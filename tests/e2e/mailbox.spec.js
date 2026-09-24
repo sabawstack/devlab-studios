@@ -348,3 +348,152 @@ test.describe('mailbox screens', () => {
     await expect(page.getByRole('navigation', { name: 'Mailbox folders' })).toBeVisible()
   })
 })
+
+/**
+ * The screens that only exist once there is mail.
+ *
+ * Everything above this point can run against an empty mailbox: authorization,
+ * navigation, highlighting, empty states. That left four features live in
+ * production with no end-to-end coverage at all — attachments on the way out,
+ * retrying a failed reply, holding back remote images, and rendering a DMARC
+ * report — because none of them are reachable without data.
+ *
+ * scripts/mailbox/apply-e2e-fixtures.mjs loads the same synthetic mail the
+ * preview environment uses, plus a real zipped DMARC report into the local R2,
+ * before wrangler dev starts.
+ */
+test.describe('the mail client, with mail in it', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page)
+  })
+
+  test('a failed reply offers Retry, and retrying returns it to the Outbox', async ({ page }) => {
+    await page.goto('/admin/mailbox/failed')
+
+    // The seed's failed reply carries the real 451 that Postfix returned while
+    // OpenDKIM could not read its signing key.
+    await expect(page.getByText(/451 4\.7\.1 Service unavailable/i)).toBeVisible()
+    await expect(
+      page.getByText(/will not be retried on its own/i),
+      'the refusal to auto-retry must be stated, not implied',
+    ).toBeVisible()
+
+    // Confirmed before it acts: if the failure happened after the message
+    // reached an MTA, retrying sends a second copy to a real person.
+    page.once('dialog', (dialog) => dialog.accept())
+    await page.getByRole('button', { name: /Retry this reply/i }).click()
+
+    await expect(page.getByRole('button', { name: /Retry this reply/i })).toHaveCount(0, { timeout: 10_000 })
+
+    await page.goto('/admin/mailbox/outbox')
+    // The error survives the retry, so what went wrong last time is still
+    // readable while the reply waits again.
+    await expect(page.getByText(/Queued again after/i)).toBeVisible()
+  })
+
+  test('a retried reply cannot be retried twice into two copies', async ({ page }) => {
+    // Whichever state the previous test left it in, a reply that is no longer
+    // `failed` must not offer the button at all — the API refuses it, and the
+    // UI must not invite the click.
+    await page.goto('/admin/mailbox/outbox')
+    await expect(page.getByRole('button', { name: /Retry this reply/i })).toHaveCount(0)
+  })
+
+  test('remote images are held back until the operator asks for them', async ({ page }) => {
+    await page.goto('/admin/mailbox/inbox')
+    await page.getByText('Following up on our booking portal').first().click()
+
+    await expect(page.getByText(/Remote images were held back/i)).toBeVisible()
+
+    const frame = page.frameLocator('iframe[title="Message content"]')
+    // No src at all before consent. data-remote-src is inert: no browser
+    // fetches it, so opening the message reports nothing to the sender.
+    await expect(frame.locator('img[data-remote-src]')).toHaveCount(1)
+    await expect(frame.locator('img[src]')).toHaveCount(0)
+
+    await page.getByRole('button', { name: /Load remote images for this message/i }).click()
+
+    await expect(page.getByText(/sender can now tell that you opened it/i)).toBeVisible()
+    await expect(frame.locator('img[src^="https://"]')).toHaveCount(1)
+  })
+
+  test("the sender's formatting survives, and their script does not", async ({ page }) => {
+    await page.goto('/admin/mailbox/inbox')
+    await page.getByText('Following up on our booking portal').first().click()
+
+    const frame = page.frameLocator('iframe[title="Message content"]')
+    // Inline style and the legacy table attributes templated mail lays itself
+    // out with — the whole point of allowing CSS through the sanitizer.
+    await expect(frame.locator('table[bgcolor="#f5f5f5"][width="600"]')).toHaveCount(1)
+    await expect(frame.locator('p[style*="font-weight"]')).toHaveCount(1)
+    await expect(frame.locator('script')).toHaveCount(0)
+  })
+
+  test('a DMARC report is rendered, not left as a zip to download', async ({ page }) => {
+    await page.goto('/admin/mailbox/dmarc')
+    await page.getByText(/Report domain: devlabconnect\.com/i).first().click()
+
+    // The fixture reports a failing source, which is the case the screen exists
+    // for: 128 forged messages against 4 of our own.
+    await expect(page.getByText(/128 of 132 messages did not pass DMARC/i)).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText(/someone sent mail using this domain/i)).toBeVisible()
+
+    // The policy the RECEIVER applied, which is what makes a report worth
+    // reading rather than a copy of what we think we published.
+    await expect(page.getByText(/adkim=s/)).toBeVisible()
+
+    await expect(page.getByText('203.0.113.9')).toBeVisible()
+    await expect(page.getByText('37.60.237.227')).toBeVisible()
+    await expect(page.getByText(/s202609/)).toBeVisible()
+  })
+
+  test('a reply can carry a file, and the file is bound to the message that sent it', async ({ page }) => {
+    await page.goto('/admin/mailbox/inbox')
+    await page.getByText('Question about your booking systems').first().click()
+
+    await page.setInputFiles('input[type="file"]', {
+      name: 'capability-deck.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('%PDF-1.4 e2e fixture'),
+    })
+
+    await expect(page.getByText('capability-deck.pdf')).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByText(/of 10 MB/)).toBeVisible()
+
+    await page.getByPlaceholder('Write your reply…').fill('Attached, as promised.')
+    await page.getByRole('button', { name: 'Send', exact: true }).click()
+
+    await expect(page.getByText(/Queued\./i)).toBeVisible({ timeout: 15_000 })
+    // The picker resets, so the next reply does not silently inherit the file.
+    await expect(page.getByText('capability-deck.pdf')).toHaveCount(0)
+  })
+
+  test('an attachment can be removed before it is sent', async ({ page }) => {
+    await page.goto('/admin/mailbox/inbox')
+    await page.getByText('Scoping a dispatch dashboard').first().click()
+
+    await page.setInputFiles('input[type="file"]', {
+      name: 'wrong-file.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('%PDF-1.4 wrong'),
+    })
+    await expect(page.getByText('wrong-file.pdf')).toBeVisible({ timeout: 15_000 })
+
+    await page.getByRole('button', { name: 'Remove' }).click()
+    await expect(page.getByText('wrong-file.pdf')).toHaveCount(0)
+  })
+})
+
+test.describe('the outbound attachment endpoints are behind the admin gate', () => {
+  test('upload and delete refuse an unauthenticated caller', async ({ request, baseURL }) => {
+    // 401 or 403: the session gate answers 401, Astro's checkOrigin answers 403
+    // first for an unsafe method with no matching Origin. Either is a refusal.
+    const upload = await request.post(`${baseURL}/api/admin/mailbox/outbound-attachments`, {
+      multipart: { file: { name: 'x.pdf', mimeType: 'application/pdf', buffer: Buffer.from('x') } },
+    })
+    expect([401, 403], 'upload must be refused').toContain(upload.status())
+
+    const remove = await request.delete(`${baseURL}/api/admin/mailbox/outbound-attachments/any-id`)
+    expect([401, 403], 'delete must be refused').toContain(remove.status())
+  })
+})

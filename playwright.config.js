@@ -41,7 +41,8 @@ export default defineConfig({
       // The fixture step must complete before wrangler dev opens the local D1
       // SQLite file — writing to it from a second process while miniflare has
       // it open can drop in-flight connections. See the script's header.
-      command: 'node scripts/pickleball/apply-e2e-fixtures.mjs && npx wrangler dev --port 8787 --local',
+      command:
+        'node scripts/pickleball/apply-e2e-fixtures.mjs && node scripts/mailbox/apply-e2e-fixtures.mjs && npx wrangler dev --port 8787 --local',
       url: 'http://localhost:8787/api/health',
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,

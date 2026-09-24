@@ -79,6 +79,11 @@ function ReplyBox({ threadId, parentMessageId, onDone }) {
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState(null)
   const [attachmentIds, setAttachmentIds] = useState([])
+  // Bumped after a send so AttachmentPicker remounts and forgets its file
+  // list. Clearing `attachmentIds` alone left the previous reply's files
+  // still listed under the box while no longer attached to anything -- a UI
+  // that shows files it will not send is worse than one that shows none.
+  const [pickerKey, setPickerKey] = useState(0)
 
   async function submit(asDraft) {
     if (!body.trim() && !asDraft) return
@@ -94,6 +99,7 @@ function ReplyBox({ threadId, parentMessageId, onDone }) {
       })
       setBody('')
       setAttachmentIds([])
+      setPickerKey((current) => current + 1)
       setFeedback({
         tone: 'ok',
         message: asDraft
@@ -127,7 +133,7 @@ function ReplyBox({ threadId, parentMessageId, onDone }) {
         className={`${inputClass} w-full font-sans`}
         placeholder="Write your reply…"
       />
-      <AttachmentPicker attachmentIds={attachmentIds} onChange={setAttachmentIds} disabled={busy} />
+      <AttachmentPicker key={pickerKey} attachmentIds={attachmentIds} onChange={setAttachmentIds} disabled={busy} />
       <Feedback feedback={feedback} />
       <div className="flex flex-wrap items-center gap-2">
         <button type="submit" disabled={busy || !body.trim()} className={primaryButtonClass}>

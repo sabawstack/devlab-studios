@@ -51,6 +51,13 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+### Fixed
+- **Attaching a file, sending, and then writing a second reply no longer shows files that will not be sent.** `attachmentIds` was cleared on send but `AttachmentPicker` kept its own list, so the previous reply's files stayed listed under the box while attached to nothing. The picker is now remounted after a send. Found by the new end-to-end test, not by review.
+- **The e2e environment applies migrations.** Nothing did, so the local D1 sat at `0015` while production was on `0016` and `mailbox_outbound_attachments` did not exist locally — the attachment upload failed there with a generic 500 that said nothing about the cause. A suite one migration behind is worse than no suite: it reports failures unrelated to the code under test, and would pass a feature that is broken in production for the mirror-image reason.
+
+### Added
+- **End-to-end coverage for the screens that only exist once there is mail.** Everything the mailbox suite tested before could run against an empty mailbox — authorization, navigation, highlighting, empty states — which left four shipped features with no end-to-end coverage at all. New tests exercise retrying a failed reply and its refusal to offer a second retry, remote images held back until asked for and the sanitizer keeping the sender's layout while dropping their script, a DMARC report rendered from a real zipped fixture reporting a forged source, and attaching a file to a reply through the real upload endpoint. `scripts/mailbox/apply-e2e-fixtures.mjs` loads the same synthetic mail preview uses, so the fixtures cannot drift from it.
+
 ## [1.13.0] - 2026-09-23
 
 ### Added

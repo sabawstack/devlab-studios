@@ -7,11 +7,15 @@ import { Feedback } from '../lead-crm/shared'
 /**
  * Compose a new message.
  *
- * WHAT IS DELIBERATELY NOT HERE: Cc, Bcc and outbound attachments.
- * `mailbox_outbound` has no columns for any of them, so a field offered here
- * would be accepted, shown back to the operator, and silently dropped on the
- * way to the wire. An absent control is honest; a present one that does nothing
- * is a message the recipient never sees half of.
+ * WHAT IS DELIBERATELY NOT HERE: Cc and Bcc. `mailbox_outbound` has no columns
+ * for either, so a field offered here would be accepted, shown back to the
+ * operator, and silently dropped on the way to the wire. An absent control is
+ * honest; a present one that does nothing is a message the recipient never
+ * sees half of.
+ *
+ * Attachments used to be on that list for the same reason, and are now here
+ * because the columns, the upload path and the multipart builder exist — the
+ * control appeared only once it could keep its promise.
  *
  * Send does not send. It writes a queued row that the external sender collects,
  * which is why the button says what happens next rather than "Send" alone.
@@ -21,6 +25,8 @@ function ComposeDialog({ open, onClose, onSent }) {
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [attachmentIds, setAttachmentIds] = useState([])
+  // See ThreadView: remounting the picker is what actually clears its list.
+  const [pickerKey, setPickerKey] = useState(0)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState(null)
 
@@ -41,6 +47,7 @@ function ComposeDialog({ open, onClose, onSent }) {
       setSubject('')
       setBody('')
       setAttachmentIds([])
+      setPickerKey((current) => current + 1)
       onSent?.(asDraft ? 'drafts' : 'outbox', result)
       onClose?.()
     } catch (error) {
@@ -105,7 +112,7 @@ function ComposeDialog({ open, onClose, onSent }) {
             />
           </div>
 
-          <AttachmentPicker attachmentIds={attachmentIds} onChange={setAttachmentIds} disabled={busy} />
+          <AttachmentPicker key={pickerKey} attachmentIds={attachmentIds} onChange={setAttachmentIds} disabled={busy} />
 
           <p className="text-xs text-slate-500">
             Sent as hello@devlabconnect.com. The body is plain text; files travel as separate attachments. Cc and
