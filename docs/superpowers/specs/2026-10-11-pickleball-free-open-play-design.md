@@ -60,62 +60,68 @@ pure, framework-free modules in `src/lib/pickleball/` (queue fairness, team
 balancing, fixture generation, bracket advancement, tournament ranking, QR
 component), and the old one is deleted in Phase 5.
 
-### 3.2 Storage: the session's Durable Object is the source of truth
+### 3.2 Storage: D1 is the source of truth, the DO coordinates
 
-One new Durable Object class, `OpenSessionDO` (SQLite-backed; wrangler
-migration tag `v3`), **one instance per session, addressed by
-`idFromName(publicCode)`**. Its embedded SQLite holds the whole session:
-settings, players, courts, matches, tournament entrants/fixtures, captain
-tokens.
+This is the same pattern as ADR 0006, so no new ADR is needed. Every session's data is written to new
+tables in `PICKLEBALL_DB` (D1). One new Durable Object class, `OpenSessionDO`
+(wrangler migration tag `v3`), **one per session, addressed by
+`idFromName(publicCode)`**, serializes commands and holds the WebSocket
+connections. Why D1 over DO-only storage (owner decision, 2026-10-11):
+- **Recovery**: D1 Time Travel gives 30-day point-in-time restore. A closed tab or a crashed DO never loses a session.
+- **Traction metrics and support**: sessions, players, matches and modes can be queried across all sessions, and a host's "my session vanished" can be looked up.
+- **Retention**: one scheduled `DELETE` cascades everything (§8).
 
-This deliberately departs from ADR 0006 ("D1 is the source of truth, the DO a
-rehydratable coordinator"). That rule protected long-lived club data. Here
-every session is ephemeral and single-writer by construction, so keeping it in
-the DO:
-- removes the D1 round-trips that made every current `broadcast` cost O(games) reads;
-- makes the 7-day purge one call (`ctx.storage.deleteAll()`) from the DO's own alarm, with no cascade ordering;
-- keeps one consistency domain: no DO-vs-D1 drift.
+**Fixing today's cost problem**: the DO loads the session from D1 once,
+then keeps it in memory. Each command validates against the in-memory state,
+writes only its changed rows to D1 in one `db.batch()` (D1 batches are
+transactional), updates memory only after the batch succeeds, and broadcasts
+from memory. No full reload per command, unlike the current
+`SessionCoordinatorDO.broadcast`. After eviction or hibernation the DO reloads
+from D1 on the next request or socket message.
 
-A new ADR (`0009-ephemeral-open-sessions-in-durable-objects.md`) records this.
-
-**D1 keeps only a thin index** in `PICKLEBALL_DB`, used for rate limiting,
-the cron backstop and aggregate traction metrics:
+New tables all carry the `open_` prefix, have no user or organization columns,
+and hang off `open_sessions` with `ON DELETE CASCADE`. Enum CHECKs are written
+wide up front, since they cannot be widened later (architecture.md, "Schema
+constraint"):
 
 ```sql
-CREATE TABLE hosts (                           -- only Google-verified DUPR exporters
-  id                TEXT PRIMARY KEY,
-  google_sub        TEXT NOT NULL UNIQUE,
-  email             TEXT NOT NULL,
-  display_name      TEXT NOT NULL,
-  dupr_club_id      TEXT,                      -- 10 digits, validated
-  marketing_opt_in  INTEGER NOT NULL DEFAULT 0 CHECK (marketing_opt_in IN (0,1)),
-  created_at        TEXT NOT NULL,
-  last_seen_at      TEXT NOT NULL
+CREATE TABLE hosts (                            -- only Google-verified DUPR exporters
+  id TEXT PRIMARY KEY, google_sub TEXT NOT NULL UNIQUE, email TEXT NOT NULL,
+  display_name TEXT NOT NULL, dupr_club_id TEXT,
+  marketing_opt_in INTEGER NOT NULL DEFAULT 0 CHECK (marketing_opt_in IN (0,1)),
+  created_at TEXT NOT NULL, last_seen_at TEXT NOT NULL
 );
-
 CREATE TABLE open_sessions (
-  public_code       TEXT PRIMARY KEY,          -- 10 chars, base32, ~50 bits
-  kind              TEXT NOT NULL CHECK (kind IN ('OPEN_PLAY','TOURNAMENT')),
-  created_at        TEXT NOT NULL,
-  last_activity_at  TEXT NOT NULL,
-  expires_at        TEXT NOT NULL,             -- last_activity_at + 7 days
-  host_id           TEXT REFERENCES hosts(id) ON DELETE SET NULL,
-  court_count       INTEGER NOT NULL DEFAULT 0,
-  player_count      INTEGER NOT NULL DEFAULT 0,
-  match_count       INTEGER NOT NULL DEFAULT 0
+  id TEXT PRIMARY KEY, public_code TEXT NOT NULL UNIQUE,   -- 10 chars base32
+  host_key_hash TEXT NOT NULL,                             -- SHA-256 of the host secret
+  host_id TEXT REFERENCES hosts(id) ON DELETE SET NULL,    -- set when claimed for DUPR
+  kind TEXT NOT NULL CHECK (kind IN ('OPEN_PLAY','TOURNAMENT')),
+  name TEXT NOT NULL, host_display_name TEXT NOT NULL, location TEXT,
+  settings_json TEXT NOT NULL,      -- mode, target, win-by-2, winner-only, scoring style, constraints
+  status TEXT NOT NULL CHECK (status IN ('ACTIVE','ENDED')),
+  version INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL, last_activity_at TEXT NOT NULL, expires_at TEXT NOT NULL
 );
 CREATE INDEX open_sessions_expires_at ON open_sessions(expires_at);
+-- open_players(id, session_id, name, skill, dupr_id, status, joined_at, games_played, last_result_tag, ...)
+-- open_courts(id, session_id, label, position, enabled)
+-- open_matches(id, session_id, court_id, round_seq, status, team_a/b player ids, score_a, score_b,
+--              winner, proposed_at, started_at, finished_at, fixture_id)
+-- open_captains(id, session_id, key_hash, label, revoked_at)
+-- open_tournament_entrants / open_tournament_fixtures   (Phase 3; same shape as today's tournament tables)
+-- open_idempotency(session_id, key, response_json, created_at)
 ```
 
-No player names live in D1. `hosts` is account data the host chose to create
-and is **not** subject to the 7-day session expiry; it is deletable on request
-(a "Delete my account" action on the export screen).
+The exact column lists are fixed in each phase's plan; the rules above are not
+negotiable. `hosts` is account data the host chose to create and is **not**
+subject to the 7-day session expiry. It is deletable on request ("Delete my
+account" on the export screen).
 
 ### 3.3 Access model: capability links, no accounts
 
 | Capability | How it's held | Can |
 |---|---|---|
-| **Host** | 128-bit random secret in the URL fragment `#host=…`, stored in the host's `localStorage`, sent as `X-Host-Key`. The DO stores only its SHA-256. | Everything. |
+| **Host** | 128-bit random secret in the URL fragment `#host=…`, stored in the host's `localStorage`, sent as `X-Host-Key`. Only its SHA-256 is stored (`open_sessions.host_key_hash`). | Everything. |
 | **Court captain** (Phase 2) | Per-captain secret, fragment `#cap=…`. | Record and undo results; nothing else. Revocable by the host. |
 | **Viewer** | The public code in the path, `/pickleball/s/{code}`. | Read the board. |
 
@@ -130,13 +136,13 @@ session as host.
 ```
 Browser ── POST /api/pickleball/open/sessions (Turnstile) ──► Worker
             Worker: rate-limit by IP → generate code + host secret
-            → OpenSessionDO(code).init() → INSERT open_sessions → 201 {code, hostKey}
+            → INSERT open_sessions (+ courts, players) → 201 {code, hostKey}
 
 Browser ── POST /api/pickleball/open/s/{code}/commands {type, …, idempotencyKey}
             Worker: rate-limit → forward to OpenSessionDO(code)
-            DO: authorize (host/captain key) → validate → apply in one
-                storage transaction → bump version → reset expiry alarm
-                → broadcast snapshot → 200 {version}
+            DO: (load from D1 if cold) → authorize (host/captain key) → validate
+                → write changed rows + version + last_activity_at/expires_at
+                  in one db.batch() → apply to memory → broadcast → 200 {version}
 
 Browser ── WS /pickleball/rt/open/{code} ──► OpenSessionDO (hibernating sockets)
             tags: 'host' | 'captain' | 'viewer'; full snapshot on connect and on
@@ -146,10 +152,7 @@ Browser ── WS /pickleball/rt/open/{code} ──► OpenSessionDO (hibernatin
 All commands go through one endpoint and one DO `dispatch()` with a
 Zod-validated discriminated union, so there's a single place enforcing
 authorization, idempotency, caps and expiry. `version` is persisted in
-storage (fixing the current in-memory `seq` reset after hibernation).
-
-The D1 index is updated from the DO at most once every 60 s per session
-(`last_activity_at`, counts), not on every command.
+`open_sessions.version` (fixing the current in-memory `seq` reset after hibernation).
 
 ### 3.5 Module layout
 
@@ -171,8 +174,10 @@ src/lib/pickleball/open/            pure, no I/O, unit-tested
    resolvePoolQualifiers, rankTournamentStandings, nextPlayableFixture)
 src/lib/schemas/pickleball/open/    Zod command + response schemas
 src/worker/pickleball/open/
-  OpenSessionDO.ts                  storage schema, dispatch, alarm, sockets (target < 600 LOC;
+  OpenSessionDO.ts                  load/cache, dispatch, sockets (target < 600 LOC;
                                     command handlers split into ./commands/*.ts)
+src/worker/repositories/pickleball/open/   D1 reads/writes per table (repository pattern)
+migrations/pickleball/0016_open_sessions.sql
   snapshot.ts                       host/viewer snapshot builders (viewer = allowlist)
   hostAuth.ts                       Google sign-in for hosts (reuses ../oauth.js)
   duprExport.ts                     CSV builder + Resend email
@@ -280,9 +285,9 @@ first names or nicknames are fine.
 
 ## 8. Retention
 
-- Every command sets the DO alarm to `now + 7 days` (`setAlarm` overwrites), and the D1 index's `expires_at` follows on its next throttled update.
-- When the alarm fires: close all sockets, `ctx.storage.deleteAll()`, `DELETE FROM open_sessions WHERE public_code = ?`.
-- **Backstop**: the existing daily cron gains a step that, for `open_sessions` rows with `expires_at < now − 1 day`, pokes the DO (which purges itself) and then deletes the row.
+- Every command sets `last_activity_at = now` and `expires_at = now + 7 days` in the same batch.
+- **Purge**: the existing daily cron gains a step: `DELETE FROM open_sessions WHERE expires_at < now` (in chunks of 500). `ON DELETE CASCADE` removes the session's players, courts, matches, captains, tournament rows and idempotency keys. It then notifies the DO of each purged code, so open sockets close and the in-memory copy is dropped. A purge count is logged.
+- D1 Time Travel can still restore purged data for up to 30 days as a backup. The privacy wording on the site says "deleted from the live service after 7 days of inactivity" and must not claim instant erasure from backups.
 - An expired or unknown code renders a friendly "This session has ended and its results were deleted" page with a "Start your own" CTA (traction).
 - **Export before it's gone**: "Download results (CSV)" for the host from Phase 1 (matches and standings).
 
@@ -344,20 +349,30 @@ Every public page is reframed around "free, no sign-up, run every court from one
 - **Palette**: court greens and blues with an optic-yellow ball accent, defined as tokens on the existing dark public shell, at WCAG AA contrast.
 - **Process**: mockups of the landing page, board and host console are reviewed with the owner before Phase 1 UI work is built.
 
-## 12. Retiring the logged-in app (Phase 5)
+## 12. Retiring the logged-in app and cleaning up its data (Phase 5)
 
-- Delete: the SPA `src/pickleball-app/`, `/pickleball/app/*`, `/pickleball/accept-invite/*`, `/pickleball/live/*`, every route under `/api/pickleball/` except `open/**` and host auth, `authContext.js`, `session.js`, `permissions.ts`, `quota.ts`, invites, platform pages, audit, per-rally scoring (`src/lib/pickleball/scoring/*`), OPI (`opi.ts`, snapshots), `SessionCoordinatorDO` (wrangler migration `deleted_classes`).
+No one uses the old app, so this phase can be pulled forward to any point after Phase 1 ships.
+
+**Database cleanup** (both `devlab-pickleball-preview` and `devlab-pickleball`):
+1. Read row counts of every old table on production and confirm they hold only test/demo data. Take a `wrangler d1 export` backup to a local file outside the repo.
+2. Migration `00NN_drop_legacy_pickleball.sql` drops, children before parents: the one-active-pair trigger, `audit_events`, `player_performance_snapshots`, `player_game_stats`, `matchmaking_history`, `idempotency_keys`, `score_events`, `game_participants`, `tournament_fixtures`, `tournament_entrants`, `games`, `team_members`, `teams`, `queue_entries`, `session_pairs`, `session_players`, `session_operator_grants`, `public_session_tokens`, `session_courts`, `pickleball_sessions`, `scoring_rulesets`, `courts`, `venues`, `players`, `organization_invites`, `organization_memberships`, `organizations`, `users`. `DROP TABLE` is safe on D1; only table rebuilds are dangerous. The `open_*` tables and `hosts` are untouched.
+3. Wrangler migration `deleted_classes: ["SessionCoordinatorDO"]` removes the old Durable Object and its stored data, in both environments.
+4. Read back the table list after applying to confirm only the new tables remain.
+5. Delete the leftover files: `_bootstrap-org-tmp.sql` (repo root), `scripts/pickleball/create-organization.mjs`, `scripts/pickleball/seed/*` and the old e2e fixtures in `scripts/pickleball/apply-e2e-fixtures.mjs`. The old `docs/superpowers` plans and specs are kept as history and marked superseded.
+6. Env/vars: keep `GOOGLE_OAUTH_CLIENT_ID`, the OAuth secret and `PICKLEBALL_OAUTH_REDIRECT_BASE_URL` (host sign-in). Remove any pickleball invite/org-only vars.
+
+**Code removal**:
+- Delete: the SPA `src/pickleball-app/`, `/pickleball/app/*`, `/pickleball/accept-invite/*`, `/pickleball/live/*`, every route under `/api/pickleball/` except `open/**` and host auth, `authContext.js`, `session.js`, `permissions.ts`, `quota.ts`, invites, platform pages, audit, per-rally scoring (`src/lib/pickleball/scoring/*`), OPI (`opi.ts`, snapshots), `SessionCoordinatorDO`, and the old repositories and e2e specs.
 - **Kept**: `oauth.js` (host sign-in), `RateLimiterDO`, the reused pure modules, `PublicLinkQRCode`.
-- **D1**: one migration drops every old pickleball table, children before parents (`DROP TABLE` is safe; it's table rebuilds that aren't).
-- **Redirects**: `/pickleball/app` → `/pickleball/new`, `/pickleball/methodology` → `/pickleball/rotation` and `/pickleball/live/*` → `/pickleball` get rows in the D1 `redirects` table, not hardcoded page redirects (per `AGENTS.md`).
+- **Redirects**: `/pickleball/app` -> `/pickleball/new`, `/pickleball/methodology` -> `/pickleball/rotation` and `/pickleball/live/*` -> `/pickleball` get rows in the D1 `redirects` table, not hardcoded page redirects (per `AGENTS.md`).
 - Remove the remaining copy that mentions sign-in, operators or OPI (the pages were already rewritten in Phase 1, §11).
 - **Docs**: `docs/pickleball/architecture.md`, `schema.md`, `realtime.md` and `runbook.md` rewritten. Their current C2–C5 staleness is fixed as a side effect.
-- **Versioning**: Phases 1–4 are MINOR releases (additive routes). Phase 5 removes public routes and APIs, so it is a **MAJOR** release (2.0.0) per `CHANGELOG.md` policy.
+- **Versioning**: Phases 1–4 are MINOR releases (additive routes). Phase 5 removes public routes, APIs and the D1 schema, so it is a **MAJOR** release (2.0.0) per `CHANGELOG.md` policy.
 
 ## 13. Testing
 
 - **Unit (vitest)**: every module under `src/lib/pickleball/open/`. Property-style tests for `propose()`: over randomized sessions of 5–40 players on 1–8 courts with random results, assert the sit-out guard (no one sits out more than 2 consecutive proposals), no player on two courts, constraints honoured, and repeat avoidance against a brute-force baseline on small cases. Plus `roster.ts` parsing fixtures, `scoreValidation.ts`, `drawEdits.ts` validity rules, and the DUPR CSV against the pinned template.
-- **DO integration**: command dispatch, idempotency, authorization (viewer and captain refused host commands), alarm purge leaves empty storage and no index row.
+- **DO + D1 integration**: command dispatch, idempotency, authorization (viewer and captain refused host commands), cold reload from D1 matches the in-memory state, a failed batch leaves memory unchanged, and the cron purge removes every `open_*` row for an expired session.
 - **E2E (Playwright, `static` project)**: create → paste roster → run 2 courts across several games in each mode → viewer page updates in a second browser context → edit result → tournament generate/edit/start/finish → expired-code page. Host Google sign-in is tested through a test-only login route gated by an env flag, as today.
 - `npm run typecheck && npm run build` and the full e2e suite before each push, per `AGENTS.md`.
 
@@ -365,7 +380,7 @@ Every public page is reframed around "free, no sign-up, run every court from one
 
 | # | Ships | Release |
 |---|---|---|
-| 1 | Anonymous create (Turnstile, limits), roster paste/manual/CSV, courts, **paddle stack**, final-score entry with undo/edit, proposal editing, live QR board, results CSV, 7-day expiry + cron backstop, **all public pages and guides rewritten with the new visual and animation set (§11)** (old app still reachable) | minor |
+| 1 | Anonymous create (Turnstile, limits), roster paste/manual/CSV, courts, **paddle stack**, final-score entry with undo/edit, proposal editing, live QR board, results CSV, 7-day expiry via the daily cron purge, **all public pages and guides rewritten with the new visual and animation set (§11)** (old app still reachable) | minor |
 | 2 | Winners/losers (shuffled), by-standing, balanced modes; keep together/apart; fairness panel; QR self check-in; court captain links; TV mode | minor |
 | 3 | Tournaments: pairing, seeding, draft edits, start lock, substitutions/opponent swaps, bracket board | minor |
 | 4 | Google host sign-in, claim, DUPR Club ID, DUPR CSV email; account deletion; optional offline PWA | minor |
@@ -386,5 +401,5 @@ partner program (clubs@mydupr.com) for direct match submission.
 | Anonymous creation spam | Turnstile, per-IP limits, fail-closed creation, caps, 7-day expiry. |
 | The public board exposes names | Privacy note at creation; first names suggested; allowlisted viewer snapshot; "Delete now". |
 | The DUPR template changes | The CSV builder is pinned to a fixture test; the email tells the host to report upload errors. |
-| DO data lost before the 7 days | Durable Object storage is durable; the results CSV is offered throughout; acceptable for a free ephemeral tool. |
+| Host closes the tab or loses the phone | Data is in D1, never only in the browser. Same device: "Resume your session". Other device: host link or Google sign-in. |
 | Mode logic feels unfair in real play | Property tests for the guarantees in §1; the fairness panel makes behaviour visible; every proposal is editable. |
