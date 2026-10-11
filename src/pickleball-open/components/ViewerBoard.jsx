@@ -32,6 +32,7 @@ export default function ViewerBoard({ viewer, status, invalidHostLink }) {
   const mine = myStatus(viewer, me)
   const myName = viewer.roster.find((p) => p.id === me)?.name
   const expires = new Date(viewer.expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const courtCount = viewer.courts.filter((c) => c.state !== 'OFF').length
   const section = (key) => `${tab === key ? 'block' : 'hidden'} lg:block`
 
   return (
@@ -44,7 +45,7 @@ export default function ViewerBoard({ viewer, status, invalidHostLink }) {
             {viewer.status === 'ACTIVE' ? 'LIVE' : 'ENDED'}{status !== 'open' && <span className="text-amber-200"> · reconnecting</span>}
           </p>
           <h1 className="text-2xl font-bold sm:text-3xl">{viewer.name}</h1>
-          <p className="text-sm text-mist">Hosted by {viewer.hostDisplayName} · {viewer.courts.filter((c) => c.state !== 'OFF').length} courts</p>
+          <p className="text-sm text-mist">Hosted by {viewer.hostDisplayName} · {courtCount} court{courtCount === 1 ? '' : 's'}</p>
         </div>
         <label className="grid gap-1 text-xs text-mist">I'm…
           <select value={me} onChange={(e) => { setMe(e.target.value); writeMe(viewer.code, e.target.value) }}

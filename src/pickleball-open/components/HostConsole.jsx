@@ -13,6 +13,8 @@ import StandingsTable from './StandingsTable.jsx'
 import UndoToast from './UndoToast.jsx'
 import { Button, Panel, Sheet } from './ui.jsx'
 
+const countLabel = (n, noun) => `${n} ${noun}${n === 1 ? '' : 's'}`
+
 const TABS = [['courts', 'Courts'], ['players', 'Players'], ['results', 'Results']]
 const OFFLINE_MESSAGE = "Couldn't reach the server. Check your connection and try again."
 
@@ -78,7 +80,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-xl font-bold sm:text-2xl">{viewer.name}</h1>
           <p className="text-xs text-mist">
-            {host.players.filter((p) => p.status !== 'LEFT').length} players · {host.courts.filter((c) => c.enabled).length} courts · paddle stack
+            {countLabel(host.players.filter((p) => p.status !== 'LEFT').length, 'player')} · {countLabel(host.courts.filter((c) => c.enabled).length, 'court')} · paddle stack
             {status !== 'open' && <span className="ml-2 text-amber-200">· Reconnecting…</span>}
             {pending > 0 && <span className="ml-2 text-amber-200">· Sending {pending}…</span>}
             {viewer.status === 'ENDED' && <span className="ml-2 text-pickle-neon">· Ended</span>}
@@ -126,7 +128,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
         <aside className="grid content-start gap-5">
           <div className={section('players')}><PlayersPanel players={host.players} waiting={viewer.waiting} playing={playing} send={send} /></div>
           <div className={section('results')}>
-            <Panel><h2 className="mb-2 text-lg font-bold">Standings</h2><StandingsTable rows={viewer.standings} compact /></Panel>
+            <Panel><h2 className="mb-2 text-lg font-bold">Standings</h2><StandingsTable rows={viewer.standings} /></Panel>
             <Panel className="mt-4"><h2 className="mb-2 text-lg font-bold">Results</h2>
               <ResultsList finished={host.finished} nameOf={nameOf} courtLabel={courtLabel} onEdit={(match) => setDialog({ type: 'editResult', match })} />
             </Panel>
