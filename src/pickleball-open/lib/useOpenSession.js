@@ -25,6 +25,8 @@ export function useOpenSession(code, hostKey, { onRejected, onCaptainRevoked, ca
   const [viewer, setViewer] = useState(null)
   const [host, setHost] = useState(null)
   const [captain, setCaptain] = useState(null)
+  // When a snapshot last arrived (socket push or poll), so a screen can tell live from stale.
+  const [lastSnapshotAt, setLastSnapshotAt] = useState(null)
   // Every key the server refused, so a caller can switch keys without the new
   // one inheriting the old one's failure.
   const [rejectedKeys, setRejectedKeys] = useState([])
@@ -48,18 +50,21 @@ export function useOpenSession(code, hostKey, { onRejected, onCaptainRevoked, ca
   const applyViewer = useCallback((snapshot) => {
     if (!snapshot || !accept(snapshot.version)) return
     setViewer(snapshot)
+    setLastSnapshotAt(Date.now())
   }, [accept])
 
   const applyHost = useCallback((snapshot) => {
     if (!snapshot?.viewer || !accept(snapshot.viewer.version)) return
     setHost(snapshot)
     setViewer(snapshot.viewer)
+    setLastSnapshotAt(Date.now())
   }, [accept])
 
   const applyCaptain = useCallback((snapshot) => {
     if (!snapshot?.viewer || !accept(snapshot.viewer.version)) return
     setCaptain(snapshot)
     setViewer(snapshot.viewer)
+    setLastSnapshotAt(Date.now())
   }, [accept])
 
   useEffect(() => {
@@ -184,7 +189,7 @@ export function useOpenSession(code, hostKey, { onRejected, onCaptainRevoked, ca
   }, [code, hostKey, captainKey, applyHost, applyViewer, applyCaptain])
 
   return {
-    status, viewer, host,
+    status, viewer, host, lastSnapshotAt,
     captain: captainKey && !revokedCaptainKeys.includes(captainKey) ? captain : null,
     captainRevoked: Boolean(captainKey) && revokedCaptainKeys.includes(captainKey),
     authFailed: Boolean(hostKey) && rejectedKeys.includes(hostKey),

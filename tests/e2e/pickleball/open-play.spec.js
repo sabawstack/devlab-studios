@@ -690,14 +690,16 @@ test.describe('TV board', () => {
       await page.setViewportSize({ width, height })
       await page.goto(`/pickleball/s/${code}/tv`)
       await expect(page.getByTestId('tv-court')).toHaveCount(16)
+      await page.waitForTimeout(600) // type is fitted to each card a frame after it renders
       const fits = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth && document.documentElement.scrollHeight <= window.innerHeight)
       expect(fits).toBe(true)
-      if (height === 1080) {
-        // About 5 m from a 1080p screen: names at least 24 px tall.
-        const size = await page.getByTestId('tv-court').first().evaluate((el) => parseFloat(getComputedStyle(el.querySelector('p')).fontSize))
-        expect(size).toBeGreaterThanOrEqual(24)
-      }
-    })
+      // Every card holds its own content: nothing spills out of a court.
+      const spill = await page.getByTestId('tv-court').evaluateAll((cards) => cards.filter((el) => el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1).length)
+      expect(spill).toBe(0)
+      const size = await page.getByTestId('tv-court').first().evaluate((el) => parseFloat(getComputedStyle(el.querySelector('p')).fontSize))
+      // About 5 m from a 1080p screen: names at least 24 px tall; at 720p the floor is 18 px.
+      expect(size).toBeGreaterThanOrEqual(height === 1080 ? 24 : 18)
+        })
   }
 
   test('the TV shows the fairness panel and the check-in QR, and updates when a result is saved', async ({ page, request }) => {
@@ -708,7 +710,37 @@ test.describe('TV board', () => {
     await expect(page.getByRole('img', { name: 'QR code for self check-in' })).toBeVisible()
     const host = await hostSnapshot(request, code, hostKey)
     expect((await command(request, code, hostKey, { type: 'RECORD_RESULT', matchId: host.courts[0].match.id, winner: 'A', scoreA: 11, scoreB: 4 })).status()).toBe(200)
-    await expect(page.getByRole('region', { name: 'Standings' })).toContainText('1–0')
+    // The side panel swaps standings and results every 15 s, so accept either view of the saved game.
+    await expect(page.getByTestId('tv-panel')).toContainText(/1–0|11–4/)
+  })
+
+  for (const courtCount of [4, 12]) {
+    for (const [width, height] of [[1920, 1080], [1280, 720]]) {
+      test(`${courtCount} courts of 40-character names are never truncated or spilling at ${width}×${height}`, async ({ page, request }) => {
+        const longName = (i) => `Maximilian-Alexandrovich Montgomery ${String(i).padStart(2, '0')}`.slice(0, 40)
+        const { code } = await createSession(request, { courtCount, players: Array.from({ length: courtCount * 4 + 6 }, (_, i) => ({ name: longName(i) })) })
+        await page.setViewportSize({ width, height })
+        await page.goto(`/pickleball/s/${code}/tv`)
+        await expect(page.getByTestId('tv-court')).toHaveCount(courtCount)
+        await page.waitForTimeout(600)
+        const overflowing = await page.evaluate(() => [...document.querySelectorAll('body *')]
+          .filter((el) => el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0)
+          .map((el) => `${el.tagName}.${String(el.className).slice(0, 40)}`))
+        expect(overflowing).toEqual([])
+        expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true)
+        const spill = await page.getByTestId('tv-court').evaluateAll((cards) => cards.filter((el) => el.scrollHeight > el.clientHeight + 1).length)
+        expect(spill).toBe(0)
+      })
+    }
+  }
+
+  test('an ended session says so in big type instead of showing courts', async ({ page, request }) => {
+    const { code, hostKey } = await createSession(request)
+    expect((await command(request, code, hostKey, { type: 'END_SESSION' })).status()).toBe(200)
+    await page.setViewportSize({ width: 1920, height: 1080 })
+    await page.goto(`/pickleball/s/${code}/tv`)
+    await expect(page.getByText('Session ended')).toBeVisible()
+    await expect(page.getByTestId('tv-court')).toHaveCount(0)
   })
 
   test('the host opens the TV board from Share', async ({ page, request }) => {
