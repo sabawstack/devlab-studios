@@ -1,5 +1,6 @@
 // src/pickleball-open/components/ViewerBoard.jsx
 import { useState } from 'react'
+import { MODE_INFO } from '../../lib/pickleball/open/modes/info'
 import { myStatus } from '../lib/myStatus'
 import StandingsTable from './StandingsTable.jsx'
 import { Panel, TeamNames } from './ui.jsx'
@@ -45,7 +46,7 @@ export default function ViewerBoard({ viewer, status, invalidHostLink }) {
             {viewer.status === 'ACTIVE' ? 'LIVE' : 'ENDED'}{status !== 'open' && <span className="text-amber-200"> · reconnecting</span>}
           </p>
           <h1 className="text-2xl font-bold sm:text-3xl">{viewer.name}</h1>
-          <p className="text-sm text-mist">Hosted by {viewer.hostDisplayName} · {courtCount} court{courtCount === 1 ? '' : 's'}</p>
+          <p className="text-sm text-mist">Hosted by {viewer.hostDisplayName} · {courtCount} court{courtCount === 1 ? '' : 's'} · {MODE_INFO[viewer.settings.mode]?.label ?? 'Paddle stack'}</p>
         </div>
         <label className="grid gap-1 text-xs text-mist">I'm…
           <select value={me} onChange={(e) => { setMe(e.target.value); writeMe(viewer.code, e.target.value) }}

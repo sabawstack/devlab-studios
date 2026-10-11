@@ -6,20 +6,23 @@ function minutesSince(iso) {
 
 export default function CourtCard({ court, nameOf, ended = false, onStart, onGameOver, onEdit }) {
   const match = court.match
+  const testId = `court-${court.position}`
   if (!court.enabled) {
-    return <article className="rounded-2xl border border-navy-800 p-4 text-mist"><h3 className="font-bold text-white">{court.label}</h3><p className="mt-2 text-sm">Off</p></article>
+    return <article data-testid={testId} className="rounded-2xl border border-navy-800 p-4 text-mist"><h3 className="font-bold text-white">{court.label}</h3><p className="mt-2 text-sm">Off</p></article>
   }
   if (!match) {
     return (
-      <article className="rounded-2xl border border-dashed border-navy-700 p-4">
+      <article data-testid={testId} className="rounded-2xl border border-dashed border-navy-700 p-4">
         <h3 className="font-bold">{court.label}</h3>
-        <p className="mt-2 text-sm text-mist">{ended ? 'Session ended' : 'Waiting for players. Fills automatically when the next game ends.'}</p>
+        <p className={`mt-2 text-sm ${court.blocked && !ended ? 'text-amber-200' : 'text-mist'}`} role={court.blocked && !ended ? 'status' : undefined}>
+          {ended ? 'Session ended' : court.blocked ?? 'Waiting for players. Fills automatically when the next game ends.'}
+        </p>
       </article>
     )
   }
   const proposed = match.status === 'PROPOSED'
   return (
-    <article key={match.id} className={`pb-flip flex flex-col gap-3 rounded-2xl p-4 ${proposed ? 'border-2 border-dashed border-pickle-neon bg-ink' : 'bg-navy-900'}`} data-testid={`court-${court.position}`}>
+    <article key={match.id} className={`pb-flip flex flex-col gap-3 rounded-2xl p-4 ${proposed ? 'border-2 border-dashed border-pickle-neon bg-ink' : 'bg-navy-900'}`} data-testid={testId}>
       <div className="flex items-baseline justify-between">
         <h3 className="text-lg font-bold">{court.label}</h3>
         <span className={`text-xs ${proposed ? 'font-bold text-pickle-neon' : 'text-mist'}`}>{proposed ? 'Up next' : `${minutesSince(match.startedAt)} min`}</span>

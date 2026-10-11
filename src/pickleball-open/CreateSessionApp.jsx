@@ -6,6 +6,7 @@ import { LIMITS } from '../lib/pickleball/open/types'
 import { createSession } from './lib/api'
 import { rememberHostedSession } from './lib/hostKeys'
 import HostLinkPanel from './components/HostLinkPanel.jsx'
+import { ModePicker } from './components/ModePicker.jsx'
 import { Button, Panel } from './components/ui.jsx'
 
 const TARGETS = [11, 15, 21]
@@ -13,7 +14,7 @@ const field = 'w-full rounded-xl border border-navy-700 bg-navy-900 px-3 py-3 te
 
 export default function CreateSessionApp({ siteKey }) {
   const [step, setStep] = useState('details')
-  const [details, setDetails] = useState({ name: 'Open Play', hostDisplayName: '', courtCount: 4, target: 11 })
+  const [details, setDetails] = useState({ name: 'Open Play', hostDisplayName: '', courtCount: 4, target: 11, mode: 'PADDLE_STACK' })
   const [rosterMode, setRosterMode] = useState('paste')
   const [pasted, setPasted] = useState('')
   const [csvText, setCsvText] = useState('')
@@ -51,7 +52,7 @@ export default function CreateSessionApp({ siteKey }) {
         name: details.name,
         hostDisplayName: details.hostDisplayName,
         courtCount: details.courtCount,
-        settings: { mode: 'PADDLE_STACK', target: details.target, scoringStyle: 'SIDEOUT' },
+        settings: { mode: details.mode, target: details.target, scoringStyle: 'SIDEOUT' },
         players: roster.entries,
         turnstileToken: turnstile.token,
       })
@@ -102,8 +103,9 @@ export default function CreateSessionApp({ siteKey }) {
             <p className="mt-3 text-sm text-mist">Sudden death or win by 2: both are accepted when you enter the score.</p>
           </Panel>
           <Panel className="md:col-span-2">
-            <p className="font-semibold">Who plays next: <span className="text-pickle-neon">paddle stack</span></p>
-            <p className="mt-1 text-sm text-mist">Fewest games first, then longest wait. Partners rotate, and every proposed game can be edited before it starts.</p>
+            <p className="mb-3 font-semibold">Who plays next</p>
+            <ModePicker value={details.mode} onChange={(mode) => update({ mode })} />
+            <p className="mt-3 text-sm text-mist">You can switch any time during the session. Anyone who has sat out 2 rounds in a row goes on next, whichever you pick, and every proposed game can be edited before it starts.</p>
           </Panel>
           <Button type="submit" variant="primary" className="md:col-span-2 text-lg">Next: add players</Button>
         </form>

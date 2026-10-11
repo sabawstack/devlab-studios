@@ -1,14 +1,18 @@
 import { useCallback, useMemo, useState } from 'react'
 import { formatPublicCode } from '../../lib/pickleball/open/codes'
+import { MODE_INFO } from '../../lib/pickleball/open/modes/info'
 import { deleteSession, downloadResults } from '../lib/api'
 import { forgetHostedSession, viewerLink } from '../lib/hostKeys'
 import { useCommandQueue } from '../lib/useCommandQueue'
 import CourtCard from './CourtCard.jsx'
 import EditMatchDialog from './EditMatchDialog.jsx'
+import FairnessPanel from './FairnessPanel.jsx'
 import GameOverDialog from './GameOverDialog.jsx'
+import ModeSheet from './ModePicker.jsx'
 import PlayersPanel from './PlayersPanel.jsx'
 import QrCode from './QrCode.jsx'
 import ResultsList from './ResultsList.jsx'
+import RulesPanel from './RulesPanel.jsx'
 import StandingsTable from './StandingsTable.jsx'
 import UndoToast from './UndoToast.jsx'
 import { Button, Panel, Sheet } from './ui.jsx'
@@ -41,6 +45,11 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
     setDialog(null)
     const ok = await send({ type: 'RECORD_RESULT', matchId: match.id, ...result })
     if (ok) setUndo({ matchId: match.id, savedAt: Date.now(), label: `${courtLabel(match.courtId)} saved${result.scoreA === null ? '' : ` ${result.scoreA}–${result.scoreB}`}.` })
+  }
+
+  function pickMode(mode) {
+    setDialog(null)
+    if (mode !== host.settings.mode) send({ type: 'SET_MODE', mode })
   }
 
   async function download() {
@@ -77,15 +86,16 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
   return (
     <div className="mx-auto max-w-[1600px] px-3 pb-24 pt-3 sm:px-5 lg:pb-8">
       <header className="flex flex-wrap items-center gap-3 py-2">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
           <h1 className="truncate text-xl font-bold sm:text-2xl">{viewer.name}</h1>
           <p className="text-xs text-mist">
-            {countLabel(host.players.filter((p) => p.status !== 'LEFT').length, 'player')} · {countLabel(host.courts.filter((c) => c.enabled).length, 'court')} · paddle stack
+            {countLabel(host.players.filter((p) => p.status !== 'LEFT').length, 'player')} · {countLabel(host.courts.filter((c) => c.enabled).length, 'court')}
             {status !== 'open' && <span className="ml-2 text-amber-200">· Reconnecting…</span>}
             {pending > 0 && <span className="ml-2 text-amber-200">· Sending {pending}…</span>}
             {viewer.status === 'ENDED' && <span className="ml-2 text-pickle-neon">· Ended</span>}
           </p>
         </div>
+        <Button variant="ghost" aria-haspopup="dialog" onClick={() => setDialog({ type: 'mode' })}>Mode: {MODE_INFO[host.settings.mode].label}</Button>
         <Button variant="neon" onClick={() => setDialog({ type: 'share' })}>Share board</Button>
         <div className="relative">
           <Button variant="ghost" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>More</Button>
@@ -123,10 +133,14 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
               </ol>
             )}
           </Panel>
+          <div className="mt-4"><FairnessPanel fairness={host.fairness} /></div>
         </section>
 
         <aside className="grid content-start gap-5">
-          <div className={section('players')}><PlayersPanel players={host.players} waiting={viewer.waiting} playing={playing} send={send} /></div>
+          <div className={`${section('players')} grid gap-5`}>
+            <PlayersPanel players={host.players} waiting={viewer.waiting} playing={playing} mode={host.settings.mode} send={send} />
+            <RulesPanel rules={host.settings.rules} players={host.players} send={send} />
+          </div>
           <div className={section('results')}>
             <Panel><h2 className="mb-2 text-lg font-bold">Standings</h2><StandingsTable rows={viewer.standings} /></Panel>
             <Panel className="mt-4"><h2 className="mb-2 text-lg font-bold">Results</h2>
@@ -143,6 +157,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
         ))}
       </nav>
 
+      {dialog?.type === 'mode' && <ModeSheet mode={host.settings.mode} onPick={pickMode} onClose={() => setDialog(null)} />}
       {dialog?.type === 'gameOver' && (
         <GameOverDialog title={`${courtLabel(dialog.match.courtId)} · who won?`} match={dialog.match} nameOf={nameOf} settings={host.settings}
           onSave={(result) => save(dialog.match, result)}

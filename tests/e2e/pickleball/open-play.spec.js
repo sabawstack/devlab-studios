@@ -30,6 +30,12 @@ function command(request, code, hostKey, cmd, idempotencyKey = crypto.randomUUID
   })
 }
 
+async function hostSnapshot(request, code, hostKey) {
+  const response = await request.get(`/api/pickleball/open/s/${code}/host`, { headers: { 'X-Host-Key': hostKey } })
+  expect(response.status()).toBe(200)
+  return response.json()
+}
+
 test.describe('open play API', () => {
   test('create, then the public board shows proposals and nothing private', async ({ request }) => {
     const { code, hostKey } = await createSession(request)
@@ -269,4 +275,83 @@ test.describe('open play UI', () => {
       await viewerContext.close()
     })
   }
+})
+
+test.describe('stacking modes, rules and fairness', () => {
+  test('the host picks a mode when creating a session and sees it on the console', async ({ page }) => {
+    const ip = freshIp()
+    await page.route('**/api/pickleball/open/sessions', (route) =>
+      route.request().method() === 'POST'
+        ? route.continue({ headers: { ...route.request().headers(), 'cf-connecting-ip': ip } })
+        : route.continue(),
+    )
+    await page.goto('/pickleball/new')
+    await page.getByLabel('Your name (shown as "Hosted by")').fill('Coach Mike')
+    for (const label of ['Paddle stack', 'Winners play winners', 'By standing', 'Balanced teams']) {
+      await expect(page.getByRole('radio', { name: new RegExp(`^${label}`) })).toBeVisible()
+    }
+    await page.getByRole('radio', { name: /^Winners play winners/ }).click()
+    await expect(page.getByRole('radio', { name: /^Winners play winners/ })).toHaveAttribute('aria-checked', 'true')
+    await page.getByRole('button', { name: 'Next: add players' }).click()
+    await page.getByLabel(/Paste names/).fill('Ana\nBen\nCarlo\nDina\nEli')
+    await expect(page.locator('input[name="cf-turnstile-response"]')).toHaveValue(/.+/, { timeout: 30_000 })
+    await page.getByRole('button', { name: /^Start session/ }).click()
+    await page.getByRole('link', { name: 'I saved it — go to courts' }).click()
+    await expect(page.getByRole('button', { name: 'Mode: Winners play winners' })).toBeVisible()
+  })
+
+  test('switching mode mid-session leaves the proposed game alone and shows on the board', async ({ page, request }) => {
+    const { code, hostKey } = await createSession(request)
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await expect(page.getByTestId('court-1')).toContainText('Up next')
+    const before = await page.getByTestId('court-1').innerText()
+    await page.getByRole('button', { name: 'Mode: Paddle stack' }).click()
+    await page.getByRole('dialog', { name: 'Who plays next' }).getByRole('radio', { name: /^By standing/ }).click()
+    await expect(page.getByRole('button', { name: 'Mode: By standing' })).toBeVisible()
+    expect(await page.getByTestId('court-1').innerText()).toBe(before)
+    expect((await hostSnapshot(request, code, hostKey)).settings.mode).toBe('BY_STANDING')
+    const viewer = await (await request.get(`/api/pickleball/open/s/${code}/state`)).json()
+    expect(viewer.settings.mode).toBe('BY_STANDING')
+  })
+
+  test('a keep-together rule added on the console is kept by every proposal', async ({ page, request }) => {
+    const { code, hostKey } = await createSession(request)
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    const rules = page.getByRole('region', { name: 'Keep together or apart' })
+    await rules.getByRole('radio', { name: 'Keep together' }).click()
+    await rules.getByLabel('First player').selectOption({ label: 'Ana' })
+    await rules.getByLabel('Second player').selectOption({ label: 'Ivan' })
+    await rules.getByRole('button', { name: 'Add rule' }).click()
+    await expect(rules.getByText('Ana & Ivan: always partners')).toBeVisible()
+    const host = await hostSnapshot(request, code, hostKey)
+    const ana = host.players.find((p) => p.name === 'Ana').id
+    const ivan = host.players.find((p) => p.name === 'Ivan').id
+    for (const court of host.courts) {
+      const m = court.match
+      if (!m) continue
+      const four = [...m.teamA, ...m.teamB]
+      if (four.includes(ana) || four.includes(ivan)) expect(m.teamA.includes(ana) ? m.teamA : m.teamB).toContain(ivan)
+    }
+  })
+
+  test('a rule no four can keep leaves the court waiting with a reason', async ({ page, request }) => {
+    const { code, hostKey } = await createSession(request, { courtCount: 1, players: ['Ana', 'Ben', 'Carlo', 'Dina'].map((name) => ({ name })) })
+    const host = await hostSnapshot(request, code, hostKey)
+    const id = (name) => host.players.find((p) => p.name === name).id
+    expect((await command(request, code, hostKey, { type: 'ADD_RULE', rule: { kind: 'APART', playerIds: [id('Ana'), id('Ben')] } })).status()).toBe(200)
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await expect(page.getByTestId('court-1')).toContainText('No four waiting players fit the keep-together and keep-apart rules')
+    expect((await command(request, code, hostKey, { type: 'REMOVE_RULE', rule: { kind: 'APART', playerIds: [id('Ana'), id('Ben')] } })).status()).toBe(200)
+    await expect(page.getByTestId('court-1')).toContainText('Up next')
+  })
+
+  test('the fairness panel shows the games spread, the longest wait and repeat partners', async ({ page, request }) => {
+    const { code, hostKey } = await createSession(request)
+    await page.setViewportSize({ width: 1280, height: 900 })
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    const panel = page.getByTestId('fairness')
+    for (const label of ['Games spread', 'Longest wait', 'Repeat partners']) await expect(panel).toContainText(label)
+  })
 })
