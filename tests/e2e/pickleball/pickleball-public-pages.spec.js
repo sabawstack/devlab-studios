@@ -125,11 +125,11 @@ test.describe('Pickleball public pages', () => {
   }
 
   for (const path of ['/pickleball', '/pickleball/how-it-works', '/pickleball/rotation']) {
-    test(`claims only what Phase 1 ships (${path})`, async ({ page }) => {
+    test(`claims only shipped features (${path})`, async ({ page }) => {
       await page.goto(path)
       const copy = (await mainCopy(page)).toLowerCase()
       // Whole words only: a bare substring check would flag "opi" inside "copied".
-      for (const unshipped of ['tournament', 'bracket', 'dupr', 'captain', 'tv mode', 'sign in', 'opi', 'performance index', 'rally-by-rally', 'winners vs winners', 'mexicano']) {
+      for (const unshipped of ['tournament', 'bracket', 'dupr', 'captain', 'tv mode', 'sign in', 'opi', 'performance index', 'rally-by-rally', 'mexicano']) {
         expect(copy, `"${unshipped}" on ${path}`).not.toMatch(new RegExp(`\\b${unshipped.replace(/[-]/g, '\\-')}`))
       }
     })
@@ -152,6 +152,27 @@ test.describe('Pickleball public pages', () => {
     await page.goto('/pickleball')
     const copy = await mainCopy(page)
     for (const claim of ['Free', 'No sign-up', '7 days', 'fewest games']) expect(copy).toContain(claim)
+  })
+
+  test('the rotation page explains all four ways to pick the next game, each with a computed example', async ({ page }) => {
+    await page.goto('/pickleball/rotation')
+    for (const label of ['Paddle stack', 'Winners play winners', 'By standing', 'Balanced teams']) {
+      const section = page.getByRole('region', { name: label })
+      await expect(section).toBeVisible()
+      await expect(section.getByRole('heading', { name: 'Round 1' })).toBeVisible()
+    }
+    const copy = await mainCopy(page)
+    expect(copy).toContain('Keep-together and keep-apart rules are never broken')
+    expect(copy).toContain('sat out 2 rounds in a row')
+  })
+
+  test('the guide and landing page describe the stacking modes and rules', async ({ page }) => {
+    await page.goto('/pickleball/how-it-works')
+    const guide = await mainCopy(page)
+    for (const claim of ['Winners play winners', 'By standing', 'Balanced teams', 'Keep friends together']) expect(guide).toContain(claim)
+    await page.goto('/pickleball')
+    const landing = await mainCopy(page)
+    for (const claim of ['winners play winners', 'Fairness you can see', 'Keep friends together']) expect(landing).toContain(claim)
   })
 
   // Spec §1.3: no competitor is named and no comparative claim is made.

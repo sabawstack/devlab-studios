@@ -1,30 +1,42 @@
 ---
+// src/pages/pickleball/rotation.astro
 import Layout from '../../layouts/Layout.astro'
+import BalancedSplitArt from '../../components/pickleball/art/BalancedSplitArt.jsx'
 import PaddleStackArt from '../../components/pickleball/art/PaddleStackArt.jsx'
+import StandingWindowArt from '../../components/pickleball/art/StandingWindowArt.jsx'
+import WinnersShuffleArt from '../../components/pickleball/art/WinnersShuffleArt.jsx'
 import { loadPageSeo } from '../../lib/content/seo'
+import { MODE_INFO, MODE_ORDER } from '../../lib/pickleball/open/modes/info'
 import { rotationExample } from '../../lib/pickleball/open/rotationExample'
 import '../../styles/pickleball-open.css'
 
-// The worked example below is computed by the real rotation engine when the
+// Every worked example below is computed by the real rotation engine when the
 // page renders (spec §11), so it can never drift from what the app does.
 const seo = await loadPageSeo('pickleball-rotation')
-const rounds = rotationExample()
+const ART = { PADDLE_STACK: PaddleStackArt, WINNERS_LOSERS: WinnersShuffleArt, BY_STANDING: StandingWindowArt, BALANCED: BalancedSplitArt }
+const DETAIL = {
+  PADDLE_STACK: 'The four who have played fewest games go on, longest wait first. The four are split so earlier partners are kept apart when another split allows it.',
+  WINNERS_LOSERS: 'Each player carries the result of their last game. Four winners go on together, else four losers, else the rest. Two winning pairs are split up: each side gets one player from each pair, so last game’s partners face each other.',
+  BY_STANDING: 'Players are ranked by today’s standings. The longest-waiting player and the three nearest in the table go on, the 1st and 4th of those four against the 2nd and 3rd.',
+  BALANCED: 'The same four as paddle stack, split so each team’s skill adds up as evenly as possible. Skill is what the player or host entered, else today’s win rate. Repeat partners break ties.',
+}
+const modes = MODE_ORDER.map((mode) => ({ mode, ...MODE_INFO[mode], detail: DETAIL[mode], Art: ART[mode], rounds: rotationExample(2, mode) }))
 
 const rules = [
-  'Fewest games first.',
-  'Then longest wait.',
-  'Anyone who has sat out 2 rounds in a row goes on next.',
-  'The four are split into teams so earlier partners are kept apart when another split allows it.',
+  'Anyone who has sat out 2 rounds in a row goes on next, in every mode.',
+  'Then each mode picks the rest of the four its own way (below).',
+  'Keep-together and keep-apart rules are never broken: a court waits, and says why, rather than break one.',
   'A late arrival starts level with whoever has played least.',
+  'The host can switch the mode at any time; it applies to the next game, never to one already on court.',
 ]
 ---
 <Layout title="How fair rotation works: Devlab Pickleball" seo={seo}>
   <div class="mx-auto max-w-5xl px-4 py-10 md:py-16">
     <section class="grid items-center gap-8 md:grid-cols-[1.2fr_1fr]">
       <div>
-        <p class="text-xs font-bold uppercase tracking-[0.14em] text-[#c6ff2e]">Paddle stack</p>
+        <p class="text-xs font-bold uppercase tracking-[0.14em] text-[#c6ff2e]">Rotation</p>
         <h1 class="mt-3 text-4xl font-bold leading-[1.1] text-white md:text-5xl">How fair rotation works</h1>
-        <p class="mt-4 text-lg text-[#b5c4e1]">Whenever a court is free, the app picks the next four players with the same few rules, every time.</p>
+        <p class="mt-4 text-lg text-[#b5c4e1]">Whenever a court is free, the app picks the next four players with the same few rules, every time. The host chooses one of four ways to pick.</p>
       </div>
       <div class="pb-anim" data-testid="pb-artwork"><PaddleStackArt className="w-full" /></div>
     </section>
@@ -41,28 +53,40 @@ const rules = [
       </ol>
     </section>
 
-    <section class="mt-14" aria-labelledby="example-heading">
-      <h2 id="example-heading" class="text-3xl font-bold text-white">A worked example</h2>
-      <p class="mt-3 max-w-2xl text-[#b5c4e1]">14 players on 3 courts, computed by the app's own rotation engine. Twelve play each round and two sit out.</p>
-      <div class="mt-6 grid gap-4 sm:grid-cols-2">
-        {rounds.map(({ round, courts, sittingOut }) => (
-          <article class="rounded-2xl border border-[#193480] p-5">
-            <h3 class="text-xl font-bold text-white">Round {round}</h3>
-            <ul class="mt-3 grid gap-2">
-              {courts.map(({ label, teamA, teamB }) => (
-                <li class="rounded-xl bg-[#11214d] px-4 py-3 text-white">
-                  <span class="block text-xs font-bold uppercase tracking-[0.1em] text-[#b5c4e1]">{label}</span>
-                  <span class="font-semibold text-[#c6ff2e]">{teamA.join(' & ')}</span>
-                  <span class="text-[#b5c4e1]"> vs </span>
-                  <span class="font-semibold text-[#8d9bff]">{teamB.join(' & ')}</span>
-                </li>
-              ))}
-            </ul>
-            <p class="mt-3 text-[#b5c4e1]">Sitting out: {sittingOut.join(', ')}</p>
-          </article>
-        ))}
-      </div>
-      <p class="mt-6 text-sm text-[#b5c4e1]">With up to 12 players per court, nobody sits out more than 2 rounds in a row. With more, the wait is shared evenly.</p>
+    <section class="mt-14" aria-labelledby="modes-heading">
+      <h2 id="modes-heading" class="text-3xl font-bold text-white">Four ways to pick the next game</h2>
+      <p class="mt-3 max-w-2xl text-[#b5c4e1]">Each example is 14 players on 3 courts for two rounds, computed by the app's own engine. Twelve play each round and two sit out.</p>
+      {modes.map(({ mode, label, summary, detail, Art, rounds }) => (
+        <section class="mt-10 rounded-3xl border border-[#193480] p-5 md:p-8" aria-labelledby={`mode-${mode}`}>
+          <div class="grid items-center gap-6 md:grid-cols-[1.4fr_1fr]">
+            <div>
+              <h3 id={`mode-${mode}`} class="text-2xl font-bold text-white">{label}</h3>
+              <p class="mt-2 text-lg text-[#c6ff2e]">{summary}</p>
+              <p class="mt-2 text-[#b5c4e1]">{detail}</p>
+            </div>
+            <div class="pb-anim mx-auto w-full max-w-[18rem]" data-testid="pb-artwork"><Art className="w-full" /></div>
+          </div>
+          <div class="mt-6 grid gap-4 sm:grid-cols-2">
+            {rounds.map(({ round, courts, sittingOut }) => (
+              <article class="rounded-2xl bg-[#0b1b34] p-4">
+                <h4 class="text-lg font-bold text-white">Round {round}</h4>
+                <ul class="mt-3 grid gap-2">
+                  {courts.map(({ label: courtLabel, teamA, teamB, winner, score }) => (
+                    <li class="rounded-xl bg-[#11214d] px-4 py-3 text-white">
+                      <span class="block text-xs font-bold uppercase tracking-[0.1em] text-[#b5c4e1]">{courtLabel} · {score} to {winner === 'A' ? teamA.join(' & ') : teamB.join(' & ')}</span>
+                      <span class="font-semibold text-[#c6ff2e]">{teamA.join(' & ')}</span>
+                      <span class="text-[#b5c4e1]"> against </span>
+                      <span class="font-semibold text-[#8d9bff]">{teamB.join(' & ')}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p class="mt-3 text-[#b5c4e1]">Sitting out: {sittingOut.join(', ')}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ))}
+      <p class="mt-6 text-sm text-[#b5c4e1]">With up to 12 players per court, nobody sits out more than 2 rounds in a row, whichever way you pick. With more, the wait is shared evenly.</p>
     </section>
 
     <div class="mt-12">
