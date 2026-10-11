@@ -1,7 +1,7 @@
 // src/pickleball-open/components/CaptainsSheet.jsx
 // The host makes and turns off court-captain links (spec §3.3). A new link's
 // secret is shown once, here; the server keeps only its hash.
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createCaptainLink, revokeCaptainLink } from '../lib/api'
 import { captainLink } from '../lib/captainKeys'
 import QrCode from './QrCode.jsx'
@@ -13,6 +13,10 @@ export default function CaptainsSheet({ code, hostKey, courts, captains, onHost,
   const [fresh, setFresh] = useState(null)
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [turningOff, setTurningOff] = useState(null)
+  // A ref, not just state: two taps in the same frame must not send two DELETEs.
+  const turningOffRef = useRef(false)
+  const [copyNote, setCopyNote] = useState(null)
 
   async function make(court) {
     setError(null)
@@ -20,6 +24,7 @@ export default function CaptainsSheet({ code, hostKey, courts, captains, onHost,
     try {
       const result = await createCaptainLink(code, hostKey, { courtId: court.id })
       setFresh({ courtLabel: court.label, label: result.label, url: captainLink(window.location.origin, code, result.captainKey) })
+      setCopyNote(null)
       onHost(result.host)
     } catch (failure) {
       setError(errorText(failure, 'Could not make the link. Try again.'))
@@ -29,23 +34,38 @@ export default function CaptainsSheet({ code, hostKey, courts, captains, onHost,
   }
 
   async function turnOff(captain) {
+    if (turningOffRef.current) return
     if (!window.confirm(`Turn off ${captain.label}'s link? It stops working straight away.`)) return
+    turningOffRef.current = true
     setError(null)
+    setTurningOff(captain.id)
     try {
       const result = await revokeCaptainLink(code, hostKey, captain.id)
       onHost(result.host)
     } catch (failure) {
       setError(errorText(failure, 'Could not turn the link off. Try again.'))
+    } finally {
+      turningOffRef.current = false
+      setTurningOff(null)
     }
   }
 
   async function share() {
     if (!fresh) return
+    setCopyNote(null)
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: fresh.label, text: `Captain link for ${fresh.courtLabel}`, url: fresh.url })
+        return
+      } catch (failure) {
+        if (failure?.name === 'AbortError') return // the host closed the share menu
+      }
+    }
     try {
-      if (navigator.share) await navigator.share({ title: fresh.label, text: `Captain link for ${fresh.courtLabel}`, url: fresh.url })
-      else await navigator.clipboard.writeText(fresh.url)
+      await navigator.clipboard.writeText(fresh.url)
+      setCopyNote('Copied')
     } catch {
-      // the link stays on screen to copy by hand, and the QR code to scan
+      setCopyNote("Couldn't copy — copy the link below")
     }
   }
 
@@ -60,10 +80,11 @@ export default function CaptainsSheet({ code, hostKey, courts, captains, onHost,
             <QrCode url={fresh.url} size={176} label={`QR code for the ${fresh.courtLabel} captain link`} />
             <p className="text-xs text-mist">The captain scans this with their phone.</p>
           </div>
+          <Button variant="neon" onClick={share}>Send link</Button>
+          {copyNote && <p role="status" className="text-sm font-semibold text-pickle-neon">{copyNote}</p>}
           <label className="grid min-w-0 gap-1 text-xs text-mist">Captain link for {fresh.courtLabel}
             <input readOnly value={fresh.url} onFocus={(event) => event.target.select()} className="min-h-11 w-full min-w-0 rounded-lg bg-ink px-3 py-2 font-mono text-xs text-white" />
           </label>
-          <Button variant="neon" onClick={share}>Send link</Button>
           <p className="text-xs text-mist">Shown once. Send it now; you can always make another.</p>
         </div>
       )}
@@ -79,7 +100,7 @@ export default function CaptainsSheet({ code, hostKey, courts, captains, onHost,
               {links.map((c) => (
                 <div key={c.id} className="mt-2 flex items-center justify-between gap-2 text-sm">
                   <span className="min-w-0 truncate text-mist">{c.label}</span>
-                  <Button variant="danger" className="!px-3" onClick={() => turnOff(c)} aria-label={`Turn off ${c.label}`}>Turn off</Button>
+                  <Button variant="danger" className="!px-3" disabled={turningOff !== null} onClick={() => turnOff(c)} aria-label={`Turn off ${c.label}`}>{turningOff === c.id ? 'Turning off…' : 'Turn off'}</Button>
                 </div>
               ))}
             </li>

@@ -546,3 +546,139 @@ test.describe('court captains (screens)', () => {
     })
   }
 })
+
+test.describe('court captains: keys survive server hiccups', () => {
+  /** Answers every socket AUTH with `type` instead of passing it to the server; everything else goes through. */
+  async function answerAuthWith(page, type) {
+    const seen = { auth: 0 }
+    await page.routeWebSocket(/\/pickleball\/rt\/open\//, (ws) => {
+      const server = ws.connectToServer()
+      ws.onMessage((message) => {
+        if (JSON.parse(String(message)).type === 'AUTH') {
+          seen.auth += 1
+          ws.send(JSON.stringify({ type }))
+        } else {
+          server.send(message)
+        }
+      })
+    })
+    return seen
+  }
+
+  async function makeCaptain(request, code, hostKey, courtId) {
+    const response = await request.post(`/api/pickleball/open/s/${code}/captains`, { headers: { 'X-Host-Key': hostKey }, data: { courtId } })
+    expect(response.status()).toBe(201)
+    return response.json()
+  }
+
+  test('a server error while the host signs in on the socket keeps the console and the key', async ({ page, context, request }) => {
+    const { code, hostKey } = await createSession(request)
+    const seen = await answerAuthWith(page, 'AUTH_ERROR')
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await expect(page.getByRole('button', { name: 'More' })).toBeVisible()
+    // The socket is dropped and opened again, so sign-in is retried with the same key.
+    await expect.poll(() => seen.auth, { timeout: 15_000 }).toBeGreaterThanOrEqual(2)
+    await expect(page.getByRole('button', { name: 'More' })).toBeVisible()
+    await page.getByTestId('court-1').getByRole('button', { name: 'Start' }).click()
+    await expect(page.getByTestId('court-1').getByRole('button', { name: 'Game over' })).toBeVisible()
+    const again = await context.newPage()
+    await again.goto(`/pickleball/s/${code}`)
+    await expect(again.getByRole('button', { name: 'More' })).toBeVisible()
+  })
+
+  test('a server error while a captain signs in on the socket keeps the captain console and the key', async ({ page, context, request }) => {
+    const { code, hostKey } = await createSession(request)
+    const host = await hostSnapshot(request, code, hostKey)
+    const { captainKey } = await makeCaptain(request, code, hostKey, host.courts[0].id)
+    const seen = await answerAuthWith(page, 'AUTH_ERROR')
+    await page.goto(`/pickleball/s/${code}#cap=${captainKey}`)
+    await expect(page.getByText('Court 1 captain')).toBeVisible()
+    await expect.poll(() => seen.auth, { timeout: 15_000 }).toBeGreaterThanOrEqual(2)
+    await expect(page.getByText('Court 1 captain')).toBeVisible()
+    await expect(page.getByText('This captain link was turned off by the host.')).toHaveCount(0)
+    const again = await context.newPage()
+    await again.goto(`/pickleball/s/${code}`)
+    await expect(again.getByText('Court 1 captain')).toBeVisible()
+  })
+
+  test('a captain key the socket refuses (AUTH_FAILED) still drops to the board and is forgotten', async ({ page, context, request }) => {
+    const { code, hostKey } = await createSession(request)
+    const host = await hostSnapshot(request, code, hostKey)
+    const { captainKey } = await makeCaptain(request, code, hostKey, host.courts[0].id)
+    await answerAuthWith(page, 'AUTH_FAILED')
+    await page.goto(`/pickleball/s/${code}#cap=${captainKey}`)
+    await expect(page.getByText('This captain link was turned off by the host.')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Start' })).toHaveCount(0)
+    const again = await context.newPage()
+    await again.goto(`/pickleball/s/${code}`)
+    await expect(again.getByText('Walk on now').first()).toBeVisible()
+    await expect(again.getByText('Court 1 captain')).toHaveCount(0)
+  })
+
+  test('a host key the socket refuses (AUTH_FAILED) still drops to the board', async ({ page, request }) => {
+    const { code, hostKey } = await createSession(request)
+    await answerAuthWith(page, 'AUTH_FAILED')
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await expect(page.getByText("That host link isn't valid for this session.")).toBeVisible()
+    await expect(page.getByRole('button', { name: 'More' })).toHaveCount(0)
+  })
+
+  test('a turned-off captain link falls back to the live captain key this phone already had', async ({ page, request, baseURL }) => {
+    const { code, hostKey } = await createSession(request)
+    const host = await hostSnapshot(request, code, hostKey)
+    const old = await makeCaptain(request, code, hostKey, host.courts[0].id)
+    const live = await makeCaptain(request, code, hostKey, host.courts[0].id)
+    expect(live.label).toBe('Court 1 captain 2')
+    expect((await request.delete(`/api/pickleball/open/s/${code}/captains/${old.captainId}`, { headers: { 'X-Host-Key': hostKey, Origin: baseURL } })).status()).toBe(200)
+    await page.goto(`/pickleball/s/${code}#cap=${live.captainKey}`)
+    await expect(page.getByText('Court 1 captain 2')).toBeVisible()
+    await page.goto('about:blank')
+    await page.goto(`/pickleball/s/${code}#cap=${old.captainKey}`)
+    await expect(page.getByText('Court 1 captain 2')).toBeVisible()
+    await expect(page.getByText('This captain link was turned off by the host.')).toHaveCount(0)
+    await page.goto('about:blank')
+    await page.goto(`/pickleball/s/${code}`)
+    await expect(page.getByText('Court 1 captain 2')).toBeVisible()
+  })
+
+  test('a host who opens a captain link stays the host and does not keep the captain key', async ({ page, request }) => {
+    const { code, hostKey } = await createSession(request)
+    const host = await hostSnapshot(request, code, hostKey)
+    const { captainKey } = await makeCaptain(request, code, hostKey, host.courts[0].id)
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await expect(page.getByRole('button', { name: 'More' })).toBeVisible()
+    await page.goto('about:blank')
+    await page.goto(`/pickleball/s/${code}#cap=${captainKey}`)
+    await expect(page.getByRole('button', { name: 'More' })).toBeVisible()
+    expect(await page.evaluate(() => localStorage.getItem('devlab-pickleball-captain') ?? '')).not.toContain(captainKey)
+  })
+
+  test('sending a captain link says whether it was copied, and turning one off sends one request', async ({ page, request }) => {
+    const { code, hostKey } = await createSession(request)
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'share', { value: undefined, configurable: true })
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: async (text) => { if (window.failCopy) throw new Error('denied'); window.copied = text } },
+      })
+      window.confirm = () => true
+    })
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await page.getByRole('button', { name: 'More' }).click()
+    await page.getByRole('button', { name: 'Court captains' }).click()
+    await page.getByRole('button', { name: 'Make a link for Court 1' }).click()
+    await page.getByRole('button', { name: 'Send link' }).click()
+    await expect(page.getByText('Copied', { exact: true })).toBeVisible()
+    expect(await page.evaluate(() => window.copied)).toContain('#cap=')
+    await page.evaluate(() => { window.failCopy = true })
+    await page.getByRole('button', { name: 'Send link' }).click()
+    await expect(page.getByText("Couldn't copy — copy the link below")).toBeVisible()
+
+    let deletes = 0
+    page.on('request', (r) => { if (r.method() === 'DELETE' && r.url().includes('/captains/')) deletes += 1 })
+    // Two taps in the same frame, before React re-renders the button as disabled.
+    await page.getByRole('button', { name: 'Turn off Court 1 captain' }).evaluate((button) => { button.click(); button.click() })
+    await expect(page.getByRole('button', { name: 'Turn off Court 1 captain' })).toHaveCount(0)
+    expect(deletes).toBe(1)
+  })
+})

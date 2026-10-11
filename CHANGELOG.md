@@ -52,6 +52,10 @@ decided against that surface specifically:
 ## [Unreleased]
 
 ### Fixed
+- Open play: a server error while a host or court captain signs in on the live connection no longer costs them their key. The server now answers `AUTH_ERROR` (not `AUTH_FAILED`), and the page keeps the key and reconnects. Only a refusal (HTTP 403 or `AUTH_FAILED`) forgets a key.
+- Open play: a captain link that was turned off falls back to a live captain key this phone already saved for the session. A host opening a captain link no longer stores the captain key.
+- Open play court captains sheet: "Turn off" sends one request however fast it is tapped, and "Send link" says "Copied" or "Couldn't copy — copy the link below". The consoles say "Connecting…" on first load instead of "Reconnecting…".
+- The open play host console's More menu stays on screen on phones; it was anchored to the button and ran off the left edge when the header wrapped.
 - **Attaching a file, sending, and then writing a second reply no longer shows files that will not be sent.** `attachmentIds` was cleared on send but `AttachmentPicker` kept its own list, so the previous reply's files stayed listed under the box while attached to nothing. The picker is now remounted after a send. Found by the new end-to-end test, not by review.
 - **The e2e environment applies migrations.** Nothing did, so the local D1 sat at `0015` while production was on `0016` and `mailbox_outbound_attachments` did not exist locally — the attachment upload failed there with a generic 500 that said nothing about the cause. A suite one migration behind is worse than no suite: it reports failures unrelated to the code under test, and would pass a feature that is broken in production for the mirror-image reason.
 - The rotation guide now says that winners play winners only draws from the eight players waiting longest, so a game can still mix winners and losers, and that by standing takes four neighbouring ranks.
@@ -102,6 +106,7 @@ decided against that surface specifically:
 - Open play engine: "balanced teams" stacking splits each four so summed skill is as even as possible (entered skill, else today's win rate, else neutral), with repeated partners breaking ties. All four modes share one set of names and one-line explanations.
 
 ### Changed
+- Open play rate limits are sized for a whole club on one Wi-Fi address: live connections 300 per minute per IP (was 30) and public board reads 1,200 per minute per IP (was 60), so the 5-second polling fallback no longer locks a club out.
 - The Playwright worker server now applies the pickleball D1 migrations locally (`wrangler d1 migrations apply devlab-pickleball --local`) before starting, so the open-play e2e tests run against the current schema.
 - Pickleball runbook: a SQL force-delete leaves the session's Durable Object serving its cached copy until it hibernates or is evicted, expired rows can sit in D1 for up to about a day until the purge (already hidden), and what a 429 on host commands means.
 - Open play retention wording now says what the code does: a session is deleted from the live service 7 days after the last change to it (any change resets the clock), not 7 days after the last game. The privacy policy gains a short open-play section: no accounts, names shown on a public board, deletion after 7 days with backups kept up to 30, and delete any time.

@@ -8,7 +8,8 @@ export const GET: APIRoute = async ({ request, params }) => {
   const env = getEnv()
   try {
     if (request.headers.get('Upgrade') !== 'websocket') return jsonResponse({ error: 'Expected a WebSocket upgrade request.' }, 400)
-    const rate = await checkRateLimit(env, 'open-ws', clientIp(request), { limit: 30, windowMs: 60_000 })
+    // A flood guard, not a quota: a whole club on one Wi-Fi shares one address.
+    const rate = await checkRateLimit(env, 'open-ws', clientIp(request), { limit: 300, windowMs: 60_000 })
     if (rate.limited) return rateLimitedResponse('Too many connections. Try again shortly.', rate.retryAfterSeconds)
     const code = codeFrom(params)
     if (!code) return notFound()

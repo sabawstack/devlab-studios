@@ -55,12 +55,12 @@ recovered. Viewers need only the public code.
 | Route | Purpose |
 |---|---|
 | `POST /api/pickleball/open/sessions` | Create a session (Turnstile; 10 per IP per day; fails closed if `RATE_LIMITER` is absent) |
-| `GET /api/pickleball/open/s/:code/state` | Viewer snapshot (60/min/IP; polled every 5 s when the socket drops) |
+| `GET /api/pickleball/open/s/:code/state` | Viewer snapshot (1200/min/IP, sized for a club on one Wi-Fi; polled every 5 s when the socket drops) |
 | `GET /api/pickleball/open/s/:code/host` | Host snapshot |
 | `POST /api/pickleball/open/s/:code/commands` | Host commands (120/min/session) |
 | `GET /api/pickleball/open/s/:code/results.csv` | Results CSV |
 | `DELETE /api/pickleball/open/s/:code/session` | Host deletes the session |
-| `WS /pickleball/rt/open/:code` | Live snapshots (30/min/IP) |
+| `WS /pickleball/rt/open/:code` | Live snapshots (300 connects/min/IP, sized for a club on one Wi-Fi) |
 
 Pages: `/pickleball` (landing), `/pickleball/how-it-works`,
 `/pickleball/rotation`, `/pickleball/new`, `/pickleball/s/[code]`. Route

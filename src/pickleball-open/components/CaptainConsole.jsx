@@ -36,7 +36,7 @@ export default function CaptainConsole({ code, captainKey, snapshot, status, onS
         <h1 className="truncate text-2xl font-bold">{snapshot.viewer.name}</h1>
         <p className="text-sm text-mist">
           {snapshot.captain.label}
-          {status !== 'open' && <span className="ml-2 text-amber-200">· Reconnecting…</span>}
+          {status !== 'open' && <span className="ml-2 text-amber-200">· {status === 'connecting' ? 'Connecting…' : 'Reconnecting…'}</span>}
           {pending > 0 && <span className="ml-2 text-amber-200">· Sending {pending}…</span>}
           {ended && <span className="ml-2 text-pickle-neon">· Ended</span>}
         </p>

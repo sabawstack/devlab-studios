@@ -363,8 +363,9 @@ export class OpenSessionDO extends DurableObject<Env> {
         }
       } catch (error) {
         this.logWsError(error, attachment.code, 'AUTH')
+        // Not a refused key: the client keeps it and retries (AUTH_FAILED would make it forget the key).
         try {
-          ws.send(JSON.stringify({ type: 'AUTH_FAILED' }))
+          ws.send(JSON.stringify({ type: 'AUTH_ERROR' }))
         } catch {
           // socket already closed
         }

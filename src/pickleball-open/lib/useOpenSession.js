@@ -15,8 +15,12 @@ const GONE = 4404
  *
  * A captain link the host turned off (403 on poll, AUTH_FAILED, or
  * CAPTAIN_REVOKED on the socket) drops to the public board: captainRevoked.
+ *
+ * Only a refusal costs a key: an HTTP 403 or AUTH_FAILED. A 5xx, a network
+ * failure or AUTH_ERROR (the server failed while checking the key) keeps it:
+ * the socket is closed and the usual poll-and-reconnect path takes over.
  */
-export function useOpenSession(code, hostKey, { onRejected, captainKey = null } = {}) {
+export function useOpenSession(code, hostKey, { onRejected, onCaptainRevoked, captainKey = null } = {}) {
   const [status, setStatus] = useState('connecting')
   const [viewer, setViewer] = useState(null)
   const [host, setHost] = useState(null)
@@ -27,9 +31,11 @@ export function useOpenSession(code, hostKey, { onRejected, captainKey = null } 
   const [revokedCaptainKeys, setRevokedCaptainKeys] = useState([])
   const versionRef = useRef(-1)
   const onRejectedRef = useRef(onRejected)
+  const onCaptainRevokedRef = useRef(onCaptainRevoked)
   useEffect(() => {
     onRejectedRef.current = onRejected
-  }, [onRejected])
+    onCaptainRevokedRef.current = onCaptainRevoked
+  }, [onRejected, onCaptainRevoked])
 
   /** True when this version is at least as new as anything already shown; records it. */
   const accept = useCallback((version) => {
@@ -76,6 +82,7 @@ export function useOpenSession(code, hostKey, { onRejected, captainKey = null } 
     function revokeCaptain() {
       captainDenied = true
       setRevokedCaptainKeys((keys) => (keys.includes(captainKey) ? keys : [...keys, captainKey]))
+      onCaptainRevokedRef.current?.(captainKey)
     }
 
     function end() {
@@ -146,6 +153,9 @@ export function useOpenSession(code, hostKey, { onRejected, captainKey = null } 
           if (hostKey) reject()
           else revokeCaptain()
         }
+        // The server failed while checking the key; the key may well be fine. Drop this
+        // socket and let onclose poll and reconnect, which signs in again.
+        if (message.type === 'AUTH_ERROR') socket.close()
       }
       socket.onclose = (event) => {
         if (cancelled || ended) return

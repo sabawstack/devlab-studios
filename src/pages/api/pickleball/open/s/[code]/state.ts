@@ -7,7 +7,8 @@ import { jsonResponse } from '../../../../../../worker/utils/responses.js'
 export const GET: APIRoute = async ({ request, params }) => {
   const env = getEnv()
   try {
-    const rate = await checkRateLimit(env, 'open-state', clientIp(request), { limit: 60, windowMs: 60_000 })
+    // Sized for a club on one Wi-Fi: 60 phones polling every 5 s while the socket is down.
+    const rate = await checkRateLimit(env, 'open-state', clientIp(request), { limit: 1200, windowMs: 60_000 })
     if (rate.limited) return rateLimitedResponse('Too many requests. Try again shortly.', rate.retryAfterSeconds)
     const code = codeFrom(params)
     if (!code) return notFound()

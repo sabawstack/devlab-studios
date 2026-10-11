@@ -91,7 +91,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
           <h1 className="truncate text-xl font-bold sm:text-2xl">{viewer.name}</h1>
           <p className="text-xs text-mist">
             {countLabel(host.players.filter((p) => p.status !== 'LEFT').length, 'player')} · {countLabel(host.courts.filter((c) => c.enabled).length, 'court')}
-            {status !== 'open' && <span className="ml-2 text-amber-200">· Reconnecting…</span>}
+            {status !== 'open' && <span className="ml-2 text-amber-200">· {status === 'connecting' ? 'Connecting…' : 'Reconnecting…'}</span>}
             {pending > 0 && <span className="ml-2 text-amber-200">· Sending {pending}…</span>}
             {viewer.status === 'ENDED' && <span className="ml-2 text-pickle-neon">· Ended</span>}
           </p>

@@ -9,28 +9,29 @@ import HostConsole from './components/HostConsole.jsx'
 import ViewerBoard from './components/ViewerBoard.jsx'
 
 export default function SessionApp({ code }) {
-  // Every key is read once, before anything is written: the saved host key is
-  // the fallback if the link's key turns out to be wrong (a mistyped or stale
-  // link must not cost the host the key this phone already had).
-  const [keys] = useState(() => {
-    const captainFragment = captainKeyFromHash(window.location.hash)
-    return {
-      fragment: hostKeyFromHash(window.location.hash),
-      saved: hostKeyFor(code),
-      captainFragment,
-      captain: captainFragment ?? captainKeyFor(code),
-    }
-  })
+  // Every key is read once, before anything is written: a saved key is the
+  // fallback if the link's key turns out to be wrong (a mistyped, stale or
+  // turned-off link must not cost this phone the key it already had).
+  const [keys] = useState(() => ({
+    fragment: hostKeyFromHash(window.location.hash),
+    saved: hostKeyFor(code),
+    captainFragment: captainKeyFromHash(window.location.hash),
+    captainSaved: captainKeyFor(code),
+  }))
   const [fellBack, setFellBack] = useState(false)
+  const [captainFellBack, setCaptainFellBack] = useState(false)
   const hostKey = keys.fragment && !fellBack ? keys.fragment : keys.saved
   const canFallBack = Boolean(keys.fragment && keys.saved && keys.saved !== keys.fragment && !fellBack)
   // A host key always wins: a host who opens a captain link still hosts.
-  const captainKey = hostKey ? null : keys.captain
+  const captainKey = hostKey ? null : (keys.captainFragment && !captainFellBack ? keys.captainFragment : keys.captainSaved)
 
   const onRejected = useCallback((key) => {
     if (key === keys.fragment && keys.saved && keys.saved !== keys.fragment) setFellBack(true)
   }, [keys])
-  const { status, viewer, host, captain, captainRevoked, authFailed, setHost, setCaptain } = useOpenSession(code, hostKey, { onRejected, captainKey })
+  const onCaptainRevoked = useCallback((key) => {
+    if (key === keys.captainFragment && keys.captainSaved && keys.captainSaved !== keys.captainFragment) setCaptainFellBack(true)
+  }, [keys])
+  const { status, viewer, host, captain, captainRevoked, authFailed, setHost, setCaptain } = useOpenSession(code, hostKey, { onRejected, onCaptainRevoked, captainKey })
 
   // Keys are removed from the address bar so they are never left on screen or
   // in a screenshot of the URL (spec §3.3), and saved straight away so closing
@@ -42,7 +43,8 @@ export default function SessionApp({ code }) {
       const previousName = hostedSessions().find((entry) => entry.code === code)?.name ?? ''
       rememberHostedSession({ code, hostKey: keys.fragment, name: previousName })
     }
-    if (keys.captainFragment) rememberCaptainKey(code, keys.captainFragment)
+    // A host opening a captain link stays the host; the captain key is not kept.
+    if (keys.captainFragment && !keys.fragment && !keys.saved) rememberCaptainKey(code, keys.captainFragment)
   }, [keys, code])
 
   useEffect(() => {
@@ -58,6 +60,9 @@ export default function SessionApp({ code }) {
   useEffect(() => {
     if (fellBack) rememberHostedSession({ code, hostKey: keys.saved, name: hostedSessions().find((entry) => entry.code === code)?.name ?? '' })
   }, [fellBack, keys, code])
+  useEffect(() => {
+    if (captainFellBack) rememberCaptainKey(code, keys.captainSaved)
+  }, [captainFellBack, keys, code])
 
   if (!code || status === 'not-found') return <ExpiredNotice />
   if (host && hostKey && !authFailed) return <HostConsole code={code} hostKey={hostKey} host={host} status={status} onHost={setHost} />
