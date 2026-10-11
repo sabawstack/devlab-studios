@@ -103,12 +103,16 @@ const linkBase = 'site-navbar__link rounded-full px-3 py-2 text-sm font-semibold
 
 <script>
   const logo = document.getElementById('navbar-logo') as HTMLImageElement | null
-  logo?.addEventListener('error', () => {
-    if (logo.dataset.fallbackSrc) {
-      logo.onerror = null
+  const useFallbackLogo = () => {
+    if (logo?.dataset.fallbackSrc && logo.src !== new URL(logo.dataset.fallbackSrc, location.href).href) {
       logo.src = logo.dataset.fallbackSrc
     }
-  }, { once: true })
+  }
+  logo?.addEventListener('error', useFallbackLogo, { once: true })
+  // This script runs after the image may already have failed — e.g. a network
+  // whose DNS does not resolve *.r2.dev fails instantly — and an `error` event
+  // that fired before the listener existed is never replayed.
+  if (logo?.complete && logo.naturalWidth === 0) useFallbackLogo()
 
   const toggle = document.getElementById('mobile-nav-toggle')
   const panel = document.getElementById('mobile-navigation')

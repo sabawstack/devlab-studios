@@ -58,6 +58,8 @@ decided against that surface specifically:
 - Open play: the host console now loads and stays current over 5-second polling when the live connection cannot open, not only over the WebSocket; snapshots older than the one on screen are ignored.
 - Open play: the host key from a link is saved the moment the page opens, the address keeps its query string when the key is removed from it, and a wrong key in a link falls back to the key this phone already saved instead of forgetting it.
 - Open play host console: "End session" asks for confirmation first; players waiting their turn are labelled "Waiting" rather than "Playing"; an empty court on an ended session says "Session ended"; a lost connection reads "Couldn't reach the server" instead of the browser's raw error. The create screen says how many players to remove above the 128 cap and will not start until they are.
+- The open play QR code is a fixed square again. Inside a row beside text it could shrink, which squashed it sideways and could stop phones scanning it; it also has a slightly wider white margin now.
+- The site logo falls back to the copy bundled with the site when the R2 copy cannot load. The fallback only listened for a failure that happened after the page script ran, so on networks whose DNS does not resolve `*.r2.dev` the image had already failed and the header showed a broken logo; the footer hid its logo instead of falling back.
 - Open play: a rejected Turnstile check on session creation now logs its reason (`pickleball_open.turnstile_rejected`), so a "Verification failed" on a deployed environment can be traced to a hostname, action or token problem.
 
 ### Security

@@ -1,5 +1,6 @@
 ---
 import { brandingAssets } from '../config/branding.js'
+import devlabStudiosLogo from '../assets/devlabstudios-logo-only.png'
 import type { SiteSettingsData } from '../lib/content/siteSettings'
 
 interface Props {
@@ -38,7 +39,7 @@ const socialIcon = (label: string) => {
     <div class="flex flex-col gap-8 text-center md:flex-row md:items-start md:justify-between md:text-left">
       <div class="flex flex-1 flex-col items-center md:items-start">
         <div class="mb-4 flex items-center gap-3">
-          <img id="footer-logo" src={brandingAssets.logoOnlyUrl} alt="" class="h-10 w-10 object-contain" loading="lazy" width="40" height="40" />
+          <img id="footer-logo" src={brandingAssets.logoOnlyUrl} data-fallback-src={devlabStudiosLogo.src} alt="" class="h-10 w-10 object-contain" loading="lazy" width="40" height="40" />
           <p class="text-lg font-semibold tracking-tight text-white">{footer.companyName || 'DevLab Studios'}</p>
         </div>
         <p class="mb-3 max-w-md text-slate-400">
@@ -101,5 +102,13 @@ const socialIcon = (label: string) => {
 
 <script>
   const logo = document.getElementById('footer-logo') as HTMLImageElement | null
-  logo?.addEventListener('error', () => { logo.style.display = 'none' }, { once: true })
+  // Same fallback as the navbar logo: swap to the copy bundled with the site,
+  // including when the image already failed before this script ran.
+  const useFallbackLogo = () => {
+    if (logo?.dataset.fallbackSrc && logo.src !== new URL(logo.dataset.fallbackSrc, location.href).href) {
+      logo.src = logo.dataset.fallbackSrc
+    }
+  }
+  logo?.addEventListener('error', useFallbackLogo, { once: true })
+  if (logo?.complete && logo.naturalWidth === 0 && logo.currentSrc) useFallbackLogo()
 </script>
