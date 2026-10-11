@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { stackingModeSchema } from './commands'
 
 export const createSessionSchema = z.object({
   name: z.string().trim().min(1).max(60),
@@ -6,10 +7,11 @@ export const createSessionSchema = z.object({
   location: z.string().trim().max(120).nullable().optional(),
   courtCount: z.number().int().min(1).max(16),
   settings: z.object({
-    // Phase 1 ships paddle stack only (spec §14); later phases widen this literal.
-    mode: z.literal('PADDLE_STACK'),
+    mode: stackingModeSchema,
     target: z.union([z.literal(11), z.literal(15), z.literal(21)]),
     scoringStyle: z.enum(['SIDEOUT', 'RALLY']),
+    // Optional: older clients send no value and get the default (on).
+    selfCheckIn: z.boolean().optional(),
   }),
   players: z.array(z.object({
     name: z.string().max(200),

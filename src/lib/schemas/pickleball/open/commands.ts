@@ -3,6 +3,8 @@ import { z } from 'zod'
 const id = z.string().min(1).max(64)
 const side = z.enum(['A', 'B'])
 const score = z.number().int().min(0).max(99).nullable()
+export const stackingModeSchema = z.enum(['PADDLE_STACK', 'WINNERS_LOSERS', 'BY_STANDING', 'BALANCED'])
+const rule = z.object({ kind: z.enum(['TOGETHER', 'APART']), playerIds: z.tuple([id, id]) })
 
 export const commandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('ADD_PLAYERS'), names: z.array(z.string().max(200)).min(1).max(128) }),
@@ -17,6 +19,11 @@ export const commandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('EDIT_RESULT'), matchId: id, winner: side, scoreA: score, scoreB: score }),
   z.object({ type: z.literal('ABANDON_MATCH'), matchId: id }),
   z.object({ type: z.literal('END_SESSION') }),
+  z.object({ type: z.literal('SET_MODE'), mode: stackingModeSchema }),
+  z.object({ type: z.literal('SET_SELF_CHECK_IN'), enabled: z.boolean() }),
+  z.object({ type: z.literal('SET_PLAYER_SKILL'), playerId: id, skill: z.number().min(1).max(8).nullable() }),
+  z.object({ type: z.literal('ADD_RULE'), rule }),
+  z.object({ type: z.literal('REMOVE_RULE'), rule }),
 ])
 
 export const commandEnvelopeSchema = z.object({

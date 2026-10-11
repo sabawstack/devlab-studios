@@ -70,6 +70,7 @@ decided against that surface specifically:
 - **Open play: anyone holding the public QR code could lock the host out.** Host commands were limited to 120 per minute per session, counted before the host key was checked, so a stranger sending junk could use up the host's allowance. The session limit now counts only commands with a valid host key, and every host route also has its own per-address limit (120 per minute) checked first.
 
 ### Added
+- Open play API: the host can switch stacking mode mid-session (applies to the next game only), add and remove keep-together/keep-apart rules, turn self check-in on or off, and set a player's skill; sessions can be created in any of the four modes.
 - Open play engine: "winners play winners" stacking: winners meet winners and losers meet losers, with the two pairs shuffled so last game's partners face each other; the sit-out guard and keep-together/apart still apply.
 - Open play engine: "by standing" stacking: players close in today's standings play each other, 1st and 4th against 2nd and 3rd, without ever letting anyone sit out more than 2 rounds in a row.
 - Open play engine: keep-together and keep-apart rules are hard constraints for every way of picking players; a court that no four can fill without breaking one waits with a reason instead of breaking it.

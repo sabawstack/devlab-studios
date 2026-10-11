@@ -1,9 +1,10 @@
 import type { OpenCommand } from '../../schemas/pickleball/open/commands'
-import { busyPlayerIds, gamesPlayed, matchIncludes } from './fairness'
+import { busyPlayerIds, gamesPlayed, matchIncludes, pairKey } from './fairness'
 import { addProposal, fillProposals, proposeForCourt } from './propose'
 import { cleanName } from './roster'
+import { activeRules, keepsRules, ruleViolation } from './rules'
 import { validateResult } from './scoreValidation'
-import { addMs, LIMITS, type CommandContext, type OpenMatch, type OpenPlayer, type OpenSessionState, type Team } from './types'
+import { addMs, LIMITS, type CommandContext, type OpenMatch, type OpenPlayer, type OpenSessionState, type PairRule, type Team } from './types'
 
 type Failure = { ok: false; status: 400 | 404 | 409; error: string }
 export type CommandResult = { ok: true; state: OpenSessionState } | Failure
@@ -23,7 +24,7 @@ function withPlayers(state: OpenSessionState, ids: ReadonlySet<string>, patch: P
   return { ...state, players: state.players.map((p) => (ids.has(p.id) ? { ...p, ...patch } : p)) }
 }
 
-function minActiveGames(state: OpenSessionState, exceptId?: string): number {
+export function minActiveGames(state: OpenSessionState, exceptId?: string): number {
   const games = state.players
     .filter((p) => p.status !== 'LEFT' && p.id !== exceptId)
     .map((p) => gamesPlayed(p, state.matches))
@@ -31,7 +32,7 @@ function minActiveGames(state: OpenSessionState, exceptId?: string): number {
 }
 
 /** Bring a returning player level with everyone else: raise their offset, never lower it. */
-function returnLevel(state: OpenSessionState, target: OpenPlayer, ctx: CommandContext): OpenSessionState {
+export function returnLevel(state: OpenSessionState, target: OpenPlayer, ctx: CommandContext): OpenSessionState {
   const shortfall = minActiveGames(state, target.id) - gamesPlayed(target, state.matches)
   const patch: Partial<OpenPlayer> = {
     status: 'ACTIVE', waitingSince: ctx.now,
@@ -90,7 +91,47 @@ function editProposal(state: OpenSessionState, matchId: string, teamA: Team, tea
     if (p.status !== 'ACTIVE') return fail(409, `${p.name} is not available.`)
     if (busyElsewhere.has(id)) return fail(409, `${p.name} is already on another court.`)
   }
+  const violation = ruleViolation(teamA, teamB, state)
+  if (violation) return fail(409, violation)
   return ok(withMatch(state, { ...match, teamA, teamB }))
+}
+
+function sameRule(a: PairRule, b: PairRule): boolean {
+  return a.kind === b.kind && pairKey(...a.playerIds) === pairKey(...b.playerIds)
+}
+
+function withRules(state: OpenSessionState, rules: readonly PairRule[]): OpenSessionState {
+  return { ...state, settings: { ...state.settings, rules } }
+}
+
+function addRule(state: OpenSessionState, rule: PairRule): CommandResult {
+  const [a, b] = rule.playerIds
+  if (a === b) return fail(400, 'Pick two different players.')
+  const pa = state.players.find((p) => p.id === a)
+  const pb = state.players.find((p) => p.id === b)
+  if (!pa || !pb) return fail(404, 'Player not found.')
+  const gone = [pa, pb].find((p) => p.status === 'LEFT')
+  if (gone) return fail(409, `${gone.name} has left the session.`)
+  const rules = state.settings.rules
+  if (rules.some((r) => sameRule(r, rule))) return ok(state)
+  if (rules.length >= LIMITS.maxRules) return fail(409, `A session can have at most ${LIMITS.maxRules} rules.`)
+  if (rules.some((r) => pairKey(...r.playerIds) === pairKey(a, b))) {
+    return fail(409, `${pa.name} and ${pb.name} already have the opposite rule. Remove it first.`)
+  }
+  if (rule.kind === 'TOGETHER') {
+    const taken = [pa, pb].find((p) => rules.some((r) => r.kind === 'TOGETHER' && r.playerIds.includes(p.id)))
+    if (taken) return fail(409, `${taken.name} already has a keep-together partner.`)
+  }
+  const next = withRules(state, [...rules, { kind: rule.kind, playerIds: [a, b] }])
+  const active = activeRules(next)
+  // A game not yet started that now breaks a rule is withdrawn; finalizeCommand proposes again.
+  return ok(withoutMatches(next, (m) => m.status === 'PROPOSED' && !keepsRules(m.teamA, m.teamB, active)))
+}
+
+function removeRule(state: OpenSessionState, rule: PairRule): CommandResult {
+  const rules = state.settings.rules
+  if (!rules.some((r) => sameRule(r, rule))) return fail(404, 'That rule is not set.')
+  return ok(withRules(state, rules.filter((r) => !sameRule(r, rule))))
 }
 
 function recordResult(state: OpenSessionState, command: Extract<OpenCommand, { type: 'RECORD_RESULT' | 'EDIT_RESULT' }>, ctx: CommandContext): CommandResult {
@@ -185,6 +226,21 @@ export function applyCommand(state: OpenSessionState, command: OpenCommand, ctx:
     }
     case 'END_SESSION':
       return ok({ ...withoutMatches(state, (m) => m.status === 'PROPOSED'), status: 'ENDED' })
+    case 'SET_MODE':
+      // Applies to the next proposal only (spec §5.2): nothing proposed or playing is rewritten.
+      return ok({ ...state, settings: { ...state.settings, mode: command.mode } })
+    case 'SET_SELF_CHECK_IN':
+      return ok({ ...state, settings: { ...state.settings, selfCheckIn: command.enabled } })
+    case 'SET_PLAYER_SKILL': {
+      const target = state.players.find((p) => p.id === command.playerId)
+      if (!target) return fail(404, 'Player not found.')
+      const skill = command.skill === null ? null : Math.round(command.skill * 100) / 100
+      return ok(withPlayers(state, new Set([target.id]), { skill }))
+    }
+    case 'ADD_RULE':
+      return addRule(state, command.rule)
+    case 'REMOVE_RULE':
+      return removeRule(state, command.rule)
   }
 }
 
