@@ -13,6 +13,74 @@ not an official USA Pickleball rating, DUPR, UTR-P, or Elo system. The scoring
 engine aligns with standard side-out scoring concepts but the software is not
 USA-Pickleball-certified.
 
+## Free open play (2026-10)
+
+Spec: `docs/superpowers/specs/2026-10-11-pickleball-free-open-play-design.md`.
+
+**Purpose.** A free, no-login way to run doubles open play. A host creates a
+session at `/pickleball/new`, players scan a QR code to watch a live board at
+`/pickleball/s/{code}`, and the host records one final score per game. The
+session is deleted 7 days after its last activity. The logged-in operator app
+described in the rest of this document is **legacy until Phase 5** of that spec
+and is untouched by this feature; the two share only the `PICKLEBALL_DB`
+database and the Worker.
+
+**Tables** (migration `0016_open_sessions.sql`): `open_sessions`,
+`open_courts`, `open_players`, `open_matches` and `open_idempotency`. None has a
+user or organization column, and every child table cascades from
+`open_sessions`, so purging a session is one `DELETE`. Enum CHECKs are written
+wider than Phase 1 uses (`kind` already allows `TOURNAMENT`) because a CHECK
+cannot be widened on D1 (see "Schema constraint" below).
+
+**`OpenSessionDO` pattern** (`src/worker/pickleball/open/OpenSessionDO.ts`,
+binding `OPEN_SESSION`, wrangler migration tag `v3`, one object per session via
+`idFromName(publicCode)`). D1 stays the source of truth. The DO loads the
+session from D1 once, then serves from memory. Commands run through a serial
+queue: each is validated against the in-memory state by the pure reducer
+(`src/lib/pickleball/open/reducer.ts`), only the changed rows are written in one
+`db.batch()` (`persistDiff`), memory is updated **after** the batch succeeds,
+and the new snapshot is broadcast from memory. There is no per-command reload.
+Sockets hibernate; after eviction the DO reloads from D1 on the next request.
+A deleted or purged session closes its sockets with code `4404`. Retried
+commands are deduplicated through `open_idempotency`.
+
+**Host key model.** The host holds a 16-byte random secret, shown once, carried
+in the URL fragment and kept in the host's `localStorage`. Only its SHA-256 is
+stored in `open_sessions.host_key_hash`. It is sent as the `X-Host-Key` header
+over HTTP and in the `AUTH` message on the WebSocket. A lost key cannot be
+recovered. Viewers need only the public code.
+
+**Routes.**
+
+| Route | Purpose |
+|---|---|
+| `POST /api/pickleball/open/sessions` | Create a session (Turnstile; 10 per IP per day; fails closed if `RATE_LIMITER` is absent) |
+| `GET /api/pickleball/open/s/:code/state` | Viewer snapshot (60/min/IP; polled every 5 s when the socket drops) |
+| `GET /api/pickleball/open/s/:code/host` | Host snapshot |
+| `POST /api/pickleball/open/s/:code/commands` | Host commands (120/min/session) |
+| `GET /api/pickleball/open/s/:code/results.csv` | Results CSV |
+| `DELETE /api/pickleball/open/s/:code/session` | Host deletes the session |
+| `WS /pickleball/rt/open/:code` | Live snapshots (30/min/IP) |
+
+Pages: `/pickleball` (landing), `/pickleball/how-it-works`,
+`/pickleball/rotation`, `/pickleball/new`, `/pickleball/s/[code]`. Route
+failures go through `openErrorResponse` (`routeHelpers.ts`), which logs the
+detail and returns a generic 500.
+
+**Retention and purge.** Every command moves `last_activity_at` and
+`expires_at` forward; a session expires 7 days after its last change, and reads
+already ignore rows past `expires_at`. `src/worker/pickleball/open/purge.ts`
+runs from the daily cron in `src/worker.ts` and deletes expired sessions in
+batches. Each `DELETE` is guarded by `expires_at`, so a session revived between
+the `SELECT` and the `DELETE` survives. It then evicts each deleted session's DO
+and logs `pickleball_open.purge`.
+
+**Domain logic** (`src/lib/pickleball/open/`) is pure and framework-free: score
+validation (sudden death and win by 2), roster parsing, standings (win rate,
+then per-game point difference, per-game points, head-to-head, name),
+paddle-stack rotation with a two-round sit-out guard, the reducer, snapshots,
+diffs and the results CSV.
+
 ## Foundational pieces
 
 1. **UI shell** — a React Router SPA island (`src/pickleball-app/`), mounted
@@ -186,6 +254,11 @@ full role→permission matrix.
 | A | Public pages — landing & guide rewrite, illustration system, request-access form, sign-in exit, services CTA | Complete |
 | B | Fixed pairs in Open Play — `session_pairs`, pair-aware queue/eligibility/assignment, pair statistics, guide gains a pairs section | Complete |
 | C1 | Tournaments, round robin — `tournament_format`/`bracket_locked_at`, `tournament_entrants`/`tournament_fixtures`, seeding, fixture generation and court assignment, OPI-neutral finishing, standings, operator UI | Complete |
+| C2 | Tournaments, single elimination — pure bracket generation and advancement (`94ac8d0`), persistence, play and correction (`81d6a70`), stranded-bracket fixes (`8568498`, `8a361e7`) | Complete |
+| C3 | Tournaments, pools to bracket — seeded qualification from pools into a bracket (`6d0a026`) | Complete |
+| C4 | Tournaments, double elimination — losers bracket (`73e7608`, `bbe4abc`) | Complete |
+| C5 | Public and TV bracket view, tournament documentation (`0c2ae5d`) | Complete |
+| Open play | Free, no-login open play — `open_*` tables, `OpenSessionDO`, live QR board, 7-day purge (migration `0016`); the operator app above is legacy until Phase 5 of that spec | Phase 1 complete |
 
 **Deliberately not built** (disclosed, not overlooked): the public sanitized
 leaderboard extension to `toPublicSessionView` (spec §9 — deferred, requires

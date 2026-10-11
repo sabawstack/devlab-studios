@@ -125,6 +125,81 @@ points at the SUSPENDED org and return a valid session with
 Platform page (gated only on `isPlatformAdmin`) stays reachable in-browser
 to reactivate the org, not just via direct API calls.
 
+## Free open play
+
+Free, no-login sessions live in the `open_*` tables of `PICKLEBALL_DB`
+(migration `0016_open_sessions.sql`). Production is `devlab-pickleball`;
+preview is `devlab-pickleball-preview` (`--env preview`). Check which one a
+command targets before running it.
+
+### Apply migration 0016
+
+```bash
+# local
+npx wrangler d1 migrations apply devlab-pickleball --local
+# preview
+npx wrangler d1 migrations apply devlab-pickleball-preview --remote --env preview
+# production
+npx wrangler d1 migrations apply devlab-pickleball --remote
+```
+
+Read back afterwards (use `--remote --env preview` for preview, `--local` for local):
+
+```bash
+npx wrangler d1 execute devlab-pickleball --remote --command "SELECT name FROM sqlite_master WHERE name LIKE 'open_%'"
+```
+
+Expect `open_sessions`, `open_courts`, `open_players`, `open_matches` and
+`open_idempotency`, plus their indexes.
+
+### Inspect a session by code
+
+```sql
+SELECT id, status, expires_at FROM open_sessions WHERE public_code = ?
+```
+
+Add `last_activity_at` or `version` when debugging a "my session vanished"
+report. A row past `expires_at` is already treated as gone by the app, even
+before the purge deletes it.
+
+### Force-delete a session
+
+Read it first, confirm it is the right one, then delete. Every child row
+cascades.
+
+```sql
+SELECT id, name, status, expires_at FROM open_sessions WHERE public_code = ?;
+DELETE FROM open_sessions WHERE public_code = ?;
+```
+
+Prefer the host's own delete (`DELETE /api/pickleball/open/s/:code/session`)
+when the host is available. A direct SQL delete does not close the session's
+Durable Object or its sockets; they linger until the object is evicted.
+
+### Purge
+
+A daily cron (`0 22 * * *` in production, `30 22 * * *` in preview) deletes
+sessions whose `expires_at` has passed (7 days after last activity), up to
+10,000 per run, and writes one line to Workers Logs:
+
+```json
+{"event":"pickleball_open.purge","outcome":"ok","purged":3}
+```
+
+`outcome` is `crashed` (with an `error` field) if the run threw; the next
+day's run retries. Route failures log `pickleball_open.error` and WebSocket
+failures `pickleball_open.ws_error`; clients only ever see a generic 500.
+
+### Troubleshooting
+
+- **Create returns 503:** the `RATE_LIMITER` binding is missing (create
+  deliberately fails closed), or Turnstile verification is unavailable. A 429
+  means the 10-per-IP-per-day limit was hit.
+- **Board is stale:** the client falls back to polling `/state` every 5 s when
+  the socket drops. Look for `pickleball_open.ws_error` log lines.
+- **Host lost their link:** the host key cannot be recovered. The session
+  expires on its own 7 days after its last activity.
+
 ## Notes
 
 - `PICKLEBALL_TEST_AUTH_ENABLED` must never be set in `wrangler.jsonc`'s committed `vars` — it exists only for local/CI `.dev.vars`.
