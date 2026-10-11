@@ -110,8 +110,10 @@ export default function TvBoard({ code }) {
   const cols = tvColumns(courts.length)
   const rows = tvRows(courts.length)
   const origin = window.location.origin
-  const qrUrl = viewer.settings.selfCheckIn ? checkInLink(origin, code) : viewerLink(origin, code)
-  const qrLabel = viewer.settings.selfCheckIn ? 'QR code for self check-in' : 'QR code for the player board'
+  // Check-in is refused once a session ends, so the QR then points at the board.
+  const checkIn = viewer.settings.selfCheckIn && !ended
+  const qrUrl = checkIn ? checkInLink(origin, code) : viewerLink(origin, code)
+  const qrLabel = checkIn ? 'QR code for self check-in' : 'QR code for the player board'
   const qrSize = Math.round(Math.min(220, Math.max(120, width * 0.08)))
   const modeLabel = MODE_INFO[viewer.settings.mode]?.label ?? 'Paddle stack'
   const grid = { '--tv-cols': cols, '--tv-rows': rows }
@@ -141,11 +143,11 @@ export default function TvBoard({ code }) {
         <div className="flex items-center gap-[1vw]">
           <QrCode url={qrUrl} size={qrSize} label={qrLabel} />
           <div className="min-w-0">
-            <p className="text-[clamp(0.9rem,1.1vw,1.5rem)] text-mist">{viewer.settings.selfCheckIn ? 'Scan to check in' : 'Scan to follow on your phone'}</p>
+            <p className="text-[clamp(0.9rem,1.1vw,1.5rem)] text-mist">{checkIn ? 'Scan to check in' : ended ? 'Scan for the final standings' : 'Scan to follow on your phone'}</p>
             <p className="whitespace-nowrap text-[clamp(1rem,1.5vw,2.25rem)] font-bold tracking-[0.04em] text-pickle-neon">{formatPublicCode(code)}</p>
           </div>
         </div>
-        <UpNext viewer={viewer} />
+        {!ended && <UpNext viewer={viewer} />}
         <div className="shrink-0"><FairnessPanel fairness={viewer.fairness} tv /></div>
         <section aria-label={panel === 'standings' ? 'Standings' : 'Recent results'} data-testid="tv-panel" className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <h2 className={H2}>{panel === 'standings' ? 'Standings' : 'Recent results'}</h2>
