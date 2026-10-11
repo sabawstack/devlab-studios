@@ -173,8 +173,11 @@ DELETE FROM open_sessions WHERE public_code = ?;
 ```
 
 Prefer the host's own delete (`DELETE /api/pickleball/open/s/:code/session`)
-when the host is available. A direct SQL delete does not close the session's
-Durable Object or its sockets; they linger until the object is evicted.
+when the host is available, or let the purge remove it. A direct SQL delete
+does not reach the session's Durable Object: until it hibernates or is evicted
+it keeps serving its cached copy (board, host console, sockets), and a host
+command in that window can fail on the missing rows. The app's "Delete now"
+and the purge both close the object as well.
 
 ### Purge
 
@@ -186,6 +189,10 @@ sessions whose `expires_at` has passed (7 days after last activity), up to
 {"event":"pickleball_open.purge","outcome":"ok","purged":3}
 ```
 
+Because it runs once a day, an expired row can stay in D1 for up to about
+24 hours after `expires_at`. That is expected: every load already treats it as
+not found, so nobody can see or change it in the meantime.
+
 `outcome` is `crashed` (with an `error` field) if the run threw; the next
 day's run retries. Route failures log `pickleball_open.error` and WebSocket
 failures `pickleball_open.ws_error`; clients only ever see a generic 500.
@@ -195,6 +202,10 @@ failures `pickleball_open.ws_error`; clients only ever see a generic 500.
 - **Create returns 503:** the `RATE_LIMITER` binding is missing (create
   deliberately fails closed), or Turnstile verification is unavailable. A 429
   means the 10-per-IP-per-day limit was hit.
+- **Host commands return 429:** either the host's own address passed 120
+  requests a minute across the host routes (`open-host-ip`), or the session
+  passed 120 authorized commands a minute (counted in the Durable Object, so
+  requests with a wrong key never use up the host's allowance).
 - **Board is stale:** the client falls back to polling `/state` every 5 s when
   the socket drops. Look for `pickleball_open.ws_error` log lines.
 - **Host lost their link:** the host key cannot be recovered. The session
