@@ -61,6 +61,8 @@ export const POST: APIRoute = async ({ request }) => {
         if (attempt === 2) return openErrorResponse(error, 'sessions')
       }
     }
+    // Every attempt above either returns or throws; this keeps that visible to the compiler.
+    return openErrorResponse(new Error('code collision'), 'sessions')
   } catch (error) {
     return openErrorResponse(error, 'sessions')
   }
