@@ -58,6 +58,7 @@ decided against that surface specifically:
 ### Added
 - Public board snapshot built from an allowlist (no skill or DUPR data), a host snapshot, and a results CSV that defuses formula-like names.
 - The open play command set: add players, breaks, courts on/off, edit or skip a proposed game, start, save, undo (2 minutes), edit and abandon a result, and end the session.
+- D1 repository for open sessions: transactional create, diff-only writes, idempotency records, expiry-aware load and purge.
 - Paste-a-list and CSV roster parsing that cleans numbering, emoji and duplicates from lists copied out of chat apps.
 - Score rules for once-per-game results: games to 11, 15 or 21, accepting both sudden-death (11–10) and win-by-2 (12–10) endings. Also unambiguous 10-character session codes.
 - Session standings ranked by win rate, then point difference per game, then points per game, then head-to-head.
