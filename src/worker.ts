@@ -23,6 +23,7 @@ import { RateLimiterDO } from './worker/RateLimiterDO'
 import { OpenSessionDO } from './worker/pickleball/open/OpenSessionDO'
 import { runDailyDigest } from './worker/digest/runDigest.js'
 import { runScheduledTick } from './lead-engine/jobs/scheduler.js'
+import { runOpenSessionPurge } from './worker/pickleball/open/purge'
 import { handleQueueBatch } from './lead-engine/queues/consumer.js'
 import { handleEmail } from './mailbox/inbound/handler.js'
 import {
@@ -92,6 +93,16 @@ export default {
           }),
         )
       }),
+    )
+
+    // Free open play retention (spec §8): its own waitUntil so it can neither
+    // block nor be blocked by the digest or the lead engine.
+    ctx.waitUntil(
+      runOpenSessionPurge(env, { now: new Date(event.scheduledTime) })
+        .then((purged) => console.log(JSON.stringify({ event: 'pickleball_open.purge', outcome: 'ok', purged })))
+        .catch((error) => {
+          console.log(JSON.stringify({ event: 'pickleball_open.purge', outcome: 'crashed', error: error instanceof Error ? error.message : 'unknown' }))
+        }),
     )
   },
 

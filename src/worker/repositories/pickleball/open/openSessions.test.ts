@@ -71,6 +71,26 @@ describe('open sessions repository', () => {
     expect(left.n).toBe(9)
   })
 
+  it('spares a session whose expiry moved between the select and the delete', async () => {
+    const { d1, raw } = createSqliteD1([MIGRATION])
+    await createOpenSession(d1, fresh('AAAAA22222'), 'h1')
+    await createOpenSession(d1, fresh('BBBBB33333'), 'h2')
+    raw.prepare("UPDATE open_sessions SET expires_at = '2026-10-01T00:00:00.000Z'").run()
+    // A host command lands after the purge's SELECT and before its DELETEs:
+    // it extends one session's expiry. The delete must not remove it.
+    const racing = {
+      prepare: d1.prepare.bind(d1),
+      batch: (statements: Parameters<typeof d1.batch>[0]) => {
+        raw.prepare("UPDATE open_sessions SET expires_at = '2026-12-01T00:00:00.000Z' WHERE public_code = 'AAAAA22222'").run()
+        return d1.batch(statements)
+      },
+    } as unknown as D1Database
+    const purged = await purgeExpiredOpenSessions(racing, '2026-10-19T00:00:00.000Z')
+    expect(purged).toEqual(['BBBBB33333'])
+    const survivors = raw.prepare('SELECT public_code FROM open_sessions').all() as { public_code: string }[]
+    expect(survivors.map((row) => row.public_code)).toEqual(['AAAAA22222'])
+  })
+
   it('deletes a session and everything under it', async () => {
     const { d1, raw } = createSqliteD1([MIGRATION])
     const state = fresh()

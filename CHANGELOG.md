@@ -66,6 +66,7 @@ decided against that surface specifically:
 - Session standings ranked by win rate, then point difference per game, then points per game, then head-to-head.
 - Paddle-stack rotation for open play: fewest games first, longest wait next, forced in after two rounds out, partners split to avoid repeats.
 - D1 migration 0016 adds the open_* tables for free, no-login open play sessions. Every table cascades from open_sessions so a single delete removes a session.
+- The daily cron deletes open sessions 7 days after their last change and closes any screens still watching them.
 - **End-to-end coverage for the screens that only exist once there is mail.** Everything the mailbox suite tested before could run against an empty mailbox — authorization, navigation, highlighting, empty states — which left four shipped features with no end-to-end coverage at all. New tests exercise retrying a failed reply and its refusal to offer a second retry, remote images held back until asked for and the sanitizer keeping the sender's layout while dropping their script, a DMARC report rendered from a real zipped fixture reporting a forged source, and attaching a file to a reply through the real upload endpoint. `scripts/mailbox/apply-e2e-fixtures.mjs` loads the same synthetic mail preview uses, so the fixtures cannot drift from it.
 
 ## [1.13.0] - 2026-09-23

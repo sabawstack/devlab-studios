@@ -129,9 +129,14 @@ export async function deleteOpenSession(db: D1Database, sessionId: string): Prom
   await db.prepare('DELETE FROM open_sessions WHERE id = ?').bind(sessionId).run()
 }
 
+// The DELETE repeats the expiry test so a session whose expiry was extended
+// between the SELECT and the DELETE (a command landed in that gap) survives.
+// Only rows whose DELETE actually removed something are reported as purged.
 export async function purgeExpiredOpenSessions(db: D1Database, nowIso: string, limit = 500): Promise<string[]> {
   const expired = await db.prepare('SELECT id, public_code FROM open_sessions WHERE expires_at < ? LIMIT ?').bind(nowIso, limit).all<{ id: string; public_code: string }>()
   if (!expired.results.length) return []
-  await db.batch(expired.results.map((row) => db.prepare('DELETE FROM open_sessions WHERE id = ?').bind(row.id)))
-  return expired.results.map((row) => row.public_code)
+  const deletions = await db.batch(
+    expired.results.map((row) => db.prepare('DELETE FROM open_sessions WHERE id = ? AND expires_at < ?').bind(row.id, nowIso)),
+  )
+  return expired.results.filter((_, index) => (deletions[index]?.meta.changes ?? 0) > 0).map((row) => row.public_code)
 }
