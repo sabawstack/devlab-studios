@@ -61,7 +61,7 @@ export function pairingHistory(matches: readonly OpenMatch[]): PartnerHistory {
   return { partners, opponents }
 }
 
-function byWait(a: QueueEntry, b: QueueEntry): number {
+export function byWait(a: QueueEntry, b: QueueEntry): number {
   return Date.parse(a.player.waitingSince) - Date.parse(b.player.waitingSince) || a.player.position - b.player.position
 }
 

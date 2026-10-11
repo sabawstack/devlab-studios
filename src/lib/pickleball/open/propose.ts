@@ -1,11 +1,13 @@
 import { pairingHistory, queueOrder } from './fairness'
 import { proposePaddleStack, type ModeProposer, type Proposal } from './modes/paddleStack'
+import { proposeWinnersLosers } from './modes/winnersLosers'
 import { activeRules } from './rules'
 import { LIMITS, type CommandContext, type OpenSessionState, type StackingMode } from './types'
 
 // Tasks 3-5 add one entry each; Task 5 makes this a total Record.
 const PROPOSERS: Partial<Record<StackingMode, ModeProposer>> = {
   PADDLE_STACK: proposePaddleStack,
+  WINNERS_LOSERS: proposeWinnersLosers,
 }
 
 /**
