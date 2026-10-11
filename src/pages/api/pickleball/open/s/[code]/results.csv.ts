@@ -1,7 +1,6 @@
 import type { APIRoute } from 'astro'
 import { getEnv } from '../../../../../../lib/env'
-import { codeFrom, doResponse, hostKeyFrom, notFound, openSessionStub } from '../../../../../../worker/pickleball/open/routeHelpers'
-import { apiErrorResponse } from '../../../../../../worker/utils/responses.js'
+import { codeFrom, doResponse, hostKeyFrom, notFound, openErrorResponse, openSessionStub } from '../../../../../../worker/pickleball/open/routeHelpers'
 
 export const GET: APIRoute = async ({ request, params }) => {
   try {
@@ -18,6 +17,6 @@ export const GET: APIRoute = async ({ request, params }) => {
       },
     })
   } catch (error) {
-    return apiErrorResponse(error)
+    return openErrorResponse(error, 'results.csv')
   }
 }

@@ -20,3 +20,17 @@ export function doResponse<T>(result: DoResult<T>): Response {
 }
 
 export const notFound = (): Response => jsonResponse({ error: 'Session not found.' }, 404)
+
+/**
+ * The only error text an anonymous caller may see. A numeric 4xx `status` on an
+ * Error is something our own code set on purpose; everything else (D1, Durable
+ * Object RPC, runtime) is logged and replaced with a generic message.
+ */
+export function openErrorResponse(error: unknown, route: string): Response {
+  const status = error instanceof Error ? (error as Error & { status?: unknown }).status : undefined
+  if (error instanceof Error && typeof status === 'number' && status >= 400 && status <= 499) {
+    return jsonResponse({ error: error.message }, status)
+  }
+  console.log(JSON.stringify({ event: 'pickleball_open.error', route, error: error instanceof Error ? error.message : 'unknown' }))
+  return jsonResponse({ error: 'Something went wrong. Try again.' }, 500)
+}

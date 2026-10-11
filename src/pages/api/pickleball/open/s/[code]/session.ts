@@ -1,7 +1,6 @@
 import type { APIRoute } from 'astro'
 import { getEnv } from '../../../../../../lib/env'
-import { codeFrom, doResponse, hostKeyFrom, notFound, openSessionStub } from '../../../../../../worker/pickleball/open/routeHelpers'
-import { apiErrorResponse } from '../../../../../../worker/utils/responses.js'
+import { codeFrom, doResponse, hostKeyFrom, notFound, openErrorResponse, openSessionStub } from '../../../../../../worker/pickleball/open/routeHelpers'
 
 export const DELETE: APIRoute = async ({ request, params }) => {
   try {
@@ -9,6 +8,6 @@ export const DELETE: APIRoute = async ({ request, params }) => {
     if (!code) return notFound()
     return doResponse(await openSessionStub(getEnv(), code).remove(code, hostKeyFrom(request)))
   } catch (error) {
-    return apiErrorResponse(error)
+    return openErrorResponse(error, 'session')
   }
 }

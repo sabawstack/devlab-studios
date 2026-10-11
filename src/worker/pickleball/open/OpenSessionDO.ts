@@ -179,7 +179,8 @@ export class OpenSessionDO extends DurableObject<Env> {
         } else {
           ws.send(JSON.stringify({ type: 'AUTH_FAILED' }))
         }
-      } catch {
+      } catch (error) {
+        this.logWsError(error, attachment.code, 'AUTH')
         try {
           ws.send(JSON.stringify({ type: 'AUTH_FAILED' }))
         } catch {
@@ -198,10 +199,15 @@ export class OpenSessionDO extends DurableObject<Env> {
           const snapshot = await this.viewer(attachment.code)
           if (snapshot) ws.send(JSON.stringify({ type: 'VIEWER', payload: snapshot }))
         }
-      } catch {
+      } catch (error) {
         // a failed resync is retried by the client's next RESYNC
+        this.logWsError(error, attachment.code, 'RESYNC')
       }
     }
+  }
+
+  private logWsError(error: unknown, code: string, messageType: string): void {
+    console.log(JSON.stringify({ event: 'pickleball_open.ws_error', code, messageType, error: error instanceof Error ? error.message : 'unknown' }))
   }
 
   async webSocketClose(ws: WebSocket, code: number, reason: string): Promise<void> {

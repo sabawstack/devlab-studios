@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro'
 import { getEnv } from '../../../../../../lib/env'
-import { codeFrom, notFound, openSessionStub } from '../../../../../../worker/pickleball/open/routeHelpers'
+import { codeFrom, notFound, openErrorResponse, openSessionStub } from '../../../../../../worker/pickleball/open/routeHelpers'
 import { checkRateLimit, clientIp, rateLimitedResponse } from '../../../../../../worker/rateLimit.js'
-import { apiErrorResponse, jsonResponse } from '../../../../../../worker/utils/responses.js'
+import { jsonResponse } from '../../../../../../worker/utils/responses.js'
 
 export const GET: APIRoute = async ({ request, params }) => {
   const env = getEnv()
@@ -14,6 +14,6 @@ export const GET: APIRoute = async ({ request, params }) => {
     const snapshot = await openSessionStub(env, code).viewer(code)
     return snapshot ? jsonResponse(snapshot, 200) : notFound()
   } catch (error) {
-    return apiErrorResponse(error)
+    return openErrorResponse(error, 'state')
   }
 }

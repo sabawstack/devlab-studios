@@ -1,8 +1,8 @@
 import type { APIRoute } from 'astro'
 import { getEnv } from '../../../../../../lib/env'
-import { codeFrom, doResponse, hostKeyFrom, notFound, openSessionStub } from '../../../../../../worker/pickleball/open/routeHelpers'
+import { codeFrom, doResponse, hostKeyFrom, notFound, openErrorResponse, openSessionStub } from '../../../../../../worker/pickleball/open/routeHelpers'
 import { checkRateLimit, rateLimitedResponse } from '../../../../../../worker/rateLimit.js'
-import { apiErrorResponse, jsonResponse } from '../../../../../../worker/utils/responses.js'
+import { jsonResponse } from '../../../../../../worker/utils/responses.js'
 
 export const POST: APIRoute = async ({ request, params }) => {
   const env = getEnv()
@@ -21,6 +21,6 @@ export const POST: APIRoute = async ({ request, params }) => {
     if (body === null) return jsonResponse({ error: 'That request was not understood.' }, 400)
     return doResponse(await openSessionStub(env, code).command(code, hostKeyFrom(request), body))
   } catch (error) {
-    return apiErrorResponse(error)
+    return openErrorResponse(error, 'commands')
   }
 }

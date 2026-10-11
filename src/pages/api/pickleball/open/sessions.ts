@@ -5,10 +5,11 @@ import { generatePublicCode } from '../../../../lib/pickleball/open/codes'
 import { buildInitialState } from '../../../../lib/pickleball/open/create'
 import { createSessionSchema } from '../../../../lib/schemas/pickleball/open/createSession'
 import { randomBase64Url, sha256Base64Url } from '../../../../lib/pickleball/webCrypto.js'
+import { openErrorResponse } from '../../../../worker/pickleball/open/routeHelpers'
 import { createOpenSession } from '../../../../worker/repositories/pickleball/open/openSessions'
 import { checkRateLimit, clientIp, rateLimitedResponse } from '../../../../worker/rateLimit.js'
 import { verifyTurnstileToken } from '../../../../worker/turnstile.js'
-import { apiErrorResponse, jsonResponse } from '../../../../worker/utils/responses.js'
+import { jsonResponse } from '../../../../worker/utils/responses.js'
 
 const CREATE_LIMIT = 10
 const DAY_MS = 86_400_000
@@ -56,11 +57,11 @@ export const POST: APIRoute = async ({ request }) => {
         return jsonResponse({ code: state.publicCode, hostKey }, 201)
       } catch (error) {
         const collision = error instanceof Error && /UNIQUE/i.test(error.message)
-        if (!collision || attempt === 2) throw error
+        if (!collision) throw error
+        if (attempt === 2) return openErrorResponse(error, 'sessions')
       }
     }
-    return jsonResponse({ error: 'Could not start the session. Try again.' }, 500)
   } catch (error) {
-    return apiErrorResponse(error)
+    return openErrorResponse(error, 'sessions')
   }
 }
