@@ -1,0 +1,154 @@
+import { useCallback, useMemo, useState } from 'react'
+import { formatPublicCode } from '../../lib/pickleball/open/codes'
+import { deleteSession, downloadResults } from '../lib/api'
+import { forgetHostedSession, viewerLink } from '../lib/hostKeys'
+import { useCommandQueue } from '../lib/useCommandQueue'
+import CourtCard from './CourtCard.jsx'
+import EditMatchDialog from './EditMatchDialog.jsx'
+import GameOverDialog from './GameOverDialog.jsx'
+import PlayersPanel from './PlayersPanel.jsx'
+import QrCode from './QrCode.jsx'
+import ResultsList from './ResultsList.jsx'
+import StandingsTable from './StandingsTable.jsx'
+import UndoToast from './UndoToast.jsx'
+import { Button, Panel, Sheet } from './ui.jsx'
+
+const TABS = [['courts', 'Courts'], ['players', 'Players'], ['results', 'Results']]
+
+export default function HostConsole({ code, hostKey, host, status, onHost }) {
+  const { send, pending, error, clearError } = useCommandQueue(code, hostKey, onHost)
+  const [tab, setTab] = useState('courts')
+  const [dialog, setDialog] = useState(null)
+  const [undo, setUndo] = useState(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const viewer = host.viewer
+  const names = useMemo(() => new Map(host.players.map((p) => [p.id, p.name])), [host.players])
+  const nameOf = useCallback((id) => names.get(id) ?? '—', [names])
+  const courtLabel = useCallback((id) => host.courts.find((c) => c.id === id)?.label ?? '', [host.courts])
+  const dismissUndo = useCallback(() => setUndo(null), [])
+
+  async function save(match, result) {
+    setDialog(null)
+    const ok = await send({ type: 'RECORD_RESULT', matchId: match.id, ...result })
+    if (ok) setUndo({ matchId: match.id, savedAt: Date.now(), label: `${courtLabel(match.courtId)} saved${result.scoreA === null ? '' : ` ${result.scoreA}–${result.scoreB}`}.` })
+  }
+
+  async function download() {
+    const { blob, filename } = await downloadResults(code, hostKey)
+    const url = URL.createObjectURL(blob)
+    const link = Object.assign(document.createElement('a'), { href: url, download: filename })
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function remove() {
+    if (!window.confirm('Delete this session and all its results now? This cannot be undone.')) return
+    await deleteSession(code, hostKey)
+    forgetHostedSession(code)
+    window.location.assign('/pickleball')
+  }
+
+  const section = (key) => `${tab === key ? 'block' : 'hidden'} lg:block`
+
+  return (
+    <div className="mx-auto max-w-[1600px] px-3 pb-24 pt-3 sm:px-5 lg:pb-8">
+      <header className="flex flex-wrap items-center gap-3 py-2">
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-xl font-bold sm:text-2xl">{viewer.name}</h1>
+          <p className="text-xs text-mist">
+            {host.players.filter((p) => p.status !== 'LEFT').length} players · {host.courts.filter((c) => c.enabled).length} courts · paddle stack
+            {status !== 'open' && <span className="ml-2 text-amber-200">· Reconnecting…</span>}
+            {pending > 0 && <span className="ml-2 text-amber-200">· Sending {pending}…</span>}
+            {viewer.status === 'ENDED' && <span className="ml-2 text-pickle-neon">· Ended</span>}
+          </p>
+        </div>
+        <Button variant="neon" onClick={() => setDialog({ type: 'share' })}>Share board</Button>
+        <div className="relative">
+          <Button variant="ghost" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>More</Button>
+          {menuOpen && (
+            <div className="absolute right-0 z-20 mt-2 grid w-56 gap-1 rounded-2xl bg-navy-950 p-2 shadow-elevated">
+              <Button variant="ghost" onClick={() => { setMenuOpen(false); download() }}>Download results (CSV)</Button>
+              {viewer.status === 'ACTIVE' && <Button variant="ghost" onClick={() => { setMenuOpen(false); send({ type: 'END_SESSION' }) }}>End session</Button>}
+              <Button variant="danger" onClick={() => { setMenuOpen(false); remove() }}>Delete now</Button>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {error && (
+        <p role="alert" className="my-2 flex items-center justify-between rounded-xl bg-rose-500/15 px-4 py-3 text-rose-100">
+          {error}<button type="button" onClick={clearError} className="ml-3 underline">OK</button>
+        </p>
+      )}
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(300px,380px)]">
+        <section className={section('courts')} aria-label="Courts">
+          <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
+            {host.courts.map((court) => (
+              <CourtCard key={court.id} court={court} nameOf={nameOf}
+                onStart={(match) => send({ type: 'START_MATCH', matchId: match.id })}
+                onGameOver={(match) => setDialog({ type: 'gameOver', match })}
+                onEdit={(match) => setDialog({ type: 'edit', match })} />
+            ))}
+          </div>
+          <Panel className="mt-4">
+            <h2 className="font-bold">Waiting</h2>
+            {viewer.waiting.length === 0 ? <p className="mt-1 text-sm text-mist">Everyone is on court.</p> : (
+              <ol className="mt-2 flex flex-wrap gap-1.5 text-sm">
+                {viewer.waiting.map((w, i) => <li key={w.id} className="rounded-full bg-navy-800 px-3 py-1">{i + 1} · {w.name}</li>)}
+              </ol>
+            )}
+          </Panel>
+        </section>
+
+        <aside className="grid content-start gap-5">
+          <div className={section('players')}><PlayersPanel players={host.players} waiting={viewer.waiting} send={send} /></div>
+          <div className={section('results')}>
+            <Panel><h2 className="mb-2 text-lg font-bold">Standings</h2><StandingsTable rows={viewer.standings} compact /></Panel>
+            <Panel className="mt-4"><h2 className="mb-2 text-lg font-bold">Results</h2>
+              <ResultsList finished={host.finished} nameOf={nameOf} courtLabel={courtLabel} onEdit={(match) => setDialog({ type: 'editResult', match })} />
+            </Panel>
+          </div>
+        </aside>
+      </div>
+
+      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-3 border-t border-navy-800 bg-ink lg:hidden" aria-label="Sections">
+        {TABS.map(([key, label]) => (
+          <button key={key} type="button" aria-current={tab === key} onClick={() => setTab(key)}
+            className={`min-h-14 text-sm ${tab === key ? 'font-bold text-pickle-neon' : 'text-mist'}`}>{label}</button>
+        ))}
+      </nav>
+
+      {dialog?.type === 'gameOver' && (
+        <GameOverDialog title={`${courtLabel(dialog.match.courtId)} · who won?`} match={dialog.match} nameOf={nameOf} settings={host.settings}
+          onSave={(result) => save(dialog.match, result)}
+          onAbandon={dialog.match.status === 'IN_PROGRESS' ? () => { setDialog(null); send({ type: 'ABANDON_MATCH', matchId: dialog.match.id }) } : null}
+          onClose={() => setDialog(null)} />
+      )}
+      {dialog?.type === 'editResult' && (
+        <GameOverDialog title="Edit result" match={dialog.match} nameOf={nameOf} settings={host.settings} initial={dialog.match}
+          onSave={(result) => { setDialog(null); send({ type: 'EDIT_RESULT', matchId: dialog.match.id, ...result }) }}
+          onClose={() => setDialog(null)} />
+      )}
+      {dialog?.type === 'edit' && (
+        <EditMatchDialog match={dialog.match} players={host.players} nameOf={nameOf}
+          onSave={(slots) => { setDialog(null); send({ type: 'EDIT_PROPOSAL', matchId: dialog.match.id, teamA: [slots[0], slots[1]], teamB: [slots[2], slots[3]] }) }}
+          onSkip={() => { setDialog(null); send({ type: 'SKIP_PROPOSAL', matchId: dialog.match.id }) }}
+          onClose={() => setDialog(null)} />
+      )}
+      {dialog?.type === 'share' && (
+        <Sheet title="Player board" onClose={() => setDialog(null)}>
+          <div className="flex flex-col items-center gap-3 text-center">
+            <QrCode url={viewerLink(window.location.origin, code)} size={220} />
+            <p className="text-2xl font-bold tracking-[0.08em] text-pickle-neon">{formatPublicCode(code)}</p>
+            <p className="text-sm text-mist">Players scan this to follow courts and standings. It can't change anything.</p>
+          </div>
+        </Sheet>
+      )}
+      {undo && (
+        <UndoToast label={undo.label} savedAt={undo.savedAt} onDismiss={dismissUndo}
+          onUndo={() => { setUndo(null); send({ type: 'UNDO_RESULT', matchId: undo.matchId }) }} />
+      )}
+    </div>
+  )
+}
