@@ -1,8 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
-import { formatPublicCode } from '../../lib/pickleball/open/codes'
 import { MODE_INFO } from '../../lib/pickleball/open/modes/info'
 import { deleteSession, downloadResults } from '../lib/api'
-import { forgetHostedSession, viewerLink } from '../lib/hostKeys'
+import { forgetHostedSession } from '../lib/hostKeys'
 import { useCommandQueue } from '../lib/useCommandQueue'
 import CourtCard from './CourtCard.jsx'
 import EditMatchDialog from './EditMatchDialog.jsx'
@@ -10,12 +9,12 @@ import FairnessPanel from './FairnessPanel.jsx'
 import GameOverDialog from './GameOverDialog.jsx'
 import ModeSheet from './ModePicker.jsx'
 import PlayersPanel from './PlayersPanel.jsx'
-import QrCode from './QrCode.jsx'
 import ResultsList from './ResultsList.jsx'
 import RulesPanel from './RulesPanel.jsx'
 import StandingsTable from './StandingsTable.jsx'
 import UndoToast from './UndoToast.jsx'
-import { Button, Panel, Sheet } from './ui.jsx'
+import ShareSheet from './ShareSheet.jsx'
+import { Button, Panel } from './ui.jsx'
 
 const countLabel = (n, noun) => `${n} ${noun}${n === 1 ? '' : 's'}`
 
@@ -176,13 +175,8 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
           onClose={() => setDialog(null)} />
       )}
       {dialog?.type === 'share' && (
-        <Sheet title="Player board" onClose={() => setDialog(null)}>
-          <div className="flex flex-col items-center gap-3 text-center">
-            <QrCode url={viewerLink(window.location.origin, code)} size={220} />
-            <p className="text-2xl font-bold tracking-[0.08em] text-pickle-neon">{formatPublicCode(code)}</p>
-            <p className="text-sm text-mist">Players scan this to follow courts and standings. It can't change anything.</p>
-          </div>
-        </Sheet>
+        <ShareSheet code={code} selfCheckIn={host.settings.selfCheckIn} onClose={() => setDialog(null)}
+          onToggleCheckIn={() => send({ type: 'SET_SELF_CHECK_IN', enabled: !host.settings.selfCheckIn })} />
       )}
       {undo && (
         <UndoToast key={undo.savedAt} label={undo.label} savedAt={undo.savedAt} onDismiss={dismissUndo}

@@ -5,6 +5,8 @@
 // AFTER the D1 batch succeeds, so a failed write leaves nothing half-applied.
 import { DurableObject } from 'cloudflare:workers'
 import { commandEnvelopeSchema } from '../../../lib/schemas/pickleball/open/commands'
+import { checkInSchema } from '../../../lib/schemas/pickleball/open/checkIn'
+import { applyCheckIn } from '../../../lib/pickleball/open/checkIn'
 import { applyCommand, finalizeCommand } from '../../../lib/pickleball/open/reducer'
 import { resultsCsv } from '../../../lib/pickleball/open/resultsCsv'
 import { constantTimeEqual } from '../../../lib/pickleball/open/secrets'
@@ -27,11 +29,29 @@ const GONE = 4404
 // enough: one object serves the whole session, and a flood keeps it awake.
 const COMMAND_LIMIT = 120
 const COMMAND_WINDOW_MS = 60_000
+// Self check-in is anonymous: 60 per 5 minutes per session caps a flood of
+// junk names well before the 128-player cap, while a real crowd arriving at
+// once still fits (the route also limits each address).
+const CHECK_IN_LIMIT = 60
+const CHECK_IN_WINDOW_MS = 5 * 60_000
+
+export interface CheckInBody { playerId: string; name: string; alreadyCheckedIn: boolean }
 
 export class OpenSessionDO extends DurableObject<Env> {
   private loaded: Loaded | null = null
   private chain: Promise<unknown> = Promise.resolve()
   private commandTimes: number[] = []
+  private checkInTimes: number[] = []
+
+  /** Counts one check-in attempt; returns the seconds to wait when over the per-session limit. */
+  private checkInRetryAfter(nowMs: number): number {
+    this.checkInTimes = this.checkInTimes.filter((t) => t > nowMs - CHECK_IN_WINDOW_MS)
+    if (this.checkInTimes.length >= CHECK_IN_LIMIT) {
+      return Math.max(1, Math.ceil((this.checkInTimes[0] + CHECK_IN_WINDOW_MS - nowMs) / 1000))
+    }
+    this.checkInTimes = [...this.checkInTimes, nowMs]
+    return 0
+  }
 
   /** Counts one authorized command; returns the seconds to wait when over the limit. */
   private commandRetryAfter(nowMs: number): number {
@@ -119,6 +139,31 @@ export class OpenSessionDO extends DurableObject<Env> {
       this.loaded = { ...auth, state: next }
       this.broadcast()
       return response
+    })
+  }
+
+  async checkIn(code: string, body: unknown): Promise<DoResult<CheckInBody>> {
+    return this.serial(async () => {
+      const parsed = checkInSchema.safeParse(body)
+      if (!parsed.success) return { status: 400, body: { error: 'Check your details and try again.' } }
+      const loaded = await this.load(code)
+      if (!loaded) return { status: 404, body: { error: 'Session not found.' } }
+      const retryAfterSeconds = this.checkInRetryAfter(Date.now())
+      if (retryAfterSeconds > 0) return { status: 429, body: { error: 'Lots of people are checking in. Try again in a minute.' }, retryAfterSeconds }
+
+      const now = new Date().toISOString()
+      const ctx = { now, newId: () => crypto.randomUUID() }
+      const entry = { name: parsed.data.name, skill: parsed.data.skill ?? null, duprId: parsed.data.duprId ?? null }
+      const result = applyCheckIn(loaded.state, entry, ctx)
+      if (!result.ok) return { status: result.status, body: { error: result.error } }
+      const answer = { playerId: result.playerId, name: result.name, alreadyCheckedIn: result.alreadyCheckedIn }
+      if (result.alreadyCheckedIn) return { status: 200, body: answer }
+
+      const next = finalizeCommand(result.state, ctx)
+      await persistDiff(this.env.PICKLEBALL_DB, loaded.state, next, null)
+      this.loaded = { ...loaded, state: next }
+      this.broadcast()
+      return { status: 201, body: answer }
     })
   }
 

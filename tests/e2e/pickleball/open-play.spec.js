@@ -355,3 +355,66 @@ test.describe('stacking modes, rules and fairness', () => {
     for (const label of ['Games spread', 'Longest wait', 'Repeat partners']) await expect(panel).toContainText(label)
   })
 })
+
+test.describe('self check-in', () => {
+  function selfCheckIn(request, code, data, ip = freshIp()) {
+    return request.post(`/api/pickleball/open/s/${code}/check-in`, { headers: { 'cf-connecting-ip': ip }, data })
+  }
+
+  test('a player checks in once, a repeat is harmless, and the host can close check-in', async ({ request }) => {
+    const { code, hostKey } = await createSession(request)
+    const first = await selfCheckIn(request, code, { name: ' 🎾 Zoe ', skill: 3, duprId: 'ab12c3' })
+    expect(first.status()).toBe(201)
+    const body = await first.json()
+    expect(body).toMatchObject({ name: 'Zoe', alreadyCheckedIn: false })
+    const again = await selfCheckIn(request, code, { name: 'ZOE' })
+    expect(again.status()).toBe(200)
+    expect(await again.json()).toMatchObject({ playerId: body.playerId, alreadyCheckedIn: true })
+    expect((await selfCheckIn(request, code, { name: 'Yan', skill: 9 })).status()).toBe(400)
+
+    const viewer = await (await request.get(`/api/pickleball/open/s/${code}/state`)).json()
+    expect(viewer.roster.filter((p) => p.name === 'Zoe')).toHaveLength(1)
+    expect(JSON.stringify(viewer)).not.toContain('AB12C3')
+
+    expect((await command(request, code, hostKey, { type: 'SET_SELF_CHECK_IN', enabled: false })).status()).toBe(200)
+    expect((await selfCheckIn(request, code, { name: 'Yuri' })).status()).toBe(403)
+  })
+
+  test('a session created with check-in off refuses it', async ({ request }) => {
+    const { code } = await createSession(request, { settings: { mode: 'PADDLE_STACK', target: 11, scoringStyle: 'SIDEOUT', selfCheckIn: false } })
+    expect((await selfCheckIn(request, code, { name: 'Zoe' })).status()).toBe(403)
+  })
+
+  test('a flood of check-ins into one session is cut off, even from many addresses', async ({ request }) => {
+    const { code } = await createSession(request)
+    const statuses = []
+    for (let i = 0; i < 61; i += 1) statuses.push((await selfCheckIn(request, code, { name: `Walk-in ${i}` })).status())
+    expect(statuses.slice(0, 60).every((s) => s === 201)).toBe(true)
+    expect(statuses[60]).toBe(429)
+  })
+
+  test('the check-in page adds the player, and the board then knows who they are', async ({ page, request }) => {
+    const { code } = await createSession(request)
+    const ip = freshIp()
+    await page.route('**/api/pickleball/open/s/*/check-in', (route) =>
+      route.continue({ headers: { ...route.request().headers(), 'cf-connecting-ip': ip } }))
+    await page.goto(`/pickleball/s/${code}`)
+    await page.getByRole('link', { name: 'Not on the list? Check in' }).click()
+    await page.getByLabel('Your name').fill('Zoe')
+    await page.getByLabel('Skill (optional)').selectOption('3')
+    await page.getByRole('button', { name: 'Check in' }).click()
+    await expect(page.getByRole('heading', { name: "You're in, Zoe." })).toBeVisible()
+    await page.getByRole('link', { name: 'See the board' }).click()
+    await expect(page.getByLabel("I'm…").locator('option:checked')).toHaveText('Zoe')
+  })
+
+  test('the host shares a check-in QR and can turn check-in off from the share sheet', async ({ page, request }) => {
+    const { code, hostKey } = await createSession(request)
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await page.getByRole('button', { name: 'Share board' }).click()
+    const sheet = page.getByRole('dialog', { name: 'Share' })
+    await expect(sheet.getByRole('img', { name: 'QR code for self check-in' })).toBeVisible()
+    await sheet.getByRole('button', { name: 'Turn self check-in off' }).click()
+    await expect(sheet.getByText('Self check-in is off. Only you can add players.')).toBeVisible()
+  })
+})

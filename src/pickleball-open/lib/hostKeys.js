@@ -45,3 +45,6 @@ export function hostLink(origin, code, hostKey) {
 export function viewerLink(origin, code) {
   return `${origin}/pickleball/s/${code}`
 }
+export function checkInLink(origin, code) {
+  return `${origin}/pickleball/s/${code}/check-in`
+}

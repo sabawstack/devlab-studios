@@ -37,3 +37,6 @@ export async function downloadResults(code, hostKey) {
 export async function deleteSession(code, hostKey) {
   return parse(await fetch(`${base(code)}/session`, { method: 'DELETE', headers: { 'X-Host-Key': hostKey } }))
 }
+export async function checkIn(code, body) {
+  return parse(await fetch(`${base(code)}/check-in`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) }))
+}

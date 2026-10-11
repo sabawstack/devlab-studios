@@ -4,7 +4,7 @@ import QRCode from 'qrcode'
 // Client-side SVG from a URL this app built itself (never raw user input), so
 // injecting the library's markup is safe. Same approach as the operator app's
 // PublicLinkQRCode, copied here because that app is retired in Phase 5.
-export default function QrCode({ url, size = 176 }) {
+export default function QrCode({ url, size = 176, label = 'QR code for the player board' }) {
   const [markup, setMarkup] = useState(null)
   useEffect(() => {
     let ignore = false
@@ -20,7 +20,7 @@ export default function QrCode({ url, size = 176 }) {
   return (
     <div
       role="img"
-      aria-label="QR code for the player board"
+      aria-label={label}
       style={box}
       className="shrink-0 overflow-hidden rounded-xl bg-white [&>svg]:block [&>svg]:h-full [&>svg]:w-full"
       dangerouslySetInnerHTML={{ __html: markup }}

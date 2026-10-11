@@ -14,7 +14,7 @@ const field = 'w-full rounded-xl border border-navy-700 bg-navy-900 px-3 py-3 te
 
 export default function CreateSessionApp({ siteKey }) {
   const [step, setStep] = useState('details')
-  const [details, setDetails] = useState({ name: 'Open Play', hostDisplayName: '', courtCount: 4, target: 11, mode: 'PADDLE_STACK' })
+  const [details, setDetails] = useState({ name: 'Open Play', hostDisplayName: '', courtCount: 4, target: 11, mode: 'PADDLE_STACK', selfCheckIn: true })
   const [rosterMode, setRosterMode] = useState('paste')
   const [pasted, setPasted] = useState('')
   const [csvText, setCsvText] = useState('')
@@ -52,7 +52,7 @@ export default function CreateSessionApp({ siteKey }) {
         name: details.name,
         hostDisplayName: details.hostDisplayName,
         courtCount: details.courtCount,
-        settings: { mode: details.mode, target: details.target, scoringStyle: 'SIDEOUT' },
+        settings: { mode: details.mode, target: details.target, scoringStyle: 'SIDEOUT', selfCheckIn: details.selfCheckIn },
         players: roster.entries,
         turnstileToken: turnstile.token,
       })
@@ -107,6 +107,10 @@ export default function CreateSessionApp({ siteKey }) {
             <ModePicker value={details.mode} onChange={(mode) => update({ mode })} />
             <p className="mt-3 text-sm text-mist">You can switch any time during the session. Anyone who has sat out 2 rounds in a row goes on next, whichever you pick, and every proposed game can be edited before it starts.</p>
           </Panel>
+          <label className="flex min-h-11 items-center gap-3 md:col-span-2">
+            <input type="checkbox" className="h-5 w-5 accent-[#c6ff2e]" checked={details.selfCheckIn} onChange={(e) => update({ selfCheckIn: e.target.checked })} />
+            <span>Let players check themselves in by QR <span className="text-sm text-mist">(you can turn this off any time)</span></span>
+          </label>
           <Button type="submit" variant="primary" className="md:col-span-2 text-lg">Next: add players</Button>
         </form>
       )}

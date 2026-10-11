@@ -1,18 +1,11 @@
 // src/pickleball-open/components/ViewerBoard.jsx
 import { useState } from 'react'
 import { MODE_INFO } from '../../lib/pickleball/open/modes/info'
+import { readMe, writeMe } from '../lib/me'
 import { myStatus } from '../lib/myStatus'
 import StandingsTable from './StandingsTable.jsx'
 import { Panel, TeamNames } from './ui.jsx'
 
-const ME_KEY = (code) => `devlab-pickleball-me:${code}`
-
-function readMe(code) {
-  try { return globalThis.localStorage?.getItem(ME_KEY(code)) ?? '' } catch { return '' }
-}
-function writeMe(code, id) {
-  try { globalThis.localStorage?.setItem(ME_KEY(code), id) } catch { /* optional convenience */ }
-}
 
 const COURT_STATE = { PLAYING: 'Playing', UP_NEXT: 'Walk on now', WAITING_FOR_PLAYERS: 'Waiting for players', OFF: 'Off' }
 
@@ -47,6 +40,9 @@ export default function ViewerBoard({ viewer, status, invalidHostLink }) {
           </p>
           <h1 className="text-2xl font-bold sm:text-3xl">{viewer.name}</h1>
           <p className="text-sm text-mist">Hosted by {viewer.hostDisplayName} · {courtCount} court{courtCount === 1 ? '' : 's'} · {MODE_INFO[viewer.settings.mode]?.label ?? 'Paddle stack'}</p>
+          {viewer.settings.selfCheckIn && viewer.status === 'ACTIVE' && (
+            <a href={`/pickleball/s/${viewer.code}/check-in`} className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-pickle-neon underline underline-offset-4">Not on the list? Check in</a>
+          )}
         </div>
         <label className="grid gap-1 text-xs text-mist">I'm…
           <select value={me} onChange={(e) => { setMe(e.target.value); writeMe(viewer.code, e.target.value) }}
