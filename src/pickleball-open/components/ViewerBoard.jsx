@@ -105,7 +105,7 @@ export default function ViewerBoard({ viewer, status, invalidHostLink }) {
         </aside>
       </div>
       <footer className="grid gap-3 pt-2 text-center">
-        <p className="text-xs text-mist">Results are deleted 7 days after the last game ({expires}). No sign-up; this phone only remembers which name you picked.</p>
+        <p className="text-xs text-mist">Results are deleted from the live service 7 days after the last change to this session ({expires}). No sign-up; this phone only remembers which name you picked.</p>
         <a href="/pickleball/new" className="mx-auto inline-flex min-h-11 items-center rounded-xl border border-navy-700 px-5 hover:bg-navy-900">Run your own games, free</a>
       </footer>
     </main>

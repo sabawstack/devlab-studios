@@ -10,4 +10,13 @@ const page = await loadPage('privacy')
 
 <Layout title={`${page?.title || 'Privacy Policy'} — DevLab Studios`} seo={seo}>
   {page ? <BlockRenderer blocks={page.blocks} /> : <p class="text-slate-600">This page is not available right now.</p>}
+  {/* Lives in the page, not the CMS body, so it ships with the feature it describes. */}
+  <section id="pickleball-open-play" class="mt-10 rounded-[28px] bg-white/90 p-6 shadow-[0_18px_45px_rgba(60,28,120,0.10)] ring-1 ring-slate-200 sm:p-8">
+    <h2 class="mb-4 text-2xl font-semibold text-brand-ink sm:text-3xl">Devlab Pickleball open play</h2>
+    <p class="text-slate-600">
+      Open play sessions need no account. The host's name and the players' names are shown on a public board that anyone with the
+      session link can see. A session is deleted from the live service 7 days after the last change to it, though backups may keep
+      its data for up to 30 days. The host can delete a session at any time.
+    </p>
+  </section>
 </Layout>
