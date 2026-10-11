@@ -1,5 +1,5 @@
 import { formatPublicCode } from '../../lib/pickleball/open/codes'
-import { checkInLink, viewerLink } from '../lib/hostKeys'
+import { checkInLink, tvLink, viewerLink } from '../lib/hostKeys'
 import QrCode from './QrCode.jsx'
 import { Button, Sheet } from './ui.jsx'
 
@@ -30,6 +30,7 @@ export default function ShareSheet({ code, selfCheckIn, onToggleCheckIn, onClose
           </Button>
         </div>
       </div>
+      <a href={tvLink(origin, code)} target="_blank" rel="noopener" className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-navy-700 px-4 font-semibold hover:bg-navy-900">Open the TV board</a>
     </Sheet>
   )
 }

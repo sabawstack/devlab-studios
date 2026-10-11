@@ -48,3 +48,6 @@ export function viewerLink(origin, code) {
 export function checkInLink(origin, code) {
   return `${origin}/pickleball/s/${code}/check-in`
 }
+export function tvLink(origin, code) {
+  return `${origin}/pickleball/s/${code}/tv`
+}

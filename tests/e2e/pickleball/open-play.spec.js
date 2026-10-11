@@ -682,3 +682,58 @@ test.describe('court captains: keys survive server hiccups', () => {
     expect(deletes).toBe(1)
   })
 })
+
+test.describe('TV board', () => {
+  for (const [width, height] of [[1920, 1080], [1280, 720]]) {
+    test(`16 courts fit a ${width}×${height} screen with no scrolling, in type readable across a hall`, async ({ page, request }) => {
+      const { code } = await createSession(request, { courtCount: 16, players: Array.from({ length: 70 }, (_, i) => ({ name: `Player ${i + 1}` })) })
+      await page.setViewportSize({ width, height })
+      await page.goto(`/pickleball/s/${code}/tv`)
+      await expect(page.getByTestId('tv-court')).toHaveCount(16)
+      const fits = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth && document.documentElement.scrollHeight <= window.innerHeight)
+      expect(fits).toBe(true)
+      if (height === 1080) {
+        // About 5 m from a 1080p screen: names at least 24 px tall.
+        const size = await page.getByTestId('tv-court').first().evaluate((el) => parseFloat(getComputedStyle(el.querySelector('p')).fontSize))
+        expect(size).toBeGreaterThanOrEqual(24)
+      }
+    })
+  }
+
+  test('the TV shows the fairness panel and the check-in QR, and updates when a result is saved', async ({ page, request }) => {
+    const { code, hostKey } = await createSession(request)
+    await page.setViewportSize({ width: 1920, height: 1080 })
+    await page.goto(`/pickleball/s/${code}/tv`)
+    await expect(page.getByTestId('fairness')).toBeVisible()
+    await expect(page.getByRole('img', { name: 'QR code for self check-in' })).toBeVisible()
+    const host = await hostSnapshot(request, code, hostKey)
+    expect((await command(request, code, hostKey, { type: 'RECORD_RESULT', matchId: host.courts[0].match.id, winner: 'A', scoreA: 11, scoreB: 4 })).status()).toBe(200)
+    await expect(page.getByRole('region', { name: 'Standings' })).toContainText('1–0')
+  })
+
+  test('the host opens the TV board from Share', async ({ page, request }) => {
+    const { code, hostKey } = await createSession(request)
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await page.getByRole('button', { name: 'Share board' }).click()
+    await expect(page.getByRole('link', { name: 'Open the TV board' })).toHaveAttribute('href', new RegExp(`/pickleball/s/${code}/tv$`))
+  })
+
+  // Spec §11: every key screen at 390, 768, 1280 and 1920 px with no sideways scroll.
+  for (const width of [390, 768, 1280, 1920]) {
+    test(`check-in, captain and TV screens fit a ${width}px screen without sideways scrolling`, async ({ browser, request }) => {
+      const { code, hostKey } = await createSession(request, { courtCount: 8, players: Array.from({ length: 30 }, (_, i) => ({ name: `Player ${i + 1}` })) })
+      const host = await hostSnapshot(request, code, hostKey)
+      const made = await request.post(`/api/pickleball/open/s/${code}/captains`, { headers: { 'X-Host-Key': hostKey }, data: { courtId: host.courts[0].id } })
+      const { captainKey } = await made.json()
+      for (const path of [`/pickleball/s/${code}/check-in`, `/pickleball/s/${code}#cap=${captainKey}`, `/pickleball/s/${code}/tv`]) {
+        // A fresh context per screen, so a remembered captain key never leaks into the next one.
+        const context = await browser.newContext({ viewport: { width, height: 900 } })
+        const screen = await context.newPage()
+        await screen.goto(path)
+        await expect(screen.locator('main, [data-testid="court-1"]').first()).toBeVisible()
+        expect(await screen.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), path).toBe(true)
+        await context.close()
+      }
+    })
+  }
+})

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { checkInLink, hostKeyFor, hostKeyFromHash, hostedSessions, hostLink, viewerLink } from './hostKeys'
+import { checkInLink, hostKeyFor, hostKeyFromHash, hostedSessions, hostLink, tvLink, viewerLink } from './hostKeys'
 
 describe('host links', () => {
   it('reads the host key from the fragment only', () => {
@@ -13,6 +13,10 @@ describe('host links', () => {
   it('builds host and viewer links', () => {
     expect(hostLink('https://x.test', 'ABCDE23456', 'k')).toBe('https://x.test/pickleball/s/ABCDE23456#host=k')
     expect(viewerLink('https://x.test', 'ABCDE23456')).toBe('https://x.test/pickleball/s/ABCDE23456')
+  })
+
+  it('builds the TV board link', () => {
+    expect(tvLink('https://x.test', 'ABCDE23456')).toBe('https://x.test/pickleball/s/ABCDE23456/tv')
   })
 
   it('builds the check-in link from the public code', () => {
