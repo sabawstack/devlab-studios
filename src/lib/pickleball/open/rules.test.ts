@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { activeRules, keepsRules, NO_RULES, pickFour, ruleViolation } from './rules'
 import { fillProposals, proposalBlocker, proposeForCourt } from './propose'
-import { at, player, sessionState } from './testing/fixtures'
+import { at, court, player, sessionState } from './testing/fixtures'
 import { DEFAULT_SETTINGS, type OpenPlayer, type PairRule } from './types'
 
 function withRules(rules: PairRule[], ids = ['a', 'b', 'c', 'd', 'e', 'f'], overrides: Record<string, Partial<OpenPlayer>> = {}) {
@@ -19,6 +19,25 @@ describe('activeRules', () => {
     expect(active.partnerOf.get('a')).toBe('b')
     expect(active.partnerOf.get('b')).toBe('a')
     expect(active.partnerOf.has('c')).toBe(false)
+  })
+})
+
+describe('inconsistent rule sets', () => {
+  it('a player in two keep-together rules keeps only the first partner, so nobody is seated twice', () => {
+    const state = withRules([{ kind: 'TOGETHER', playerIds: ['a', 'b'] }, { kind: 'TOGETHER', playerIds: ['b', 'c'] }], ['a', 'b', 'c', 'd', 'e'])
+    const rules = activeRules(state)
+    expect(rules.partnerOf.get('b')).toBe('a')
+    expect(rules.partnerOf.has('c')).toBe(false)
+    const four = pickFour(['a', 'b', 'c', 'd', 'e'], rules)!
+    expect(new Set(four).size).toBe(4)
+  })
+
+  it('a pair that is both together and apart is never seated together', () => {
+    const state = withRules([{ kind: 'TOGETHER', playerIds: ['a', 'b'] }, { kind: 'APART', playerIds: ['a', 'b'] }])
+    const rules = activeRules(state)
+    expect(rules.partnerOf.has('a')).toBe(false)
+    const four = pickFour(['a', 'b', 'c', 'd', 'e'], rules)!
+    expect(four.includes('a') && four.includes('b')).toBe(false)
   })
 })
 
@@ -81,5 +100,21 @@ describe('proposals with rules', () => {
     expect(filled.matches).toHaveLength(0)
     expect(proposalBlocker(filled)).toMatch(/keep-together and keep-apart rules/)
     expect(proposalBlocker(withRules([], ['a', 'b', 'c']))).toBeNull()
+  })
+
+  it('a forced player whose keep-together partner is busy waits, and others fill the court', () => {
+    const base = withRules([{ kind: 'TOGETHER', playerIds: ['a', 'b'] }], ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'])
+    const state = {
+      ...base,
+      courts: [court('c1', 1), court('c2', 2)],
+      players: base.players.map((p) => (p.id === 'a' ? { ...p, waitingSince: at(-60) } : p)),
+      matches: [{
+        id: 'm0', courtId: 'c2', seq: 1, status: 'IN_PROGRESS' as const, teamA: ['b', 'c'] as [string, string], teamB: ['d', 'e'] as [string, string],
+        scoreA: null, scoreB: null, winner: null, proposedAt: at(0), startedAt: at(0), finishedAt: null, recordedBy: null,
+      }],
+    }
+    const p = proposeForCourt(state)!
+    expect([...p.teamA, ...p.teamB].sort()).toEqual(['f', 'g', 'h', 'i'])
+    expect([...p.teamA, ...p.teamB]).not.toContain('a')
   })
 })

@@ -21,6 +21,15 @@ describe('paddle stack (property)', () => {
   )
 })
 
+describe('paddle stack partner rotation (property)', () => {
+  it('8 players on 2 courts repeat a partnership at most twice over 6 rounds', () => {
+    const { rounds } = simulate({ players: 8, courts: 2, rounds: 6, seed: 7 })
+    const counts = new Map<string, number>()
+    for (const m of rounds.flat()) for (const team of [m.teamA, m.teamB]) counts.set(pairKey(...team), (counts.get(pairKey(...team)) ?? 0) + 1)
+    expect(Math.max(...counts.values())).toBeLessThanOrEqual(2)
+  })
+})
+
 describe.each(MODES)('%s (property)', (mode) => {
   it.each([[5, 1], [8, 2], [12, 1], [14, 3], [20, 2], [24, 2], [40, 4], [96, 8]])(
     'with %i players on %i courts nobody is on two courts at once',
@@ -60,9 +69,9 @@ describe.each(MODES)('%s (property)', (mode) => {
         for (const rule of rules) {
           const [a, b] = rule.playerIds
           if (rule.kind === 'APART') expect(four.includes(a) && four.includes(b), `${a} and ${b} on one court`).toBe(false)
-          else if (four.includes(a) || four.includes(b)) {
-            const team = match.teamA.includes(a) ? match.teamA : match.teamB
-            expect(team.includes(b), `${a} without ${b}`).toBe(true)
+          else {
+            expect(four.includes(a), `${a} and ${b} not both present`).toBe(four.includes(b))
+            if (four.includes(a)) expect(match.teamA.includes(a) ? match.teamA.includes(b) : match.teamB.includes(b), `${a} without ${b}`).toBe(true)
           }
         }
       }

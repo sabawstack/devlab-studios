@@ -22,12 +22,16 @@ export function activeRules(state: OpenSessionState): ActiveRules {
   const partnerOf = new Map<string, string>()
   const apart = new Set<string>()
   for (const rule of state.settings.rules) {
+    if (rule.kind === 'APART') apart.add(pairKey(...rule.playerIds))
+  }
+  // normalizeSettings accepts any well-formed rules, so defend here: the first
+  // keep-together rule wins a player, and keep-apart beats keep-together.
+  for (const rule of state.settings.rules) {
     const [a, b] = rule.playerIds
-    if (rule.kind === 'APART') apart.add(pairKey(a, b))
-    else if (active.has(a) && active.has(b)) {
-      partnerOf.set(a, b)
-      partnerOf.set(b, a)
-    }
+    if (rule.kind !== 'TOGETHER' || !active.has(a) || !active.has(b)) continue
+    if (partnerOf.has(a) || partnerOf.has(b) || apart.has(pairKey(a, b))) continue
+    partnerOf.set(a, b)
+    partnerOf.set(b, a)
   }
   return { partnerOf, apart }
 }
