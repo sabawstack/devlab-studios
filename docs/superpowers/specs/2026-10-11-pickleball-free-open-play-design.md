@@ -185,7 +185,7 @@ src/pickleball-open/                React components for the board, console, dia
 
 ## 4. Session lifecycle
 
-1. **Create** (`/pickleball/new`): host display name (unverified, shown as "Hosted by"), format (Open play / Tournament), number of courts (1–16) with optional labels, game settings (target 11/15/21, win by 2 on/off, or "winner only"), stacking mode. Turnstile required.
+1. **Create** (`/pickleball/new`): host display name (unverified, shown as "Hosted by"), format (Open play / Tournament), number of courts (1–16) with optional labels, game settings (target 11/15/21, win by 2 on/off, or "winner only"; scoring style side-out or rally, which only labels the DUPR export), optional venue/location text, stacking mode. Turnstile required.
 2. **Roster**: paste a list (one per line or comma-separated; numbering, bullets and emoji stripped; duplicates removed case-insensitively; e.g. copied from a Reclub attendee list or WhatsApp), CSV upload (`name[,skill][,dupr_id]`), manual add, or **QR self check-in**: players scan a check-in QR and type their own name (and optionally skill 1–5 and DUPR ID). The host can turn self check-in off.
 3. **Run**: the host console shows every court. A free court shows the proposed match with **Start**, **Edit** and **Skip**. A playing court shows **Game over**.
 4. **Players come and go**: add a late player at any time; mark a player *on break* (skipped by every mode) or *left*. A late player enters with `games_played` equal to the current minimum among active players, so they neither jump the queue nor wait forever.
@@ -291,7 +291,22 @@ first names or nicknames are fine.
 1. On the host console, **Email me the DUPR export** prompts Google sign-in. This reuses `src/worker/pickleball/oauth.js` (PKCE), with a new `devlab_pb_host` cookie that carries only `hostId`. On first sign-in a `hosts` row is created, with an optional marketing opt-in checkbox, unticked by default.
 2. **Claim**: the session's DO records `hostId`. A session can be claimed once, only by someone holding the host key. After that the export is restricted to that account; a viewer or captain never sees the button.
 3. The host enters their **DUPR Club ID** once (saved on `hosts`). Players' DUPR IDs come from check-in or the host's edits.
-4. `duprExport.ts` builds a CSV in **DUPR's official match-import template**, which must be fetched from DUPR's club Matches tab and pinned in a test fixture before this phase is built; the column layout is not assumed. It includes only scored, finished doubles matches where all four players have a DUPR ID. The email lists how many matches were skipped and why.
+4. `duprExport.ts` builds a CSV in DUPR's club match-import template. The layout below was taken from public sources without a DUPR login: a public copy of DUPR's template in the open-source repo `johnpathe/dupr-match-entry`, which matches PickleQ's "27-column" description, plus DUPR's and vendors' help pages. It is pinned as a test fixture (`tests/fixtures/dupr-import-template.csv`):
+
+   ```
+   matchType,event,date,playerA1,playerA1DuprId,playerA1ExternalId,playerA2,playerA2DuprId,
+   playerA2ExternalId,playerB1,playerB1DuprId,playerB1ExternalId,playerB2,playerB2DuprId,
+   playerB2ExternalId,teamAGame1,teamBGame1,teamAGame2,teamBGame2,teamAGame3,teamBGame3,
+   teamAGame4,teamBGame4,teamAGame5,teamBGame5,location,scoreType
+   ```
+
+   - **Field values**: `matchType` = `D`; `event` = session name; `date` = `YYYY-MM-DD` in the session's local date; `scoreType` = `SIDEOUT`, or `RALLY` if the host chose rally scoring at creation; `location` = an optional venue text field on the session.
+   - **Games**: one row per game, with only game 1 filled. Games 2–5 stay blank. `*ExternalId` is our session player id.
+   - **No instruction rows**: DUPR's downloadable template carries instruction rows that must be deleted before upload; ours never includes them.
+   - **Eligibility**: DUPR rejects ties and games where neither team reaches 6 points. A game is exported only if it is a finished doubles match with a score (not winner-only) that passes those rules and all four players have a DUPR ID. DUPR IDs are validated as 6 alphanumeric characters, uppercased.
+   - **Skipped games**: the email lists each skipped game and the reason.
+   - **Upload**: the host's DUPR account must be a Club Director or Organizer of their club. The email says so, with the click path (Matches → Add Matches → Import Matches via CSV).
+   - **Risk**: if DUPR changes the template, the fixture and builder are updated together. Uploads that fail are reported by hosts through the email's reply-to.
 5. Sent through the existing Resend integration to the host's **verified Google email**, with the CSV attached. The host uploads it in DUPR ("Import Matches via CSV"). Exports are limited to 5 per session per day.
 
 We do not call DUPR or Reclub APIs, and do not scrape. Direct DUPR submission
@@ -305,32 +320,56 @@ needs DUPR partner status and is a business track. A Reclub partnership
 - **Caps per session**: 16 courts, 128 players, 2,000 matches; names ≤ 40 characters, trimmed, control characters stripped. React escaping covers rendering.
 - **Idempotency**: every command carries a client `idempotencyKey`, deduplicated in the DO for 10 minutes, so double taps on court-side Wi-Fi are safe.
 
-## 11. Retiring the logged-in app (Phase 5)
+## 11. Public pages, guides and visual design
+
+Every public page is reframed around "free, no sign-up, run every court from one phone":
+
+- **Pages**:
+  - `/pickleball`: the landing page, with a "Start a free session" primary CTA, a live demo board and a feature tour.
+  - `/pickleball/how-it-works`: rewritten as the host guide (start, add players, run courts, record results, stacking modes, tournaments, QR board, exports, privacy and retention).
+  - A new `/pickleball/rotation`: "How fair rotation works". It replaces `/pickleball/methodology`, and like it, its worked examples are computed at build time by importing the real engine (`propose()`), so the page cannot drift from the code.
+  - FAQ: free? login? how long is data kept? DUPR? Reclub?
+  - The create page, board, TV view, expired-code page and a new 1200×630 share image (`scripts/og/`).
+- **Copy rule kept**: every claim must map to shipped code, pinned by `pickleball-public-pages.spec.js`. Phase 1 rewrites all of the pages but claims only Phase 1 features; each later phase adds its own guide sections and claims in the same change that ships the feature.
+- **Visual system**: extend the hand-authored SVG set in `src/components/pickleball/art/` with:
+  - an animated hero court scene (ball arc, paddles, players rotating in);
+  - one animated diagram per stacking mode (paddle stack moving through courts, the winners/losers shuffle showing partners becoming opponents, standing windows, balanced splits);
+  - QR to phone, the score dialog, the bracket, and empty and expired states.
+- **Animation rules**:
+  - Pure CSS keyframes or SMIL inside inline SVG, with no animation library and no JavaScript on the marketing pages (the existing zero-hydration rule holds).
+  - Animate only `transform` and `opacity`.
+  - Everything stops under `prefers-reduced-motion: reduce`.
+  - The hero SVG stays under 30 KB, and Lighthouse performance on `/pickleball` stays at or above 90 on mobile.
+- **In-app motion**: a court card flips to its next match when a result is saved; "Up next" pulses; a short CSS celebration plays for a tournament winner. All respect reduced motion.
+- **Palette**: court greens and blues with an optic-yellow ball accent, defined as tokens on the existing dark public shell, at WCAG AA contrast.
+- **Process**: mockups of the landing page, board and host console are reviewed with the owner before Phase 1 UI work is built.
+
+## 12. Retiring the logged-in app (Phase 5)
 
 - Delete: the SPA `src/pickleball-app/`, `/pickleball/app/*`, `/pickleball/accept-invite/*`, `/pickleball/live/*`, every route under `/api/pickleball/` except `open/**` and host auth, `authContext.js`, `session.js`, `permissions.ts`, `quota.ts`, invites, platform pages, audit, per-rally scoring (`src/lib/pickleball/scoring/*`), OPI (`opi.ts`, snapshots), `SessionCoordinatorDO` (wrangler migration `deleted_classes`).
 - **Kept**: `oauth.js` (host sign-in), `RateLimiterDO`, the reused pure modules, `PublicLinkQRCode`.
 - **D1**: one migration drops every old pickleball table, children before parents (`DROP TABLE` is safe; it's table rebuilds that aren't).
-- **Redirects**: `/pickleball/app`, `/pickleball/methodology` and `/pickleball/live/*` get rows in the D1 `redirects` table, not hardcoded page redirects (per `AGENTS.md`).
-- **Landing and guide copy** rewritten for "Free · no sign-up · QR live board"; `pickleball-public-pages.spec.js` is updated to pin the new claims, and every claim must still map to shipped code.
+- **Redirects**: `/pickleball/app` → `/pickleball/new`, `/pickleball/methodology` → `/pickleball/rotation` and `/pickleball/live/*` → `/pickleball` get rows in the D1 `redirects` table, not hardcoded page redirects (per `AGENTS.md`).
+- Remove the remaining copy that mentions sign-in, operators or OPI (the pages were already rewritten in Phase 1, §11).
 - **Docs**: `docs/pickleball/architecture.md`, `schema.md`, `realtime.md` and `runbook.md` rewritten. Their current C2–C5 staleness is fixed as a side effect.
 - **Versioning**: Phases 1–4 are MINOR releases (additive routes). Phase 5 removes public routes and APIs, so it is a **MAJOR** release (2.0.0) per `CHANGELOG.md` policy.
 
-## 12. Testing
+## 13. Testing
 
 - **Unit (vitest)**: every module under `src/lib/pickleball/open/`. Property-style tests for `propose()`: over randomized sessions of 5–40 players on 1–8 courts with random results, assert the sit-out guard (no one sits out more than 2 consecutive proposals), no player on two courts, constraints honoured, and repeat avoidance against a brute-force baseline on small cases. Plus `roster.ts` parsing fixtures, `scoreValidation.ts`, `drawEdits.ts` validity rules, and the DUPR CSV against the pinned template.
 - **DO integration**: command dispatch, idempotency, authorization (viewer and captain refused host commands), alarm purge leaves empty storage and no index row.
 - **E2E (Playwright, `static` project)**: create → paste roster → run 2 courts across several games in each mode → viewer page updates in a second browser context → edit result → tournament generate/edit/start/finish → expired-code page. Host Google sign-in is tested through a test-only login route gated by an env flag, as today.
 - `npm run typecheck && npm run build` and the full e2e suite before each push, per `AGENTS.md`.
 
-## 13. Phases
+## 14. Phases
 
 | # | Ships | Release |
 |---|---|---|
-| 1 | Anonymous create (Turnstile, limits), roster paste/manual/CSV, courts, **paddle stack**, final-score entry with undo/edit, proposal editing, live QR board, results CSV, 7-day expiry + cron backstop, new landing CTA "Start a free session" (old app still reachable) | minor |
+| 1 | Anonymous create (Turnstile, limits), roster paste/manual/CSV, courts, **paddle stack**, final-score entry with undo/edit, proposal editing, live QR board, results CSV, 7-day expiry + cron backstop, **all public pages and guides rewritten with the new visual and animation set (§11)** (old app still reachable) | minor |
 | 2 | Winners/losers (shuffled), by-standing, balanced modes; keep together/apart; fairness panel; QR self check-in; court captain links; TV mode | minor |
 | 3 | Tournaments: pairing, seeding, draft edits, start lock, substitutions/opponent swaps, bracket board | minor |
 | 4 | Google host sign-in, claim, DUPR Club ID, DUPR CSV email; account deletion; optional offline PWA | minor |
-| 5 | Retire the logged-in app (§11) | **major** |
+| 5 | Retire the logged-in app (§12) | **major** |
 
 Each phase: feature branch → `development` → verify on the preview URL → `main`,
 with a `[Unreleased]` CHANGELOG entry in the same commit as each change.
@@ -339,7 +378,7 @@ with a `[Unreleased]` CHANGELOG entry in the same commit as each change.
 data access so hosts can import a meet's attendees directly; apply to DUPR's
 partner program (clubs@mydupr.com) for direct match submission.
 
-## 14. Risks
+## 15. Risks
 
 | Risk | Mitigation |
 |---|---|
