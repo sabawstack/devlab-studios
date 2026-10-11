@@ -59,6 +59,7 @@ decided against that surface specifically:
 - Paste-a-list and CSV roster parsing that cleans numbering, emoji and duplicates from lists copied out of chat apps.
 - Score rules for once-per-game results: games to 11, 15 or 21, accepting both sudden-death (11–10) and win-by-2 (12–10) endings. Also unambiguous 10-character session codes.
 - Session standings ranked by win rate, then point difference per game, then points per game, then head-to-head.
+- Paddle-stack rotation for open play: fewest games first, longest wait next, forced in after two rounds out, partners split to avoid repeats.
 - D1 migration 0016 adds the open_* tables for free, no-login open play sessions. Every table cascades from open_sessions so a single delete removes a session.
 - **End-to-end coverage for the screens that only exist once there is mail.** Everything the mailbox suite tested before could run against an empty mailbox — authorization, navigation, highlighting, empty states — which left four shipped features with no end-to-end coverage at all. New tests exercise retrying a failed reply and its refusal to offer a second retry, remote images held back until asked for and the sanitizer keeping the sender's layout while dropping their script, a DMARC report rendered from a real zipped fixture reporting a forged source, and attaching a file to a reply through the real upload endpoint. `scripts/mailbox/apply-e2e-fixtures.mjs` loads the same synthetic mail preview uses, so the fixtures cannot drift from it.
 
