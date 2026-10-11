@@ -1,9 +1,9 @@
 // QR self check-in (spec §4.2): an anonymous player adds themselves. The same
 // cleaning as a pasted roster applies, and nothing here can touch anyone else
 // beyond bringing a player with the same name back from a break.
-import { minActiveGames, returnLevel } from './reducer'
+import { addOrReturnPlayer } from './reducer'
 import { cleanName } from './roster'
-import { LIMITS, type CommandContext, type OpenPlayer, type OpenSessionState } from './types'
+import type { CommandContext, OpenSessionState } from './types'
 
 export interface CheckInEntry {
   name: string
@@ -28,15 +28,11 @@ export function applyCheckIn(state: OpenSessionState, entry: CheckInEntry, ctx: 
   const duprId = entry.duprId ? entry.duprId.trim().toUpperCase() : null
   if (duprId !== null && !DUPR_ID.test(duprId)) return { ok: false, status: 400, error: 'A DUPR ID is 6 letters or digits.' }
 
-  const existing = state.players.find((p) => p.name.toLocaleLowerCase() === name.toLocaleLowerCase())
-  if (existing?.status === 'ACTIVE') return { ok: true, state, playerId: existing.id, name: existing.name, alreadyCheckedIn: true }
-  if (existing) return { ok: true, state: returnLevel(state, existing, ctx), playerId: existing.id, name: existing.name, alreadyCheckedIn: false }
-  if (state.players.length >= LIMITS.maxPlayers) return { ok: false, status: 409, error: 'This session is full.' }
-
-  const added: OpenPlayer = {
-    id: ctx.newId(), name, skill: entry.skill, duprId, status: 'ACTIVE',
-    gamesOffset: minActiveGames(state), joinedAt: ctx.now, waitingSince: ctx.now,
-    position: state.players.reduce((max, p) => Math.max(max, p.position), 0) + 1,
+  const taken = state.players.find((p) => p.name.toLocaleLowerCase() === name.toLocaleLowerCase())
+  if (taken?.status === 'LEFT') {
+    return { ok: false, status: 409, error: 'The host took this name off the list. Ask the host to add you back.' }
   }
-  return { ok: true, state: { ...state, players: [...state.players, added] }, playerId: added.id, name, alreadyCheckedIn: false }
+  const result = addOrReturnPlayer(state, name, { skill: entry.skill, duprId }, ctx)
+  if (result.outcome === 'full') return { ok: false, status: 409, error: 'This session is full.' }
+  return { ok: true, state: result.state, playerId: result.player.id, name: result.player.name, alreadyCheckedIn: result.outcome === 'present' }
 }

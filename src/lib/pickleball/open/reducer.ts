@@ -49,23 +49,46 @@ function nameTaken(state: OpenSessionState, name: string, exceptId?: string): bo
   return state.players.some((p) => p.id !== exceptId && p.name.toLocaleLowerCase() === key)
 }
 
+export interface NewPlayerDetails {
+  skill: number | null
+  duprId: string | null
+}
+
+export type AddOrReturn =
+  | { outcome: 'added' | 'returned' | 'present'; state: OpenSessionState; player: OpenPlayer }
+  | { outcome: 'full' }
+
+/**
+ * The one way a cleaned name joins a session: a name already on the list is
+ * matched case-insensitively and, unless already ACTIVE, brought back level;
+ * a new name is added level with whoever has played least (`offset` lets a
+ * batch fix that level up front). A returning player is never blocked by the cap.
+ */
+export function addOrReturnPlayer(
+  state: OpenSessionState, name: string, details: NewPlayerDetails, ctx: CommandContext, offset: number = minActiveGames(state),
+): AddOrReturn {
+  const existing = state.players.find((p) => p.name.toLocaleLowerCase() === name.toLocaleLowerCase())
+  if (existing) {
+    if (existing.status === 'ACTIVE') return { outcome: 'present', state, player: existing }
+    const next = returnLevel(state, existing, ctx)
+    return { outcome: 'returned', state: next, player: next.players.find((p) => p.id === existing.id) ?? existing }
+  }
+  if (state.players.length >= LIMITS.maxPlayers) return { outcome: 'full' }
+  const added: OpenPlayer = {
+    id: ctx.newId(), name, skill: details.skill, duprId: details.duprId, status: 'ACTIVE',
+    gamesOffset: offset, joinedAt: ctx.now, waitingSince: ctx.now,
+    position: state.players.reduce((max, p) => Math.max(max, p.position), 0) + 1,
+  }
+  return { outcome: 'added', state: { ...state, players: [...state.players, added] }, player: added }
+}
+
 function addPlayers(state: OpenSessionState, rawNames: readonly string[], ctx: CommandContext): CommandResult {
   const offset = minActiveGames(state)
   let next = state
-  let position = state.players.reduce((max, p) => Math.max(max, p.position), 0) + 1
   for (const name of rawNames.map(cleanName).filter(Boolean)) {
-    const existing = next.players.find((p) => p.name.toLocaleLowerCase() === name.toLocaleLowerCase())
-    if (existing) {
-      if (existing.status !== 'ACTIVE') next = returnLevel(next, existing, ctx)
-      continue
-    }
-    if (next.players.length >= LIMITS.maxPlayers) return fail(409, `A session can have at most ${LIMITS.maxPlayers} players.`)
-    const added: OpenPlayer = {
-      id: ctx.newId(), name, skill: null, duprId: null, status: 'ACTIVE',
-      gamesOffset: offset, joinedAt: ctx.now, waitingSince: ctx.now, position,
-    }
-    position += 1
-    next = { ...next, players: [...next.players, added] }
+    const result = addOrReturnPlayer(next, name, { skill: null, duprId: null }, ctx, offset)
+    if (result.outcome === 'full') return fail(409, `A session can have at most ${LIMITS.maxPlayers} players.`)
+    next = result.state
   }
   return ok(next)
 }

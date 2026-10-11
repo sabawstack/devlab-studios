@@ -24,10 +24,24 @@ describe('applyCheckIn', () => {
     expect(result.ok && result.state).toBe(state)
   })
 
-  it('brings a player back from a break or after leaving, without touching their details', () => {
-    const state = sessionState({ players: [player('a', { name: 'Ana', status: 'LEFT', skill: 2 })] })
+  it('brings a player back from a break without touching their details', () => {
+    const state = sessionState({ players: [player('a', { name: 'Ana', status: 'BREAK', skill: 2 })] })
     const result = applyCheckIn(state, { name: 'ana', skill: 5, duprId: null }, ctx)
+    expect(result).toMatchObject({ ok: true, playerId: 'a', alreadyCheckedIn: false })
     expect(result.ok && result.state.players[0]).toMatchObject({ status: 'ACTIVE', skill: 2, waitingSince: at(30) })
+  })
+
+  it('does not undo a host removal: a player who left stays off the list', () => {
+    const state = sessionState({ players: [player('a', { name: 'Ana', status: 'LEFT' })] })
+    expect(applyCheckIn(state, { name: 'ana', skill: null, duprId: null }, ctx)).toEqual({
+      ok: false, status: 409, error: 'The host took this name off the list. Ask the host to add you back.',
+    })
+  })
+
+  it('lets a returning break player in even when the session is at the player cap', () => {
+    const players = Array.from({ length: LIMITS.maxPlayers }, (_, i) => player(`p${i}`, i === 0 ? { name: 'Ana', status: 'BREAK' } : {}))
+    const result = applyCheckIn(sessionState({ players }), { name: 'Ana', skill: null, duprId: null }, ctx)
+    expect(result).toMatchObject({ ok: true, playerId: 'p0', alreadyCheckedIn: false })
   })
 
   it('refuses when check-in is off, the session ended, the name is empty, or values are out of range', () => {
