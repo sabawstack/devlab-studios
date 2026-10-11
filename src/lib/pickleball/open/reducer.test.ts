@@ -109,16 +109,52 @@ describe('applyCommand', () => {
     expect([...replacement.teamA, ...replacement.teamB].sort()).not.toEqual([...c1.teamA, ...c1.teamB].sort())
   })
 
-  it('late arrivals start level with the least-played active player', () => {
-    let state = ready()
-    const c1 = proposedOn(state, 'c1')
-    state = finalizeCommand(must(applyCommand(state, { type: 'RECORD_RESULT', matchId: c1.id, winner: 'A', scoreA: 11, scoreB: 3 }, ctxAt(10))), ctxAt(10))
-    const c2 = proposedOn(state, 'c2')
-    state = finalizeCommand(must(applyCommand(state, { type: 'RECORD_RESULT', matchId: c2.id, winner: 'A', scoreA: 11, scoreB: 3 }, ctxAt(11))), ctxAt(11))
+  it('late arrivals start level with the least-played active player (LEFT players excluded)', () => {
+    const state = sessionState({
+      players: [
+        player('a', { gamesOffset: 2 }), player('b', { gamesOffset: 3 }), player('c', { gamesOffset: 5 }),
+        player('x', { gamesOffset: 0, status: 'LEFT' }),
+      ],
+    })
     const added = must(applyCommand(state, { type: 'ADD_PLAYERS', names: ['Late', 'a'] }, ctxAt(12)))
-    const late = added.players.find((p) => p.name === 'Late')!
-    expect(late.gamesOffset).toBe(0) // player 'i' has still played 0, so the minimum is 0
+    expect(added.players.find((p) => p.name === 'Late')!.gamesOffset).toBe(2)
     expect(added.players.filter((p) => p.name === 'a')).toHaveLength(1) // duplicate ignored
+  })
+
+  it('a player returning from break or left comes back level, never owed games', () => {
+    const state = sessionState({
+      players: [
+        player('a', { gamesOffset: 3 }), player('b', { gamesOffset: 3 }), player('c', { gamesOffset: 4 }),
+        player('d', { gamesOffset: 1, status: 'BREAK' }), player('e', { gamesOffset: 0, status: 'LEFT' }),
+        player('f', { gamesOffset: 9, status: 'BREAK' }),
+      ],
+    })
+    const back = must(applyCommand(state, { type: 'SET_PLAYER_STATUS', playerId: 'd', status: 'ACTIVE' }, ctxAt(1)))
+    expect(back.players.find((p) => p.id === 'd')!.gamesOffset).toBe(3)
+    const re = must(applyCommand(state, { type: 'ADD_PLAYERS', names: ['e'] }, ctxAt(1)))
+    expect(re.players.find((p) => p.id === 'e')!.gamesOffset).toBe(1) // min of other non-LEFT is d's 1
+    const high = must(applyCommand(state, { type: 'SET_PLAYER_STATUS', playerId: 'f', status: 'ACTIVE' }, ctxAt(1)))
+    expect(high.players.find((p) => p.id === 'f')!.gamesOffset).toBe(9) // never lowered
+  })
+
+  it('undo is refused when the court has already started its next game', () => {
+    const state = ready()
+    const first = proposedOn(state, 'c1')
+    const saved = finalizeCommand(must(applyCommand(state, { type: 'RECORD_RESULT', matchId: first.id, winner: 'A', scoreA: 11, scoreB: 7 }, ctxAt(12))), ctxAt(12))
+    const next = proposedOn(saved, 'c1')
+    const started = must(applyCommand(saved, { type: 'START_MATCH', matchId: next.id }, ctxAt(13)))
+    expect(applyCommand(started, { type: 'UNDO_RESULT', matchId: first.id }, ctxAt(13))).toMatchObject({ ok: false, status: 409 })
+  })
+
+  it('an ended session never gains proposals, even after a result or new players', () => {
+    const state = ready()
+    const c1 = proposedOn(state, 'c1')
+    const started = must(applyCommand(state, { type: 'START_MATCH', matchId: c1.id }, ctxAt(1)))
+    const ended = finalizeCommand(must(applyCommand(started, { type: 'END_SESSION' }, ctxAt(2))), ctxAt(2))
+    const recorded = finalizeCommand(must(applyCommand(ended, { type: 'RECORD_RESULT', matchId: c1.id, winner: 'A', scoreA: 11, scoreB: 4 }, ctxAt(3))), ctxAt(3))
+    expect(recorded.matches.filter((m) => m.status === 'PROPOSED')).toHaveLength(0)
+    const added = finalizeCommand(must(applyCommand(recorded, { type: 'ADD_PLAYERS', names: ['Z1', 'Z2', 'Z3', 'Z4'] }, ctxAt(4))), ctxAt(4))
+    expect(added.matches.filter((m) => m.status === 'PROPOSED')).toHaveLength(0)
   })
 
   it('caps the roster at 128 players', () => {

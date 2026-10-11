@@ -23,9 +23,21 @@ function withPlayers(state: OpenSessionState, ids: ReadonlySet<string>, patch: P
   return { ...state, players: state.players.map((p) => (ids.has(p.id) ? { ...p, ...patch } : p)) }
 }
 
-function minActiveGames(state: OpenSessionState): number {
-  const games = state.players.filter((p) => p.status !== 'LEFT').map((p) => gamesPlayed(p, state.matches))
+function minActiveGames(state: OpenSessionState, exceptId?: string): number {
+  const games = state.players
+    .filter((p) => p.status !== 'LEFT' && p.id !== exceptId)
+    .map((p) => gamesPlayed(p, state.matches))
   return games.length ? Math.min(...games) : 0
+}
+
+/** Bring a returning player level with everyone else: raise their offset, never lower it. */
+function returnLevel(state: OpenSessionState, target: OpenPlayer, ctx: CommandContext): OpenSessionState {
+  const shortfall = minActiveGames(state, target.id) - gamesPlayed(target, state.matches)
+  const patch: Partial<OpenPlayer> = {
+    status: 'ACTIVE', waitingSince: ctx.now,
+    gamesOffset: target.gamesOffset + Math.max(0, shortfall),
+  }
+  return withPlayers(state, new Set([target.id]), patch)
 }
 
 function nameTaken(state: OpenSessionState, name: string, exceptId?: string): boolean {
@@ -40,7 +52,7 @@ function addPlayers(state: OpenSessionState, rawNames: readonly string[], ctx: C
   for (const name of rawNames.map(cleanName).filter(Boolean)) {
     const existing = next.players.find((p) => p.name.toLocaleLowerCase() === name.toLocaleLowerCase())
     if (existing) {
-      if (existing.status !== 'ACTIVE') next = withPlayers(next, new Set([existing.id]), { status: 'ACTIVE', waitingSince: ctx.now })
+      if (existing.status !== 'ACTIVE') next = returnLevel(next, existing, ctx)
       continue
     }
     if (next.players.length >= LIMITS.maxPlayers) return fail(409, `A session can have at most ${LIMITS.maxPlayers} players.`)
@@ -61,8 +73,8 @@ function setPlayerStatus(state: OpenSessionState, playerId: string, status: Open
   const playing = state.matches.some((m) => m.status === 'IN_PROGRESS' && matchIncludes(m, playerId))
   if (status !== 'ACTIVE' && playing) return fail(409, `${target.name} is playing. Finish or abandon their game first.`)
   const cleared = status === 'ACTIVE' ? state : withoutMatches(state, (m) => m.status === 'PROPOSED' && matchIncludes(m, playerId))
-  const patch: Partial<OpenPlayer> = status === 'ACTIVE' ? { status, waitingSince: ctx.now } : { status }
-  return ok(withPlayers(cleared, new Set([playerId]), patch))
+  if (status === 'ACTIVE') return ok(returnLevel(cleared, target, ctx))
+  return ok(withPlayers(cleared, new Set([playerId]), { status }))
 }
 
 function editProposal(state: OpenSessionState, matchId: string, teamA: Team, teamB: Team): CommandResult {
@@ -104,6 +116,9 @@ function undoResult(state: OpenSessionState, matchId: string, ctx: CommandContex
   if (match.status !== 'FINISHED' || !match.finishedAt) return fail(409, 'Only a saved result can be undone.')
   if (Date.parse(ctx.now) - Date.parse(match.finishedAt) > LIMITS.undoWindowMs) {
     return fail(409, 'The 2-minute undo has passed. Edit the result instead.')
+  }
+  if (state.matches.some((m) => m.id !== matchId && m.courtId === match.courtId && m.status === 'IN_PROGRESS')) {
+    return fail(409, 'That court has already started its next game. Edit the result instead.')
   }
   const ids = [...match.teamA, ...match.teamB]
   const nowPlaying = state.matches.find((m) => m.id !== matchId && m.status === 'IN_PROGRESS' && ids.some((id) => matchIncludes(m, id)))
