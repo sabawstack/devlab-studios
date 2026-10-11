@@ -1,18 +1,35 @@
 import { pairingHistory, queueOrder } from './fairness'
-import { proposePaddleStack, type Proposal } from './modes/paddleStack'
-import { LIMITS, type CommandContext, type OpenSessionState } from './types'
+import { proposePaddleStack, type ModeProposer, type Proposal } from './modes/paddleStack'
+import { activeRules } from './rules'
+import { LIMITS, type CommandContext, type OpenSessionState, type StackingMode } from './types'
 
+// Tasks 3-5 add one entry each; Task 5 makes this a total Record.
+const PROPOSERS: Partial<Record<StackingMode, ModeProposer>> = {
+  PADDLE_STACK: proposePaddleStack,
+}
+
+/**
+ * Runs the session's current mode (spec §5.2). The sit-out guard is inside
+ * queueOrder (forced players first), and every mode picks through pickFour, so
+ * keep-together/keep-apart can never be broken: no fitting four means null.
+ */
 export function proposeForCourt(state: OpenSessionState, exclude?: readonly string[]): Proposal | null {
   if (state.status !== 'ACTIVE' || state.matches.length >= LIMITS.maxMatches) return null
   const queue = queueOrder(state)
-  const history = pairingHistory(state.matches)
-  switch (state.settings.mode) {
-    case 'PADDLE_STACK':
-      return proposePaddleStack(queue, history, exclude)
-    default:
-      // Unreachable in Phase 1: the create schema only accepts PADDLE_STACK.
-      throw new Error(`Stacking mode ${state.settings.mode} is not available yet.`)
-  }
+  if (queue.length < 4) return null
+  const proposer = PROPOSERS[state.settings.mode]
+  if (!proposer) throw new Error(`Stacking mode ${state.settings.mode} is not available yet.`)
+  return proposer({ state, queue, history: pairingHistory(state.matches), rules: activeRules(state), exclude })
+}
+
+/** Why a free court has no proposal, when the reason is not simply "fewer than 4 waiting". */
+export function proposalBlocker(state: OpenSessionState): string | null {
+  if (state.status !== 'ACTIVE') return null
+  if (state.matches.length >= LIMITS.maxMatches) return `This session has reached ${LIMITS.maxMatches} games.`
+  if (queueOrder(state).length < 4) return null
+  return proposeForCourt(state)
+    ? null
+    : 'No four waiting players fit the keep-together and keep-apart rules. Change a rule, or wait for the next game to end.'
 }
 
 export function addProposal(state: OpenSessionState, courtId: string, proposal: Proposal, ctx: CommandContext): OpenSessionState {

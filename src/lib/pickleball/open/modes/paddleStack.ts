@@ -1,47 +1,65 @@
+// src/lib/pickleball/open/modes/paddleStack.ts
 import { pairKey, type PartnerHistory, type QueueEntry } from '../fairness'
-import type { Team } from '../types'
+import { honoursTogether, NO_RULES, pickFour, type ActiveRules } from '../rules'
+import type { OpenSessionState, Team } from '../types'
 
 export interface Proposal {
   teamA: Team
   teamB: Team
 }
 
-const SPLITS: ReadonlyArray<readonly [number, number, number, number]> = [
-  [0, 1, 2, 3],
-  [0, 2, 1, 3],
-  [0, 3, 1, 2],
-]
+/** What every mode receives (built once per proposal by propose.ts). */
+export interface ModeInput {
+  state: OpenSessionState
+  /** Available players in paddle-stack order: forced sit-outs first (spec §5.2 rule 1). */
+  queue: readonly QueueEntry[]
+  history: PartnerHistory
+  rules: ActiveRules
+  /** Skip: the four just rejected. */
+  exclude?: readonly string[]
+}
+
+export type ModeProposer = (input: ModeInput) => Proposal | null
+
+/** The three ways to split four players into two teams. */
+export function allSplits(four: readonly string[]): Proposal[] {
+  const [a, b, c, d] = four
+  return [
+    { teamA: [a, b], teamB: [c, d] },
+    { teamA: [a, c], teamB: [b, d] },
+    { teamA: [a, d], teamB: [b, c] },
+  ]
+}
+
+export function partnerCost(p: Proposal, history: PartnerHistory): number {
+  return (history.partners.get(pairKey(...p.teamA)) ?? 0) + (history.partners.get(pairKey(...p.teamB)) ?? 0)
+}
+
+export function opponentCost(p: Proposal, history: PartnerHistory): number {
+  return p.teamA.reduce((sum, x) => sum + p.teamB.reduce((s, y) => s + (history.opponents.get(pairKey(x, y)) ?? 0), 0), 0)
+}
 
 /**
- * Chooses the split of four with the fewest repeated partners; opponent repeats only break ties
- * (strict lexicographic, so a repeated partnership never beats a split that avoids it).
+ * The candidate with the fewest repeated partners; opponent repeats only break
+ * ties (strict lexicographic, so a repeated partnership never beats a split that
+ * avoids it). Candidates that would split a keep-together pair are dropped.
+ * Returns null only when every candidate breaks a rule.
  */
-export function splitTeams(four: readonly string[], history: PartnerHistory): Proposal {
-  const scored = SPLITS.map(([a, b, c, d]) => {
-    const teamA: Team = [four[a], four[b]]
-    const teamB: Team = [four[c], four[d]]
-    const partnerCost = (history.partners.get(pairKey(...teamA)) ?? 0) + (history.partners.get(pairKey(...teamB)) ?? 0)
-    const opponentCost = teamA.reduce((sum, x) => sum + teamB.reduce((s, y) => s + (history.opponents.get(pairKey(x, y)) ?? 0), 0), 0)
-    return { proposal: { teamA, teamB }, partnerCost, opponentCost }
-  })
+export function bestSplit(candidates: readonly Proposal[], history: PartnerHistory, rules: ActiveRules = NO_RULES): Proposal | null {
+  const scored = candidates
+    .filter((p) => honoursTogether(p.teamA, p.teamB, rules))
+    .map((proposal) => ({ proposal, partner: partnerCost(proposal, history), opponent: opponentCost(proposal, history) }))
+  if (!scored.length) return null
   return scored.reduce((best, next) => (
-    next.partnerCost < best.partnerCost || (next.partnerCost === best.partnerCost && next.opponentCost < best.opponentCost) ? next : best
+    next.partner < best.partner || (next.partner === best.partner && next.opponent < best.opponent) ? next : best
   )).proposal
 }
 
-function sameSet(a: readonly string[], b: readonly string[]): boolean {
-  return a.length === b.length && [...a].sort().join('|') === [...b].sort().join('|')
+export function splitTeams(four: readonly string[], history: PartnerHistory, rules: ActiveRules = NO_RULES): Proposal {
+  return bestSplit(allSplits(four), history, rules) ?? allSplits(four)[0]
 }
 
-export function proposePaddleStack(
-  queue: readonly QueueEntry[],
-  history: PartnerHistory,
-  exclude?: readonly string[],
-): Proposal | null {
-  if (queue.length < 4) return null
-  const first = queue.slice(0, 4).map((entry) => entry.player.id)
-  const four = exclude && queue.length > 4 && sameSet(first, exclude)
-    ? [...first.slice(0, 3), queue[4].player.id]
-    : first
-  return splitTeams(four, history)
+export function proposePaddleStack({ queue, history, rules, exclude }: ModeInput): Proposal | null {
+  const four = pickFour(queue.map((entry) => entry.player.id), rules, exclude)
+  return four ? splitTeams(four, history, rules) : null
 }

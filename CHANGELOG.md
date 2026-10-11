@@ -70,6 +70,7 @@ decided against that surface specifically:
 - **Open play: anyone holding the public QR code could lock the host out.** Host commands were limited to 120 per minute per session, counted before the host key was checked, so a stranger sending junk could use up the host's allowance. The session limit now counts only commands with a valid host key, and every host route also has its own per-address limit (120 per minute) checked first.
 
 ### Added
+- Open play engine: keep-together and keep-apart rules are hard constraints for every way of picking players; a court that no four can fill without breaking one waits with a reason instead of breaking it.
 - Open play: migration `0017` adds court-captain links (`open_captains`, key hash only) and records who saved each result; settings gain self check-in and keep-together/keep-apart rules, and sessions stored before this load with defaults.
 - Five new animated pickleball illustrations (rally, paddle stack, score tap, QR board, quiet court), CSS-only, stopped for reduced motion.
 - /pickleball/new: start a free session in two steps (details, then paste or upload players), then save the host link and show the player QR.
