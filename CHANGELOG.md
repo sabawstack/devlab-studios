@@ -108,6 +108,7 @@ decided against that surface specifically:
 - Open play engine: "balanced teams" stacking splits each four so summed skill is as even as possible (entered skill, else today's win rate, else neutral), with repeated partners breaking ties. All four modes share one set of names and one-line explanations.
 
 ### Changed
+- Docs: architecture and runbook cover Phase 2 open play (stacking modes, pair rules, captain links, self check-in, TV board, migration 0017).
 - Open play rate limits are sized for a whole club on one Wi-Fi address: live connections 300 per minute per IP (was 30) and public board reads 1,200 per minute per IP (was 60), so the 5-second polling fallback no longer locks a club out.
 - The Playwright worker server now applies the pickleball D1 migrations locally (`wrangler d1 migrations apply devlab-pickleball --local`) before starting, so the open-play e2e tests run against the current schema.
 - Pickleball runbook: a SQL force-delete leaves the session's Durable Object serving its cached copy until it hibernates or is evicted, expired rows can sit in D1 for up to about a day until the purge (already hidden), and what a 429 on host commands means.

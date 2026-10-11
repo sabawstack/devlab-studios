@@ -57,13 +57,17 @@ recovered. Viewers need only the public code.
 | `POST /api/pickleball/open/sessions` | Create a session (Turnstile; 10 per IP per day; fails closed if `RATE_LIMITER` is absent) |
 | `GET /api/pickleball/open/s/:code/state` | Viewer snapshot (1200/min/IP, sized for a club on one Wi-Fi; polled every 5 s when the socket drops) |
 | `GET /api/pickleball/open/s/:code/host` | Host snapshot |
+| `POST /api/pickleball/open/s/:code/check-in` | Anonymous self check-in (30 per 10 min per IP, 60 per 5 min per session) |
+| `GET /api/pickleball/open/s/:code/captain` | Captain snapshot (`X-Captain-Key`) |
+| `POST/GET /api/pickleball/open/s/:code/captains`, `DELETE .../captains/:id` | Host makes, lists and turns off captain links |
 | `POST /api/pickleball/open/s/:code/commands` | Host commands (120/min/session) |
 | `GET /api/pickleball/open/s/:code/results.csv` | Results CSV |
 | `DELETE /api/pickleball/open/s/:code/session` | Host deletes the session |
 | `WS /pickleball/rt/open/:code` | Live snapshots (300 connects/min/IP, sized for a club on one Wi-Fi) |
 
 Pages: `/pickleball` (landing), `/pickleball/how-it-works`,
-`/pickleball/rotation`, `/pickleball/new`, `/pickleball/s/[code]`. Route
+`/pickleball/rotation`, `/pickleball/new`, `/pickleball/s/[code]`,
+`/pickleball/s/[code]/check-in`, `/pickleball/s/[code]/tv`. Route
 failures go through `openErrorResponse` (`routeHelpers.ts`), which logs the
 detail and returns a generic 500.
 
@@ -80,6 +84,38 @@ validation (sudden death and win by 2), roster parsing, standings (win rate,
 then share of points won, head-to-head, name),
 paddle-stack rotation with a two-round sit-out guard, the reducer, snapshots,
 diffs and the results CSV.
+
+### Phase 2 additions
+
+- **Modes.** Four stacking modes (`PADDLE_STACK`, `WINNERS_LOSERS`,
+  `BY_STANDING`, `BALANCED`) behind one `ModeInput`/`pickFour` interface, with
+  the sit-out guard in `queueOrder`. The `DUE_WINDOW` rule applies to
+  winners/losers and by-standing.
+- **Rules.** Keep-together / keep-apart pairs live in `settings_json` and are
+  read through `normalizeSettings`.
+- **Scores.** Every result needs both scores (no winner-only). Standings order
+  by win rate, then OPI per-game points share, then head-to-head, then name.
+- **Captains.** `OpenSessionDO` resolves an actor per call: the host, or a
+  captain whose key hash is in `open_captains` (`captain` role on commands and
+  WebSocket). Captains are checked from memory on every call, so revoking a link
+  takes effect at once and the DO demotes that captain's sockets to viewers.
+- **Check-in.** Anonymous `POST .../check-in`. The route checks a schema and
+  refuses bodies over 4096 bytes (413); a per-IP limit (bucket `open-checkin-ip`,
+  30 per 10 min, 503 if `RATE_LIMITER` is missing) and a per-session limit in
+  the DO (60 per 5 min) return 429. The DO uses the shared `addOrReturnPlayer`
+  (`reducer.ts`): a new name is added, an active name is returned as
+  already checked in, a player on BREAK returns, and a name the host removed
+  (LEFT) is refused with 409.
+- **WebSocket auth.** `AUTH_FAILED` means the key was refused: the client
+  forgets it. `AUTH_ERROR` means a server error: the client keeps the key and
+  reconnects, falling back to polling `/state`.
+- **Per-IP limits.** Live connects 300 per minute and `/state` reads 1200 per
+  minute, because a club shares one Wi-Fi address.
+- **TV.** `/pickleball/s/{code}/tv` renders the viewer snapshot. A LIVE or
+  Offline indicator comes from the time of the last snapshot (stale after 15 s),
+  and an ended session closes check-in on the screen.
+- **Migration.** `0017_open_captains.sql` adds `open_captains` and
+  `open_matches.recorded_by`.
 
 ## Foundational pieces
 
@@ -258,7 +294,7 @@ full role→permission matrix.
 | C3 | Tournaments, pools to bracket — seeded qualification from pools into a bracket (`6d0a026`) | Complete |
 | C4 | Tournaments, double elimination — losers bracket (`73e7608`, `bbe4abc`) | Complete |
 | C5 | Public and TV bracket view, tournament documentation (`0c2ae5d`) | Complete |
-| Open play | Free, no-login open play — `open_*` tables, `OpenSessionDO`, live QR board, 7-day purge (migration `0016`); the operator app above is legacy until Phase 5 of that spec | Phase 1 complete |
+| Open play | Free, no-login open play — `open_*` tables, `OpenSessionDO`, live QR board, 7-day purge (migration `0016`); the operator app above is legacy until Phase 5 of that spec | Phase 2 built (preview), release pending |
 
 **Deliberately not built** (disclosed, not overlooked): the public sanitized
 leaderboard extension to `toPublicSessionView` (spec §9 — deferred, requires

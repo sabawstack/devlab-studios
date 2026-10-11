@@ -152,6 +152,51 @@ npx wrangler d1 execute devlab-pickleball --remote --command "SELECT name FROM s
 Expect `open_sessions`, `open_courts`, `open_players`, `open_matches` and
 `open_idempotency`, plus their indexes.
 
+### Apply migration 0017
+
+Same commands as 0016 (the migrations folder applies pending files in order).
+The preview Worker and D1 live in the personal Cloudflare account, so preview
+commands need `CLOUDFLARE_ACCOUNT_ID` set inline to the preview account ID.
+The preview deploy workflow does not apply D1 migrations: apply each one by
+hand with `--env preview --remote`.
+
+```bash
+CLOUDFLARE_ACCOUNT_ID=<preview account ID> npx wrangler d1 migrations apply devlab-pickleball-preview --remote --env preview
+```
+
+Read back:
+
+```sql
+SELECT name FROM sqlite_master WHERE name = 'open_captains';
+SELECT recorded_by FROM open_matches LIMIT 1;
+```
+
+### Captain links
+
+Inspect a session's links:
+
+```sql
+SELECT id, label, court_id, created_at, revoked_at FROM open_captains WHERE session_id = (SELECT id FROM open_sessions WHERE public_code = ?)
+```
+
+To turn one off by hand, read it first, then:
+
+```sql
+UPDATE open_captains SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL
+```
+
+A running DO keeps its cached copy until it next reloads, so prefer the host's
+"Turn off" button or `DELETE .../captains/{id}`.
+
+### Check-in floods
+
+Self check-in is anonymous. A 429 reads "Too many check-ins from this network"
+(30 per 10 min per address, bucket `open-checkin-ip`) or "Lots of people are
+checking in" (60 per 5 min per session, counted in the DO). A 503 means
+`RATE_LIMITER` is missing (the address limit fails closed). A 409 on a name the
+host removed is expected. Club Wi-Fi shares one address, so live connects are
+allowed 300 per minute and `/state` reads 1200 per minute per address.
+
 ### Inspect a session by code
 
 ```sql
