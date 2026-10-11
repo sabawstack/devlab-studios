@@ -16,8 +16,8 @@ const seo = await loadPageSeo('pickleball-rotation')
 const ART = { PADDLE_STACK: PaddleStackArt, WINNERS_LOSERS: WinnersShuffleArt, BY_STANDING: StandingWindowArt, BALANCED: BalancedSplitArt }
 const DETAIL = {
   PADDLE_STACK: 'The four who have played fewest games go on, longest wait first. The four are split so earlier partners are kept apart when another split allows it.',
-  WINNERS_LOSERS: 'Each player carries the result of their last game. Four winners go on together, else four losers, else the rest. Two winning pairs are split up: each side gets one player from each pair, so last game’s partners face each other.',
-  BY_STANDING: 'Players are ranked by today’s standings. The longest-waiting player and the three nearest in the table go on, the 1st and 4th of those four against the 2nd and 3rd.',
+  WINNERS_LOSERS: 'Each player carries the result of their last game. Among the players due next (the eight waiting longest), four winners go on together when there are four, else four losers, else whoever is due — so a game can mix winners and losers. Two winning pairs are split up: each side gets one player from each pair, so last game’s partners face each other.',
+  BY_STANDING: 'Players are ranked by today’s standings. The longest-waiting player goes on with three players next to them in the table (four neighbouring ranks), the 1st and 4th of those four against the 2nd and 3rd.',
   BALANCED: 'The same four as paddle stack, split so each team’s skill adds up as evenly as possible. Skill is what the player or host entered, else today’s win rate. Repeat partners break ties.',
 }
 const modes = MODE_ORDER.map((mode) => ({ mode, ...MODE_INFO[mode], detail: DETAIL[mode], Art: ART[mode], rounds: rotationExample(2, mode) }))
