@@ -98,7 +98,7 @@ CREATE TABLE open_sessions (
   host_id TEXT REFERENCES hosts(id) ON DELETE SET NULL,    -- set when claimed for DUPR
   kind TEXT NOT NULL CHECK (kind IN ('OPEN_PLAY','TOURNAMENT')),
   name TEXT NOT NULL, host_display_name TEXT NOT NULL, location TEXT,
-  settings_json TEXT NOT NULL,      -- mode, target, win-by-2, winner-only, scoring style, constraints
+  settings_json TEXT NOT NULL,      -- mode, target, winner-only, scoring style, constraints
   status TEXT NOT NULL CHECK (status IN ('ACTIVE','ENDED')),
   version INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL, last_activity_at TEXT NOT NULL, expires_at TEXT NOT NULL
@@ -170,7 +170,7 @@ src/lib/pickleball/open/            pure, no I/O, unit-tested
   modes/byStanding.ts               │
   modes/balanced.ts                 ┘
   propose.ts                        picks the mode, applies the sit-out guard
-  scoreValidation.ts                target/win-by-2/cap rules
+  scoreValidation.ts                target, sudden death / win by 2, cap rules
   tournament/pairing.ts             random | balanced | manual pair formation
   tournament/drawEdits.ts           validate/apply player/pair/opponent swaps
   (reuses ../tournament/generateFixtures, advanceBracket,
@@ -193,7 +193,7 @@ src/pickleball-open/                React components for the board, console, dia
 
 ## 4. Session lifecycle
 
-1. **Create** (`/pickleball/new`): host display name (unverified, shown as "Hosted by"), format (Open play / Tournament), number of courts (1–16) with optional labels, game settings (target 11/15/21, win by 2 on/off, or "winner only"; scoring style side-out or rally, which only labels the DUPR export), optional venue/location text, stacking mode. Turnstile required.
+1. **Create** (`/pickleball/new`): host display name (unverified, shown as "Hosted by"), format (Open play / Tournament), number of courts (1–16) with optional labels, game settings (target 11/15/21, or "winner only"; scoring style side-out or rally, which only labels the DUPR export), optional venue/location text, stacking mode. Turnstile required.
 2. **Roster**: paste a list (one per line or comma-separated; numbering, bullets and emoji stripped; duplicates removed case-insensitively; e.g. copied from a Reclub attendee list or WhatsApp), CSV upload (`name[,skill][,dupr_id]`), manual add, or **QR self check-in**: players scan a check-in QR and type their own name (and optionally skill 1–5 and DUPR ID). The host can turn self check-in off.
 3. **Run**: the host console shows every court. A free court shows the proposed match with **Start**, **Edit** and **Skip**. A playing court shows **Game over**.
 4. **Players come and go**: add a late player at any time; mark a player *on break* (skipped by every mode) or *left*. A late player enters with `games_played` equal to the current minimum among active players, so they neither jump the queue nor wait forever.
@@ -206,8 +206,16 @@ src/pickleball-open/                React components for the board, console, dia
 
 **Game over** opens one dialog: tap the winning team; optionally enter the
 score using a pad with the target preset (e.g. 11–__). Validation
-(`scoreValidation.ts`): the winner reaches the target, win by 2 if enabled,
-loser < winner, both ≤ 99; "winner only" sessions skip scores. The match
+(`scoreValidation.ts`) accepts **either** way a game can end, because the
+app only ever hears the final score and cannot know which rule a court played
+(owner decision, 2026-10-11): **sudden death**, where the winner has exactly the
+target and the loser anything below it (11–7, 11–10); or **win by 2**, where the
+loser reached at least target − 1 and the winner is exactly 2 ahead (12–10,
+13–11). Anything else is refused (12–9, 13–10, 12–11, 11–11), and both scores
+must be ≤ 99. There is no win-by-2 setting. On the pad, a losing score of
+target − 1 defaults to sudden death (11–10) with a one-tap "12–10 win by 2"
+switch, because most open play is sudden death; a losing score at or above the
+target fills the win-by-2 score. "Winner only" sessions skip scores. The match
 becomes `FINISHED`, its four players return to the waiting pool tagged with
 the result, and the court immediately shows its next proposal.
 

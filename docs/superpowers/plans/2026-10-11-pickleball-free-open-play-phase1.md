@@ -47,7 +47,7 @@
 2. **A player taken off court mid-proposal.** Setting a proposed player to *break*/*left* must drop that proposal and re-propose without them. Setting a player who is *playing* to break must be refused. Pinned in Task 6.
 3. **Pasted rosters from real chat apps.** Numbering like `1.`/`4)`/`-`, emoji, blank lines, comma-joined names and duplicates differing only in case must all parse cleanly. Pinned in Task 3.
 4. **Expired or unknown codes.** The board, the WebSocket and the API must all behave as "not found" for a code past `expires_at`, even before the cron has run. Pinned in Task 8 (load filter) and Task 18 (UI notice).
-5. **Deuce scores.** 12–10, 13–11 and 15–13 must be accepted in a win-by-2 game to 11, and 12–9 and 11–10 rejected. The game-over pad must let the host enter a loser score above `target − 1`. Pinned in Task 2 and Task 14.
+5. **Sudden death and win by 2 together.** Only final scores are entered, so both endings must be accepted in a game to 11: 11–10 (sudden death) and 12–10, 13–11, 15–13 (win by 2). 12–9, 13–10 and 12–11 must be rejected. The pad must reach losing scores above `target − 1`, and must offer both 11–10 and 12–10 when the loser has 10. Pinned in Task 2 and Task 14.
 
 ---
 
@@ -349,7 +349,7 @@ git commit -m "feat(pickleball): add open_* tables for no-login sessions"
 - Produces:
   - All the types below.
   - Code helpers: `generatePublicCode(randomBytes?)`, `normalizePublicCode(input): string | null`, `formatPublicCode(code)`.
-  - Score helpers: `expectedWinnerScore(loser, { target, winBy2 })`, `validateResult({ winner, scoreA, scoreB }, settings): ValidationResult`.
+  - Score helpers: `expectedWinnerScore(loser, { target })` (the default reading: sudden death below the target, deuce from it), `isPossibleFinal(winnerScore, loserScore, target): boolean`, `validateResult({ winner, scoreA, scoreB }, settings): ValidationResult`.
   - `constantTimeEqual(a, b): boolean`.
   - `OPEN_SESSION_TURNSTILE_ACTION = 'open_session_create'`.
 
@@ -364,7 +364,6 @@ export type ScoringStyle = 'SIDEOUT' | 'RALLY'
 export interface SessionSettings {
   mode: StackingMode
   target: TargetPoints
-  winBy2: boolean
   winnerOnly: boolean
   scoringStyle: ScoringStyle
 }
@@ -448,7 +447,6 @@ export const LIMITS = {
 export const DEFAULT_SETTINGS: SessionSettings = {
   mode: 'PADDLE_STACK',
   target: 11,
-  winBy2: true,
   winnerOnly: false,
   scoringStyle: 'SIDEOUT',
 }
@@ -502,39 +500,48 @@ describe('public codes', () => {
 ```ts
 // src/lib/pickleball/open/scoreValidation.test.ts
 import { describe, expect, it } from 'vitest'
-import { expectedWinnerScore, validateResult } from './scoreValidation'
+import { expectedWinnerScore, isPossibleFinal, validateResult } from './scoreValidation'
 import { DEFAULT_SETTINGS } from './types'
 
 const to11 = DEFAULT_SETTINGS
-const to11NoWinBy2 = { ...DEFAULT_SETTINGS, winBy2: false }
 
-describe('expectedWinnerScore', () => {
-  it('is the target until deuce, then loser + 2', () => {
+describe('expectedWinnerScore (the pad\'s default reading)', () => {
+  it('is the target below it (sudden death), then loser + 2 (deuce)', () => {
     expect(expectedWinnerScore(7, to11)).toBe(11)
-    expect(expectedWinnerScore(9, to11)).toBe(11)
-    expect(expectedWinnerScore(10, to11)).toBe(12)
+    expect(expectedWinnerScore(10, to11)).toBe(11)
+    expect(expectedWinnerScore(11, to11)).toBe(13)
     expect(expectedWinnerScore(13, to11)).toBe(15)
-    expect(expectedWinnerScore(10, to11NoWinBy2)).toBe(11)
+  })
+})
+
+describe('isPossibleFinal', () => {
+  it('accepts both sudden death and win-by-2 endings, and nothing else', () => {
+    expect(isPossibleFinal(11, 10, 11)).toBe(true) // sudden death
+    expect(isPossibleFinal(12, 10, 11)).toBe(true) // win by 2
+    expect(isPossibleFinal(12, 11, 11)).toBe(false)
+    expect(isPossibleFinal(13, 10, 11)).toBe(false)
+    expect(isPossibleFinal(15, 14, 15)).toBe(true)
   })
 })
 
 describe('validateResult', () => {
   it.each([
-    ['A', 11, 7], ['B', 4, 11], ['A', 12, 10], ['A', 13, 11], ['B', 13, 15],
-  ])('accepts %s %i-%i to 11 win by 2', (winner, scoreA, scoreB) => {
+    ['A', 11, 7], ['B', 4, 11], ['A', 11, 10], ['A', 12, 10], ['A', 13, 11], ['B', 13, 15],
+  ])('accepts %s %i-%i in a game to 11', (winner, scoreA, scoreB) => {
     expect(validateResult({ winner: winner as 'A' | 'B', scoreA, scoreB }, to11)).toEqual({ ok: true })
   })
 
   it.each([
-    ['A', 11, 10], ['A', 12, 9], ['A', 10, 8], ['A', 7, 11], ['A', 11, 11], ['A', 100, 98], ['A', 11.5, 7],
-  ])('rejects %s %s-%s to 11 win by 2', (winner, scoreA, scoreB) => {
+    ['A', 12, 9], ['A', 13, 10], ['A', 12, 11], ['A', 10, 8], ['A', 7, 11], ['A', 11, 11], ['A', 100, 98], ['A', 11.5, 7],
+  ])('rejects %s %s-%s in a game to 11', (winner, scoreA, scoreB) => {
     const result = validateResult({ winner: winner as 'A' | 'B', scoreA: Number(scoreA), scoreB: Number(scoreB) }, to11)
     expect(result.ok).toBe(false)
   })
 
-  it('without win-by-2, the game ends exactly at the target', () => {
-    expect(validateResult({ winner: 'A', scoreA: 11, scoreB: 10 }, to11NoWinBy2)).toEqual({ ok: true })
-    expect(validateResult({ winner: 'A', scoreA: 12, scoreB: 10 }, to11NoWinBy2).ok).toBe(false)
+  it('explains both accepted endings when it refuses', () => {
+    const result = validateResult({ winner: 'A', scoreA: 12, scoreB: 9 }, to11)
+    expect(result).toMatchObject({ ok: false })
+    expect(!result.ok && result.reason).toContain("can't end 12–9")
   })
 
   it('a winner-only save (both scores null) is always allowed', () => {
@@ -612,6 +619,8 @@ export function formatPublicCode(code: string): string {
 
 ```ts
 // src/lib/pickleball/open/scoreValidation.ts
+// Only the FINAL score is ever entered, so the app cannot know whether a court
+// played sudden death or win by 2. Both endings are accepted (spec §5.1).
 import type { SessionSettings, Side } from './types'
 
 export interface ResultInput {
@@ -628,10 +637,19 @@ function isScore(value: number): boolean {
   return Number.isInteger(value) && value >= 0 && value <= 99
 }
 
-/** The only winning score a finished game can have, given the loser's. */
-export function expectedWinnerScore(loserScore: number, settings: Pick<SessionSettings, 'target' | 'winBy2'>): number {
-  if (!settings.winBy2) return settings.target
-  return loserScore <= settings.target - 2 ? settings.target : loserScore + 2
+/**
+ * The pad's default winning score for a losing score: sudden death below the
+ * target (most open play), deuce once the loser has reached the target.
+ */
+export function expectedWinnerScore(loserScore: number, settings: Pick<SessionSettings, 'target'>): number {
+  return loserScore <= settings.target - 1 ? settings.target : loserScore + 2
+}
+
+/** True for a sudden-death ending (11–10, 11–7) or a win-by-2 ending (12–10, 13–11). */
+export function isPossibleFinal(winnerScore: number, loserScore: number, target: number): boolean {
+  if (winnerScore <= loserScore) return false
+  if (winnerScore === target) return loserScore <= target - 1
+  return winnerScore > target && winnerScore - loserScore === 2 && loserScore >= target - 1
 }
 
 export function validateResult(input: ResultInput, settings: SessionSettings): ValidationResult {
@@ -644,9 +662,11 @@ export function validateResult(input: ResultInput, settings: SessionSettings): V
   const winnerScore = winner === 'A' ? scoreA : scoreB
   const loserScore = winner === 'A' ? scoreB : scoreA
   if (winnerScore <= loserScore) return { ok: false, reason: 'The winning team must have the higher score.' }
-  if (winnerScore !== expectedWinnerScore(loserScore, settings)) {
-    const rule = settings.winBy2 ? `to ${settings.target}, win by 2` : `to ${settings.target}`
-    return { ok: false, reason: `A game ${rule} can't end ${winnerScore}–${loserScore}.` }
+  if (!isPossibleFinal(winnerScore, loserScore, settings.target)) {
+    return {
+      ok: false,
+      reason: `A game to ${settings.target} can't end ${winnerScore}–${loserScore}. It ends at ${settings.target} (sudden death), or 2 points clear once both teams reach ${settings.target - 1} (win by 2).`,
+    }
   }
   return OK
 }
@@ -670,7 +690,7 @@ Expected: PASS.
 
 - [ ] **Step 6: Commit**
 
-CHANGELOG `### Added`: `- Score rules for once-per-game results (target 11/15/21, win by 2, deuce) and unambiguous 10-character session codes.`
+CHANGELOG `### Added`: `- Score rules for once-per-game results: games to 11, 15 or 21, accepting both sudden-death (11–10) and win-by-2 (12–10) endings. Also unambiguous 10-character session codes.`
 
 ```bash
 git add src/lib/pickleball/open CHANGELOG.md
@@ -1636,7 +1656,6 @@ export const createSessionSchema = z.object({
     // Phase 1 ships paddle stack only (spec §14); later phases widen this literal.
     mode: z.literal('PADDLE_STACK'),
     target: z.union([z.literal(11), z.literal(15), z.literal(21)]),
-    winBy2: z.boolean(),
     winnerOnly: z.boolean(),
     scoringStyle: z.enum(['SIDEOUT', 'RALLY']),
   }),
@@ -1737,7 +1756,7 @@ describe('applyCommand', () => {
   it('rejects an impossible score (400)', () => {
     const state = ready()
     const match = proposedOn(state, 'c1')
-    expect(applyCommand(state, { type: 'RECORD_RESULT', matchId: match.id, winner: 'A', scoreA: 11, scoreB: 10 }, ctxAt(5))).toMatchObject({ ok: false, status: 400 })
+    expect(applyCommand(state, { type: 'RECORD_RESULT', matchId: match.id, winner: 'A', scoreA: 12, scoreB: 9 }, ctxAt(5))).toMatchObject({ ok: false, status: 400 })
   })
 
   it('undo within 2 minutes reopens the game and drops the court\'s next proposal', () => {
@@ -2240,7 +2259,7 @@ export interface ViewerSnapshot {
   hostDisplayName: string
   status: 'ACTIVE' | 'ENDED'
   expiresAt: string
-  settings: { target: number; winBy2: boolean; winnerOnly: boolean; mode: string }
+  settings: { target: number; winnerOnly: boolean; mode: string }
   version: number
   courts: ViewerCourt[]
   waiting: Array<{ id: string; name: string }>
@@ -2295,7 +2314,7 @@ export function toViewerSnapshot(state: OpenSessionState): ViewerSnapshot {
     hostDisplayName: state.hostDisplayName,
     status: state.status,
     expiresAt: state.expiresAt,
-    settings: { target: state.settings.target, winBy2: state.settings.winBy2, winnerOnly: state.settings.winnerOnly, mode: state.settings.mode },
+    settings: { target: state.settings.target, winnerOnly: state.settings.winnerOnly, mode: state.settings.mode },
     version: state.version,
     courts: courts.map((c) => {
       const match = c.enabled ? liveMatch(state, c.id) : null
@@ -2992,7 +3011,7 @@ export async function createSession(request, overrides = {}) {
       name: 'Sunday Open Play',
       hostDisplayName: 'Coach Mike',
       courtCount: 2,
-      settings: { mode: 'PADDLE_STACK', target: 11, winBy2: true, winnerOnly: false, scoringStyle: 'SIDEOUT' },
+      settings: { mode: 'PADDLE_STACK', target: 11, winnerOnly: false, scoringStyle: 'SIDEOUT' },
       players: ROSTER.map((name) => ({ name })),
       ...overrides,
     },
@@ -3050,9 +3069,12 @@ test.describe('open play API', () => {
   test('an impossible score is refused with a reason', async ({ request }) => {
     const { code, hostKey } = await createSession(request)
     const host = await (await request.get(`/api/pickleball/open/s/${code}/host`, { headers: { 'X-Host-Key': hostKey } })).json()
-    const response = await command(request, code, hostKey, { type: 'RECORD_RESULT', matchId: host.courts[0].match.id, winner: 'A', scoreA: 11, scoreB: 10 })
+    const response = await command(request, code, hostKey, { type: 'RECORD_RESULT', matchId: host.courts[0].match.id, winner: 'A', scoreA: 12, scoreB: 9 })
     expect(response.status()).toBe(400)
-    expect((await response.json()).error).toContain('win by 2')
+    expect((await response.json()).error).toContain("can't end 12–9")
+    // Both endings are accepted: sudden death on one court, win by 2 on the other.
+    expect((await command(request, code, hostKey, { type: 'RECORD_RESULT', matchId: host.courts[0].match.id, winner: 'A', scoreA: 11, scoreB: 10 })).status()).toBe(200)
+    expect((await command(request, code, hostKey, { type: 'RECORD_RESULT', matchId: host.courts[1].match.id, winner: 'B', scoreA: 10, scoreB: 12 })).status()).toBe(200)
   })
 
   test('results download as CSV, and delete removes the session for everyone', async ({ request }) => {
@@ -4051,7 +4073,7 @@ const field = 'w-full rounded-xl border border-navy-700 bg-navy-900 px-3 py-3 te
 
 export default function CreateSessionApp({ siteKey }) {
   const [step, setStep] = useState('details')
-  const [details, setDetails] = useState({ name: 'Open Play', hostDisplayName: '', courtCount: 4, target: 11, winBy2: true, winnerOnly: false })
+  const [details, setDetails] = useState({ name: 'Open Play', hostDisplayName: '', courtCount: 4, target: 11, winnerOnly: false })
   const [rosterMode, setRosterMode] = useState('paste')
   const [pasted, setPasted] = useState('')
   const [csvText, setCsvText] = useState('')
@@ -4088,7 +4110,7 @@ export default function CreateSessionApp({ siteKey }) {
         name: details.name,
         hostDisplayName: details.hostDisplayName,
         courtCount: details.courtCount,
-        settings: { mode: 'PADDLE_STACK', target: details.target, winBy2: details.winBy2, winnerOnly: details.winnerOnly, scoringStyle: 'SIDEOUT' },
+        settings: { mode: 'PADDLE_STACK', target: details.target, winnerOnly: details.winnerOnly, scoringStyle: 'SIDEOUT' },
         players: roster.entries,
         turnstileToken: turnstile.token,
       })
@@ -4137,10 +4159,7 @@ export default function CreateSessionApp({ siteKey }) {
               ))}
               <Button role="radio" aria-checked={details.winnerOnly} variant={details.winnerOnly ? 'neon' : 'ghost'} className="text-sm" onClick={() => update({ winnerOnly: true })}>Winner only</Button>
             </div>
-            <label className="mt-3 flex items-center justify-between text-sm">
-              <span>Win by 2</span>
-              <input type="checkbox" className="h-5 w-5 accent-[#c6ff2e]" checked={details.winBy2} disabled={details.winnerOnly} onChange={(e) => update({ winBy2: e.target.checked })} />
-            </label>
+            <p className="mt-3 text-sm text-mist">Sudden death or win by 2: both are accepted when you enter the score.</p>
           </Panel>
           <Panel className="md:col-span-2">
             <p className="font-semibold">Who plays next: <span className="text-pickle-neon">paddle stack</span></p>
@@ -4239,16 +4258,24 @@ git commit -m "feat(pickleball): create session flow with host link and player q
 import { describe, expect, it } from 'vitest'
 import { resultFromPad, scorePadOptions } from './scorePad'
 
+const settings = { target: 11, winnerOnly: false }
+
 describe('score pad', () => {
   it('offers every losing score up to target - 1, then deuce scores', () => {
     expect(scorePadOptions(11).slice(0, 11)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     expect(scorePadOptions(11)).toContain(13)
   })
 
-  it('fills the winner score from the loser score', () => {
-    const settings = { target: 11, winBy2: true, winnerOnly: false }
+  it('fills the winner score from the loser score, defaulting to sudden death', () => {
     expect(resultFromPad('A', 7, settings)).toEqual({ winner: 'A', scoreA: 11, scoreB: 7 })
-    expect(resultFromPad('B', 10, settings)).toEqual({ winner: 'B', scoreA: 10, scoreB: 12 })
+    expect(resultFromPad('B', 10, settings)).toEqual({ winner: 'B', scoreA: 10, scoreB: 11 })
+    expect(resultFromPad('A', 11, settings)).toEqual({ winner: 'A', scoreA: 13, scoreB: 11 })
+  })
+
+  it('a loser at target - 1 can be switched to win by 2 (12–10)', () => {
+    expect(resultFromPad('B', 10, settings, true)).toEqual({ winner: 'B', scoreA: 10, scoreB: 12 })
+    // the switch only matters at target - 1
+    expect(resultFromPad('A', 7, settings, true)).toEqual({ winner: 'A', scoreA: 11, scoreB: 7 })
   })
 })
 ```
@@ -4267,8 +4294,12 @@ export function scorePadOptions(target) {
   return [...Array.from({ length: target }, (_, i) => i), target, target + 1, target + 2, target + 3]
 }
 
-export function resultFromPad(winner, loserScore, settings) {
-  const winnerScore = expectedWinnerScore(loserScore, settings)
+/**
+ * The result for a tapped losing score. Sudden death is the default; when the
+ * loser has exactly target - 1, `winBy2` turns 11–10 into 12–10.
+ */
+export function resultFromPad(winner, loserScore, settings, winBy2 = false) {
+  const winnerScore = winBy2 && loserScore === settings.target - 1 ? settings.target + 1 : expectedWinnerScore(loserScore, settings)
   return winner === 'A'
     ? { winner, scoreA: winnerScore, scoreB: loserScore }
     : { winner, scoreA: loserScore, scoreB: winnerScore }
@@ -4334,15 +4365,17 @@ import { Button, Sheet } from './ui.jsx'
 
 export default function GameOverDialog({ title, match, nameOf, settings, initial, onSave, onAbandon, onClose }) {
   const [winner, setWinner] = useState(initial?.winner ?? null)
-  const [loserScore, setLoserScore] = useState(initial ? Math.min(initial.scoreA ?? 0, initial.scoreB ?? 0) : null)
+  const [loserScore, setLoserScore] = useState(initial && initial.scoreA !== null ? Math.min(initial.scoreA, initial.scoreB) : null)
+  const [winBy2, setWinBy2] = useState(Boolean(initial && initial.scoreA !== null && Math.max(initial.scoreA, initial.scoreB) === settings.target + 1))
   const teamA = match.teamA.map(nameOf).join(' · ')
   const teamB = match.teamB.map(nameOf).join(' · ')
-  const result = winner && loserScore !== null && !settings.winnerOnly ? resultFromPad(winner, loserScore, settings) : null
+  const result = winner && loserScore !== null && !settings.winnerOnly ? resultFromPad(winner, loserScore, settings, winBy2) : null
+  const tied = loserScore === settings.target - 1
   const check = result ? validateResult(result, settings) : null
 
   return (
     <Sheet title={title} onClose={onClose}>
-      <p className="mb-3 text-sm text-mist">{settings.winnerOnly ? 'Winner only' : `Game to ${settings.target}${settings.winBy2 ? ' · win by 2' : ''}`}</p>
+      <p className="mb-3 text-sm text-mist">{settings.winnerOnly ? 'Winner only' : `Game to ${settings.target} · sudden death or win by 2`}</p>
       <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Who won?">
         {[['A', teamA], ['B', teamB]].map(([side, label]) => (
           <button key={side} type="button" role="radio" aria-checked={winner === side} onClick={() => setWinner(side)}
@@ -4362,6 +4395,12 @@ export default function GameOverDialog({ title, match, nameOf, settings, initial
                 className={`min-h-11 rounded-lg text-base ${loserScore === value ? 'bg-pickle-teamb font-bold text-ink' : 'bg-navy-900'}`}>{value}</button>
             ))}
           </div>
+          {tied && (
+            <div className="mt-3 grid grid-cols-2 gap-2" role="radiogroup" aria-label="How did it end?">
+              <Button role="radio" aria-checked={!winBy2} variant={!winBy2 ? 'neon' : 'ghost'} onClick={() => setWinBy2(false)}>{settings.target}–{settings.target - 1} sudden death</Button>
+              <Button role="radio" aria-checked={winBy2} variant={winBy2 ? 'neon' : 'ghost'} onClick={() => setWinBy2(true)}>{settings.target + 1}–{settings.target - 1} win by 2</Button>
+            </div>
+          )}
           {result && (
             <p className="mt-3 text-center text-3xl font-bold" aria-live="polite">
               <span className={result.winner === 'A' ? 'text-pickle-neon' : ''}>{result.scoreA}</span>
@@ -5575,6 +5614,18 @@ test.describe('open play UI', () => {
     await page.getByRole('button', { name: /^Undo/ }).click()
     await expect(viewer.getByText('11–7')).toHaveCount(0)
     await viewerContext.close()
+  })
+
+  test('a loser score of 10 offers sudden death (11–10) and win by 2 (12–10)', async ({ page, request }) => {
+    const { code, hostKey } = await createSession(request)
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await page.getByTestId('court-1').getByRole('button', { name: 'Already played? Enter result' }).click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByRole('radio').first().click()
+    await dialog.getByRole('button', { name: '10', exact: true }).click()
+    await expect(dialog.getByRole('button', { name: 'Save 11–10' })).toBeEnabled()
+    await dialog.getByRole('radio', { name: '12–10 win by 2' }).click()
+    await expect(dialog.getByRole('button', { name: 'Save 12–10' })).toBeEnabled()
   })
 
   test('a deuce score is accepted from the pad', async ({ page, request }) => {
