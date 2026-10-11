@@ -1,0 +1,29 @@
+/* src/styles/pickleball-open.css
+ * Motion for the open-play pages and app. Only transform/opacity animate
+ * (spec §11), and everything stops for people who ask for less motion. */
+.pb-anim .pb-ball { animation: pb-ball-arc 2.4s ease-in-out infinite alternate; transform-box: fill-box; }
+.pb-anim .pb-bob { animation: pb-bob 1.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center bottom; }
+.pb-anim .pb-step { animation: pb-step 4s ease-in-out infinite; }
+.pb-pulse { animation: pb-pulse 1.6s ease-in-out infinite; }
+.pb-anim .pb-fade-cycle { animation: pb-fade-cycle 4s ease-in-out infinite; }
+.pb-flip { animation: pb-flip 420ms ease-out; }
+
+@keyframes pb-ball-arc {
+  0% { transform: translate(0, 0); }
+  50% { transform: translate(130px, -96px); }
+  100% { transform: translate(260px, 0); }
+}
+@keyframes pb-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes pb-step {
+  0%, 15% { transform: translateX(0); opacity: 1; }
+  45%, 70% { transform: translateX(var(--pb-step-x, 120px)); opacity: 1; }
+  85% { transform: translateX(var(--pb-step-x, 120px)); opacity: 0; }
+  100% { transform: translateX(0); opacity: 0; }
+}
+@keyframes pb-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes pb-fade-cycle { 0%, 20% { opacity: 0; } 35%, 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes pb-flip { from { transform: rotateX(70deg); opacity: 0.2; } to { transform: rotateX(0); opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-anim *, .pb-flip, .pb-pulse { animation: none !important; }
+}

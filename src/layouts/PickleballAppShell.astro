@@ -1,0 +1,32 @@
+---
+// src/layouts/PickleballAppShell.astro
+// Standalone shell for the open-play app screens (create, board/console).
+// Not Layout.astro: these are full-screen tools without the site nav.
+import '../index.css'
+import '../styles/pickleball-open.css'
+
+interface Props {
+  title: string
+  description?: string
+  indexable?: boolean
+}
+const { title, description, indexable = false } = Astro.props
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <link rel="icon" type="image/png" href="/devlabstudios-logo-only.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
+    {!indexable && <meta name="robots" content="noindex, nofollow" />}
+    {description && <meta name="description" content={description} />}
+    <meta name="theme-color" content="#0b1426" />
+    <title>{title}</title>
+  </head>
+  <body class="min-h-screen bg-ink font-sans text-white antialiased">
+    <slot />
+  </body>
+</html>

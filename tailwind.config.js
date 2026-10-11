@@ -31,6 +31,11 @@ export default {
         },
         ink: '#0b1426',
         mist: '#b5c4e1',
+        // Free open play (spec §11): one neon accent layered on DevLab navy/violet.
+        pickle: {
+          neon: '#c6ff2e',
+          teamb: '#8d9bff',
+        },
       },
       boxShadow: {
         glass: '0 20px 50px rgba(10, 13, 33, 0.22)',
