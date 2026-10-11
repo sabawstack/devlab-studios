@@ -154,6 +154,8 @@ Zod-validated discriminated union, so there's a single place enforcing
 authorization, idempotency, caps and expiry. `version` is persisted in
 `open_sessions.version` (fixing the current in-memory `seq` reset after hibernation).
 
+**Concurrent and flaky writes**: a result command carries the match id. If that match is already finished, the second writer gets 409 with who saved it ("Already saved by Court captain 2"). While the socket is down, the host console shows "Reconnecting…" and keeps unsent commands in memory, retrying them with the same `idempotencyKey`, so a retry is never applied twice. Viewers fall back to polling `state` every 5 s.
+
 ### 3.5 Module layout
 
 ```
@@ -241,7 +243,7 @@ games count toward W/L with no points. No persistent rating exists anywhere.
 
 Before **Start**, the host (or a captain on their court) can tap any of the four
 slots and replace that player with any available player, swap two players
-between teams, or **Skip** (re-propose, excluding this exact four). Optional
+between teams, or **Skip** (re-propose, excluding this exact four). A player swapped out of a proposal keeps their place at the front of the queue, so an edit never costs anyone a turn. If fewer than 4 players are available when a court frees, the court shows "Waiting for players" and is proposed again automatically after the next result. Optional
 per-session constraints: *keep together* (always partners) and *keep apart*
 (never on the same court). Each mode honours them as hard constraints, and
 leaves a court unproposed (with a message) rather than break one.
@@ -312,7 +314,8 @@ first names or nicknames are fine.
    - **Skipped games**: the email lists each skipped game and the reason.
    - **Upload**: the host's DUPR account must be a Club Director or Organizer of their club. The email says so, with the click path (Matches → Add Matches → Import Matches via CSV).
    - **Risk**: if DUPR changes the template, the fixture and builder are updated together. Uploads that fail are reported by hosts through the email's reply-to.
-5. Sent through the existing Resend integration to the host's **verified Google email**, with the CSV attached. The host uploads it in DUPR ("Import Matches via CSV"). Exports are limited to 5 per session per day.
+5. **My sessions**: a signed-in host sees their claimed sessions from any device and can reopen them as host (this is the recovery path for a lost host link).
+6. Sent through the existing Resend integration to the host's **verified Google email**, with the CSV attached. The host uploads it in DUPR ("Import Matches via CSV"). Exports are limited to 5 per session per day.
 
 We do not call DUPR or Reclub APIs, and do not scrape. Direct DUPR submission
 needs DUPR partner status and is a business track. A Reclub partnership
