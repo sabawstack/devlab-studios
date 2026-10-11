@@ -1,24 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { fetchHost, fetchViewer } from './api'
+import { fetchCaptain, fetchHost, fetchViewer } from './api'
 
 const POLL_MS = 5000
 const GONE = 4404
 
 /**
  * Live board state: WebSocket first, 5-second polling while it is down
- * (spec §3.4). With a host key the poll also fetches the host snapshot, so the
- * console works even when the socket never connects.
+ * (spec §3.4). With a host key the poll also fetches the host snapshot, and
+ * with a captain key (and no host key) the captain's court snapshot, so both
+ * consoles work even when the socket never connects.
  *
  * Snapshots can arrive out of order (a poll that left before a command but
  * landed after it), so anything older than the version already held is ignored.
+ *
+ * A captain link the host turned off (403 on poll, AUTH_FAILED, or
+ * CAPTAIN_REVOKED on the socket) drops to the public board: captainRevoked.
  */
-export function useOpenSession(code, hostKey, { onRejected } = {}) {
+export function useOpenSession(code, hostKey, { onRejected, captainKey = null } = {}) {
   const [status, setStatus] = useState('connecting')
   const [viewer, setViewer] = useState(null)
   const [host, setHost] = useState(null)
+  const [captain, setCaptain] = useState(null)
   // Every key the server refused, so a caller can switch keys without the new
   // one inheriting the old one's failure.
   const [rejectedKeys, setRejectedKeys] = useState([])
+  const [revokedCaptainKeys, setRevokedCaptainKeys] = useState([])
   const versionRef = useRef(-1)
   const onRejectedRef = useRef(onRejected)
   useEffect(() => {
@@ -44,6 +50,12 @@ export function useOpenSession(code, hostKey, { onRejected } = {}) {
     setViewer(snapshot.viewer)
   }, [accept])
 
+  const applyCaptain = useCallback((snapshot) => {
+    if (!snapshot?.viewer || !accept(snapshot.viewer.version)) return
+    setCaptain(snapshot)
+    setViewer(snapshot.viewer)
+  }, [accept])
+
   useEffect(() => {
     let socket = null
     let retryTimer = null
@@ -52,6 +64,7 @@ export function useOpenSession(code, hostKey, { onRejected } = {}) {
     let ended = false
     let attempt = 0
     let hostDenied = false
+    let captainDenied = false
     versionRef.current = -1
 
     function reject() {
@@ -60,28 +73,16 @@ export function useOpenSession(code, hostKey, { onRejected } = {}) {
       onRejectedRef.current?.(hostKey)
     }
 
+    function revokeCaptain() {
+      captainDenied = true
+      setRevokedCaptainKeys((keys) => (keys.includes(captainKey) ? keys : [...keys, captainKey]))
+    }
+
     function end() {
       ended = true
       clearTimeout(retryTimer)
       clearInterval(pollTimer)
       setStatus('not-found')
-    }
-
-    async function pollHost() {
-      try {
-        const snapshot = await fetchHost(code, hostKey)
-        if (!cancelled) applyHost(snapshot)
-        return true
-      } catch (error) {
-        if (cancelled) return false
-        if (error?.status === 404) {
-          end()
-          return false
-        }
-        if (error?.status === 403) reject()
-        // 403 still shows the public board; anything else is retried by the next poll
-        return pollViewer()
-      }
     }
 
     async function pollViewer() {
@@ -95,7 +96,29 @@ export function useOpenSession(code, hostKey, { onRejected } = {}) {
       }
     }
 
-    const poll = () => (hostKey && !hostDenied ? pollHost() : pollViewer())
+    /** The host or captain snapshot; a refused key falls back to the public board. */
+    async function pollKeyed(fetchSnapshot, apply, onDenied) {
+      try {
+        const snapshot = await fetchSnapshot()
+        if (!cancelled) apply(snapshot)
+        return true
+      } catch (error) {
+        if (cancelled) return false
+        if (error?.status === 404) {
+          end()
+          return false
+        }
+        if (error?.status === 403) onDenied()
+        // 403 still shows the public board; anything else is retried by the next poll
+        return pollViewer()
+      }
+    }
+
+    const poll = () => {
+      if (hostKey && !hostDenied) return pollKeyed(() => fetchHost(code, hostKey), applyHost, reject)
+      if (!hostKey && captainKey && !captainDenied) return pollKeyed(() => fetchCaptain(code, captainKey), applyCaptain, revokeCaptain)
+      return pollViewer()
+    }
 
     function connect() {
       if (cancelled || ended) return
@@ -106,6 +129,7 @@ export function useOpenSession(code, hostKey, { onRejected } = {}) {
         clearInterval(pollTimer)
         setStatus('open')
         if (hostKey) socket.send(JSON.stringify({ type: 'AUTH', hostKey }))
+        else if (captainKey && !captainDenied) socket.send(JSON.stringify({ type: 'AUTH', captainKey }))
       }
       socket.onmessage = (event) => {
         let message
@@ -116,8 +140,11 @@ export function useOpenSession(code, hostKey, { onRejected } = {}) {
         }
         if (message.type === 'VIEWER') applyViewer(message.payload)
         if (message.type === 'HOST') applyHost(message.payload)
+        if (message.type === 'CAPTAIN') applyCaptain(message.payload)
+        if (message.type === 'CAPTAIN_REVOKED') revokeCaptain()
         if (message.type === 'AUTH_FAILED') {
-          reject()
+          if (hostKey) reject()
+          else revokeCaptain()
         }
       }
       socket.onclose = (event) => {
@@ -144,7 +171,14 @@ export function useOpenSession(code, hostKey, { onRejected } = {}) {
       clearInterval(pollTimer)
       socket?.close()
     }
-  }, [code, hostKey, applyHost, applyViewer])
+  }, [code, hostKey, captainKey, applyHost, applyViewer, applyCaptain])
 
-  return { status, viewer, host, authFailed: Boolean(hostKey) && rejectedKeys.includes(hostKey), setHost: applyHost }
+  return {
+    status, viewer, host,
+    captain: captainKey && !revokedCaptainKeys.includes(captainKey) ? captain : null,
+    captainRevoked: Boolean(captainKey) && revokedCaptainKeys.includes(captainKey),
+    authFailed: Boolean(hostKey) && rejectedKeys.includes(hostKey),
+    setHost: applyHost,
+    setCaptain: applyCaptain,
+  }
 }

@@ -20,7 +20,7 @@ function MeBanner({ status }) {
   return <p className="rounded-2xl bg-pickle-neon px-4 py-3 text-lg font-bold text-ink" role="status">{text}</p>
 }
 
-export default function ViewerBoard({ viewer, status, invalidHostLink }) {
+export default function ViewerBoard({ viewer, status, invalidHostLink, revokedCaptainLink = false }) {
   const [me, setMe] = useState(() => readMe(viewer.code))
   const [tab, setTab] = useState('courts')
   const mine = myStatus(viewer, me)
@@ -31,6 +31,7 @@ export default function ViewerBoard({ viewer, status, invalidHostLink }) {
 
   return (
     <main className="mx-auto grid max-w-[1500px] gap-4 px-3 pb-10 pt-4 sm:px-5">
+      {revokedCaptainLink && <p role="alert" className="rounded-xl bg-amber-400/15 px-4 py-3 text-amber-100">This captain link was turned off by the host. You're seeing the player board.</p>}
       {invalidHostLink && <p role="alert" className="rounded-xl bg-amber-400/15 px-4 py-3 text-amber-100">That host link isn't valid for this session. You're seeing the player board.</p>}
       <header className="flex flex-wrap items-end gap-3">
         <div className="flex-1">

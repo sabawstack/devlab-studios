@@ -3,6 +3,7 @@ import { MODE_INFO } from '../../lib/pickleball/open/modes/info'
 import { deleteSession, downloadResults } from '../lib/api'
 import { forgetHostedSession } from '../lib/hostKeys'
 import { useCommandQueue } from '../lib/useCommandQueue'
+import CaptainsSheet from './CaptainsSheet.jsx'
 import CourtCard from './CourtCard.jsx'
 import EditMatchDialog from './EditMatchDialog.jsx'
 import FairnessPanel from './FairnessPanel.jsx'
@@ -27,7 +28,8 @@ function friendlyError(message) {
 }
 
 export default function HostConsole({ code, hostKey, host, status, onHost }) {
-  const { send, pending, error, clearError } = useCommandQueue(code, hostKey, onHost)
+  const credentials = useMemo(() => ({ hostKey }), [hostKey])
+  const { send, pending, error, clearError } = useCommandQueue(code, credentials, onHost)
   const [tab, setTab] = useState('courts')
   const [dialog, setDialog] = useState(null)
   const [undo, setUndo] = useState(null)
@@ -84,7 +86,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
 
   return (
     <div className="mx-auto max-w-[1600px] px-3 pb-24 pt-3 sm:px-5 lg:pb-8">
-      <header className="flex flex-wrap items-center gap-3 py-2">
+      <header className="relative flex flex-wrap items-center gap-3 py-2">
         <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
           <h1 className="truncate text-xl font-bold sm:text-2xl">{viewer.name}</h1>
           <p className="text-xs text-mist">
@@ -96,10 +98,13 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
         </div>
         <Button variant="ghost" aria-haspopup="dialog" onClick={() => setDialog({ type: 'mode' })}>Mode: {MODE_INFO[host.settings.mode].label}</Button>
         <Button variant="neon" onClick={() => setDialog({ type: 'share' })}>Share board</Button>
-        <div className="relative">
+        {/* The menu is placed against the header, not the button: on a phone More wraps to the
+            left edge, and a menu anchored to its right side ran off the screen. */}
+        <div>
           <Button variant="ghost" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>More</Button>
           {menuOpen && (
             <div className="absolute right-0 z-20 mt-2 grid w-56 gap-1 rounded-2xl bg-navy-950 p-2 shadow-elevated">
+              <Button variant="ghost" onClick={() => { setMenuOpen(false); setDialog({ type: 'captains' }) }}>Court captains</Button>
               <Button variant="ghost" onClick={() => { setMenuOpen(false); download() }}>Download results (CSV)</Button>
               {viewer.status === 'ACTIVE' && <Button variant="ghost" onClick={() => { setMenuOpen(false); endSession() }}>End session</Button>}
               <Button variant="danger" onClick={() => { setMenuOpen(false); remove() }}>Delete now</Button>
@@ -177,6 +182,9 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
       {dialog?.type === 'share' && (
         <ShareSheet code={code} selfCheckIn={host.settings.selfCheckIn} onClose={() => setDialog(null)}
           onToggleCheckIn={() => send({ type: 'SET_SELF_CHECK_IN', enabled: !host.settings.selfCheckIn })} />
+      )}
+      {dialog?.type === 'captains' && (
+        <CaptainsSheet code={code} hostKey={hostKey} courts={host.courts} captains={host.captains} onHost={onHost} onClose={() => setDialog(null)} />
       )}
       {undo && (
         <UndoToast key={undo.savedAt} label={undo.label} savedAt={undo.savedAt} onDismiss={dismissUndo}
