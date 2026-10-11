@@ -38,7 +38,10 @@ export function returnLevel(state: OpenSessionState, target: OpenPlayer, ctx: Co
     status: 'ACTIVE', waitingSince: ctx.now,
     gamesOffset: target.gamesOffset + Math.max(0, shortfall),
   }
-  return withPlayers(state, new Set([target.id]), patch)
+  const returned = withPlayers(state, new Set([target.id]), patch)
+  // Rules involving the returning player are live again: withdraw any proposal that now breaks one.
+  const active = activeRules(returned)
+  return withoutMatches(returned, (m) => m.status === 'PROPOSED' && !keepsRules(m.teamA, m.teamB, active))
 }
 
 function nameTaken(state: OpenSessionState, name: string, exceptId?: string): boolean {

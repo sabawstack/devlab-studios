@@ -49,13 +49,10 @@ describe('keep-together / keep-apart rules', () => {
     const outsider = 'j'
     const next = run(start, { type: 'ADD_RULE', rule: { kind: 'TOGETHER', playerIds: [x, outsider] } })
     expect(next.matches.some((m) => m.id === proposed.id)).toBe(false)
-    for (const m of next.matches.filter((match) => match.status === 'PROPOSED')) {
-      const four = [...m.teamA, ...m.teamB]
-      if (four.includes(x) || four.includes(outsider)) {
-        const team = m.teamA.includes(x) ? m.teamA : m.teamB
-        expect(team).toContain(outsider)
-      }
-    }
+    const withX = next.matches.find((m) => m.status === 'PROPOSED' && [...m.teamA, ...m.teamB].includes(x))
+    expect(withX).toBeDefined()
+    const team = withX!.teamA.includes(x) ? withX!.teamA : withX!.teamB
+    expect(team).toContain(outsider)
   })
 
   it('refuses contradictions, second partners, players who left; a repeat is harmless', () => {
@@ -67,6 +64,23 @@ describe('keep-together / keep-apart rules', () => {
     expect(fail(left, { type: 'ADD_RULE', rule: { kind: 'APART', playerIds: ['c', 'j'] } }).error).toBe('j has left the session.')
     const again = applyCommand(together, { type: 'ADD_RULE', rule: { kind: 'TOGETHER', playerIds: ['b', 'a'] } }, ctx(2))
     expect(again.ok && again.state.settings.rules).toHaveLength(1)
+  })
+
+  it('a returning player re-activates their rules: a proposal that now breaks one is withdrawn and re-proposed', () => {
+    const players = ['a', 'b', 'x', 'y', 'z', 'w'].map((id, i) => player(id, { position: i }))
+    const together = run(finalizeCommand(sessionState({ players }), ctx(0)), { type: 'ADD_RULE', rule: { kind: 'TOGETHER', playerIds: ['a', 'b'] } })
+    const onBreak = run(together, { type: 'SET_PLAYER_STATUS', playerId: 'b', status: 'BREAK' })
+    const before = onBreak.matches.find((m) => m.status === 'PROPOSED')
+    expect(before).toBeDefined()
+    expect([...before!.teamA, ...before!.teamB]).toContain('a')
+    expect([...before!.teamA, ...before!.teamB]).not.toContain('b')
+    const back = run(onBreak, { type: 'SET_PLAYER_STATUS', playerId: 'b', status: 'ACTIVE' })
+    expect(back.matches.some((m) => m.id === before!.id)).toBe(false)
+    const again = back.matches.find((m) => m.status === 'PROPOSED')
+    expect(again).toBeDefined()
+    const team = again!.teamA.includes('a') ? again!.teamA : again!.teamB
+    expect([...again!.teamA, ...again!.teamB]).toContain('a')
+    expect(team).toContain('b')
   })
 
   it('removes a rule regardless of player order, and 404s an unknown one', () => {
