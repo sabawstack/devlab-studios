@@ -1,15 +1,16 @@
 import { pairingHistory, queueOrder } from './fairness'
 import { proposePaddleStack, type ModeProposer, type Proposal } from './modes/paddleStack'
 import { proposeWinnersLosers } from './modes/winnersLosers'
+import { proposeBalanced } from './modes/balanced'
 import { proposeByStanding } from './modes/byStanding'
 import { activeRules } from './rules'
 import { LIMITS, type CommandContext, type OpenSessionState, type StackingMode } from './types'
 
-// Tasks 3-5 add one entry each; Task 5 makes this a total Record.
-const PROPOSERS: Partial<Record<StackingMode, ModeProposer>> = {
+const PROPOSERS: Record<StackingMode, ModeProposer> = {
   PADDLE_STACK: proposePaddleStack,
   WINNERS_LOSERS: proposeWinnersLosers,
   BY_STANDING: proposeByStanding,
+  BALANCED: proposeBalanced,
 }
 
 /**
@@ -21,9 +22,7 @@ export function proposeForCourt(state: OpenSessionState, exclude?: readonly stri
   if (state.status !== 'ACTIVE' || state.matches.length >= LIMITS.maxMatches) return null
   const queue = queueOrder(state)
   if (queue.length < 4) return null
-  const proposer = PROPOSERS[state.settings.mode]
-  if (!proposer) throw new Error(`Stacking mode ${state.settings.mode} is not available yet.`)
-  return proposer({ state, queue, history: pairingHistory(state.matches), rules: activeRules(state), exclude })
+  return PROPOSERS[state.settings.mode]({ state, queue, history: pairingHistory(state.matches), rules: activeRules(state), exclude })
 }
 
 /** Why a free court has no proposal, when the reason is not simply "fewer than 4 waiting". */

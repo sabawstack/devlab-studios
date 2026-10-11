@@ -5,7 +5,7 @@ import { simulate } from '../testing/simulate'
 import type { PairRule, StackingMode } from '../types'
 
 // Each mode task appends its mode here.
-const MODES: StackingMode[] = ['PADDLE_STACK', 'WINNERS_LOSERS', 'BY_STANDING']
+const MODES: StackingMode[] = ['PADDLE_STACK', 'WINNERS_LOSERS', 'BY_STANDING', 'BALANCED']
 
 describe('paddle stack (property)', () => {
   it.each([[5, 1], [12, 1], [14, 3], [20, 2], [24, 2], [40, 4], [96, 8]])(
