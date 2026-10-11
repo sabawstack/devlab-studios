@@ -21,10 +21,12 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
   const [dialog, setDialog] = useState(null)
   const [undo, setUndo] = useState(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [actionError, setActionError] = useState(null)
   const viewer = host.viewer
   const names = useMemo(() => new Map(host.players.map((p) => [p.id, p.name])), [host.players])
   const nameOf = useCallback((id) => names.get(id) ?? '—', [names])
   const courtLabel = useCallback((id) => host.courts.find((c) => c.id === id)?.label ?? '', [host.courts])
+  const playing = useMemo(() => new Set(host.courts.flatMap((c) => (c.match?.status === 'IN_PROGRESS' ? [...c.match.teamA, ...c.match.teamB] : []))), [host.courts])
   const dismissUndo = useCallback(() => setUndo(null), [])
 
   async function save(match, result) {
@@ -34,16 +36,25 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
   }
 
   async function download() {
-    const { blob, filename } = await downloadResults(code, hostKey)
-    const url = URL.createObjectURL(blob)
-    const link = Object.assign(document.createElement('a'), { href: url, download: filename })
-    link.click()
-    URL.revokeObjectURL(url)
+    try {
+      const { blob, filename } = await downloadResults(code, hostKey)
+      const url = URL.createObjectURL(blob)
+      const link = Object.assign(document.createElement('a'), { href: url, download: filename })
+      link.click()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (err) {
+      setActionError(err instanceof Error && err.message ? err.message : 'Could not download the results. Try again.')
+    }
   }
 
   async function remove() {
     if (!window.confirm('Delete this session and all its results now? This cannot be undone.')) return
-    await deleteSession(code, hostKey)
+    try {
+      await deleteSession(code, hostKey)
+    } catch (err) {
+      setActionError(err instanceof Error && err.message ? err.message : 'Could not delete the session. Try again.')
+      return
+    }
     forgetHostedSession(code)
     window.location.assign('/pickleball')
   }
@@ -75,9 +86,9 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
         </div>
       </header>
 
-      {error && (
+      {(error || actionError) && (
         <p role="alert" className="my-2 flex items-center justify-between rounded-xl bg-rose-500/15 px-4 py-3 text-rose-100">
-          {error}<button type="button" onClick={clearError} className="ml-3 underline">OK</button>
+          {actionError ?? error}<button type="button" onClick={() => { setActionError(null); clearError() }} className="ml-3 min-h-11 px-3 underline">OK</button>
         </p>
       )}
 
@@ -102,7 +113,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
         </section>
 
         <aside className="grid content-start gap-5">
-          <div className={section('players')}><PlayersPanel players={host.players} waiting={viewer.waiting} send={send} /></div>
+          <div className={section('players')}><PlayersPanel players={host.players} waiting={viewer.waiting} playing={playing} send={send} /></div>
           <div className={section('results')}>
             <Panel><h2 className="mb-2 text-lg font-bold">Standings</h2><StandingsTable rows={viewer.standings} compact /></Panel>
             <Panel className="mt-4"><h2 className="mb-2 text-lg font-bold">Results</h2>
@@ -146,7 +157,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
         </Sheet>
       )}
       {undo && (
-        <UndoToast label={undo.label} savedAt={undo.savedAt} onDismiss={dismissUndo}
+        <UndoToast key={undo.savedAt} label={undo.label} savedAt={undo.savedAt} onDismiss={dismissUndo}
           onUndo={() => { setUndo(null); send({ type: 'UNDO_RESULT', matchId: undo.matchId }) }} />
       )}
     </div>

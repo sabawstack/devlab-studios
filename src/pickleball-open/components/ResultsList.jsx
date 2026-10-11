@@ -12,8 +12,8 @@ export default function ResultsList({ finished, nameOf, courtLabel, onEdit }) {
             <span className="text-mist"> vs </span>
             <span className={m.winner === 'B' ? 'font-bold' : ''}>{m.teamB.map(nameOf).join(' · ')}</span>
           </span>
-          <span className="font-bold">{m.scoreA === null ? `${m.winner} won` : `${m.scoreA}–${m.scoreB}`}</span>
-          <Button variant="quiet" className="!min-h-9 !px-2" onClick={() => onEdit(m)}>Edit</Button>
+          <span className="font-bold">{m.scoreA === null ? `${(m.winner === 'A' ? m.teamA : m.teamB).map(nameOf).join(' · ')} won` : `${m.scoreA}–${m.scoreB}`}</span>
+          <Button variant="quiet" className="!min-h-11 !px-2" onClick={() => onEdit(m)}>Edit</Button>
         </li>
       ))}
     </ul>

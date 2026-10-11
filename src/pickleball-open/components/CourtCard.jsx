@@ -32,7 +32,7 @@ export default function CourtCard({ court, nameOf, onStart, onGameOver, onEdit }
         <div className="grid grid-cols-2 gap-2">
           <Button variant="neon" onClick={() => onStart(match)}>Start</Button>
           <Button variant="ghost" onClick={() => onEdit(match)}>Edit</Button>
-          <Button variant="quiet" className="col-span-2 !min-h-9 text-sm" onClick={() => onGameOver(match)}>Already played? Enter result</Button>
+          <Button variant="quiet" className="col-span-2 !min-h-11 text-sm" onClick={() => onGameOver(match)}>Already played? Enter result</Button>
         </div>
       ) : (
         <Button variant="primary" onClick={() => onGameOver(match)}>Game over</Button>

@@ -4,7 +4,8 @@ import { Button, Sheet } from './ui.jsx'
 export default function EditMatchDialog({ match, players, nameOf, onSave, onSkip, onClose }) {
   const [slots, setSlots] = useState([...match.teamA, ...match.teamB])
   const [selected, setSelected] = useState(null)
-  const available = players.filter((p) => p.status === 'ACTIVE' && (!p.busy || slots.includes(p.id)) && !slots.includes(p.id))
+  const originalIds = [...match.teamA, ...match.teamB]
+  const available = players.filter((p) => p.status === 'ACTIVE' && (!p.busy || originalIds.includes(p.id)) && !slots.includes(p.id))
     .sort((a, b) => b.satOut - a.satOut || a.games - b.games)
 
   function tapSlot(index) {

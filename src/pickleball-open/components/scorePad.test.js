@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { validateResult } from '../../lib/pickleball/open/scoreValidation'
 import { resultFromPad, scorePadOptions } from './scorePad'
 
 const settings = { target: 11, winnerOnly: false }
@@ -19,5 +20,17 @@ describe('score pad', () => {
     expect(resultFromPad('B', 10, settings, true)).toEqual({ winner: 'B', scoreA: 10, scoreB: 12 })
     // the switch only matters at target - 1
     expect(resultFromPad('A', 7, settings, true)).toEqual({ winner: 'A', scoreA: 11, scoreB: 7 })
+  })
+
+  it.each([11, 15, 21])('every pad option yields a valid final for target %i', (target) => {
+    const session = { mode: 'PADDLE_STACK', target, winnerOnly: false, scoringStyle: 'SIDEOUT' }
+    for (const loser of scorePadOptions(target)) {
+      for (const winner of ['A', 'B']) {
+        for (const winBy2 of [false, true]) {
+          const result = resultFromPad(winner, loser, session, winBy2)
+          expect(validateResult(result, session), JSON.stringify({ winner, loser, winBy2, result })).toEqual({ ok: true })
+        }
+      }
+    }
   })
 })

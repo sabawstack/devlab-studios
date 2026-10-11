@@ -3,7 +3,7 @@ import { Button } from './ui.jsx'
 
 const STATUS_LABEL = { ACTIVE: 'Playing', BREAK: 'On break', LEFT: 'Left' }
 
-export default function PlayersPanel({ players, waiting, send }) {
+export default function PlayersPanel({ players, waiting, playing, send }) {
   const [names, setNames] = useState('')
   const order = new Map(waiting.map((w, index) => [w.id, index + 1]))
 
@@ -26,10 +26,10 @@ export default function PlayersPanel({ players, waiting, send }) {
         {players.filter((p) => p.status !== 'LEFT').map((p) => (
           <li key={p.id} className="flex items-center gap-2 rounded-xl bg-navy-900 px-3 py-2 text-[15px]">
             <span className="flex-1">{order.has(p.id) ? `${order.get(p.id)} · ` : ''}{p.name}</span>
-            <span className="text-xs text-mist">{p.busy ? 'on court' : STATUS_LABEL[p.status]} · {p.games} games</span>
-            {p.status === 'ACTIVE' && !p.busy && <Button variant="quiet" className="!min-h-9 !px-2 text-sm" onClick={() => send({ type: 'SET_PLAYER_STATUS', playerId: p.id, status: 'BREAK' })}>Break</Button>}
-            {p.status === 'BREAK' && <Button variant="quiet" className="!min-h-9 !px-2 text-sm" onClick={() => send({ type: 'SET_PLAYER_STATUS', playerId: p.id, status: 'ACTIVE' })}>Back in</Button>}
-            {!p.busy && <Button variant="quiet" className="!min-h-9 !px-2 text-sm text-mist" aria-label={`${p.name} left`} onClick={() => send({ type: 'SET_PLAYER_STATUS', playerId: p.id, status: 'LEFT' })}>Left</Button>}
+            <span className="text-xs text-mist">{playing.has(p.id) ? 'on court' : p.busy ? 'up next' : STATUS_LABEL[p.status]} · {p.games} games</span>
+            {p.status === 'ACTIVE' && !playing.has(p.id) && <Button variant="quiet" className="!min-h-11 !px-2 text-sm" onClick={() => send({ type: 'SET_PLAYER_STATUS', playerId: p.id, status: 'BREAK' })}>Break</Button>}
+            {p.status === 'BREAK' && <Button variant="quiet" className="!min-h-11 !px-2 text-sm" onClick={() => send({ type: 'SET_PLAYER_STATUS', playerId: p.id, status: 'ACTIVE' })}>Back in</Button>}
+            {!playing.has(p.id) && <Button variant="quiet" className="!min-h-11 !px-2 text-sm text-mist" aria-label={`${p.name} left`} onClick={() => send({ type: 'SET_PLAYER_STATUS', playerId: p.id, status: 'LEFT' })}>Left</Button>}
           </li>
         ))}
       </ul>
