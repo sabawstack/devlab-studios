@@ -363,8 +363,31 @@ Every public page is reframed around "free, no sign-up, run every court from one
   - Everything stops under `prefers-reduced-motion: reduce`.
   - The hero SVG stays under 30 KB, and Lighthouse performance on `/pickleball` stays at or above 90 on mobile.
 - **In-app motion**: a court card flips to its next match when a result is saved; "Up next" pulses; a short CSS celebration plays for a tournament winner. All respect reduced motion.
-- **Palette**: court greens and blues with an optic-yellow ball accent, defined as tokens on the existing dark public shell, at WCAG AA contrast.
-- **Process**: mockups of the landing page, board and host console are reviewed with the owner before Phase 1 UI work is built.
+- **Palette: DevLab base plus one pickleball neon** (owner decision, 2026-10-11). Use the existing `tailwind.config.js` tokens, plus one new token:
+
+  | Role | Token | Value |
+  |---|---|---|
+  | Page ground (dark) | `ink`, `navy-950` | `#0b1426`, `#0b1b34` |
+  | Surfaces | `navy-900` / `navy-800` | `#11214d` / `#152b66` |
+  | Primary action | `brand` (white text) | `#4500ff` |
+  | Secondary text | `mist` | `#b5c4e1` |
+  | Court art | `navy-500` / `navy-300` | `#3055d6` / `#7594fb` |
+  | **Pickleball accent** (new `pickle-neon`) | ink text on it | `#c6ff2e` |
+  | Team A / Team B | `pickle-neon` / `#8d9bff` | different lightness, always labelled |
+
+  - **Neon use**: the neon marks "live / up next / winner": the ball, the active court, the live dot, highlights. It is used as a fill with ink text, or as text on dark surfaces only, never as text on white. Violet stays the colour of the main actions, so the product reads as DevLab.
+  - **Light mode**: the `brand.shell` (`#f5f5fc`) ground. Neon appears only as fills with ink text.
+  - **Type**: Plus Jakarta Sans, the site font, at heavier weights for display. The mockup's placeholder fonts are not used.
+  - **Contrast**: every pair is checked to WCAG AA.
+- **Every screen adapts to any width, from a phone to a TV** (owner decision, 2026-10-11). Layout uses CSS grid with `auto-fill`/`minmax`, container queries and `clamp()` type, not fixed phone frames:
+  - **Phone (< 640 px)**: single column, as in the mockups, with the bottom tab bar.
+  - **Tablet (640–1023 px)**: courts in a 2–3 column grid; the waiting list and fairness panel sit beside or under them.
+  - **Laptop / desktop (≥ 1024 px)**: the host console is a three-area layout: a courts grid (`repeat(auto-fill, minmax(280px, 1fr))`, so 4–16 courts fit without scrolling where possible), a waiting/fairness sidebar, and a standings panel. The tab bar becomes a top or side nav. Dialogs (Game over, Edit match) open as centred panels instead of bottom sheets.
+  - **Viewer board**: courts grid plus standings side by side on wide screens.
+  - **TV mode (`/tv`)**: fills the screen at any size and court count, with type scaling via `clamp()` and the courts grid reflowing for 1–16 courts. It must stay readable from about 5 m on a 1080p screen.
+  - **Tournament editor**: pools side by side on wide screens, stacked on phones. Dragging also works by tap-to-select, so touch and mouse both work.
+  - **E2E checks**: every key screen at 390, 768, 1280 and 1920 px wide, with no horizontal page scroll.
+- **Process**: the owner reviewed the phone mockups on 2026-10-11 and approved the direction. The palette and wide-screen layouts above refine them during the build.
 
 ## 12. Retiring the logged-in app and cleaning up its data (Phase 5)
 
