@@ -40,6 +40,9 @@ export const POST: APIRoute = async ({ request }) => {
       allowMissingSecret: isLocal,
     })
     if (!verification.ok) {
+      // Same structured line the contact form logs, so a rejected create can be
+      // diagnosed from `wrangler tail` (hostname/action mismatch vs. a bad token).
+      console.log(JSON.stringify({ event: 'pickleball_open.turnstile_rejected', reason: verification.reason }))
       const unavailable = verification.reason === 'configuration-missing' || verification.reason === 'verification-request-failed'
       return jsonResponse({ error: unavailable ? 'Verification is unavailable. Try again shortly.' : 'Verification failed. Please try again.' }, unavailable ? 503 : 400)
     }
