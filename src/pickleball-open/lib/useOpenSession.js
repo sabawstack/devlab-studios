@@ -16,7 +16,15 @@ export function useOpenSession(code, hostKey) {
     let retryTimer = null
     let pollTimer = null
     let cancelled = false
+    let ended = false
     let attempt = 0
+
+    function end() {
+      ended = true
+      clearTimeout(retryTimer)
+      clearInterval(pollTimer)
+      setStatus('not-found')
+    }
 
     async function poll() {
       try {
@@ -24,12 +32,13 @@ export function useOpenSession(code, hostKey) {
         if (!cancelled) setViewer(snapshot)
         return true
       } catch (error) {
-        if (!cancelled && error?.status === 404) setStatus('not-found')
+        if (!cancelled && error?.status === 404) end()
         return error?.status !== 404
       }
     }
 
     function connect() {
+      if (cancelled || ended) return
       const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
       socket = new WebSocket(`${protocol}://${window.location.host}/pickleball/rt/open/${code}`)
       socket.onopen = () => {
@@ -53,9 +62,9 @@ export function useOpenSession(code, hostKey) {
         if (message.type === 'AUTH_FAILED') setAuthFailed(true)
       }
       socket.onclose = (event) => {
-        if (cancelled) return
+        if (cancelled || ended) return
         if (event.code === GONE) {
-          setStatus('not-found')
+          end()
           return
         }
         setStatus('reconnecting')
@@ -67,7 +76,7 @@ export function useOpenSession(code, hostKey) {
     }
 
     poll().then((found) => {
-      if (found && !cancelled) connect()
+      if (found && !cancelled && !ended) connect()
     })
 
     return () => {

@@ -12,6 +12,8 @@ const RETRY_MS = 3000
 export function useCommandQueue(code, hostKey, onHost) {
   const queueRef = useRef([])
   const flushingRef = useRef(false)
+  const latestRef = useRef({ code, hostKey, onHost })
+  latestRef.current = { code, hostKey, onHost }
   const [pending, setPending] = useState(0)
   const [error, setError] = useState(null)
 
@@ -21,11 +23,16 @@ export function useCommandQueue(code, hostKey, onHost) {
     try {
       while (queueRef.current.length) {
         const item = queueRef.current[0]
+        const { code: c, hostKey: k, onHost: handle } = latestRef.current
         try {
-          const result = await postCommand(code, hostKey, item.envelope)
-          onHost(result.host)
+          const result = await postCommand(c, k, item.envelope)
           queueRef.current = queueRef.current.slice(1)
           item.resolve(true)
+          try {
+            handle(result.host)
+          } catch (handlerError) {
+            console.error('Applying the host snapshot failed', handlerError)
+          }
         } catch (failure) {
           if (failure instanceof ApiError && failure.status < 500 && failure.status !== 429) {
             queueRef.current = queueRef.current.slice(1)
@@ -41,7 +48,7 @@ export function useCommandQueue(code, hostKey, onHost) {
     } finally {
       flushingRef.current = false
     }
-  }, [code, hostKey, onHost])
+  }, [])
 
   const send = useCallback((command) => new Promise((resolve) => {
     queueRef.current = [...queueRef.current, { envelope: { idempotencyKey: crypto.randomUUID(), command }, resolve }]
@@ -53,8 +60,15 @@ export function useCommandQueue(code, hostKey, onHost) {
     const timer = setInterval(() => {
       if (queueRef.current.length) flush()
     }, RETRY_MS)
-    return () => clearInterval(timer)
+    return () => {
+      clearInterval(timer)
+      const abandoned = queueRef.current
+      queueRef.current = []
+      abandoned.forEach((item) => item.resolve(false))
+    }
   }, [flush])
 
-  return { send, pending, error, clearError: () => setError(null) }
+  const clearError = useCallback(() => setError(null), [])
+
+  return { send, pending, error, clearError }
 }

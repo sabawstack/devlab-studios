@@ -7,7 +7,9 @@ const MAX_REMEMBERED = 10
 function read() {
   try {
     const value = JSON.parse(globalThis.localStorage?.getItem(STORAGE_KEY) || '[]')
-    return Array.isArray(value) ? value : []
+    return Array.isArray(value)
+      ? value.filter((entry) => entry && typeof entry.code === 'string' && typeof entry.hostKey === 'string')
+      : []
   } catch {
     return []
   }
@@ -34,7 +36,7 @@ export function forgetHostedSession(code) {
   write(read().filter((entry) => entry.code !== code))
 }
 export function hostKeyFromHash(hash) {
-  const match = /(?:^#|&)host=([A-Za-z0-9_-]+)/.exec(hash || '')
+  const match = /(?:^#|&)host=([A-Za-z0-9_-]+)(?:&|$)/.exec(hash || '')
   return match ? match[1] : null
 }
 export function hostLink(origin, code, hostKey) {
