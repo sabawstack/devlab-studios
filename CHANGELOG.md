@@ -58,6 +58,7 @@ decided against that surface specifically:
 ### Added
 - Five new animated pickleball illustrations (rally, paddle stack, score tap, QR board, quiet court), CSS-only, stopped for reduced motion.
 - /pickleball/new: start a free session in two steps (details, then paste or upload players), then save the host link and show the player QR.
+- /pickleball/s/<code>: the live player board (courts, "you're up next", waiting order, standings, results), the host console for whoever holds the host link, and a friendly page once a session has been deleted.
 - Pickleball neon (#c6ff2e) as a design token on the DevLab palette, an app shell for the open-play screens, and the client data layer (live connection with polling fallback, retrying command queue).
 - Public API for free open play under /api/pickleball/open/: create (Turnstile, 10 per IP per day), board state, host commands with idempotency, results CSV, delete, and a live WebSocket.
 - OpenSessionDO: one coordinator per open session that serializes commands, writes only changed rows, and pushes live updates to every connected screen.

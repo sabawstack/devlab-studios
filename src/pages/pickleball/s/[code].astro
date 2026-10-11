@@ -1,0 +1,11 @@
+---
+// src/pages/pickleball/s/[code].astro
+import PickleballAppShell from '../../../layouts/PickleballAppShell.astro'
+import SessionApp from '../../../pickleball-open/SessionApp.jsx'
+import { normalizePublicCode } from '../../../lib/pickleball/open/codes'
+
+const code = normalizePublicCode(Astro.params.code ?? '') ?? ''
+---
+<PickleballAppShell title="Live board — Devlab Pickleball">
+  <SessionApp code={code} client:only="react" />
+</PickleballAppShell>
