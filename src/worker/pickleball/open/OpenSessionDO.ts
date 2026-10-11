@@ -4,29 +4,40 @@
 // changed, and broadcasts to hibernating sockets. Memory is updated only
 // AFTER the D1 batch succeeds, so a failed write leaves nothing half-applied.
 import { DurableObject } from 'cloudflare:workers'
-import { commandEnvelopeSchema } from '../../../lib/schemas/pickleball/open/commands'
+import { createCaptainSchema } from '../../../lib/schemas/pickleball/open/captains'
 import { checkInSchema } from '../../../lib/schemas/pickleball/open/checkIn'
+import { commandEnvelopeSchema } from '../../../lib/schemas/pickleball/open/commands'
+import { captainLabel, captainRefusal, findCaptain } from '../../../lib/pickleball/open/captains'
 import { applyCheckIn } from '../../../lib/pickleball/open/checkIn'
-import { applyCommand, finalizeCommand } from '../../../lib/pickleball/open/reducer'
+import { applyCommand, finalizeCommand, touch } from '../../../lib/pickleball/open/reducer'
 import { resultsCsv } from '../../../lib/pickleball/open/resultsCsv'
 import { constantTimeEqual } from '../../../lib/pickleball/open/secrets'
-import { toHostSnapshot, toViewerSnapshot, type HostSnapshot, type ViewerSnapshot } from '../../../lib/pickleball/open/snapshot'
-import type { OpenSessionState } from '../../../lib/pickleball/open/types'
-import { sha256Base64Url } from '../../../lib/pickleball/webCrypto.js'
 import {
-  deleteOpenSession, findIdempotentResponse, loadOpenSession, persistDiff,
+  toCaptainSnapshot, toHostSnapshot, toViewerSnapshot, type CaptainSnapshot, type HostSnapshot, type ViewerSnapshot,
+} from '../../../lib/pickleball/open/snapshot'
+import { LIMITS, type CaptainRecord, type OpenSessionState } from '../../../lib/pickleball/open/types'
+import { randomBase64Url, sha256Base64Url } from '../../../lib/pickleball/webCrypto.js'
+import {
+  deleteOpenSession, findIdempotentResponse, insertCaptain, loadOpenSession, persistDiff, revokeCaptain as revokeCaptainRow,
+  type LoadedSession,
 } from '../../repositories/pickleball/open/openSessions'
 
 export type DoResult<T> = { status: number; body: T | { error: string }; retryAfterSeconds?: number }
-type Loaded = { state: OpenSessionState; hostKeyHash: string }
-type Attachment = { code: string; role: 'viewer' | 'host' }
+export interface Credentials { hostKey: string | null; captainKey: string | null }
+export type CommandBody = { version: number; host?: HostSnapshot; captain?: CaptainSnapshot }
+export interface CheckInBody { playerId: string; name: string; alreadyCheckedIn: boolean }
+export interface CaptainLinkBody { captainId: string; label: string; captainKey: string; host: HostSnapshot }
+
+type Actor = { role: 'host' } | { role: 'captain'; captain: CaptainRecord }
+type Attachment = { code: string; role: 'viewer' | 'host' | 'captain'; captainId?: string }
+type Identified = { role: 'host'; payload: HostSnapshot } | { role: 'captain'; captainId: string; payload: CaptainSnapshot }
 
 const IDEMPOTENCY_TTL_MS = 10 * 60_000
 const GONE = 4404
 // Spec §10: 120 commands per minute per session. Counted here, after the host
-// key is checked, so strangers holding only the public code cannot use up the
-// host's allowance (they are limited per IP at the route instead). In memory is
-// enough: one object serves the whole session, and a flood keeps it awake.
+// or captain key is checked, so strangers holding only the public code cannot
+// use up the session's allowance (they are limited per IP at the route instead).
+// In memory is enough: one object serves the whole session, and a flood keeps it awake.
 const COMMAND_LIMIT = 120
 const COMMAND_WINDOW_MS = 60_000
 // Self check-in is anonymous: 60 per 5 minutes per session caps a flood of
@@ -35,33 +46,18 @@ const COMMAND_WINDOW_MS = 60_000
 const CHECK_IN_LIMIT = 60
 const CHECK_IN_WINDOW_MS = 5 * 60_000
 
-export interface CheckInBody { playerId: string; name: string; alreadyCheckedIn: boolean }
+/** Sliding-window counter: the kept times, and the seconds to wait (0 when this call is allowed and counted). */
+function windowRetryAfter(times: readonly number[], limit: number, windowMs: number, nowMs: number): { times: number[]; retryAfter: number } {
+  const recent = times.filter((t) => t > nowMs - windowMs)
+  if (recent.length >= limit) return { times: recent, retryAfter: Math.max(1, Math.ceil((recent[0] + windowMs - nowMs) / 1000)) }
+  return { times: [...recent, nowMs], retryAfter: 0 }
+}
 
 export class OpenSessionDO extends DurableObject<Env> {
-  private loaded: Loaded | null = null
+  private loaded: LoadedSession | null = null
   private chain: Promise<unknown> = Promise.resolve()
   private commandTimes: number[] = []
   private checkInTimes: number[] = []
-
-  /** Counts one check-in attempt; returns the seconds to wait when over the per-session limit. */
-  private checkInRetryAfter(nowMs: number): number {
-    this.checkInTimes = this.checkInTimes.filter((t) => t > nowMs - CHECK_IN_WINDOW_MS)
-    if (this.checkInTimes.length >= CHECK_IN_LIMIT) {
-      return Math.max(1, Math.ceil((this.checkInTimes[0] + CHECK_IN_WINDOW_MS - nowMs) / 1000))
-    }
-    this.checkInTimes = [...this.checkInTimes, nowMs]
-    return 0
-  }
-
-  /** Counts one authorized command; returns the seconds to wait when over the limit. */
-  private commandRetryAfter(nowMs: number): number {
-    this.commandTimes = this.commandTimes.filter((t) => t > nowMs - COMMAND_WINDOW_MS)
-    if (this.commandTimes.length >= COMMAND_LIMIT) {
-      return Math.max(1, Math.ceil((this.commandTimes[0] + COMMAND_WINDOW_MS - nowMs) / 1000))
-    }
-    this.commandTimes = [...this.commandTimes, nowMs]
-    return 0
-  }
 
   /** Runs fn after every earlier call has settled: one command at a time, even across awaits. */
   private serial<T>(fn: () => Promise<T>): Promise<T> {
@@ -70,7 +66,7 @@ export class OpenSessionDO extends DurableObject<Env> {
     return run
   }
 
-  private async load(code: string): Promise<Loaded | null> {
+  private async load(code: string): Promise<LoadedSession | null> {
     // A request routed to the wrong coordinator must never load (or cache) another session's state.
     if (!this.ctx.id.equals(this.env.OPEN_SESSION.idFromName(code))) return null
     const now = new Date().toISOString()
@@ -79,16 +75,28 @@ export class OpenSessionDO extends DurableObject<Env> {
     return this.loaded
   }
 
-  private async isHost(loaded: Loaded, hostKey: string | null): Promise<boolean> {
+  private async isHost(loaded: LoadedSession, hostKey: string | null): Promise<boolean> {
     if (!hostKey) return false
     return constantTimeEqual(await sha256Base64Url(hostKey), loaded.hostKeyHash)
   }
 
-  private async authorized(code: string, hostKey: string | null): Promise<Loaded | DoResult<never>> {
+  /** Host first; otherwise a live (unrevoked) captain link. Revocation is immediate: captains are checked from memory on every call. */
+  private async actorFor(loaded: LoadedSession, credentials: Credentials): Promise<Actor | null> {
+    if (await this.isHost(loaded, credentials.hostKey)) return { role: 'host' }
+    if (!credentials.captainKey) return null
+    const captain = findCaptain(loaded.captains, await sha256Base64Url(credentials.captainKey))
+    return captain ? { role: 'captain', captain } : null
+  }
+
+  private async authorized(code: string, hostKey: string | null): Promise<LoadedSession | DoResult<never>> {
     const loaded = await this.load(code)
     if (!loaded) return { status: 404, body: { error: 'Session not found.' } }
     if (!(await this.isHost(loaded, hostKey))) return { status: 403, body: { error: 'Only the host can do that.' } }
     return loaded
+  }
+
+  private snapshotFor(actor: Actor, state: OpenSessionState, captains: readonly CaptainRecord[]): Pick<CommandBody, 'host' | 'captain'> {
+    return actor.role === 'host' ? { host: toHostSnapshot(state, captains) } : { captain: toCaptainSnapshot(state, actor.captain) }
   }
 
   async viewer(code: string): Promise<ViewerSnapshot | null> {
@@ -101,44 +109,63 @@ export class OpenSessionDO extends DurableObject<Env> {
   async host(code: string, hostKey: string | null): Promise<DoResult<HostSnapshot>> {
     return this.serial(async () => {
       const auth = await this.authorized(code, hostKey)
-      return 'state' in auth ? { status: 200, body: toHostSnapshot(auth.state) } : auth
+      return 'state' in auth ? { status: 200, body: toHostSnapshot(auth.state, auth.captains) } : auth
     })
   }
 
-  async command(code: string, hostKey: string | null, envelope: unknown): Promise<DoResult<{ version: number; host: HostSnapshot }>> {
+  async captain(code: string, captainKey: string | null): Promise<DoResult<CaptainSnapshot>> {
+    return this.serial(async () => {
+      const loaded = await this.load(code)
+      if (!loaded) return { status: 404, body: { error: 'Session not found.' } }
+      const actor = await this.actorFor(loaded, { hostKey: null, captainKey })
+      if (actor?.role !== 'captain') return { status: 403, body: { error: 'This captain link is no longer valid.' } }
+      return { status: 200, body: toCaptainSnapshot(loaded.state, actor.captain) }
+    })
+  }
+
+  async command(code: string, credentials: Credentials, envelope: unknown): Promise<DoResult<CommandBody>> {
     return this.serial(async () => {
       const parsed = commandEnvelopeSchema.safeParse(envelope)
       if (!parsed.success) return { status: 400, body: { error: 'That request was not understood.' } }
-      const auth = await this.authorized(code, hostKey)
-      if (!('state' in auth)) return auth
-      const retryAfterSeconds = this.commandRetryAfter(Date.now())
-      if (retryAfterSeconds > 0) return { status: 429, body: { error: 'Slow down a little and try again.' }, retryAfterSeconds }
+      const loaded = await this.load(code)
+      if (!loaded) return { status: 404, body: { error: 'Session not found.' } }
+      const actor = await this.actorFor(loaded, credentials)
+      if (!actor) {
+        const captainOnly = credentials.captainKey !== null && credentials.hostKey === null
+        return { status: 403, body: { error: captainOnly ? 'This captain link is no longer valid.' : 'Only the host can do that.' } }
+      }
+      if (actor.role === 'captain') {
+        const refusal = captainRefusal(parsed.data.command, actor.captain, loaded.state)
+        if (refusal) return { status: 403, body: { error: refusal } }
+      }
+      const limit = windowRetryAfter(this.commandTimes, COMMAND_LIMIT, COMMAND_WINDOW_MS, Date.now())
+      this.commandTimes = limit.times
+      if (limit.retryAfter > 0) return { status: 429, body: { error: 'Slow down a little and try again.' }, retryAfterSeconds: limit.retryAfter }
       const db = this.env.PICKLEBALL_DB
-      const prior = await findIdempotentResponse(db, auth.state.id, parsed.data.idempotencyKey)
+      const prior = await findIdempotentResponse(db, loaded.state.id, parsed.data.idempotencyKey)
       if (prior) {
-        // Only {status, version} is stored (a host snapshot near the caps would crowd D1's row limit);
+        // Only {status, version} is stored (a snapshot near the caps would crowd D1's row limit);
         // the replay answers with the session as it is now, which is what the caller needs anyway.
         const stored = JSON.parse(prior) as { status: number; version?: number; body?: { version?: number } }
-        const version = stored.version ?? stored.body?.version ?? auth.state.version
-        return { status: stored.status, body: { version, host: toHostSnapshot(auth.state) } }
+        const version = stored.version ?? stored.body?.version ?? loaded.state.version
+        return { status: stored.status, body: { version, ...this.snapshotFor(actor, loaded.state, loaded.captains) } }
       }
 
       const now = new Date().toISOString()
-      const ctx = { now, newId: () => crypto.randomUUID() }
-      const result = applyCommand(auth.state, parsed.data.command, ctx)
+      const ctx = { now, newId: () => crypto.randomUUID(), actor: actor.role === 'captain' ? actor.captain.label : 'Host' }
+      const result = applyCommand(loaded.state, parsed.data.command, ctx)
       if (!result.ok) return { status: result.status, body: { error: result.error } }
 
       const next = finalizeCommand(result.state, ctx)
-      const response: DoResult<{ version: number; host: HostSnapshot }> = { status: 200, body: { version: next.version, host: toHostSnapshot(next) } }
-      await persistDiff(db, auth.state, next, {
+      await persistDiff(db, loaded.state, next, {
         key: parsed.data.idempotencyKey,
         responseJson: JSON.stringify({ status: 200, version: next.version }),
         now,
         cutoff: new Date(Date.parse(now) - IDEMPOTENCY_TTL_MS).toISOString(),
       })
-      this.loaded = { ...auth, state: next }
+      this.loaded = { ...loaded, state: next }
       this.broadcast()
-      return response
+      return { status: 200, body: { version: next.version, ...this.snapshotFor(actor, next, loaded.captains) } }
     })
   }
 
@@ -148,8 +175,9 @@ export class OpenSessionDO extends DurableObject<Env> {
       if (!parsed.success) return { status: 400, body: { error: 'Check your details and try again.' } }
       const loaded = await this.load(code)
       if (!loaded) return { status: 404, body: { error: 'Session not found.' } }
-      const retryAfterSeconds = this.checkInRetryAfter(Date.now())
-      if (retryAfterSeconds > 0) return { status: 429, body: { error: 'Lots of people are checking in. Try again in a minute.' }, retryAfterSeconds }
+      const limit = windowRetryAfter(this.checkInTimes, CHECK_IN_LIMIT, CHECK_IN_WINDOW_MS, Date.now())
+      this.checkInTimes = limit.times
+      if (limit.retryAfter > 0) return { status: 429, body: { error: 'Lots of people are checking in. Try again in a minute.' }, retryAfterSeconds: limit.retryAfter }
 
       const now = new Date().toISOString()
       const ctx = { now, newId: () => crypto.randomUUID() }
@@ -164,6 +192,47 @@ export class OpenSessionDO extends DurableObject<Env> {
       this.loaded = { ...loaded, state: next }
       this.broadcast()
       return { status: 201, body: answer }
+    })
+  }
+
+  async createCaptain(code: string, hostKey: string | null, body: unknown): Promise<DoResult<CaptainLinkBody>> {
+    return this.serial(async () => {
+      const parsed = createCaptainSchema.safeParse(body)
+      if (!parsed.success) return { status: 400, body: { error: 'Pick a court for the captain.' } }
+      const auth = await this.authorized(code, hostKey)
+      if (!('state' in auth)) return auth
+      const court = auth.state.courts.find((c) => c.id === parsed.data.courtId)
+      if (!court) return { status: 404, body: { error: 'Court not found.' } }
+      if (auth.captains.length >= LIMITS.maxCaptains) return { status: 409, body: { error: `A session can have at most ${LIMITS.maxCaptains} captain links.` } }
+
+      const now = new Date().toISOString()
+      const captainKey = randomBase64Url(16)
+      const captain: CaptainRecord = {
+        id: crypto.randomUUID(), label: captainLabel(auth.state, court.id, auth.captains, parsed.data.label),
+        courtId: court.id, keyHash: await sha256Base64Url(captainKey), createdAt: now,
+      }
+      const next = touch(auth.state, now)
+      await insertCaptain(this.env.PICKLEBALL_DB, next, captain)
+      const captains = [...auth.captains, captain]
+      this.loaded = { ...auth, state: next, captains }
+      this.broadcast()
+      return { status: 201, body: { captainId: captain.id, label: captain.label, captainKey, host: toHostSnapshot(next, captains) } }
+    })
+  }
+
+  async revokeCaptain(code: string, hostKey: string | null, captainId: string): Promise<DoResult<{ revoked: true; host: HostSnapshot }>> {
+    return this.serial(async () => {
+      const auth = await this.authorized(code, hostKey)
+      if (!('state' in auth)) return auth
+      // Unknown or already revoked: nothing is written, versioned or broadcast.
+      if (!auth.captains.some((c) => c.id === captainId)) return { status: 404, body: { error: 'That captain link was not found.' } }
+      const now = new Date().toISOString()
+      const next = touch(auth.state, now)
+      await revokeCaptainRow(this.env.PICKLEBALL_DB, next, captainId, now)
+      const captains = auth.captains.filter((c) => c.id !== captainId)
+      this.loaded = { ...auth, state: next, captains }
+      this.broadcast()
+      return { status: 200, body: { revoked: true, host: toHostSnapshot(next, captains) } }
     })
   }
 
@@ -202,18 +271,54 @@ export class OpenSessionDO extends DurableObject<Env> {
     }
   }
 
+  /**
+   * Sends every socket the snapshot for its role. Each snapshot is built at most
+   * once per pass. A captain socket whose link was revoked is turned back into a
+   * viewer here, in the same pass, and told so (CAPTAIN_REVOKED) before it gets
+   * the public board.
+   */
   private broadcast(): void {
     if (!this.loaded) return
-    const viewer = JSON.stringify({ type: 'VIEWER', payload: toViewerSnapshot(this.loaded.state) })
-    const host = JSON.stringify({ type: 'HOST', payload: toHostSnapshot(this.loaded.state) })
+    const { state, captains } = this.loaded
+    const viewer = JSON.stringify({ type: 'VIEWER', payload: toViewerSnapshot(state) })
+    const host = JSON.stringify({ type: 'HOST', payload: toHostSnapshot(state, captains) })
+    const perCaptain = new Map<string, string>()
     for (const ws of this.ctx.getWebSockets()) {
       const attachment = ws.deserializeAttachment() as Attachment | null
       try {
-        ws.send(attachment?.role === 'host' ? host : viewer)
+        if (attachment?.role === 'host') {
+          ws.send(host)
+          continue
+        }
+        if (attachment?.role === 'captain' && attachment.captainId) {
+          const captain = captains.find((c) => c.id === attachment.captainId)
+          if (captain) {
+            const message = perCaptain.get(captain.id) ?? JSON.stringify({ type: 'CAPTAIN', payload: toCaptainSnapshot(state, captain) })
+            perCaptain.set(captain.id, message)
+            ws.send(message)
+            continue
+          }
+          ws.serializeAttachment({ code: attachment.code, role: 'viewer' } satisfies Attachment)
+          ws.send(JSON.stringify({ type: 'CAPTAIN_REVOKED' }))
+        }
+        ws.send(viewer)
       } catch {
         // a socket mid-close; it is dropped by the runtime
       }
     }
+  }
+
+  /** Who a socket's AUTH message proves it is, with their snapshot; null when the key is not valid. */
+  private async identify(code: string, credentials: Credentials): Promise<Identified | null> {
+    return this.serial(async () => {
+      const loaded = await this.load(code)
+      if (!loaded) return null
+      const actor = await this.actorFor(loaded, credentials)
+      if (!actor) return null
+      return actor.role === 'host'
+        ? { role: 'host', payload: toHostSnapshot(loaded.state, loaded.captains) }
+        : { role: 'captain', captainId: actor.captain.id, payload: toCaptainSnapshot(loaded.state, actor.captain) }
+    })
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -231,7 +336,7 @@ export class OpenSessionDO extends DurableObject<Env> {
   }
 
   async webSocketMessage(ws: WebSocket, message: ArrayBuffer | string): Promise<void> {
-    let parsed: { type?: string; hostKey?: unknown }
+    let parsed: { type?: string; hostKey?: unknown; captainKey?: unknown }
     try {
       parsed = JSON.parse(String(message))
     } catch {
@@ -240,12 +345,19 @@ export class OpenSessionDO extends DurableObject<Env> {
     const attachment = ws.deserializeAttachment() as Attachment | null
     if (!attachment) return
 
-    if (parsed.type === 'AUTH' && typeof parsed.hostKey === 'string') {
+    if (parsed.type === 'AUTH') {
+      const credentials: Credentials = {
+        hostKey: typeof parsed.hostKey === 'string' && parsed.hostKey.length <= 128 ? parsed.hostKey : null,
+        captainKey: typeof parsed.captainKey === 'string' && parsed.captainKey.length <= 128 ? parsed.captainKey : null,
+      }
       try {
-        const result = await this.host(attachment.code, parsed.hostKey)
-        if (result.status === 200) {
+        const who = await this.identify(attachment.code, credentials)
+        if (who?.role === 'host') {
           ws.serializeAttachment({ code: attachment.code, role: 'host' } satisfies Attachment)
-          ws.send(JSON.stringify({ type: 'HOST', payload: result.body }))
+          ws.send(JSON.stringify({ type: 'HOST', payload: who.payload }))
+        } else if (who?.role === 'captain') {
+          ws.serializeAttachment({ code: attachment.code, role: 'captain', captainId: who.captainId } satisfies Attachment)
+          ws.send(JSON.stringify({ type: 'CAPTAIN', payload: who.payload }))
         } else {
           ws.send(JSON.stringify({ type: 'AUTH_FAILED' }))
         }
@@ -262,13 +374,15 @@ export class OpenSessionDO extends DurableObject<Env> {
 
     if (parsed.type === 'RESYNC') {
       try {
+        const loaded = await this.serial(() => this.load(attachment.code))
+        if (!loaded) return
         if (attachment.role === 'host') {
-          const loaded = await this.serial(() => this.load(attachment.code))
-          if (loaded) ws.send(JSON.stringify({ type: 'HOST', payload: toHostSnapshot(loaded.state) }))
-        } else {
-          const snapshot = await this.viewer(attachment.code)
-          if (snapshot) ws.send(JSON.stringify({ type: 'VIEWER', payload: snapshot }))
+          ws.send(JSON.stringify({ type: 'HOST', payload: toHostSnapshot(loaded.state, loaded.captains) }))
+          return
         }
+        const captain = attachment.role === 'captain' ? loaded.captains.find((c) => c.id === attachment.captainId) : undefined
+        if (captain) ws.send(JSON.stringify({ type: 'CAPTAIN', payload: toCaptainSnapshot(loaded.state, captain) }))
+        else ws.send(JSON.stringify({ type: 'VIEWER', payload: toViewerSnapshot(loaded.state) }))
       } catch (error) {
         // a failed resync is retried by the client's next RESYNC
         this.logWsError(error, attachment.code, 'RESYNC')

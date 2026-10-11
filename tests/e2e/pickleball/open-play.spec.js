@@ -418,3 +418,60 @@ test.describe('self check-in', () => {
     await expect(sheet.getByText('Self check-in is off. Only you can add players.')).toBeVisible()
   })
 })
+
+test.describe('court captains (API)', () => {
+  async function makeCaptain(request, code, hostKey, courtId) {
+    const response = await request.post(`/api/pickleball/open/s/${code}/captains`, { headers: { 'X-Host-Key': hostKey }, data: { courtId } })
+    expect(response.status()).toBe(201)
+    return response.json()
+  }
+  function asCaptain(request, code, captainKey, cmd) {
+    return request.post(`/api/pickleball/open/s/${code}/commands`, {
+      headers: { 'X-Captain-Key': captainKey },
+      data: { idempotencyKey: crypto.randomUUID(), command: cmd },
+    })
+  }
+
+  test('a captain runs their own court and nothing else, and a second save says who saved it', async ({ request }) => {
+    const { code, hostKey } = await createSession(request)
+    const host = await hostSnapshot(request, code, hostKey)
+    const [court1, court2] = host.courts
+    const { captainKey, label } = await makeCaptain(request, code, hostKey, court1.id)
+    expect(label).toBe('Court 1 captain')
+    expect((await asCaptain(request, code, captainKey, { type: 'START_MATCH', matchId: court1.match.id })).status()).toBe(200)
+
+    const other = await asCaptain(request, code, captainKey, { type: 'START_MATCH', matchId: court2.match.id })
+    expect(other.status()).toBe(403)
+    expect((await other.json()).error).toBe('This captain link only runs Court 1.')
+    expect((await asCaptain(request, code, captainKey, { type: 'END_SESSION' })).status()).toBe(403)
+
+    const saved = await asCaptain(request, code, captainKey, { type: 'RECORD_RESULT', matchId: court1.match.id, winner: 'A', scoreA: 11, scoreB: 6 })
+    expect(saved.status()).toBe(200)
+    expect((await saved.json()).captain.court.id).toBe(court1.id)
+    const hostAgain = await command(request, code, hostKey, { type: 'RECORD_RESULT', matchId: court1.match.id, winner: 'B', scoreA: 6, scoreB: 11 })
+    expect(hostAgain.status()).toBe(409)
+    expect((await hostAgain.json()).error).toBe('This game was already saved by Court 1 captain.')
+
+    const snapshot = await (await request.get(`/api/pickleball/open/s/${code}/captain`, { headers: { 'X-Captain-Key': captainKey } })).json()
+    expect(JSON.stringify(snapshot)).not.toMatch(/skill|duprId|keyHash|key_hash/)
+    const hostView = await hostSnapshot(request, code, hostKey)
+    expect(hostView.captains.map((c) => c.label)).toEqual(['Court 1 captain'])
+    expect(JSON.stringify(hostView)).not.toContain(captainKey)
+  })
+
+  test('a revoked captain link stops working at once; a stranger cannot make or revoke links', async ({ request, baseURL }) => {
+    const { code, hostKey } = await createSession(request)
+    const host = await hostSnapshot(request, code, hostKey)
+    const { captainKey, captainId } = await makeCaptain(request, code, hostKey, host.courts[0].id)
+    expect((await request.post(`/api/pickleball/open/s/${code}/captains`, { headers: { 'X-Host-Key': 'wrong-key-wrong-key' }, data: { courtId: host.courts[0].id } })).status()).toBe(403)
+    expect((await request.post(`/api/pickleball/open/s/${code}/captains`, { headers: { 'X-Captain-Key': captainKey }, data: { courtId: host.courts[0].id } })).status()).toBe(403)
+
+    // A browser always sends Origin on DELETE; Astro's CSRF check rejects a bodyless request without one.
+    const revoked = await request.delete(`/api/pickleball/open/s/${code}/captains/${captainId}`, { headers: { 'X-Host-Key': hostKey, Origin: baseURL } })
+    expect(revoked.status()).toBe(200)
+    const after = await asCaptain(request, code, captainKey, { type: 'START_MATCH', matchId: host.courts[0].match.id })
+    expect(after.status()).toBe(403)
+    expect((await after.json()).error).toBe('This captain link is no longer valid.')
+    expect((await request.get(`/api/pickleball/open/s/${code}/captain`, { headers: { 'X-Captain-Key': captainKey } })).status()).toBe(403)
+  })
+})

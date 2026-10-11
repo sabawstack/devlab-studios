@@ -1,7 +1,7 @@
 import { normalizePublicCode } from '../../../lib/pickleball/open/codes'
 import { checkRateLimit, clientIp, rateLimitedResponse } from '../../rateLimit.js'
 import { jsonResponse } from '../../utils/responses.js'
-import type { DoResult } from './OpenSessionDO'
+import type { Credentials, DoResult } from './OpenSessionDO'
 
 /**
  * Per-IP limit on the host routes, checked before the host key is. The
@@ -25,6 +25,15 @@ export function codeFrom(params: Record<string, string | undefined>): string | n
 export function hostKeyFrom(request: Request): string | null {
   const key = request.headers.get('X-Host-Key')
   return key && key.length <= 128 ? key : null
+}
+
+export function captainKeyFrom(request: Request): string | null {
+  const key = request.headers.get('X-Captain-Key')
+  return key && key.length <= 128 ? key : null
+}
+
+export function credentialsFrom(request: Request): Credentials {
+  return { hostKey: hostKeyFrom(request), captainKey: captainKeyFrom(request) }
 }
 
 export function doResponse<T>(result: DoResult<T>): Response {

@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro'
 import { getEnv } from '../../../../../../lib/env'
-import { codeFrom, doResponse, hostIpLimited, hostKeyFrom, notFound, openErrorResponse, openSessionStub } from '../../../../../../worker/pickleball/open/routeHelpers'
+import { codeFrom, credentialsFrom, doResponse, hostIpLimited, notFound, openErrorResponse, openSessionStub } from '../../../../../../worker/pickleball/open/routeHelpers'
 import { jsonResponse } from '../../../../../../worker/utils/responses.js'
 
 export const POST: APIRoute = async ({ request, params }) => {
@@ -16,10 +16,10 @@ export const POST: APIRoute = async ({ request, params }) => {
       await request.arrayBuffer().catch(() => {})
       return notFound()
     }
-    // The 120-per-minute-per-session limit is counted in the DO after the host key checks out.
+    // The 120-per-minute-per-session limit is counted in the DO after the host or captain key checks out.
     const body = await request.json().catch(() => null)
     if (body === null) return jsonResponse({ error: 'That request was not understood.' }, 400)
-    return doResponse(await openSessionStub(env, code).command(code, hostKeyFrom(request), body))
+    return doResponse(await openSessionStub(env, code).command(code, credentialsFrom(request), body))
   } catch (error) {
     return openErrorResponse(error, 'commands')
   }
