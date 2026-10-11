@@ -56,6 +56,7 @@ decided against that surface specifically:
 - **The e2e environment applies migrations.** Nothing did, so the local D1 sat at `0015` while production was on `0016` and `mailbox_outbound_attachments` did not exist locally — the attachment upload failed there with a generic 500 that said nothing about the cause. A suite one migration behind is worse than no suite: it reports failures unrelated to the code under test, and would pass a feature that is broken in production for the mirror-image reason.
 
 ### Added
+- /pickleball/new: start a free session in two steps (details, then paste or upload players), then save the host link and show the player QR.
 - Pickleball neon (#c6ff2e) as a design token on the DevLab palette, an app shell for the open-play screens, and the client data layer (live connection with polling fallback, retrying command queue).
 - Public API for free open play under /api/pickleball/open/: create (Turnstile, 10 per IP per day), board state, host commands with idempotency, results CSV, delete, and a live WebSocket.
 - OpenSessionDO: one coordinator per open session that serializes commands, writes only changed rows, and pushes live updates to every connected screen.
