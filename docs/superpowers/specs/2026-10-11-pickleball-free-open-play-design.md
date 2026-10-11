@@ -235,9 +235,23 @@ The host can switch mode mid-session; it applies to the next proposal.
 ### 5.3 Session standings
 
 Per player: games played, wins, losses, points for and against, point
-differential. Rank by **win rate**, then point differential, then points for,
-then name. Players with 0 games are listed unranked at the bottom. Winner-only
-games count toward W/L with no points. No persistent rating exists anywhere.
+differential. Players play different numbers of games in open play, so point
+measures are compared **per game**, never as totals. Ranking order (owner
+decision, 2026-10-11):
+
+1. Win rate (wins ÷ games played).
+2. Average point differential per scored game.
+3. Average points scored per scored game.
+4. Head-to-head among exactly the tied players: wins in today's games where they were on opposite sides. Applied only if every tied player has met.
+5. Name.
+
+"Scored games" excludes winner-only games, which count toward W/L and win
+rate but not toward any point average. Players with 0 games are listed unranked
+at the bottom. The board shows W–L, Win % and +/− per game, with a one-line
+"how ranking works" note. No persistent rating exists anywhere.
+
+Example: Ana 3–1 with scores 11–2, 11–3, 11–5, 9–11 (+21 over 4 = **+5.3**)
+ranks above Leo 3–1 with 11–9, 11–9, 12–10, 9–11 (+4 over 4 = **+1.0**).
 
 ### 5.4 Editing proposals
 
