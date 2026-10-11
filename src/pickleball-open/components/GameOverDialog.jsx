@@ -9,13 +9,13 @@ export default function GameOverDialog({ title, match, nameOf, settings, initial
   const [winBy2, setWinBy2] = useState(Boolean(initial && initial.scoreA !== null && Math.max(initial.scoreA, initial.scoreB) === settings.target + 1))
   const teamA = match.teamA.map(nameOf).join(' · ')
   const teamB = match.teamB.map(nameOf).join(' · ')
-  const result = winner && loserScore !== null && !settings.winnerOnly ? resultFromPad(winner, loserScore, settings, winBy2) : null
+  const result = winner && loserScore !== null ? resultFromPad(winner, loserScore, settings, winBy2) : null
   const tied = loserScore === settings.target - 1
   const check = result ? validateResult(result, settings) : null
 
   return (
     <Sheet title={title} onClose={onClose}>
-      <p className="mb-3 text-sm text-mist">{settings.winnerOnly ? 'Winner only' : `Game to ${settings.target} · sudden death or win by 2`}</p>
+      <p className="mb-3 text-sm text-mist">Game to {settings.target} · sudden death or win by 2</p>
       <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Who won?">
         {[['A', teamA], ['B', teamB]].map(([side, label]) => (
           <button key={side} type="button" role="radio" aria-checked={winner === side} onClick={() => setWinner(side)}
@@ -26,7 +26,7 @@ export default function GameOverDialog({ title, match, nameOf, settings, initial
         ))}
       </div>
 
-      {!settings.winnerOnly && winner && (
+      {winner && (
         <>
           <p className="mt-4 text-sm text-mist">Losing team's score</p>
           <div className="mt-2 grid grid-cols-6 gap-1.5 sm:grid-cols-8">
@@ -53,12 +53,9 @@ export default function GameOverDialog({ title, match, nameOf, settings, initial
       )}
 
       <div className="mt-5 grid gap-2">
-        {!settings.winnerOnly && (
-          <Button variant="primary" disabled={!result || !check?.ok} onClick={() => onSave(result)}>
-            {result ? `Save ${result.scoreA}–${result.scoreB}` : 'Pick the winner and score'}
-          </Button>
-        )}
-        <Button variant={settings.winnerOnly ? 'primary' : 'ghost'} disabled={!winner} onClick={() => onSave({ winner, scoreA: null, scoreB: null })}>Save winner only</Button>
+        <Button variant="primary" disabled={!result || !check?.ok} onClick={() => onSave(result)}>
+          {result ? `Save ${result.scoreA}–${result.scoreB}` : 'Pick the winner and score'}
+        </Button>
         {onAbandon && <Button variant="quiet" onClick={onAbandon}>Game abandoned (no result)</Button>}
       </div>
     </Sheet>

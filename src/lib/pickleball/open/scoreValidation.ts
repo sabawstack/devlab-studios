@@ -33,9 +33,9 @@ export function isPossibleFinal(winnerScore: number, loserScore: number, target:
 
 export function validateResult(input: ResultInput, settings: SessionSettings): ValidationResult {
   const { winner, scoreA, scoreB } = input
-  if (scoreA === null && scoreB === null) return OK
-  if (settings.winnerOnly) return { ok: false, reason: 'This session records winners only.' }
-  if (scoreA === null || scoreB === null) return { ok: false, reason: 'Enter both scores, or save the winner only.' }
+  // Every result carries a score (owner decision 2026-10-12): standings rank on
+  // the share of points won, so a winner-only save would rank on wins alone.
+  if (scoreA === null || scoreB === null) return { ok: false, reason: 'Enter the score for both teams.' }
   if (!isScore(scoreA) || !isScore(scoreB)) return { ok: false, reason: 'Scores must be whole numbers from 0 to 99.' }
 
   const winnerScore = winner === 'A' ? scoreA : scoreB

@@ -6,8 +6,8 @@ import { finished, player } from './testing/fixtures'
 const names = (rows: { name: string }[]) => rows.map((row) => row.name)
 
 describe('computeStandings', () => {
-  it('ranks by win rate, then by the share of points won (spec §5.3)', () => {
-    // Ana: 11-2, 11-3, 11-5, 9-11 = 42 of 63 points (66.7%). Leo: 11-9, 11-9, 12-10, 9-11 = 43 of 82 (52.4%).
+  it('ranks by win rate, then by the average share of points won per game (spec §5.3)', () => {
+    // Ana: 11-2, 11-3, 11-5, 9-11 -> mean of 84.6/78.6/68.8/45.0 = 69.2%. Leo: 11-9, 11-9, 12-10, 9-11 -> 52.4%.
     const players = ['Ana', 'Leo', 'x1', 'x2', 'x3', 'x4'].map((id) => player(id))
     const matches = [
       finished('a1', ['Ana', 'x1'], ['x2', 'x3'], 'A', 11, 2, 1),
@@ -22,8 +22,19 @@ describe('computeStandings', () => {
     const rows = computeStandings(players, matches)
     const ana = rows.find((row) => row.name === 'Ana')!
     expect(ana).toMatchObject({ played: 4, wins: 3, losses: 1, winRate: 0.75, pointsFor: 42, pointsAgainst: 21, rank: 1 })
-    expect(ana.pointsPct).toBeCloseTo(42 / 63, 10)
+    expect(ana.pointsPct).toBeCloseTo((11 / 13 + 11 / 14 + 11 / 16 + 9 / 20) / 4, 10)
     expect(rows.indexOf(ana)).toBeLessThan(rows.findIndex((row) => row.name === 'Leo'))
+  })
+
+  it('matches the documented OPI worked example: per-game shares averaged, each game counting equally', () => {
+    // docs/pickleball/opi-methodology.md: 11-7, 9-11, 11-5 -> 58.287...% (a pooled 31 of 54 would be 57.4%).
+    const players = ['X', 'x1', 'o1', 'o2'].map((id) => player(id))
+    const rows = computeStandings(players, [
+      finished('m1', ['X', 'x1'], ['o1', 'o2'], 'A', 11, 7, 1),
+      finished('m2', ['X', 'x1'], ['o1', 'o2'], 'A', 9, 11, 2),
+      finished('m3', ['X', 'x1'], ['o1', 'o2'], 'A', 11, 5, 3),
+    ].map((m, i) => (i === 1 ? { ...m, winner: 'B' as const } : m)))
+    expect(rows.find((row) => row.name === 'X')!.pointsPct! * 100).toBeCloseTo(58.287037037037045, 10)
   })
 
   it('compares the share of points, not the margin, so games to 11 and to 21 are comparable', () => {
@@ -49,7 +60,7 @@ describe('computeStandings', () => {
     expect(order.indexOf('A')).toBeLessThan(order.indexOf('B'))
   })
 
-  it('winner-only games count toward W/L but not toward the points share', () => {
+  it('a legacy result saved without a score counts toward W/L but not toward the points share', () => {
     const rows = computeStandings([player('A'), player('B'), player('C'), player('D')], [
       finished('m1', ['A', 'B'], ['C', 'D'], 'A', null, null, 1),
       finished('m2', ['A', 'B'], ['C', 'D'], 'A', 11, 5, 2),
@@ -59,7 +70,7 @@ describe('computeStandings', () => {
     expect(a.pointsPct).toBeCloseTo(11 / 16, 10)
   })
 
-  it('has no points share for a player whose games were all winner-only', () => {
+  it('has no points share for a player whose only results were saved without a score', () => {
     const rows = computeStandings([player('A'), player('B'), player('C'), player('D')], [
       finished('m1', ['A', 'B'], ['C', 'D'], 'A', null, null, 1),
     ])

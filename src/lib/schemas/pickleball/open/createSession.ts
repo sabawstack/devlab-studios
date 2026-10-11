@@ -9,7 +9,6 @@ export const createSessionSchema = z.object({
     // Phase 1 ships paddle stack only (spec §14); later phases widen this literal.
     mode: z.literal('PADDLE_STACK'),
     target: z.union([z.literal(11), z.literal(15), z.literal(21)]),
-    winnerOnly: z.boolean(),
     scoringStyle: z.enum(['SIDEOUT', 'RALLY']),
   }),
   players: z.array(z.object({

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { validateResult } from '../../lib/pickleball/open/scoreValidation'
 import { resultFromPad, scorePadOptions } from './scorePad'
 
-const settings = { target: 11, winnerOnly: false }
+const settings = { target: 11 }
 
 describe('score pad', () => {
   it('offers every losing score up to target - 1, then deuce scores', () => {
@@ -23,7 +23,7 @@ describe('score pad', () => {
   })
 
   it.each([11, 15, 21])('every pad option yields a valid final for target %i', (target) => {
-    const session = { mode: 'PADDLE_STACK', target, winnerOnly: false, scoringStyle: 'SIDEOUT' }
+    const session = { mode: 'PADDLE_STACK', target, scoringStyle: 'SIDEOUT' }
     for (const loser of scorePadOptions(target)) {
       for (const winner of ['A', 'B']) {
         for (const winBy2 of [false, true]) {

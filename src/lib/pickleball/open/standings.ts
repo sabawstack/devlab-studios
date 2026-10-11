@@ -11,15 +11,20 @@ export interface StandingRow {
   pointsAgainst: number
   scoredGames: number
   winRate: number | null
-  /** Share of points won across scored games, 0–1 (spec §5.3). Null when no game had a score. */
+  /**
+   * Average share of points won per scored game, 0–1 (spec §5.3) — the same
+   * formula as the documented OPI (docs/pickleball/opi-methodology.md): each
+   * game's points_for / (points_for + points_against), averaged so every game
+   * counts equally. Null when no game had a score.
+   */
   pointsPct: number | null
   rank: number | null
 }
 
 const EPSILON = 1e-9
 
-interface Tally { played: number; wins: number; losses: number; pointsFor: number; pointsAgainst: number; scoredGames: number }
-const EMPTY: Tally = { played: 0, wins: 0, losses: 0, pointsFor: 0, pointsAgainst: 0, scoredGames: 0 }
+interface Tally { played: number; wins: number; losses: number; pointsFor: number; pointsAgainst: number; scoredGames: number; shareSum: number }
+const EMPTY: Tally = { played: 0, wins: 0, losses: 0, pointsFor: 0, pointsAgainst: 0, scoredGames: 0, shareSum: 0 }
 
 function tallies(matches: readonly OpenMatch[]): ReadonlyMap<string, Tally> {
   return matches.reduce((acc, match) => {
@@ -39,6 +44,7 @@ function tallies(matches: readonly OpenMatch[]): ReadonlyMap<string, Tally> {
           pointsFor: t.pointsFor + (scored ? side.pf : 0),
           pointsAgainst: t.pointsAgainst + (scored ? side.pa : 0),
           scoredGames: t.scoredGames + (scored ? 1 : 0),
+          shareSum: t.shareSum + (scored && side.pf + side.pa > 0 ? side.pf / (side.pf + side.pa) : 0),
         })
       }
     }
@@ -48,9 +54,10 @@ function tallies(matches: readonly OpenMatch[]): ReadonlyMap<string, Tally> {
 
 function toRow(p: OpenPlayer, t: Tally): StandingRow {
   return {
-    playerId: p.id, name: p.name, ...t,
+    playerId: p.id, name: p.name, played: t.played, wins: t.wins, losses: t.losses,
+    pointsFor: t.pointsFor, pointsAgainst: t.pointsAgainst, scoredGames: t.scoredGames,
     winRate: t.played ? t.wins / t.played : null,
-    pointsPct: t.pointsFor + t.pointsAgainst > 0 ? t.pointsFor / (t.pointsFor + t.pointsAgainst) : null,
+    pointsPct: t.scoredGames ? t.shareSum / t.scoredGames : null,
     rank: null,
   }
 }

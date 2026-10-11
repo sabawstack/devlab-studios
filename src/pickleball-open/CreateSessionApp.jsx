@@ -13,7 +13,7 @@ const field = 'w-full rounded-xl border border-navy-700 bg-navy-900 px-3 py-3 te
 
 export default function CreateSessionApp({ siteKey }) {
   const [step, setStep] = useState('details')
-  const [details, setDetails] = useState({ name: 'Open Play', hostDisplayName: '', courtCount: 4, target: 11, winnerOnly: false })
+  const [details, setDetails] = useState({ name: 'Open Play', hostDisplayName: '', courtCount: 4, target: 11 })
   const [rosterMode, setRosterMode] = useState('paste')
   const [pasted, setPasted] = useState('')
   const [csvText, setCsvText] = useState('')
@@ -51,7 +51,7 @@ export default function CreateSessionApp({ siteKey }) {
         name: details.name,
         hostDisplayName: details.hostDisplayName,
         courtCount: details.courtCount,
-        settings: { mode: 'PADDLE_STACK', target: details.target, winnerOnly: details.winnerOnly, scoringStyle: 'SIDEOUT' },
+        settings: { mode: 'PADDLE_STACK', target: details.target, scoringStyle: 'SIDEOUT' },
         players: roster.entries,
         turnstileToken: turnstile.token,
       })
@@ -94,11 +94,10 @@ export default function CreateSessionApp({ siteKey }) {
           </Panel>
           <Panel>
             <span className="font-semibold">Games to</span>
-            <div className="mt-2 grid grid-cols-4 gap-2" role="radiogroup" aria-label="Games to">
+            <div className="mt-2 grid grid-cols-3 gap-2" role="radiogroup" aria-label="Games to">
               {TARGETS.map((target) => (
-                <Button key={target} role="radio" aria-checked={!details.winnerOnly && details.target === target} variant={!details.winnerOnly && details.target === target ? 'neon' : 'ghost'} onClick={() => update({ target, winnerOnly: false })}>{target}</Button>
+                <Button key={target} role="radio" aria-checked={details.target === target} variant={details.target === target ? 'neon' : 'ghost'} onClick={() => update({ target })}>{target}</Button>
               ))}
-              <Button role="radio" aria-checked={details.winnerOnly} variant={details.winnerOnly ? 'neon' : 'ghost'} className="text-sm" onClick={() => update({ winnerOnly: true })}>Winner only</Button>
             </div>
             <p className="mt-3 text-sm text-mist">Sudden death or win by 2: both are accepted when you enter the score.</p>
           </Panel>

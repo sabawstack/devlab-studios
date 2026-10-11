@@ -14,7 +14,7 @@ export async function createSession(request, overrides = {}) {
       name: 'Sunday Open Play',
       hostDisplayName: 'Coach Mike',
       courtCount: 2,
-      settings: { mode: 'PADDLE_STACK', target: 11, winnerOnly: false, scoringStyle: 'SIDEOUT' },
+      settings: { mode: 'PADDLE_STACK', target: 11, scoringStyle: 'SIDEOUT' },
       players: ROSTER.map((name) => ({ name })),
       ...overrides,
     },

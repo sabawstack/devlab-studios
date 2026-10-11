@@ -98,7 +98,7 @@ CREATE TABLE open_sessions (
   host_id TEXT REFERENCES hosts(id) ON DELETE SET NULL,    -- set when claimed for DUPR
   kind TEXT NOT NULL CHECK (kind IN ('OPEN_PLAY','TOURNAMENT')),
   name TEXT NOT NULL, host_display_name TEXT NOT NULL, location TEXT,
-  settings_json TEXT NOT NULL,      -- mode, target, winner-only, scoring style, constraints
+  settings_json TEXT NOT NULL,      -- mode, target, scoring style, constraints
   status TEXT NOT NULL CHECK (status IN ('ACTIVE','ENDED')),
   version INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL, last_activity_at TEXT NOT NULL, expires_at TEXT NOT NULL
@@ -193,7 +193,7 @@ src/pickleball-open/                React components for the board, console, dia
 
 ## 4. Session lifecycle
 
-1. **Create** (`/pickleball/new`): host display name (unverified, shown as "Hosted by"), format (Open play / Tournament), number of courts (1–16) with optional labels, game settings (target 11/15/21, or "winner only"; scoring style side-out or rally, which only labels the DUPR export), optional venue/location text, stacking mode. Turnstile required.
+1. **Create** (`/pickleball/new`): host display name (unverified, shown as "Hosted by"), format (Open play / Tournament), number of courts (1–16) with optional labels, game settings (target 11/15/21; scoring style side-out or rally, which only labels the DUPR export), optional venue/location text, stacking mode. Turnstile required.
 2. **Roster**: paste a list (one per line or comma-separated; numbering, bullets and emoji stripped; duplicates removed case-insensitively; e.g. copied from a Reclub attendee list or WhatsApp), CSV upload (`name[,skill][,dupr_id]`), manual add, or **QR self check-in**: players scan a check-in QR and type their own name (and optionally skill 1–5 and DUPR ID). The host can turn self check-in off.
 3. **Run**: the host console shows every court. A free court shows the proposed match with **Start**, **Edit** and **Skip**. A playing court shows **Game over**.
 4. **Players come and go**: add a late player at any time; mark a player *on break* (skipped by every mode) or *left*. A late player enters with `games_played` equal to the current minimum among active players, so they neither jump the queue nor wait forever.
@@ -215,7 +215,9 @@ loser reached at least target − 1 and the winner is exactly 2 ahead (12–10,
 must be ≤ 99. There is no win-by-2 setting. On the pad, a losing score of
 target − 1 defaults to sudden death (11–10) with a one-tap "12–10 win by 2"
 switch, because most open play is sudden death; a losing score at or above the
-target fills the win-by-2 score. "Winner only" sessions skip scores. The match
+target fills the win-by-2 score. Every result carries a score; there is no
+winner-only option (owner decision 2026-10-12), so every game counts in the
+points share. The match
 becomes `FINISHED`, its four players return to the waiting pool tagged with
 the result, and the court immediately shows its next proposal.
 
@@ -247,17 +249,17 @@ Per player: games played, wins, losses, points for and against, and the share
 of points won. Ranking order (owner decisions, 2026-10-11, revised 2026-10-12):
 
 1. Win rate (wins ÷ games played).
-2. **Points won %**: points scored ÷ points played, over scored games. A share rather than a margin, because +4 means far less in a game to 21 than in a game to 11, and a percentage stays comparable across targets and across players with different numbers of games.
+2. **Points won %**: the average, over scored games, of each game's points scored ÷ points played — the same formula as the documented OPI (`docs/pickleball/opi-methodology.md`), session-only. A share rather than a margin, because +4 means far less in a game to 21 than in a game to 11; averaged per game so a long deuce game counts no more than an 11–2.
 3. Head-to-head among exactly the tied players: wins in today's games where they were on opposite sides. Applied only if every tied player has met.
 4. Name.
 
-"Scored games" excludes winner-only games, which count toward W/L and win
+Results saved before 2026-10-12 without a score count toward W/L and win
 rate but not toward the points share. Players with 0 games are listed unranked
 at the bottom. The board shows W–L, Win % and Pts won %, with a one-line
 "how ranking works" note. No persistent rating exists anywhere.
 
-Example: Ana 3–1 with scores 11–2, 11–3, 11–5, 9–11 (42 of 63 points = **67%**)
-ranks above Leo 3–1 with 11–9, 11–9, 12–10, 9–11 (43 of 82 = **52%**).
+Example: Ana 3–1 with scores 11–2, 11–3, 11–5, 9–11 (per-game 85, 79, 69, 45 → **69%**)
+ranks above Leo 3–1 with 11–9, 11–9, 12–10, 9–11 (55, 55, 55, 45 → **52%**).
 
 ### 5.4 Editing proposals
 
@@ -330,7 +332,7 @@ first names or nicknames are fine.
    - **Field values**: `matchType` = `D`; `event` = session name; `date` = `YYYY-MM-DD` in the session's local date; `scoreType` = `SIDEOUT`, or `RALLY` if the host chose rally scoring at creation; `location` = an optional venue text field on the session.
    - **Games**: one row per game, with only game 1 filled. Games 2–5 stay blank. `*ExternalId` is our session player id.
    - **No instruction rows**: DUPR's downloadable template carries instruction rows that must be deleted before upload; ours never includes them.
-   - **Eligibility**: DUPR rejects ties and games where neither team reaches 6 points. A game is exported only if it is a finished doubles match with a score (not winner-only) that passes those rules and all four players have a DUPR ID. DUPR IDs are validated as 6 alphanumeric characters, uppercased.
+   - **Eligibility**: DUPR rejects ties and games where neither team reaches 6 points. A game is exported only if it is a finished doubles match with a score that passes those rules and all four players have a DUPR ID. DUPR IDs are validated as 6 alphanumeric characters, uppercased.
    - **Skipped games**: the email lists each skipped game and the reason.
    - **Upload**: the host's DUPR account must be a Club Director or Organizer of their club. The email says so, with the click path (Matches → Add Matches → Import Matches via CSV).
    - **Risk**: if DUPR changes the template, the fixture and builder are updated together. Uploads that fail are reported by hosts through the email's reply-to.

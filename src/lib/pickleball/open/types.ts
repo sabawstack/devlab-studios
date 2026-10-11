@@ -5,7 +5,6 @@ export type ScoringStyle = 'SIDEOUT' | 'RALLY'
 export interface SessionSettings {
   mode: StackingMode
   target: TargetPoints
-  winnerOnly: boolean
   scoringStyle: ScoringStyle
 }
 
@@ -88,7 +87,6 @@ export const LIMITS = {
 export const DEFAULT_SETTINGS: SessionSettings = {
   mode: 'PADDLE_STACK',
   target: 11,
-  winnerOnly: false,
   scoringStyle: 'SIDEOUT',
 }
 

@@ -20,7 +20,7 @@ export interface ViewerSnapshot {
   hostDisplayName: string
   status: 'ACTIVE' | 'ENDED'
   expiresAt: string
-  settings: { target: number; winnerOnly: boolean; mode: string }
+  settings: { target: number; mode: string }
   version: number
   courts: ViewerCourt[]
   waiting: Array<{ id: string; name: string }>
@@ -75,7 +75,7 @@ export function toViewerSnapshot(state: OpenSessionState): ViewerSnapshot {
     hostDisplayName: state.hostDisplayName,
     status: state.status,
     expiresAt: state.expiresAt,
-    settings: { target: state.settings.target, winnerOnly: state.settings.winnerOnly, mode: state.settings.mode },
+    settings: { target: state.settings.target, mode: state.settings.mode },
     version: state.version,
     courts: courts.map((c) => {
       const match = c.enabled ? liveMatch(state, c.id) : null

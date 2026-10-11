@@ -43,17 +43,12 @@ describe('validateResult', () => {
     expect(!result.ok && result.reason).toContain("can't end 12–9")
   })
 
-  it('a winner-only save (both scores null) is always allowed', () => {
-    expect(validateResult({ winner: 'B', scoreA: null, scoreB: null }, to11)).toEqual({ ok: true })
+  it('a result without both scores is refused, so every game counts in the points share', () => {
+    expect(validateResult({ winner: 'B', scoreA: null, scoreB: null }, to11)).toMatchObject({ ok: false, reason: 'Enter the score for both teams.' })
   })
 
   it('half a score is refused', () => {
     expect(validateResult({ winner: 'A', scoreA: 11, scoreB: null }, to11).ok).toBe(false)
   })
 
-  it('a winner-only session refuses scores', () => {
-    const settings = { ...to11, winnerOnly: true }
-    expect(validateResult({ winner: 'A', scoreA: 11, scoreB: 5 }, settings).ok).toBe(false)
-    expect(validateResult({ winner: 'A', scoreA: null, scoreB: null }, settings)).toEqual({ ok: true })
-  })
 })
