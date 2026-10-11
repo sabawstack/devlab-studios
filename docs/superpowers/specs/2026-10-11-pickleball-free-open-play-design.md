@@ -38,7 +38,8 @@ session's QR board is seen by every player at the court.
 - A host goes from the landing page to a running 4-court session in under 2 minutes on a phone, without creating an account.
 - Recording a finished game takes ≤ 3 taps (Game over → winner/score → confirm).
 - A player scanning the QR sees, without installing anything, who is on every court, who is up next, and standings, updated within 2 s of a result.
-- In any mode, no available player sits out more than 2 consecutive rounds, and with ≥ 8 players no partner pairing repeats while an unused pairing is possible.
+- Sit-outs: with up to 12 available players per enabled court (4 playing, 8 waiting), no available player sits out more than 2 consecutive rounds. A "round" is one started game per enabled court. With more players than that, the wait is unavoidable and spreads evenly: fewest games first. In paddle stack, every proposal includes the available player who has played least.
+- Partners: when splitting the chosen four into teams, a split that repeats an earlier partnership is never picked if another split of the same four avoids it.
 - Nothing about a session remains in storage 7 days after its last change.
 
 ## 2. Scope
@@ -220,7 +221,7 @@ When a court frees (or a new session starts), `propose(state, courtId)` runs
 the session's mode over **available** players (not playing, not on break,
 not left). Two rules apply to every mode before the mode's own logic:
 
-1. **Sit-out guard**: any available player who has sat out ≥ 2 consecutive proposals is forced into this match (oldest first). This is what keeps sit-outs even with awkward counts like 14 players on 3 courts.
+1. **Sit-out guard**: any available player who has sat out ≥ 2 consecutive rounds is forced into this match (oldest first). A round is one started game per enabled court. This keeps sit-outs even with awkward counts like 14 players on 3 courts, and caps them at 2 in a row whenever there are no more than 12 available players per court (§1).
 2. **Repeat avoidance**: among otherwise equal options, prefer the one with the fewest repeated partners, then repeated opponents (history kept per session).
 
 | Mode | Picks the 4 players | Forms the teams |
@@ -411,7 +412,7 @@ No one uses the old app, so this phase can be pulled forward to any point after 
 
 ## 13. Testing
 
-- **Unit (vitest)**: every module under `src/lib/pickleball/open/`. Property-style tests for `propose()`: over randomized sessions of 5–40 players on 1–8 courts with random results, assert the sit-out guard (no one sits out more than 2 consecutive proposals), no player on two courts, constraints honoured, and repeat avoidance against a brute-force baseline on small cases. Plus `roster.ts` parsing fixtures, `scoreValidation.ts`, `drawEdits.ts` validity rules, and the DUPR CSV against the pinned template.
+- **Unit (vitest)**: every module under `src/lib/pickleball/open/`. Property-style tests for `propose()`: over randomized sessions of 5–40 players on 1–8 courts with random results, assert the sit-out guard (no one sits out more than 2 consecutive rounds while players ≤ 12 per court), no player on two courts, constraints honoured, and repeat avoidance against a brute-force baseline on small cases. Plus `roster.ts` parsing fixtures, `scoreValidation.ts`, `drawEdits.ts` validity rules, and the DUPR CSV against the pinned template.
 - **DO + D1 integration**: command dispatch, idempotency, authorization (viewer and captain refused host commands), cold reload from D1 matches the in-memory state, a failed batch leaves memory unchanged, and the cron purge removes every `open_*` row for an expired session.
 - **E2E (Playwright, `static` project)**: create → paste roster → run 2 courts across several games in each mode → viewer page updates in a second browser context → edit result → tournament generate/edit/start/finish → expired-code page. Host Google sign-in is tested through a test-only login route gated by an env flag, as today.
 - `npm run typecheck && npm run build` and the full e2e suite before each push, per `AGENTS.md`.
