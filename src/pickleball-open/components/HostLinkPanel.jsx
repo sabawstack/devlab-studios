@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { formatPublicCode } from '../../lib/pickleball/open/codes'
 import { hostLink, viewerLink } from '../lib/hostKeys'
 import QrCode from './QrCode.jsx'
@@ -9,21 +9,34 @@ export default function HostLinkPanel({ code, hostKey, name }) {
   const host = hostLink(origin, code, hostKey)
   const viewer = viewerLink(origin, code)
   const [copied, setCopied] = useState(false)
+  const [copyFailed, setCopyFailed] = useState(false)
+
+  useEffect(() => {
+    if (!copied) return undefined
+    const timer = setTimeout(() => setCopied(false), 2000)
+    return () => clearTimeout(timer)
+  }, [copied])
 
   async function copy() {
     try {
       await navigator.clipboard.writeText(host)
       setCopied(true)
+      setCopyFailed(false)
     } catch {
       setCopied(false)
+      setCopyFailed(true)
     }
   }
 
   async function share() {
-    if (navigator.share) {
-      await navigator.share({ title: `Host link: ${name}`, text: 'My host link (keep private)', url: host }).catch(() => {})
-    } else {
+    if (!navigator.share) {
       await copy()
+      return
+    }
+    try {
+      await navigator.share({ title: `Host link: ${name}`, text: 'My host link (keep private)', url: host })
+    } catch (failure) {
+      if (failure?.name !== 'AbortError') await copy()
     }
   }
 
@@ -41,6 +54,14 @@ export default function HostLinkPanel({ code, hostKey, name }) {
           <Button variant="neon" onClick={copy}>{copied ? 'Copied ✓' : 'Copy'}</Button>
           <Button variant="ghost" onClick={share}>Send to myself</Button>
         </div>
+        <p role="status" aria-live="polite" className={copied || copyFailed ? 'mt-3 text-sm text-pickle-neon' : 'sr-only'}>
+          {copied ? 'Copied to clipboard.' : copyFailed ? "Couldn't copy automatically. Long-press or select the link below to copy it." : ''}
+        </p>
+        {copyFailed && (
+          <label className="mt-2 grid gap-1 text-xs text-mist">Host link (keep private)
+            <input readOnly value={host} onFocus={(event) => event.target.select()} className="w-full rounded-lg bg-ink px-3 py-2 font-mono text-xs text-white" />
+          </label>
+        )}
         <p className="mt-3 text-xs text-mist">Lose it on a new phone and it can't be recovered, so save it somewhere now.</p>
       </Panel>
       <Panel className="flex items-center gap-4">
