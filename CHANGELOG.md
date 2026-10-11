@@ -56,6 +56,7 @@ decided against that surface specifically:
 - **The e2e environment applies migrations.** Nothing did, so the local D1 sat at `0015` while production was on `0016` and `mailbox_outbound_attachments` did not exist locally — the attachment upload failed there with a generic 500 that said nothing about the cause. A suite one migration behind is worse than no suite: it reports failures unrelated to the code under test, and would pass a feature that is broken in production for the mirror-image reason.
 
 ### Added
+- The open play command set: add players, breaks, courts on/off, edit or skip a proposed game, start, save, undo (2 minutes), edit and abandon a result, and end the session.
 - Paste-a-list and CSV roster parsing that cleans numbering, emoji and duplicates from lists copied out of chat apps.
 - Score rules for once-per-game results: games to 11, 15 or 21, accepting both sudden-death (11–10) and win-by-2 (12–10) endings. Also unambiguous 10-character session codes.
 - Session standings ranked by win rate, then point difference per game, then points per game, then head-to-head.
