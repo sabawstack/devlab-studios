@@ -11,8 +11,8 @@ export interface StandingRow {
   pointsAgainst: number
   scoredGames: number
   winRate: number | null
-  avgDiff: number | null
-  avgFor: number | null
+  /** Share of points won across scored games, 0–1 (spec §5.3). Null when no game had a score. */
+  pointsPct: number | null
   rank: number | null
 }
 
@@ -50,8 +50,7 @@ function toRow(p: OpenPlayer, t: Tally): StandingRow {
   return {
     playerId: p.id, name: p.name, ...t,
     winRate: t.played ? t.wins / t.played : null,
-    avgDiff: t.scoredGames ? (t.pointsFor - t.pointsAgainst) / t.scoredGames : null,
-    avgFor: t.scoredGames ? t.pointsFor / t.scoredGames : null,
+    pointsPct: t.pointsFor + t.pointsAgainst > 0 ? t.pointsFor / (t.pointsFor + t.pointsAgainst) : null,
     rank: null,
   }
 }
@@ -65,7 +64,9 @@ function desc(a: number | null, b: number | null): number {
 }
 
 function compareCore(a: StandingRow, b: StandingRow): number {
-  return desc(a.winRate, b.winRate) || desc(a.avgDiff, b.avgDiff) || desc(a.avgFor, b.avgFor)
+  // A share rather than a margin: +4 means far less in a game to 21 than to 11,
+  // and a percentage stays comparable across targets and game counts.
+  return desc(a.winRate, b.winRate) || desc(a.pointsPct, b.pointsPct)
 }
 
 function pairKey(a: string, b: string): string {

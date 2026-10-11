@@ -6,8 +6,8 @@ import { finished, player } from './testing/fixtures'
 const names = (rows: { name: string }[]) => rows.map((row) => row.name)
 
 describe('computeStandings', () => {
-  it('ranks by win rate, then point difference PER GAME (spec §5.3 example)', () => {
-    // Ana: 11-2, 11-3, 11-5, 9-11 (+21 / 4 = +5.25). Leo: 11-9, 11-9, 12-10, 9-11 (+4 / 4 = +1).
+  it('ranks by win rate, then by the share of points won (spec §5.3)', () => {
+    // Ana: 11-2, 11-3, 11-5, 9-11 = 42 of 63 points (66.7%). Leo: 11-9, 11-9, 12-10, 9-11 = 43 of 82 (52.4%).
     const players = ['Ana', 'Leo', 'x1', 'x2', 'x3', 'x4'].map((id) => player(id))
     const matches = [
       finished('a1', ['Ana', 'x1'], ['x2', 'x3'], 'A', 11, 2, 1),
@@ -21,33 +21,53 @@ describe('computeStandings', () => {
     ]
     const rows = computeStandings(players, matches)
     const ana = rows.find((row) => row.name === 'Ana')!
-    expect(ana).toMatchObject({ played: 4, wins: 3, losses: 1, winRate: 0.75, avgDiff: 5.25, rank: 1 })
+    expect(ana).toMatchObject({ played: 4, wins: 3, losses: 1, winRate: 0.75, pointsFor: 42, pointsAgainst: 21, rank: 1 })
+    expect(ana.pointsPct).toBeCloseTo(42 / 63, 10)
     expect(rows.indexOf(ana)).toBeLessThan(rows.findIndex((row) => row.name === 'Leo'))
   })
 
-  it('compares per game, not totals, when game counts differ', () => {
-    // A: one game, +8 (11-3). B: two games, +5 each (total +10 beats A's +8, per-game +5 does not).
-    // Distinct partners so nobody else shares A's or B's record.
+  it('compares the share of points, not the margin, so games to 11 and to 21 are comparable', () => {
+    // P won 21-13 (+8, 61.8%). Q won 11-4 (+7, 73.3%). A margin ranks P first; the percentage ranks Q first.
+    const players = ['P', 'Q', 'p1', 'q1', 'o1', 'o2'].map((id) => player(id))
+    const matches = [
+      finished('m1', ['P', 'p1'], ['o1', 'o2'], 'A', 21, 13, 1),
+      finished('m2', ['Q', 'q1'], ['o1', 'o2'], 'A', 11, 4, 2),
+    ]
+    const order = names(computeStandings(players, matches))
+    expect(order.indexOf('Q')).toBeLessThan(order.indexOf('P'))
+  })
+
+  it('does not reward playing more games: a percentage, not a points total', () => {
+    // A: one game 11-3 (78.6%). B: two games 11-8, 11-8 (22 of 38, 57.9%) - more points in total, lower share.
     const players = ['A', 'B', 'p1', 'p2', 'o1', 'o2'].map((id) => player(id))
     const matches = [
       finished('m1', ['A', 'p1'], ['o1', 'o2'], 'A', 11, 3, 1),
-      finished('m2', ['B', 'p2'], ['o1', 'o2'], 'A', 11, 6, 2),
-      finished('m3', ['B', 'p2'], ['o1', 'o2'], 'A', 11, 6, 3),
+      finished('m2', ['B', 'p2'], ['o1', 'o2'], 'A', 11, 8, 2),
+      finished('m3', ['B', 'p2'], ['o1', 'o2'], 'A', 11, 8, 3),
     ]
     const order = names(computeStandings(players, matches))
     expect(order.indexOf('A')).toBeLessThan(order.indexOf('B'))
   })
 
-  it('winner-only games count toward W/L but not toward point averages', () => {
+  it('winner-only games count toward W/L but not toward the points share', () => {
     const rows = computeStandings([player('A'), player('B'), player('C'), player('D')], [
       finished('m1', ['A', 'B'], ['C', 'D'], 'A', null, null, 1),
       finished('m2', ['A', 'B'], ['C', 'D'], 'A', 11, 5, 2),
     ])
-    expect(rows.find((row) => row.name === 'A')).toMatchObject({ played: 2, wins: 2, scoredGames: 1, avgDiff: 6, avgFor: 11 })
+    const a = rows.find((row) => row.name === 'A')!
+    expect(a).toMatchObject({ played: 2, wins: 2, scoredGames: 1, pointsFor: 11, pointsAgainst: 5 })
+    expect(a.pointsPct).toBeCloseTo(11 / 16, 10)
+  })
+
+  it('has no points share for a player whose games were all winner-only', () => {
+    const rows = computeStandings([player('A'), player('B'), player('C'), player('D')], [
+      finished('m1', ['A', 'B'], ['C', 'D'], 'A', null, null, 1),
+    ])
+    expect(rows.find((row) => row.name === 'A')).toMatchObject({ played: 1, pointsPct: null, rank: 1 })
   })
 
   it('breaks a full tie by head-to-head when the tied players met', () => {
-    // Zed and Amy both finish 1-1, 20 for and 20 against: identical on every
+    // Zed and Amy both finish 1-1, 20 of 40 points (50%): identical on every
     // core key. Zed beat Amy in m1, so Zed ranks first even though "Amy"
     // sorts first by name.
     // Every other player appears once, so only Zed and Amy finish 1-1.

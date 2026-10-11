@@ -25,13 +25,14 @@ export function resultsCsv(state: OpenSessionState): string {
     ].join(','))
   const standings = computeStandings(state.players, state.matches).map((row) => [
     row.rank === null ? '' : String(row.rank), text(row.name), String(row.played), String(row.wins), String(row.losses),
-    row.winRate === null ? '' : (row.winRate * 100).toFixed(0), num(row.avgDiff, 1), num(row.avgFor, 1),
+    row.winRate === null ? '' : (row.winRate * 100).toFixed(0), row.pointsPct === null ? '' : (row.pointsPct * 100).toFixed(1),
+    row.scoredGames ? String(row.pointsFor) : '', row.scoredGames ? String(row.pointsAgainst) : '',
   ].join(','))
   return [
     'Game,Court,Started,Finished,Team A,Team B,Score A,Score B,Winner',
     ...games,
     '',
-    'Rank,Player,Played,Won,Lost,Win %,+/- per game,Points per game',
+    'Rank,Player,Played,Won,Lost,Win %,Points won %,Points for,Points against',
     ...standings,
   ].join('\r\n')
 }

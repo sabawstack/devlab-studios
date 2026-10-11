@@ -77,7 +77,7 @@ and logs `pickleball_open.purge`.
 
 **Domain logic** (`src/lib/pickleball/open/`) is pure and framework-free: score
 validation (sudden death and win by 2), roster parsing, standings (win rate,
-then per-game point difference, per-game points, head-to-head, name),
+then share of points won, head-to-head, name),
 paddle-stack rotation with a two-round sit-out guard, the reducer, snapshots,
 diffs and the results CSV.
 

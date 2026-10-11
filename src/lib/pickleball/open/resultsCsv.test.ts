@@ -12,7 +12,7 @@ describe('resultsCsv', () => {
     const lines = csv.split('\r\n')
     expect(lines[0]).toBe('Game,Court,Started,Finished,Team A,Team B,Score A,Score B,Winner')
     expect(csv).toContain(`"'=HYPERLINK(""x"") & Ben, Jr."`)
-    expect(csv).toContain('Rank,Player,Played,Won,Lost,Win %,+/- per game,Points per game')
+    expect(csv).toContain('Rank,Player,Played,Won,Lost,Win %,Points won %,Points for,Points against')
     expect(csv).toContain(',11,7,A')
   })
 })
