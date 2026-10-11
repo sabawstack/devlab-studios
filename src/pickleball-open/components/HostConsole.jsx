@@ -14,6 +14,12 @@ import UndoToast from './UndoToast.jsx'
 import { Button, Panel, Sheet } from './ui.jsx'
 
 const TABS = [['courts', 'Courts'], ['players', 'Players'], ['results', 'Results']]
+const OFFLINE_MESSAGE = "Couldn't reach the server. Check your connection and try again."
+
+/** A fetch that never reached the server throws a TypeError whose text means nothing to a host. */
+function friendlyError(message) {
+  return !message || /failed to fetch|networkerror|load failed|network request failed/i.test(message) ? OFFLINE_MESSAGE : message
+}
 
 export default function HostConsole({ code, hostKey, host, status, onHost }) {
   const { send, pending, error, clearError } = useCommandQueue(code, hostKey, onHost)
@@ -45,6 +51,11 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
     } catch (err) {
       setActionError(err instanceof Error && err.message ? err.message : 'Could not download the results. Try again.')
     }
+  }
+
+  function endSession() {
+    if (!window.confirm('End this session? Courts stop getting new matches. Games in progress can still be saved.')) return
+    send({ type: 'END_SESSION' })
   }
 
   async function remove() {
@@ -79,7 +90,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
           {menuOpen && (
             <div className="absolute right-0 z-20 mt-2 grid w-56 gap-1 rounded-2xl bg-navy-950 p-2 shadow-elevated">
               <Button variant="ghost" onClick={() => { setMenuOpen(false); download() }}>Download results (CSV)</Button>
-              {viewer.status === 'ACTIVE' && <Button variant="ghost" onClick={() => { setMenuOpen(false); send({ type: 'END_SESSION' }) }}>End session</Button>}
+              {viewer.status === 'ACTIVE' && <Button variant="ghost" onClick={() => { setMenuOpen(false); endSession() }}>End session</Button>}
               <Button variant="danger" onClick={() => { setMenuOpen(false); remove() }}>Delete now</Button>
             </div>
           )}
@@ -88,7 +99,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
 
       {(error || actionError) && (
         <p role="alert" className="my-2 flex items-center justify-between rounded-xl bg-rose-500/15 px-4 py-3 text-rose-100">
-          {actionError ?? error}<button type="button" onClick={() => { setActionError(null); clearError() }} className="ml-3 min-h-11 px-3 underline">OK</button>
+          {friendlyError(actionError ?? error)}<button type="button" onClick={() => { setActionError(null); clearError() }} className="ml-3 min-h-11 px-3 underline">OK</button>
         </p>
       )}
 
@@ -96,7 +107,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
         <section className={section('courts')} aria-label="Courts">
           <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
             {host.courts.map((court) => (
-              <CourtCard key={court.id} court={court} nameOf={nameOf}
+              <CourtCard key={court.id} court={court} nameOf={nameOf} ended={viewer.status === 'ENDED'}
                 onStart={(match) => send({ type: 'START_MATCH', matchId: match.id })}
                 onGameOver={(match) => setDialog({ type: 'gameOver', match })}
                 onEdit={(match) => setDialog({ type: 'edit', match })} />

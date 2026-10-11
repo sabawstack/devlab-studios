@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Button } from './ui.jsx'
 
-const STATUS_LABEL = { ACTIVE: 'Playing', BREAK: 'On break', LEFT: 'Left' }
+const STATUS_LABEL = { ACTIVE: 'Waiting', BREAK: 'On break', LEFT: 'Left' }
 
 export default function PlayersPanel({ players, waiting, playing, send }) {
   const [names, setNames] = useState('')

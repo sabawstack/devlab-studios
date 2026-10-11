@@ -4,7 +4,7 @@ function minutesSince(iso) {
   return iso ? Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60_000)) : 0
 }
 
-export default function CourtCard({ court, nameOf, onStart, onGameOver, onEdit }) {
+export default function CourtCard({ court, nameOf, ended = false, onStart, onGameOver, onEdit }) {
   const match = court.match
   if (!court.enabled) {
     return <article className="rounded-2xl border border-navy-800 p-4 text-mist"><h3 className="font-bold text-white">{court.label}</h3><p className="mt-2 text-sm">Off</p></article>
@@ -13,7 +13,7 @@ export default function CourtCard({ court, nameOf, onStart, onGameOver, onEdit }
     return (
       <article className="rounded-2xl border border-dashed border-navy-700 p-4">
         <h3 className="font-bold">{court.label}</h3>
-        <p className="mt-2 text-sm text-mist">Waiting for players. Fills automatically when the next game ends.</p>
+        <p className="mt-2 text-sm text-mist">{ended ? 'Session ended' : 'Waiting for players. Fills automatically when the next game ends.'}</p>
       </article>
     )
   }

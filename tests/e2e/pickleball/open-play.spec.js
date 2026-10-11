@@ -221,6 +221,32 @@ test.describe('open play UI', () => {
     expect(await page.evaluate(() => localStorage.getItem('devlab-pickleball-hosted'))).toContain(hostKey)
   })
 
+  test('ending a session asks first', async ({ page, request }) => {
+    const { code, hostKey } = await createSession(request)
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await expect(page.getByTestId('court-1')).toBeVisible()
+    const prompts = []
+    page.once('dialog', (dialog) => { prompts.push(dialog.message()); dialog.dismiss() })
+    await page.getByRole('button', { name: 'More' }).click()
+    await page.getByRole('button', { name: 'End session' }).click()
+    expect(prompts[0]).toContain('End this session?')
+    await expect(page.getByText('· Ended')).toHaveCount(0)
+
+    page.once('dialog', (dialog) => dialog.accept())
+    await page.getByRole('button', { name: 'More' }).click()
+    await page.getByRole('button', { name: 'End session' }).click()
+    await expect(page.getByText('· Ended')).toBeVisible()
+  })
+
+  test('a roster over 128 players says how many to remove and cannot start', async ({ page }) => {
+    await page.goto('/pickleball/new')
+    await page.getByLabel('Your name (shown as "Hosted by")').fill('Coach Mike')
+    await page.getByRole('button', { name: 'Next: add players' }).click()
+    await page.getByLabel(/Paste names/).fill(Array.from({ length: 130 }, (_, i) => `Player ${i + 1}`).join('\n'))
+    await expect(page.getByText('A session can have up to 128 players — remove 2.')).toBeVisible()
+    await expect(page.getByRole('button', { name: /^Start session/ })).toBeDisabled()
+  })
+
   test('an unknown or deleted code shows the ended notice', async ({ page }) => {
     await page.goto('/pickleball/s/ZZZZZ22222')
     await expect(page.getByRole('heading', { name: 'This session has ended and its results were deleted.' })).toBeVisible()

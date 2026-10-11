@@ -57,6 +57,7 @@ decided against that surface specifically:
 - Open play: replaying a host command now answers with the session as it is now and stores only the status and version, so an idempotency record can never approach D1's row size at the session caps.
 - Open play: the host console now loads and stays current over 5-second polling when the live connection cannot open, not only over the WebSocket; snapshots older than the one on screen are ignored.
 - Open play: the host key from a link is saved the moment the page opens, the address keeps its query string when the key is removed from it, and a wrong key in a link falls back to the key this phone already saved instead of forgetting it.
+- Open play host console: "End session" asks for confirmation first; players waiting their turn are labelled "Waiting" rather than "Playing"; an empty court on an ended session says "Session ended"; a lost connection reads "Couldn't reach the server" instead of the browser's raw error. The create screen says how many players to remove above the 128 cap and will not start until they are.
 
 ### Security
 - **Open play: anyone holding the public QR code could lock the host out.** Host commands were limited to 120 per minute per session, counted before the host key was checked, so a stranger sending junk could use up the host's allowance. The session limit now counts only commands with a valid host key, and every host route also has its own per-address limit (120 per minute) checked first.

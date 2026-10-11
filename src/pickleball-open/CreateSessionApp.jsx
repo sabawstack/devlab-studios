@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTurnstile, VERIFICATION_MESSAGES } from '../components/islands/useTurnstile.js'
 import { OPEN_SESSION_TURNSTILE_ACTION } from '../lib/pickleball/open/constants'
 import { parseRoster, parseRosterCsv } from '../lib/pickleball/open/roster'
+import { LIMITS } from '../lib/pickleball/open/types'
 import { createSession } from './lib/api'
 import { rememberHostedSession } from './lib/hostKeys'
 import HostLinkPanel from './components/HostLinkPanel.jsx'
@@ -30,6 +31,7 @@ export default function CreateSessionApp({ siteKey }) {
     return { entries: parsed.names.map((name) => ({ name, skill: null, duprId: null })), duplicates: parsed.duplicates, warnings: [] }
   }, [rosterMode, pasted, csvText])
 
+  const overCap = Math.max(0, roster.entries.length - LIMITS.maxPlayers)
   const update = (patch) => setDetails((current) => ({ ...current, ...patch }))
 
   async function onCsvFile(event) {
@@ -136,13 +138,14 @@ export default function CreateSessionApp({ siteKey }) {
             </ul>
             {roster.warnings.map((warning) => <p key={warning} className="mt-2 text-xs text-amber-200">{warning}</p>)}
             {roster.entries.length > 0 && roster.entries.length < 4 && <p className="mt-3 text-sm text-amber-200">Add at least 4 players for the first game.</p>}
+            {overCap > 0 && <p role="alert" className="mt-3 text-sm text-amber-200">A session can have up to {LIMITS.maxPlayers} players — remove {overCap}.</p>}
           </Panel>
           <div className="lg:col-span-2 grid gap-3">
             <div ref={turnstile.containerRef} />
             {error && <p role="alert" className="rounded-xl bg-rose-500/15 px-4 py-3 text-rose-100">{error}</p>}
             <div className="flex flex-wrap gap-3">
               <Button variant="ghost" onClick={() => setStep('details')}>Back</Button>
-              <Button variant="primary" className="flex-1 text-lg" disabled={busy} onClick={start}>
+              <Button variant="primary" className="flex-1 text-lg" disabled={busy || overCap > 0} onClick={start}>
                 {busy ? 'Starting…' : `Start session · ${roster.entries.length} players, ${details.courtCount} court${details.courtCount > 1 ? 's' : ''}`}
               </Button>
             </div>
