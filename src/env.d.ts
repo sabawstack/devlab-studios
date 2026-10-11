@@ -34,6 +34,7 @@ interface Env {
   PICKLEBALL_TEST_AUTH_ENABLED?: string
   SESSION_COORDINATOR: DurableObjectNamespace<import('./worker/pickleball/SessionCoordinatorDO').SessionCoordinatorDO>
   RATE_LIMITER: DurableObjectNamespace<import('./worker/RateLimiterDO').RateLimiterDO>
+  OPEN_SESSION: DurableObjectNamespace<import('./worker/pickleball/open/OpenSessionDO').OpenSessionDO>
 
   // ---------------------------------------------------------------------
   // Lead Intelligence Engine

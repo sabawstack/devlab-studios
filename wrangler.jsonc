@@ -75,12 +75,14 @@
   "durable_objects": {
     "bindings": [
       { "name": "SESSION_COORDINATOR", "class_name": "SessionCoordinatorDO" },
+      { "name": "OPEN_SESSION", "class_name": "OpenSessionDO" },
       { "name": "RATE_LIMITER", "class_name": "RateLimiterDO" }
     ]
   },
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["SessionCoordinatorDO"] },
-    { "tag": "v2", "new_sqlite_classes": ["RateLimiterDO"] }
+    { "tag": "v2", "new_sqlite_classes": ["RateLimiterDO"] },
+    { "tag": "v3", "new_sqlite_classes": ["OpenSessionDO"] }
   ],
 
   // ----------------------------------------------------------------------
@@ -314,12 +316,14 @@
       "durable_objects": {
         "bindings": [
           { "name": "SESSION_COORDINATOR", "class_name": "SessionCoordinatorDO" },
+          { "name": "OPEN_SESSION", "class_name": "OpenSessionDO" },
           { "name": "RATE_LIMITER", "class_name": "RateLimiterDO" }
         ]
       },
       "migrations": [
         { "tag": "v1", "new_sqlite_classes": ["SessionCoordinatorDO"] },
-        { "tag": "v2", "new_sqlite_classes": ["RateLimiterDO"] }
+        { "tag": "v2", "new_sqlite_classes": ["RateLimiterDO"] },
+        { "tag": "v3", "new_sqlite_classes": ["OpenSessionDO"] }
       ]
     }
   }
