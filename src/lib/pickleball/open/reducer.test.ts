@@ -138,12 +138,19 @@ describe('applyCommand', () => {
   })
 
   it('undo is refused when the court has already started its next game', () => {
-    const state = ready()
+    const base = sessionState({
+      courts: [court('c1', 1), court('c2', 2)],
+      players: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l'].map((id, i) => player(id, { position: i })),
+    })
+    const state = fillProposals(base, ctxAt(0))
     const first = proposedOn(state, 'c1')
     const saved = finalizeCommand(must(applyCommand(state, { type: 'RECORD_RESULT', matchId: first.id, winner: 'A', scoreA: 11, scoreB: 7 }, ctxAt(12))), ctxAt(12))
     const next = proposedOn(saved, 'c1')
+    const firstIds = [...first.teamA, ...first.teamB]
+    expect([...next.teamA, ...next.teamB].some((id) => firstIds.includes(id))).toBe(false)
     const started = must(applyCommand(saved, { type: 'START_MATCH', matchId: next.id }, ctxAt(13)))
-    expect(applyCommand(started, { type: 'UNDO_RESULT', matchId: first.id }, ctxAt(13))).toMatchObject({ ok: false, status: 409 })
+    const refused = applyCommand(started, { type: 'UNDO_RESULT', matchId: first.id }, ctxAt(13))
+    expect(refused).toMatchObject({ ok: false, status: 409, error: expect.stringContaining('court has already started') })
   })
 
   it('an ended session never gains proposals, even after a result or new players', () => {
