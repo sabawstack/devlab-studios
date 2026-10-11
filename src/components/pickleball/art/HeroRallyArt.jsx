@@ -13,13 +13,17 @@ export default function HeroRallyArt({ className = '' }) {
         <circle cx="96" cy="182" r="13" fill="#c6ff2e" />
         <circle cx="92" cy="178" r="1.8" fill="#0b1426" /><circle cx="100" cy="184" r="1.8" fill="#0b1426" /><circle cx="95" cy="188" r="1.8" fill="#0b1426" />
       </g>
-      <g className="pb-bob" transform="rotate(-22 88 214)">
-        <rect x="74" y="190" width="30" height="40" rx="14" fill="#4500ff" />
-        <rect x="85" y="228" width="8" height="22" rx="3" fill="#11214d" />
+      <g transform="rotate(-22 88 214)">
+        <g className="pb-bob">
+          <rect x="74" y="190" width="30" height="40" rx="14" fill="#4500ff" />
+          <rect x="85" y="228" width="8" height="22" rx="3" fill="#11214d" />
+        </g>
       </g>
-      <g className="pb-bob" style={{ animationDelay: '0.9s' }} transform="rotate(20 396 206)">
-        <rect x="382" y="182" width="30" height="40" rx="14" fill="#fff" />
-        <rect x="393" y="220" width="8" height="22" rx="3" fill="#b5c4e1" />
+      <g transform="rotate(20 396 206)">
+        <g className="pb-bob" style={{ animationDelay: '0.9s' }}>
+          <rect x="382" y="182" width="30" height="40" rx="14" fill="#fff" />
+          <rect x="393" y="220" width="8" height="22" rx="3" fill="#b5c4e1" />
+        </g>
       </g>
       {[[120, 240], [170, 160], [310, 240], [360, 160]].map(([x, y], i) => (
         <g key={x} className="pb-bob" style={{ animationDelay: `${i * 0.3}s` }}>

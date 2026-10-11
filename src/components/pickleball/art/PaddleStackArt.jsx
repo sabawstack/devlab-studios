@@ -8,7 +8,7 @@ export default function PaddleStackArt({ className = '' }) {
       <rect x="200" y="40" width="130" height="120" stroke="#fff" strokeWidth="2" />
       <rect x="20" y="40" width="120" height="120" rx="12" stroke="#7594fb" strokeWidth="2" strokeDasharray="5 6" />
       {[0, 1, 2, 3].map((i) => (
-        <g key={i} className="pb-step" style={{ animationDelay: `${i * 0.25}s`, '--pb-step-x': `${190 + (i % 2) * 70}px` }}>
+        <g key={i} className="pb-step" style={{ animationDelay: `${i * 0.25}s`, '--pb-step-x': `${180 + (i % 2) * 20}px` }}>
           <circle cx={50 + (i % 2) * 40} cy={70 + Math.floor(i / 2) * 50} r="10" fill={i < 2 ? '#c6ff2e' : '#8d9bff'} />
         </g>
       ))}
