@@ -71,6 +71,7 @@ decided against that surface specifically:
 
 ### Added
 - Open play engine: "winners play winners" stacking: winners meet winners and losers meet losers, with the two pairs shuffled so last game's partners face each other; the sit-out guard and keep-together/apart still apply.
+- Open play engine: "by standing" stacking: players close in today's standings play each other, 1st and 4th against 2nd and 3rd, without ever letting anyone sit out more than 2 rounds in a row.
 - Open play engine: keep-together and keep-apart rules are hard constraints for every way of picking players; a court that no four can fill without breaking one waits with a reason instead of breaking it.
 - Open play: migration `0017` adds court-captain links (`open_captains`, key hash only) and records who saved each result; settings gain self check-in and keep-together/keep-apart rules, and sessions stored before this load with defaults.
 - Five new animated pickleball illustrations (rally, paddle stack, score tap, QR board, quiet court), CSS-only, stopped for reduced motion.
