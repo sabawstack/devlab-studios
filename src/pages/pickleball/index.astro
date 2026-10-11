@@ -1,231 +1,108 @@
 ---
 import Layout from '../../layouts/Layout.astro'
-import CourtSceneArt from '../../components/pickleball/art/CourtSceneArt.jsx'
-import QueueFlowArt from '../../components/pickleball/art/QueueFlowArt.jsx'
-import ScoreboardArt from '../../components/pickleball/art/ScoreboardArt.jsx'
-import StandingsArt from '../../components/pickleball/art/StandingsArt.jsx'
-import ShareLiveArt from '../../components/pickleball/art/ShareLiveArt.jsx'
+import HeroRallyArt from '../../components/pickleball/art/HeroRallyArt.jsx'
+import PaddleStackArt from '../../components/pickleball/art/PaddleStackArt.jsx'
+import ScoreTapArt from '../../components/pickleball/art/ScoreTapArt.jsx'
+import QrBoardArt from '../../components/pickleball/art/QrBoardArt.jsx'
+import ResumeBanner from '../../pickleball-open/ResumeBanner.jsx'
 import ContactForm from '../../components/islands/ContactForm.jsx'
 import { resolveTurnstileSiteKey } from '../../lib/turnstileSiteKey'
 import { loadPageSeo } from '../../lib/content/seo'
-import '../../pickleball-app/pickleball.css'
+import '../../styles/pickleball-open.css'
 
-// Same pattern as every other public page: static defaults from
-// src/data/seoContent.js, overridable per-page from the CMS.
+// Colours are explicit hex values rather than text-slate-* classes: the
+// public shell is always dark and remaps slate classes (src/index.css), so
+// hex keeps contrast independent of that remapping.
 const seo = await loadPageSeo('pickleball')
-
-const features = [
-  { Art: QueueFlowArt, title: 'Fair queueing', body: 'Fewest games played first, longest wait next. The app picks the match and tells you why it picked it.' },
-  { Art: ScoreboardArt, title: 'Rally-by-rally scoring', body: 'One tap per rally. Side-out, server number and the official score call are all derived, never typed in.' },
-  { Art: StandingsArt, title: 'Live standings', body: 'Players ranked by performance index as games finish, each with a confidence tier so you can see how settled a number really is.' },
-  { Art: ShareLiveArt, title: 'Share it live', body: 'A QR code puts the live scoreboard on every player’s phone, and on the TV in the hall.' },
-]
-
-const differentiators = [
-  {
-    Art: QueueFlowArt,
-    title: 'Every match-up explains itself',
-    body: 'The queue picks on fewest games played, then longest wait. Once at least five players are eligible, it also tries to break up a pair who just played together — swapping one of them for another player on the same number of games. Each recommendation carries the reasons it was chosen, so you can answer “why them?” without guessing.',
-  },
-  {
-    Art: ScoreboardArt,
-    title: 'Nothing is ever lost',
-    body: 'Undo the last rally at any point. Reopen and correct a finished game long after it ended — statistics are recomputed from scratch rather than layered on top of the old ones, and reopening or correcting a game is recorded in the audit log.',
-  },
-  {
-    Art: ShareLiveArt,
-    title: 'Everyone sees the same score',
-    body: 'Every rally you record broadcasts live to every connected screen — the scorekeeper’s tablet, your players’ phones, and a TV in the hall. A device that drops off and reconnects is handed the full current state rather than a gap it has to guess at.',
-  },
-  {
-    Art: StandingsArt,
-    title: 'Standings from the first minute',
-    body: 'The board is populated the moment players check in — nobody has to finish a game to appear on it. Everyone is listed with their win-loss record and point differential, marked when they are on court, and ranked as soon as they have played enough games to qualify.',
-  },
-]
-
-// text-white, not text-brand: this is the page's only brand-coloured run
-// sitting directly on the dark .public-shell background, where #4500ff
-// measures ~2.5:1 and fails WCAG AA. `.public-shell` (src/index.css) remaps
-// text-slate-* and text-brand-ink but has no rule for .text-brand, and every
-// other text-brand on this page sits inside a white panel where it is fine —
-// so this is fixed here rather than in the shared stylesheet. Kept in the
-// frontmatter so the rationale does not ship in the served HTML.
-const walkthroughLinkClass = 'text-sm font-semibold text-white underline underline-offset-4'
-
-const faqs = [
-  { q: 'Do players need an account?', a: 'No. Players never sign in — they scan a QR code to watch the live scoreboard. Only the person running the session signs in.' },
-  { q: 'How many courts can I run?', a: 'As many as your venue has. Courts are set up once per venue and every session picks them up automatically.' },
-  { q: 'What scoring does it use?', a: 'Side-out scoring driven by a ruleset you control — target score and win-by are configurable, not hardcoded to 11.' },
-  { q: 'What happens if I make a scoring mistake?', a: 'Undo the last rally straight away, or reopen and correct the game after it has finished. Statistics are recomputed, never patched.' },
-  {
-    q: 'Is OPI an official rating?',
-    a: 'No. OPI is a Devlab-original performance index, not a USA Pickleball rating, DUPR, UTR-P or Elo system.',
-    // The one place a reader forms this question, so the one place worth
-    // linking the full methodology from.
-    href: '/pickleball/methodology',
-    hrefLabel: 'Read how OPI works',
-  },
-]
-
 const turnstileSiteKey = resolveTurnstileSiteKey(Astro.request.url)
-
+// subjectPlaceholder is kept verbatim: the /api/contact subject handling for
+// this form depends on it (CHANGELOG, "legacy /api/contact subject").
 const accessFormCopy = {
   nameLabel: 'Your name',
   subjectLabel: 'Subject',
   subjectPlaceholder: 'Pickleball early access request',
-  messageLabel: 'Tell us about your open play',
-  messagePlaceholder: 'Your club or venue, how many players and courts, how often you run open play, and what you want out of the app.',
-  submitLabel: 'Request access',
-  helperText: 'We review every request personally.',
+  messageLabel: 'Tell us about your club',
+  messagePlaceholder: 'Your club or venue, how many players and courts, and how often you run open play.',
+  submitLabel: 'Send',
+  helperText: 'We read every message personally.',
 }
----
 
-<Layout title="Devlab Pickleball" seo={seo}>
-  <div class="mx-auto max-w-6xl px-6 py-16 sm:py-20">
-    <section class="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+const steps = [
+  { Art: PaddleStackArt, title: 'Add your players', body: 'Paste a list from Reclub, WhatsApp or anywhere. Numbering, emoji and duplicates are cleaned up for you. Late arrivals can join any time.' },
+  { Art: ScoreTapArt, title: 'Tap the score when a game ends', body: 'Pick the winner and the losing score; the winning score fills itself in. The next fair match is ready on that court straight away.' },
+  { Art: QrBoardArt, title: 'Everyone follows by QR', body: 'Players scan one code to see who is on every court, who is up next and the standings. No app, no account.' },
+]
+
+const features = [
+  { title: 'Fair rotation', body: 'Paddle stack: fewest games first, then longest wait. Partners rotate so nobody gets the same partner twice when there is another way to split the four.' },
+  { title: 'One person, every court', body: 'Up to 16 courts on one screen. Any proposed game can be edited before it starts, and a wrong score can be undone or fixed.' },
+  { title: 'Free, with no sign-up', body: 'No accounts for the host or the players. Your host link is your key; the board link is view-only.' },
+  { title: 'Private by default', body: 'Results are deleted 7 days after the last game. Download them as a spreadsheet any time before then.' },
+]
+
+const faqs = [
+  { q: 'Is it really free?', a: 'Yes. Every court, every player, no paid tier.' },
+  { q: 'Do players need an app or an account?', a: 'No. They scan the QR code or open the link in any browser. Nobody signs up.' },
+  { q: 'What if I close the tab?', a: 'Nothing is lost: every tap is saved on our servers. Open the site on the same phone and choose “Resume as host”, or open your host link on another device.' },
+  { q: 'How long are results kept?', a: 'Until 7 days after the last change to the session, then they are deleted. You can download a CSV of every game and the standings before that.' },
+  { q: 'Can I use it on a tablet, laptop or big screen?', a: 'Yes. The courts reflow to fit any screen, from a phone to a wide monitor.' },
+]
+---
+<Layout title="Devlab Pickleball: free open play manager" seo={seo}>
+  <div class="mx-auto max-w-6xl px-4 py-10 md:py-16">
+    <section class="grid items-center gap-10 md:grid-cols-[1.1fr_1fr]">
       <div>
-        <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Session management</p>
-        <h1 class="mt-2 text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">Devlab Pickleball</h1>
-        <div class="pb-rule mt-3 h-[3px] w-11 rounded-full"></div>
-        <p class="mt-5 max-w-xl text-lg leading-relaxed text-slate-600">
-          Run open play from one screen — check-in, queueing, court assignment, live scoring,
-          and a scoreboard your players can watch from their own phones.
-        </p>
-        {/* Ordered for who actually arrives here. While the product is in
-            beta almost every visitor is a prospective operator, not an
-            existing one, so requesting access is the primary action and
-            signing in is the quiet link for the handful who already have an
-            account. Swapping the emphasis back is a one-line change once
-            sign-ups outnumber sign-ins. */}
-        <div class="mt-8 flex flex-wrap items-center gap-3">
-          <a href="#request-access" class="pb-btn-primary inline-flex rounded-lg px-5 py-3 text-sm">
-            Be a beta tester
-          </a>
-          <a
-            href="/pickleball/how-it-works"
-            class="inline-flex items-center rounded-lg bg-white/[0.92] px-5 py-3 text-sm font-semibold text-brand-ink ring-1 ring-slate-200 transition hover:ring-brand/35"
-          >
-            See how it works
-          </a>
-          {/* A ghost button, not bare text. `text-slate-500` here resolved to
-              --text-muted through .public-shell, which on the dark hero made a
-              real control look like a rendering fault. `text-slate-900` maps to
-              --text-primary on the dark shell and stays dark on a light one, so
-              this reads correctly either way; the ring gives it a surface
-              without competing with the two filled buttons beside it. */}
-          <a
-            href="/pickleball/app"
-            class="inline-flex items-center rounded-lg px-5 py-3 text-sm font-semibold text-slate-900 ring-1 ring-slate-400/40 transition hover:bg-white/10 hover:ring-slate-300/70"
-          >
-            Operator sign in
-          </a>
+        <p class="text-xs font-bold uppercase tracking-[0.14em] text-[#c6ff2e]">Free · No sign-up · Up to 16 courts</p>
+        <h1 class="mt-3 text-4xl font-bold leading-[1.05] text-white md:text-6xl">Run every court from one phone.</h1>
+        <p class="mt-4 max-w-xl text-lg text-[#b5c4e1]">Add players, tap the score when a game ends, and the next fair match is ready. Everyone follows along by QR.</p>
+        <div class="mt-7 flex flex-wrap gap-3">
+          <a href="/pickleball/new" class="inline-flex min-h-12 items-center rounded-xl bg-[#4500ff] px-6 text-lg font-bold text-white hover:bg-[#3a00d6]">Start a free session</a>
+          <a href="/pickleball/how-it-works" class="inline-flex min-h-12 items-center rounded-xl border border-[#193480] px-6 font-semibold text-white hover:bg-[#11214d]">See how it works</a>
         </div>
       </div>
-      <div
-        class="light-artifact rounded-[1.75rem] bg-gradient-to-br from-[#fff9ff] via-[#fbf9ff] to-[#f2efff] p-6 shadow-[0_18px_38px_rgba(48,28,114,0.12)] sm:p-8"
-        data-testid="pb-artwork"
-      >
-        <CourtSceneArt className="h-auto w-full text-brand-ink" />
-      </div>
+      <div class="pb-anim" data-testid="pb-artwork"><HeroRallyArt className="w-full" /></div>
     </section>
 
-    <section class="mt-20">
-      <h2 class="text-3xl font-semibold text-slate-900">Built for the person running the session</h2>
-      <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4" data-testid="pb-feature-grid">
-        {features.map(({ Art, title, body }) => (
-          <article class="light-artifact rounded-2xl bg-white/[0.92] p-5 shadow-[0_12px_28px_rgba(60,28,120,0.08)] ring-1 ring-slate-200" data-testid="pb-artwork">
-            <Art className="h-24 w-full text-brand-ink" />
-            <h3 class="mt-4 font-semibold text-brand-ink">{title}</h3>
-            <p class="mt-2 text-sm leading-relaxed text-slate-600">{body}</p>
-          </article>
+    <ResumeBanner client:load />
+
+    <section class="mt-20" aria-labelledby="steps-heading">
+      <h2 id="steps-heading" class="text-3xl font-bold text-white">Three steps, then just play</h2>
+      <ol class="mt-8 grid gap-5 md:grid-cols-3">
+        {steps.map(({ Art, title, body }, index) => (
+          <li class="rounded-2xl bg-[#11214d] p-6">
+            <div class="pb-anim h-36 text-white" data-testid="pb-artwork"><Art className="h-full w-full" /></div>
+            <p class="mt-4 text-sm font-bold text-[#c6ff2e]">Step {index + 1}</p>
+            <h3 class="mt-1 text-xl font-bold text-white">{title}</h3>
+            <p class="mt-2 text-[#b5c4e1]">{body}</p>
+          </li>
         ))}
-      </div>
+      </ol>
     </section>
 
-    <section class="mt-20 space-y-6">
-      {differentiators.map(({ Art, title, body }, index) => (
-        <article class="light-artifact overflow-hidden rounded-[1.75rem] bg-white/[0.92] shadow-[0_18px_38px_rgba(48,28,114,0.10)] ring-1 ring-slate-200">
-          <div class="grid items-center gap-0 lg:grid-cols-2">
-            <div class={['flex justify-center p-8 lg:p-10', index % 2 === 0 ? 'lg:order-1' : 'lg:order-2'].join(' ')} data-testid="pb-artwork">
-              <Art className="h-40 w-full max-w-sm text-brand-ink" />
-            </div>
-            <div class={['p-8 lg:p-10', index % 2 === 0 ? 'lg:order-2' : 'lg:order-1'].join(' ')}>
-              <h2 class="text-2xl font-semibold text-brand-ink">{title}</h2>
-              <p class="mt-3 leading-relaxed text-slate-600">{body}</p>
-            </div>
-          </div>
-        </article>
+    <section class="mt-20 grid gap-4 md:grid-cols-2" aria-label="Features">
+      {features.map(({ title, body }) => (
+        <div class="rounded-2xl border border-[#193480] p-6">
+          <h3 class="text-xl font-bold text-white">{title}</h3>
+          <p class="mt-2 text-[#b5c4e1]">{body}</p>
+        </div>
       ))}
     </section>
 
-    <section class="mt-20">
-      <h2 class="text-3xl font-semibold text-slate-900">A session in three moves</h2>
-      <div class="mt-8 grid gap-5 sm:grid-cols-3">
-        <article class="rounded-2xl bg-white/[0.92] p-5 ring-1 ring-slate-200">
-          <p class="pb-score text-2xl text-brand">1</p>
-          <h3 class="mt-2 font-semibold text-brand-ink">Open for check-in</h3>
-          <p class="mt-2 text-sm text-slate-600">Create the session, pick your venue and ruleset, and let players check in.</p>
-        </article>
-        <article class="rounded-2xl bg-white/[0.92] p-5 ring-1 ring-slate-200">
-          <p class="pb-score text-2xl text-brand">2</p>
-          <h3 class="mt-2 font-semibold text-brand-ink">Assign and score</h3>
-          <p class="mt-2 text-sm text-slate-600">The app proposes the next players. Confirm, start the game, then tap who won each rally.</p>
-        </article>
-        <article class="rounded-2xl bg-white/[0.92] p-5 ring-1 ring-slate-200">
-          <p class="pb-score text-2xl text-brand">3</p>
-          <h3 class="mt-2 font-semibold text-brand-ink">Finish and repeat</h3>
-          <p class="mt-2 text-sm text-slate-600">Finishing a game frees the court, updates the standings, and requeues the players.</p>
-        </article>
-      </div>
-      <p class="mt-6">
-        <a href="/pickleball/how-it-works" class={walkthroughLinkClass}>
-          Read the full walkthrough
-        </a>
-      </p>
-    </section>
-
-    <section class="mt-20">
-      <h2 class="text-3xl font-semibold text-slate-900">What your players see</h2>
-      <div class="mt-8 grid gap-5 sm:grid-cols-3">
-        <article class="rounded-2xl bg-white/[0.92] p-5 ring-1 ring-slate-200">
-          <h3 class="font-semibold text-brand-ink">A QR code</h3>
-          <p class="mt-2 text-sm text-slate-600">Share one code. No app to install and no account to create.</p>
-        </article>
-        <article class="rounded-2xl bg-white/[0.92] p-5 ring-1 ring-slate-200">
-          <h3 class="font-semibold text-brand-ink">The live view</h3>
-          <p class="mt-2 text-sm text-slate-600">Scores update on their phones as the rallies happen.</p>
-        </article>
-        <article class="rounded-2xl bg-white/[0.92] p-5 ring-1 ring-slate-200">
-          <h3 class="font-semibold text-brand-ink">A TV display</h3>
-          <p class="mt-2 text-sm text-slate-600">A full-screen scoreboard for a screen in the hall.</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="mt-20">
-      <h2 class="text-3xl font-semibold text-slate-900">Questions</h2>
-      <div class="mt-8 grid gap-3 lg:grid-cols-2" data-testid="pb-faq">
-        {faqs.map(({ q, a, href, hrefLabel }) => (
-          <details class="rounded-2xl bg-white/[0.92] p-5 ring-1 ring-slate-200">
-            <summary class="cursor-pointer font-semibold text-brand-ink">{q}</summary>
-            <p class="mt-2 text-sm leading-relaxed text-slate-600">{a}</p>
-            {href && (
-              <p class="mt-2">
-                <a href={href} class="text-sm font-semibold text-brand underline underline-offset-4">{hrefLabel}</a>
-              </p>
-            )}
+    <section class="mt-20" aria-labelledby="faq-heading">
+      <h2 id="faq-heading" class="text-3xl font-bold text-white">Questions</h2>
+      <div class="mt-6 grid gap-3">
+        {faqs.map(({ q, a }) => (
+          <details class="rounded-2xl bg-[#11214d] p-5">
+            <summary class="cursor-pointer text-lg font-semibold text-white">{q}</summary>
+            <p class="mt-2 text-[#b5c4e1]">{a}</p>
           </details>
         ))}
       </div>
     </section>
 
     <section id="request-access" class="mt-20 scroll-mt-24">
-      <h2 class="text-3xl font-semibold text-slate-900">Request early access</h2>
-      <p class="mt-3 max-w-2xl text-slate-600">
-        We are piloting with a small group of clubs before opening this up. If you run open play
-        and want in, tell us a little about your sessions.
-      </p>
+      <h2 class="text-3xl font-semibold text-white">Running a club or venue?</h2>
+      <p class="mt-3 max-w-2xl text-[#b5c4e1]">Tell us about your sessions and we'll help you set it up.</p>
       <div class="mt-8 rounded-2xl bg-white/[0.92] p-6 ring-1 ring-slate-200">
         <ContactForm client:visible siteKey={turnstileSiteKey} copy={accessFormCopy} />
       </div>

@@ -34,6 +34,11 @@ describe('SEO coverage', () => {
     expect(seoSlugForPath('/insights')).toBe('insights')
   })
 
+  it('uses a route\'s explicit seoSlug where the record is not keyed by its path', () => {
+    expect(seoSlugForPath('/pickleball/how-it-works')).toBe('pickleball-how-it-works')
+    expect(seoSlugForPath('/pickleball/rotation')).toBe('pickleball-rotation')
+  })
+
   it('declares no canonical URL that points somewhere other than its own route', () => {
     for (const path of PUBLIC_ROUTES.map((entry) => entry.path)) {
       const record = seoContent.pages.find(

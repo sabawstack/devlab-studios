@@ -128,37 +128,73 @@ export const seoContent = {
     {
       id: 'seo-pickleball',
       pageSlug: 'pickleball',
-      metaTitle: 'Devlab Pickleball — Open Play Session Management',
+      metaTitle: 'Free Pickleball Open Play Manager: Devlab Pickleball',
       metaDescription:
-        'Run recreational pickleball open play from one screen: check-in, fair queueing, court assignment, rally-by-rally scoring, live standings, and a scoreboard your players follow from their own phones.',
+        'Run pickleball open play free, with no sign-up: fair paddle-stack rotation for up to 16 courts, one-tap results, and a live QR board players follow on their own phones.',
       metaKeywords:
-        'pickleball open play software, pickleball session management, pickleball queue app, pickleball court rotation, pickleball live scoreboard, open play check-in, pickleball club software',
+        'free pickleball open play app, pickleball court rotation, paddle stack app, pickleball queue, open play scheduler, pickleball live board',
       canonicalUrl: 'https://www.devlabstudios.com/pickleball',
-      ogTitle: 'Devlab Pickleball — Open Play Session Management',
+      ogTitle: 'Run every pickleball court from one phone. Free.',
       ogDescription:
-        'Check-in, queueing, court assignment and live scoring for recreational pickleball open play, all from one screen.',
+        'Fair rotation, one-tap results and a live QR board. No sign-up.',
       ogImage: 'https://www.devlabstudios.com/og-pickleball.png',
-      twitterTitle: 'Devlab Pickleball — Open Play Session Management',
+      twitterTitle: 'Run every pickleball court from one phone. Free.',
       twitterDescription:
-        'Run pickleball open play from one screen — fair queueing, court assignment, live scoring and a shareable scoreboard.',
+        'Fair rotation, one-tap results and a live QR board. No sign-up.',
       twitterImage: 'https://www.devlabstudios.com/og-pickleball.png',
     },
     {
       id: 'seo-pickleball-how-it-works',
       pageSlug: 'pickleball-how-it-works',
-      metaTitle: 'How Devlab Pickleball Works — Running an Open Play Session',
+      metaTitle: 'How to Run Pickleball Open Play: Devlab Pickleball Guide',
       metaDescription:
-        'A full walkthrough of one open play session, written for the person holding the tablet: create the session, check players in, fill the queue, assign a court, start and score the game, then close it out.',
+        'Step by step: start a free session, add players, start proposed games, tap results, handle late arrivals and breaks, and download results.',
       metaKeywords:
         'how to run pickleball open play, pickleball session guide, pickleball court rotation guide, pickleball scorekeeping, open play facilitator guide',
       canonicalUrl: 'https://www.devlabstudios.com/pickleball/how-it-works',
-      ogTitle: 'How Devlab Pickleball Works — Running an Open Play Session',
+      ogTitle: 'How to Run Pickleball Open Play: Devlab Pickleball Guide',
       ogDescription:
-        'Every step of running an open play session, from creating it to closing it — written for the operator, not the player.',
+        'Step by step: start a free session, add players, start proposed games, tap results, handle late arrivals and breaks, and download results.',
       ogImage: 'https://www.devlabstudios.com/og-pickleball.png',
-      twitterTitle: 'How Devlab Pickleball Works — Running an Open Play Session',
+      twitterTitle: 'How to Run Pickleball Open Play: Devlab Pickleball Guide',
       twitterDescription:
-        'A step-by-step guide to running a pickleball open play session with Devlab Pickleball.',
+        'Step by step: start a free session, add players, start proposed games, tap results, handle late arrivals and breaks, and download results.',
+      twitterImage: 'https://www.devlabstudios.com/og-pickleball.png',
+    },
+    {
+      id: 'seo-pickleball-rotation',
+      pageSlug: 'pickleball-rotation',
+      metaTitle: 'How Fair Rotation Works: Devlab Pickleball',
+      metaDescription:
+        'The exact rules behind paddle-stack rotation, with a worked example computed by the app itself.',
+      metaKeywords:
+        'pickleball paddle stack rotation, fair pickleball rotation, pickleball open play rotation rules, pickleball sit out rotation',
+      canonicalUrl: 'https://www.devlabstudios.com/pickleball/rotation',
+      ogTitle: 'How Fair Rotation Works: Devlab Pickleball',
+      ogDescription:
+        'The exact rules behind paddle-stack rotation, with a worked example computed by the app itself.',
+      ogImage: 'https://www.devlabstudios.com/og-pickleball.png',
+      twitterTitle: 'How Fair Rotation Works: Devlab Pickleball',
+      twitterDescription:
+        'The exact rules behind paddle-stack rotation, with a worked example computed by the app itself.',
+      twitterImage: 'https://www.devlabstudios.com/og-pickleball.png',
+    },
+    {
+      id: 'seo-pickleball-new',
+      pageSlug: 'pickleball-new',
+      metaTitle: 'Start a Free Session: Devlab Pickleball',
+      metaDescription:
+        'Start a free pickleball open play session. No sign-up.',
+      metaKeywords:
+        'start pickleball open play, free pickleball session, pickleball open play app',
+      canonicalUrl: 'https://www.devlabstudios.com/pickleball/new',
+      ogTitle: 'Start a Free Session: Devlab Pickleball',
+      ogDescription:
+        'Start a free pickleball open play session. No sign-up.',
+      ogImage: 'https://www.devlabstudios.com/og-pickleball.png',
+      twitterTitle: 'Start a Free Session: Devlab Pickleball',
+      twitterDescription:
+        'Start a free pickleball open play session. No sign-up.',
       twitterImage: 'https://www.devlabstudios.com/og-pickleball.png',
     },
     {

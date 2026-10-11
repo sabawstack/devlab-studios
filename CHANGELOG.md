@@ -74,6 +74,9 @@ decided against that surface specifically:
 - Host console for open play: a responsive courts grid, one-tap "Game over" with a score pad that fills the winning score, 2-minute undo, edit or skip a proposed game, late arrivals, breaks, result edits, CSV download, end and delete.
 - **End-to-end coverage for the screens that only exist once there is mail.** Everything the mailbox suite tested before could run against an empty mailbox — authorization, navigation, highlighting, empty states — which left four shipped features with no end-to-end coverage at all. New tests exercise retrying a failed reply and its refusal to offer a second retry, remote images held back until asked for and the sanitizer keeping the sender's layout while dropping their script, a DMARC report rendered from a real zipped fixture reporting a forged source, and attaching a file to a reply through the real upload endpoint. `scripts/mailbox/apply-e2e-fixtures.mjs` loads the same synthetic mail preview uses, so the fixtures cannot drift from it.
 
+### Changed
+- The pickleball pages are rewritten around free, no-sign-up open play: a new landing page with animated art and FAQ, a step-by-step host guide, and a new "How fair rotation works" page whose example is computed by the app's own rotation engine. The old operator sign-in link is gone from the landing page.
+
 ## [1.13.0] - 2026-09-23
 
 ### Added
