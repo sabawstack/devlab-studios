@@ -200,6 +200,27 @@ test.describe('open play UI', () => {
     await expect(page.getByTestId('court-1')).toBeVisible()
   })
 
+  test('the host console loads and saves over polling when the live connection is down', async ({ page, request }) => {
+    const { code, hostKey } = await createSession(request)
+    await page.routeWebSocket(/\/pickleball\/rt\/open\//, (ws) => ws.close({ code: 1011, reason: 'blocked by test' }))
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await expect(page.getByTestId('court-1')).toContainText('Up next')
+    await expect(page.getByText('Reconnecting…')).toBeVisible()
+    await page.getByTestId('court-1').getByRole('button', { name: 'Start' }).click()
+    await expect(page.getByTestId('court-1').getByRole('button', { name: 'Game over' })).toBeVisible()
+  })
+
+  test('a wrong key in the link falls back to the key this phone already saved', async ({ page, request }) => {
+    const { code, hostKey } = await createSession(request)
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await expect(page.getByTestId('court-1')).toBeVisible()
+    await page.goto(`/pickleball/s/${code}?from=chat#host=wrong-key-wrong-key`)
+    await expect(page.getByTestId('court-1')).toBeVisible()
+    expect(new URL(page.url()).search).toBe('?from=chat')
+    expect(page.url()).not.toContain('#host=')
+    expect(await page.evaluate(() => localStorage.getItem('devlab-pickleball-hosted'))).toContain(hostKey)
+  })
+
   test('an unknown or deleted code shows the ended notice', async ({ page }) => {
     await page.goto('/pickleball/s/ZZZZZ22222')
     await expect(page.getByRole('heading', { name: 'This session has ended and its results were deleted.' })).toBeVisible()

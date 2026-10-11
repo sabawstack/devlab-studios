@@ -1,15 +1,48 @@
-import { useEffect, useState } from 'react'
-import { fetchViewer } from './api'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { fetchHost, fetchViewer } from './api'
 
 const POLL_MS = 5000
 const GONE = 4404
 
-/** Live board state: WebSocket first, 5-second polling while it is down (spec §3.4). */
-export function useOpenSession(code, hostKey) {
+/**
+ * Live board state: WebSocket first, 5-second polling while it is down
+ * (spec §3.4). With a host key the poll also fetches the host snapshot, so the
+ * console works even when the socket never connects.
+ *
+ * Snapshots can arrive out of order (a poll that left before a command but
+ * landed after it), so anything older than the version already held is ignored.
+ */
+export function useOpenSession(code, hostKey, { onRejected } = {}) {
   const [status, setStatus] = useState('connecting')
   const [viewer, setViewer] = useState(null)
   const [host, setHost] = useState(null)
-  const [authFailed, setAuthFailed] = useState(false)
+  // Every key the server refused, so a caller can switch keys without the new
+  // one inheriting the old one's failure.
+  const [rejectedKeys, setRejectedKeys] = useState([])
+  const versionRef = useRef(-1)
+  const onRejectedRef = useRef(onRejected)
+  useEffect(() => {
+    onRejectedRef.current = onRejected
+  }, [onRejected])
+
+  /** True when this version is at least as new as anything already shown; records it. */
+  const accept = useCallback((version) => {
+    if (typeof version !== 'number') return true
+    if (version < versionRef.current) return false
+    versionRef.current = version
+    return true
+  }, [])
+
+  const applyViewer = useCallback((snapshot) => {
+    if (!snapshot || !accept(snapshot.version)) return
+    setViewer(snapshot)
+  }, [accept])
+
+  const applyHost = useCallback((snapshot) => {
+    if (!snapshot?.viewer || !accept(snapshot.viewer.version)) return
+    setHost(snapshot)
+    setViewer(snapshot.viewer)
+  }, [accept])
 
   useEffect(() => {
     let socket = null
@@ -18,6 +51,14 @@ export function useOpenSession(code, hostKey) {
     let cancelled = false
     let ended = false
     let attempt = 0
+    let hostDenied = false
+    versionRef.current = -1
+
+    function reject() {
+      hostDenied = true
+      setRejectedKeys((keys) => (keys.includes(hostKey) ? keys : [...keys, hostKey]))
+      onRejectedRef.current?.(hostKey)
+    }
 
     function end() {
       ended = true
@@ -26,16 +67,35 @@ export function useOpenSession(code, hostKey) {
       setStatus('not-found')
     }
 
-    async function poll() {
+    async function pollHost() {
+      try {
+        const snapshot = await fetchHost(code, hostKey)
+        if (!cancelled) applyHost(snapshot)
+        return true
+      } catch (error) {
+        if (cancelled) return false
+        if (error?.status === 404) {
+          end()
+          return false
+        }
+        if (error?.status === 403) reject()
+        // 403 still shows the public board; anything else is retried by the next poll
+        return pollViewer()
+      }
+    }
+
+    async function pollViewer() {
       try {
         const snapshot = await fetchViewer(code)
-        if (!cancelled) setViewer(snapshot)
+        if (!cancelled) applyViewer(snapshot)
         return true
       } catch (error) {
         if (!cancelled && error?.status === 404) end()
         return error?.status !== 404
       }
     }
+
+    const poll = () => (hostKey && !hostDenied ? pollHost() : pollViewer())
 
     function connect() {
       if (cancelled || ended) return
@@ -54,12 +114,11 @@ export function useOpenSession(code, hostKey) {
         } catch {
           return
         }
-        if (message.type === 'VIEWER') setViewer(message.payload)
-        if (message.type === 'HOST') {
-          setHost(message.payload)
-          setViewer(message.payload.viewer)
+        if (message.type === 'VIEWER') applyViewer(message.payload)
+        if (message.type === 'HOST') applyHost(message.payload)
+        if (message.type === 'AUTH_FAILED') {
+          reject()
         }
-        if (message.type === 'AUTH_FAILED') setAuthFailed(true)
       }
       socket.onclose = (event) => {
         if (cancelled || ended) return
@@ -85,7 +144,7 @@ export function useOpenSession(code, hostKey) {
       clearInterval(pollTimer)
       socket?.close()
     }
-  }, [code, hostKey])
+  }, [code, hostKey, applyHost, applyViewer])
 
-  return { status, viewer, host, authFailed, setHost }
+  return { status, viewer, host, authFailed: Boolean(hostKey) && rejectedKeys.includes(hostKey), setHost: applyHost }
 }
