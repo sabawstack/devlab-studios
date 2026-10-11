@@ -194,3 +194,25 @@ describe('applyCommand', () => {
     expect(applyCommand(state, { type: 'RENAME_PLAYER', playerId: 'nope', name: 'x' }, ctxAt(1))).toMatchObject({ ok: false, status: 404 })
   })
 })
+
+describe('who saved a result', () => {
+  it('a second save says who saved it first, and undo clears it', () => {
+    let n = 0
+    const ctx = (minute: number, actor?: string) => ({ now: at(minute), newId: () => `w${(n += 1)}`, actor })
+    const base = finalizeCommand(sessionState({ courts: [court('c1', 1)], players: ['a', 'b', 'c', 'd', 'e'].map((id, i) => player(id, { position: i })) }), ctx(0))
+    const match = base.matches[0]
+    const saved = applyCommand(base, { type: 'RECORD_RESULT', matchId: match.id, winner: 'A', scoreA: 11, scoreB: 4 }, ctx(5, 'Court 1 captain'))
+    if (!saved.ok) throw new Error(saved.error)
+    expect(saved.state.matches.find((m) => m.id === match.id)?.recordedBy).toBe('Court 1 captain')
+    const again = applyCommand(saved.state, { type: 'RECORD_RESULT', matchId: match.id, winner: 'B', scoreA: 4, scoreB: 11 }, ctx(6))
+    expect(again).toMatchObject({ ok: false, status: 409, error: 'This game was already saved by Court 1 captain.' })
+    const undone = applyCommand(saved.state, { type: 'UNDO_RESULT', matchId: match.id }, ctx(6))
+    expect(undone.ok && undone.state.matches.find((m) => m.id === match.id)).toMatchObject({ status: 'IN_PROGRESS', recordedBy: null })
+  })
+
+  it('a save without an actor is recorded as the host', () => {
+    const base = finalizeCommand(sessionState({ players: ['a', 'b', 'c', 'd'].map((id) => player(id)) }), { now: at(0), newId: () => 'm1' })
+    const saved = applyCommand(base, { type: 'RECORD_RESULT', matchId: 'm1', winner: 'A', scoreA: 11, scoreB: 2 }, { now: at(3), newId: () => 'x' })
+    expect(saved.ok && saved.state.matches[0].recordedBy).toBe('Host')
+  })
+})

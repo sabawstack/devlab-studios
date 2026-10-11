@@ -6,7 +6,7 @@ import { diffState } from '../../../../lib/pickleball/open/diff'
 import { applyCommand, finalizeCommand } from '../../../../lib/pickleball/open/reducer'
 import { DEFAULT_SETTINGS } from '../../../../lib/pickleball/open/types'
 
-const MIGRATION = 'migrations/pickleball/0016_open_sessions.sql'
+const MIGRATION = ['migrations/pickleball/0016_open_sessions.sql', 'migrations/pickleball/0017_open_captains.sql']
 const NOW = '2026-10-11T10:00:00.000Z'
 
 function fresh(code = 'ABCDE23456') {
@@ -19,7 +19,7 @@ function fresh(code = 'ABCDE23456') {
 
 describe('open sessions repository', () => {
   it('round-trips a created session exactly', async () => {
-    const { d1 } = createSqliteD1([MIGRATION])
+    const { d1 } = createSqliteD1(MIGRATION)
     const state = fresh()
     await createOpenSession(d1, state, 'hash')
     const loaded = await loadOpenSession(d1, 'ABCDE23456', NOW)
@@ -28,7 +28,7 @@ describe('open sessions repository', () => {
   })
 
   it('loads rows with the same key order the reducer builds, so nothing shows up in a diff', async () => {
-    const { d1 } = createSqliteD1([MIGRATION])
+    const { d1 } = createSqliteD1(MIGRATION)
     const state = fresh()
     await createOpenSession(d1, state, 'hash')
     const loaded = await loadOpenSession(d1, 'ABCDE23456', NOW)
@@ -42,7 +42,7 @@ describe('open sessions repository', () => {
   })
 
   it('persists only the diff, and a reload equals the in-memory state', async () => {
-    const { d1 } = createSqliteD1([MIGRATION])
+    const { d1 } = createSqliteD1(MIGRATION)
     const state = fresh()
     await createOpenSession(d1, state, 'hash')
     const match = state.matches[0]
@@ -56,13 +56,13 @@ describe('open sessions repository', () => {
   })
 
   it('treats an expired session as not found even before the purge runs', async () => {
-    const { d1 } = createSqliteD1([MIGRATION])
+    const { d1 } = createSqliteD1(MIGRATION)
     await createOpenSession(d1, fresh(), 'hash')
     expect(await loadOpenSession(d1, 'ABCDE23456', '2026-10-18T10:00:00.001Z')).toBeNull()
   })
 
   it('purges only expired sessions, with all their rows', async () => {
-    const { d1, raw } = createSqliteD1([MIGRATION])
+    const { d1, raw } = createSqliteD1(MIGRATION)
     await createOpenSession(d1, fresh('AAAAA22222'), 'h1')
     await createOpenSession(d1, { ...fresh('BBBBB33333'), expiresAt: '2026-12-01T00:00:00.000Z' }, 'h2')
     const purged = await purgeExpiredOpenSessions(d1, '2026-10-19T00:00:00.000Z')
@@ -72,7 +72,7 @@ describe('open sessions repository', () => {
   })
 
   it('spares a session whose expiry moved between the select and the delete', async () => {
-    const { d1, raw } = createSqliteD1([MIGRATION])
+    const { d1, raw } = createSqliteD1(MIGRATION)
     await createOpenSession(d1, fresh('AAAAA22222'), 'h1')
     await createOpenSession(d1, fresh('BBBBB33333'), 'h2')
     raw.prepare("UPDATE open_sessions SET expires_at = '2026-10-01T00:00:00.000Z'").run()
@@ -92,7 +92,7 @@ describe('open sessions repository', () => {
   })
 
   it('deletes a session and everything under it', async () => {
-    const { d1, raw } = createSqliteD1([MIGRATION])
+    const { d1, raw } = createSqliteD1(MIGRATION)
     const state = fresh()
     await createOpenSession(d1, state, 'hash')
     await deleteOpenSession(d1, state.id)

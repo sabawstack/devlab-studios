@@ -1,5 +1,6 @@
 import { fillProposals } from './propose'
 import { cleanName, type RosterEntry } from './roster'
+import { normalizeSettings } from './settings'
 import { addMs, LIMITS, type CommandContext, type OpenPlayer, type OpenSessionState, type SessionSettings } from './types'
 
 export interface CreateSessionInput {
@@ -7,7 +8,8 @@ export interface CreateSessionInput {
   hostDisplayName: string
   location: string | null
   courtCount: number
-  settings: SessionSettings
+  /** Rules are always empty at creation: they name player ids, which do not exist yet. */
+  settings: Pick<SessionSettings, 'mode' | 'target' | 'scoringStyle'> & { selfCheckIn?: boolean }
   players: readonly RosterEntry[]
 }
 
@@ -38,7 +40,7 @@ export function buildInitialState(
     hostDisplayName: input.hostDisplayName.trim(),
     location: input.location?.trim() || null,
     status: 'ACTIVE',
-    settings: input.settings,
+    settings: normalizeSettings({ ...input.settings, rules: [] }),
     players: uniquePlayers(input.players, ctx),
     courts: Array.from({ length: courtCount }, (_, i) => ({ id: ctx.newId(), label: `Court ${i + 1}`, position: i + 1, enabled: true })),
     matches: [],

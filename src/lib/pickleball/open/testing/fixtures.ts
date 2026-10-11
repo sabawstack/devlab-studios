@@ -22,7 +22,7 @@ export function finished(
 ): OpenMatch {
   return {
     id, courtId, seq: minute, status: 'FINISHED', teamA, teamB, scoreA, scoreB, winner,
-    proposedAt: at(minute), startedAt: at(minute), finishedAt: at(minute + 10),
+    proposedAt: at(minute), startedAt: at(minute), finishedAt: at(minute + 10), recordedBy: 'Host',
   }
 }
 

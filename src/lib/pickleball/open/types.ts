@@ -1,11 +1,21 @@
 export type StackingMode = 'PADDLE_STACK' | 'WINNERS_LOSERS' | 'BY_STANDING' | 'BALANCED'
 export type TargetPoints = 11 | 15 | 21
 export type ScoringStyle = 'SIDEOUT' | 'RALLY'
+export type RuleKind = 'TOGETHER' | 'APART'
+
+/** A host-set hard constraint (spec §5.4): always partners, or never on the same court. */
+export interface PairRule {
+  kind: RuleKind
+  playerIds: readonly [string, string]
+}
 
 export interface SessionSettings {
   mode: StackingMode
   target: TargetPoints
   scoringStyle: ScoringStyle
+  /** Players may add themselves from the check-in link (spec §4.2). */
+  selfCheckIn: boolean
+  rules: readonly PairRule[]
 }
 
 export type PlayerStatus = 'ACTIVE' | 'BREAK' | 'LEFT'
@@ -48,6 +58,8 @@ export interface OpenMatch {
   proposedAt: string
   startedAt: string | null
   finishedAt: string | null
+  /** Who saved the result: 'Host' or a captain's label. Null until saved. */
+  recordedBy: string | null
 }
 
 export type SessionStatus = 'ACTIVE' | 'ENDED'
@@ -73,6 +85,17 @@ export interface OpenSessionState {
 export interface CommandContext {
   now: string
   newId: () => string
+  /** Who is acting: 'Host' or a captain's label. Treated as 'Host' when absent. */
+  actor?: string
+}
+
+/** A court captain link (spec §3.3). Only the SHA-256 of its secret is kept. */
+export interface CaptainRecord {
+  id: string
+  label: string
+  courtId: string
+  keyHash: string
+  createdAt: string
 }
 
 export const LIMITS = {
@@ -82,12 +105,16 @@ export const LIMITS = {
   maxNameLength: 40,
   undoWindowMs: 120_000,
   retentionMs: 7 * 24 * 60 * 60 * 1000,
+  maxRules: 32,
+  maxCaptains: 32,
 } as const
 
 export const DEFAULT_SETTINGS: SessionSettings = {
   mode: 'PADDLE_STACK',
   target: 11,
   scoringStyle: 'SIDEOUT',
+  selfCheckIn: true,
+  rules: [],
 }
 
 export function addMs(iso: string, ms: number): string {

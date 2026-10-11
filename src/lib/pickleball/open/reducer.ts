@@ -98,13 +98,15 @@ function recordResult(state: OpenSessionState, command: Extract<OpenCommand, { t
   if (!match) return fail(404, 'Game not found.')
   const editing = command.type === 'EDIT_RESULT'
   if (editing && match.status !== 'FINISHED') return fail(409, 'Only a saved result can be edited.')
-  if (!editing && match.status === 'FINISHED') return fail(409, 'This game was already saved.')
+  if (!editing && match.status === 'FINISHED') {
+    return fail(409, match.recordedBy ? `This game was already saved by ${match.recordedBy}.` : 'This game was already saved.')
+  }
   if (!editing && match.status !== 'PROPOSED' && match.status !== 'IN_PROGRESS') return fail(409, 'This game cannot be saved.')
   const check = validateResult({ winner: command.winner, scoreA: command.scoreA, scoreB: command.scoreB }, state.settings)
   if (!check.ok) return fail(400, check.reason)
   const saved: OpenMatch = {
     ...match, status: 'FINISHED', winner: command.winner, scoreA: command.scoreA, scoreB: command.scoreB,
-    startedAt: match.startedAt ?? ctx.now, finishedAt: editing ? match.finishedAt : ctx.now,
+    startedAt: match.startedAt ?? ctx.now, finishedAt: editing ? match.finishedAt : ctx.now, recordedBy: ctx.actor ?? 'Host',
   }
   const next = withMatch(state, saved)
   return ok(editing ? next : withPlayers(next, new Set([...match.teamA, ...match.teamB]), { waitingSince: ctx.now }))
@@ -124,7 +126,7 @@ function undoResult(state: OpenSessionState, matchId: string, ctx: CommandContex
   const nowPlaying = state.matches.find((m) => m.id !== matchId && m.status === 'IN_PROGRESS' && ids.some((id) => matchIncludes(m, id)))
   if (nowPlaying) return fail(409, 'Someone from that game is already playing again. Edit the result instead.')
   const cleared = withoutMatches(state, (m) => m.status === 'PROPOSED' && (m.courtId === match.courtId || ids.some((id) => matchIncludes(m, id))))
-  return ok(withMatch(cleared, { ...match, status: 'IN_PROGRESS', winner: null, scoreA: null, scoreB: null, finishedAt: null }))
+  return ok(withMatch(cleared, { ...match, status: 'IN_PROGRESS', winner: null, scoreA: null, scoreB: null, finishedAt: null, recordedBy: null }))
 }
 
 export function applyCommand(state: OpenSessionState, command: OpenCommand, ctx: CommandContext): CommandResult {
@@ -186,13 +188,12 @@ export function applyCommand(state: OpenSessionState, command: OpenCommand, ctx:
   }
 }
 
-/** Every successful command: bump version, push expiry out 7 days, fill free courts. */
+/** Bump the version and push expiry out 7 days (spec §8). */
+export function touch(state: OpenSessionState, now: string): OpenSessionState {
+  return { ...state, version: state.version + 1, lastActivityAt: now, expiresAt: addMs(now, LIMITS.retentionMs) }
+}
+
+/** Every successful command: touch, then fill free courts. */
 export function finalizeCommand(state: OpenSessionState, ctx: CommandContext): OpenSessionState {
-  const touched: OpenSessionState = {
-    ...state,
-    version: state.version + 1,
-    lastActivityAt: ctx.now,
-    expiresAt: addMs(ctx.now, LIMITS.retentionMs),
-  }
-  return fillProposals(touched, ctx)
+  return fillProposals(touch(state, ctx.now), ctx)
 }

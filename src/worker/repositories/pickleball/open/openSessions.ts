@@ -2,7 +2,8 @@
 // Writes are always one db.batch() -- D1 batches are transactional, so a
 // command is either fully stored or not stored at all.
 import { diffState } from '../../../../lib/pickleball/open/diff'
-import type { OpenCourt, OpenMatch, OpenPlayer, OpenSessionState, Team } from '../../../../lib/pickleball/open/types'
+import { normalizeSettings } from '../../../../lib/pickleball/open/settings'
+import type { CaptainRecord, OpenCourt, OpenMatch, OpenPlayer, OpenSessionState, Team } from '../../../../lib/pickleball/open/types'
 
 interface SessionRow {
   id: string; public_code: string; host_key_hash: string; kind: OpenSessionState['kind']; name: string
@@ -17,7 +18,15 @@ interface CourtRow { id: string; label: string; position: number; enabled: numbe
 interface MatchRow {
   id: string; court_id: string; seq: number; status: OpenMatch['status']; team_a_json: string; team_b_json: string
   score_a: number | null; score_b: number | null; winner: OpenMatch['winner']; proposed_at: string
-  started_at: string | null; finished_at: string | null
+  started_at: string | null; finished_at: string | null; recorded_by: string | null
+}
+interface CaptainRow { id: string; court_id: string; key_hash: string; label: string; created_at: string }
+
+export interface LoadedSession {
+  state: OpenSessionState
+  hostKeyHash: string
+  /** Live (unrevoked) captain links, oldest first. */
+  captains: CaptainRecord[]
 }
 
 const UPSERT_PLAYER = `INSERT INTO open_players (id, session_id, name, skill, dupr_id, status, games_offset, joined_at, waiting_since, position)
@@ -26,10 +35,11 @@ const UPSERT_PLAYER = `INSERT INTO open_players (id, session_id, name, skill, du
     games_offset = excluded.games_offset, waiting_since = excluded.waiting_since, position = excluded.position`
 const UPSERT_COURT = `INSERT INTO open_courts (id, session_id, label, position, enabled) VALUES (?, ?, ?, ?, ?)
   ON CONFLICT(id) DO UPDATE SET label = excluded.label, position = excluded.position, enabled = excluded.enabled`
-const UPSERT_MATCH = `INSERT INTO open_matches (id, session_id, court_id, seq, status, team_a_json, team_b_json, score_a, score_b, winner, fixture_id, proposed_at, started_at, finished_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)
+const UPSERT_MATCH = `INSERT INTO open_matches (id, session_id, court_id, seq, status, team_a_json, team_b_json, score_a, score_b, winner, fixture_id, proposed_at, started_at, finished_at, recorded_by)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?)
   ON CONFLICT(id) DO UPDATE SET status = excluded.status, team_a_json = excluded.team_a_json, team_b_json = excluded.team_b_json,
-    score_a = excluded.score_a, score_b = excluded.score_b, winner = excluded.winner, started_at = excluded.started_at, finished_at = excluded.finished_at`
+    score_a = excluded.score_a, score_b = excluded.score_b, winner = excluded.winner, started_at = excluded.started_at,
+    finished_at = excluded.finished_at, recorded_by = excluded.recorded_by`
 
 function playerStatement(db: D1Database, sessionId: string, p: OpenPlayer): D1PreparedStatement {
   return db.prepare(UPSERT_PLAYER).bind(p.id, sessionId, p.name, p.skill, p.duprId, p.status, p.gamesOffset, p.joinedAt, p.waitingSince, p.position)
@@ -40,7 +50,7 @@ function courtStatement(db: D1Database, sessionId: string, c: OpenCourt): D1Prep
 function matchStatement(db: D1Database, sessionId: string, m: OpenMatch): D1PreparedStatement {
   return db.prepare(UPSERT_MATCH).bind(
     m.id, sessionId, m.courtId, m.seq, m.status, JSON.stringify(m.teamA), JSON.stringify(m.teamB),
-    m.scoreA, m.scoreB, m.winner, m.proposedAt, m.startedAt, m.finishedAt,
+    m.scoreA, m.scoreB, m.winner, m.proposedAt, m.startedAt, m.finishedAt, m.recordedBy,
   )
 }
 function sessionUpdate(db: D1Database, s: OpenSessionState): D1PreparedStatement {
@@ -64,22 +74,23 @@ export async function createOpenSession(db: D1Database, state: OpenSessionState,
 // The row objects below deliberately use the same key order as the
 // reducer/create code. diffState compares rows with JSON.stringify, so a
 // different order would make every loaded row look changed.
-export async function loadOpenSession(
-  db: D1Database, code: string, nowIso: string,
-): Promise<{ state: OpenSessionState; hostKeyHash: string } | null> {
+export async function loadOpenSession(db: D1Database, code: string, nowIso: string): Promise<LoadedSession | null> {
   const session = await db.prepare('SELECT * FROM open_sessions WHERE public_code = ? AND expires_at > ?').bind(code, nowIso).first<SessionRow>()
   if (!session) return null
-  const [players, courts, matches] = await Promise.all([
+  const [players, courts, matches, captains] = await Promise.all([
     db.prepare('SELECT * FROM open_players WHERE session_id = ? ORDER BY position').bind(session.id).all<PlayerRow>(),
     db.prepare('SELECT * FROM open_courts WHERE session_id = ? ORDER BY position').bind(session.id).all<CourtRow>(),
     db.prepare('SELECT * FROM open_matches WHERE session_id = ? ORDER BY seq').bind(session.id).all<MatchRow>(),
+    db.prepare('SELECT * FROM open_captains WHERE session_id = ? AND revoked_at IS NULL ORDER BY created_at, id').bind(session.id).all<CaptainRow>(),
   ])
   return {
     hostKeyHash: session.host_key_hash,
+    captains: captains.results.map((c) => ({ id: c.id, label: c.label, courtId: c.court_id, keyHash: c.key_hash, createdAt: c.created_at })),
     state: {
       id: session.id, publicCode: session.public_code, kind: session.kind, name: session.name,
       hostDisplayName: session.host_display_name, location: session.location, status: session.status,
-      settings: JSON.parse(session.settings_json), version: session.version, createdAt: session.created_at,
+      // Sessions from before a settings field existed load with its default (settings.ts).
+      settings: normalizeSettings(JSON.parse(session.settings_json)), version: session.version, createdAt: session.created_at,
       lastActivityAt: session.last_activity_at, expiresAt: session.expires_at,
       players: players.results.map((p) => ({
         id: p.id, name: p.name, skill: p.skill, duprId: p.dupr_id, status: p.status, gamesOffset: p.games_offset,
@@ -90,10 +101,28 @@ export async function loadOpenSession(
         id: m.id, courtId: m.court_id, seq: m.seq, status: m.status,
         teamA: JSON.parse(m.team_a_json) as Team, teamB: JSON.parse(m.team_b_json) as Team,
         scoreA: m.score_a, scoreB: m.score_b, winner: m.winner, proposedAt: m.proposed_at,
-        startedAt: m.started_at, finishedAt: m.finished_at,
+        startedAt: m.started_at, finishedAt: m.finished_at, recordedBy: m.recorded_by,
       })),
     },
   }
+}
+
+/** Adds a captain link and touches the session, in one batch. */
+export async function insertCaptain(db: D1Database, next: OpenSessionState, captain: CaptainRecord): Promise<void> {
+  await db.batch([
+    db.prepare('INSERT INTO open_captains (id, session_id, court_id, key_hash, label, created_at, revoked_at) VALUES (?, ?, ?, ?, ?, ?, NULL)')
+      .bind(captain.id, next.id, captain.courtId, captain.keyHash, captain.label, captain.createdAt),
+    sessionUpdate(db, next),
+  ])
+}
+
+/** Revokes a captain link and touches the session, in one batch. False when no live link had that id. */
+export async function revokeCaptain(db: D1Database, next: OpenSessionState, captainId: string, now: string): Promise<boolean> {
+  const [revoked] = await db.batch([
+    db.prepare('UPDATE open_captains SET revoked_at = ? WHERE id = ? AND session_id = ? AND revoked_at IS NULL').bind(now, captainId, next.id),
+    sessionUpdate(db, next),
+  ])
+  return (revoked?.meta.changes ?? 0) > 0
 }
 
 export async function persistDiff(
