@@ -34,6 +34,8 @@ export class OpenSessionDO extends DurableObject<Env> {
   }
 
   private async load(code: string): Promise<Loaded | null> {
+    // A request routed to the wrong coordinator must never load (or cache) another session's state.
+    if (!this.ctx.id.equals(this.env.OPEN_SESSION.idFromName(code))) return null
     const now = new Date().toISOString()
     if (this.loaded && this.loaded.state.publicCode === code && this.loaded.state.expiresAt > now) return this.loaded
     this.loaded = await loadOpenSession(this.env.PICKLEBALL_DB, code, now)
@@ -116,7 +118,7 @@ export class OpenSessionDO extends DurableObject<Env> {
 
   /** Called by the purge cron after it deleted this session's rows. */
   async evict(): Promise<void> {
-    this.closeAll()
+    return this.serial(async () => this.closeAll())
   }
 
   private closeAll(): void {
@@ -169,23 +171,35 @@ export class OpenSessionDO extends DurableObject<Env> {
     if (!attachment) return
 
     if (parsed.type === 'AUTH' && typeof parsed.hostKey === 'string') {
-      const result = await this.host(attachment.code, parsed.hostKey)
-      if (result.status === 200) {
-        ws.serializeAttachment({ code: attachment.code, role: 'host' } satisfies Attachment)
-        ws.send(JSON.stringify({ type: 'HOST', payload: result.body }))
-      } else {
-        ws.send(JSON.stringify({ type: 'AUTH_FAILED' }))
+      try {
+        const result = await this.host(attachment.code, parsed.hostKey)
+        if (result.status === 200) {
+          ws.serializeAttachment({ code: attachment.code, role: 'host' } satisfies Attachment)
+          ws.send(JSON.stringify({ type: 'HOST', payload: result.body }))
+        } else {
+          ws.send(JSON.stringify({ type: 'AUTH_FAILED' }))
+        }
+      } catch {
+        try {
+          ws.send(JSON.stringify({ type: 'AUTH_FAILED' }))
+        } catch {
+          // socket already closed
+        }
       }
       return
     }
 
     if (parsed.type === 'RESYNC') {
-      if (attachment.role === 'host') {
-        const loaded = await this.serial(() => this.load(attachment.code))
-        if (loaded) ws.send(JSON.stringify({ type: 'HOST', payload: toHostSnapshot(loaded.state) }))
-      } else {
-        const snapshot = await this.viewer(attachment.code)
-        if (snapshot) ws.send(JSON.stringify({ type: 'VIEWER', payload: snapshot }))
+      try {
+        if (attachment.role === 'host') {
+          const loaded = await this.serial(() => this.load(attachment.code))
+          if (loaded) ws.send(JSON.stringify({ type: 'HOST', payload: toHostSnapshot(loaded.state) }))
+        } else {
+          const snapshot = await this.viewer(attachment.code)
+          if (snapshot) ws.send(JSON.stringify({ type: 'VIEWER', payload: snapshot }))
+        }
+      } catch {
+        // a failed resync is retried by the client's next RESYNC
       }
     }
   }

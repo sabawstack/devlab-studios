@@ -32,8 +32,9 @@ export const VERIFICATION_MESSAGES = {
  *   again -- leaving a form that can never produce a token and therefore can
  *   never be submitted. Including it in the dependency list is what makes the
  *   widget render the moment its container actually appears.
+ * @param {string} [action]  Turnstile action; must match the server's expectedAction.
  */
-export function useTurnstile(siteKey, enabled = true) {
+export function useTurnstile(siteKey, enabled = true, action = TURNSTILE_ACTION) {
   const containerRef = useRef(null)
   const widgetIdRef = useRef(null)
   const [token, setToken] = useState('')
@@ -49,7 +50,7 @@ export function useTurnstile(siteKey, enabled = true) {
       try {
         widgetIdRef.current = window.turnstile.render(containerRef.current, {
           sitekey: siteKey,
-          action: TURNSTILE_ACTION,
+          action,
           theme: 'light',
           size: 'flexible',
           appearance: 'always',
@@ -109,7 +110,7 @@ export function useTurnstile(siteKey, enabled = true) {
         widgetIdRef.current = null
       }
     }
-  }, [siteKey, enabled])
+  }, [siteKey, enabled, action])
 
   function reset() {
     setToken('')

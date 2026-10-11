@@ -33,6 +33,10 @@ const PICKLEBALL_PUBLIC_ROUTES = new Set([
 // Set, so this is a prefix check instead; the route's own handler still
 // does the real authorization (public_view_enabled + revoked-code 404).
 const PICKLEBALL_PUBLIC_STATE_PREFIX = '/api/pickleball/public/'
+// Free open play (spec 2026-10-11) has no login at all: its routes authorize
+// with the session's host key inside the Durable Object, so the operator
+// session gate below must never run for them.
+const PICKLEBALL_OPEN_PREFIX = '/api/pickleball/open/'
 // The org-invite accept route requires only a valid Google-authenticated
 // session (via requireGoogleIdentity), never org membership -- by
 // definition, the caller has no membership anywhere yet. It cannot go
@@ -113,6 +117,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     url.pathname.startsWith(PICKLEBALL_API_PREFIX) &&
     !PICKLEBALL_PUBLIC_ROUTES.has(url.pathname) &&
     !url.pathname.startsWith(PICKLEBALL_PUBLIC_STATE_PREFIX) &&
+    !url.pathname.startsWith(PICKLEBALL_OPEN_PREFIX) &&
     !url.pathname.startsWith(PICKLEBALL_ORG_INVITE_ACCEPT_PREFIX) &&
     !url.pathname.startsWith(PICKLEBALL_PLATFORM_ADMIN_PREFIX)
   ) {
