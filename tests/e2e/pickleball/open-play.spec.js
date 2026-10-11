@@ -49,6 +49,25 @@ test.describe('open play API', () => {
     expect(missing.status()).toBe(403)
   })
 
+  test('a wrong-key flood from one address does not lock the host out', async ({ request }) => {
+    const { code, hostKey } = await createSession(request)
+    const attacker = freshIp()
+    const flood = await Promise.all(Array.from({ length: 125 }, () =>
+      request.post(`/api/pickleball/open/s/${code}/commands`, {
+        headers: { 'X-Host-Key': 'wrong-key-wrong-key', 'cf-connecting-ip': attacker },
+        data: { idempotencyKey: crypto.randomUUID(), command: { type: 'END_SESSION' } },
+      })))
+    const statuses = flood.map((r) => r.status())
+    expect(statuses.every((s) => s === 403 || s === 429)).toBe(true)
+    expect(statuses).toContain(429)
+
+    const host = await request.post(`/api/pickleball/open/s/${code}/commands`, {
+      headers: { 'X-Host-Key': hostKey, 'cf-connecting-ip': freshIp() },
+      data: { idempotencyKey: crypto.randomUUID(), command: { type: 'END_SESSION' } },
+    })
+    expect(host.status()).toBe(200)
+  })
+
   test('a game is saved once: replay returns the same answer, a second save is 409', async ({ request }) => {
     const { code, hostKey } = await createSession(request)
     const host = await (await request.get(`/api/pickleball/open/s/${code}/host`, { headers: { 'X-Host-Key': hostKey } })).json()

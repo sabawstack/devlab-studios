@@ -15,16 +15,33 @@ import {
   deleteOpenSession, findIdempotentResponse, loadOpenSession, persistDiff,
 } from '../../repositories/pickleball/open/openSessions'
 
-export type DoResult<T> = { status: number; body: T | { error: string } }
+export type DoResult<T> = { status: number; body: T | { error: string }; retryAfterSeconds?: number }
 type Loaded = { state: OpenSessionState; hostKeyHash: string }
 type Attachment = { code: string; role: 'viewer' | 'host' }
 
 const IDEMPOTENCY_TTL_MS = 10 * 60_000
 const GONE = 4404
+// Spec §10: 120 commands per minute per session. Counted here, after the host
+// key is checked, so strangers holding only the public code cannot use up the
+// host's allowance (they are limited per IP at the route instead). In memory is
+// enough: one object serves the whole session, and a flood keeps it awake.
+const COMMAND_LIMIT = 120
+const COMMAND_WINDOW_MS = 60_000
 
 export class OpenSessionDO extends DurableObject<Env> {
   private loaded: Loaded | null = null
   private chain: Promise<unknown> = Promise.resolve()
+  private commandTimes: number[] = []
+
+  /** Counts one authorized command; returns the seconds to wait when over the limit. */
+  private commandRetryAfter(nowMs: number): number {
+    this.commandTimes = this.commandTimes.filter((t) => t > nowMs - COMMAND_WINDOW_MS)
+    if (this.commandTimes.length >= COMMAND_LIMIT) {
+      return Math.max(1, Math.ceil((this.commandTimes[0] + COMMAND_WINDOW_MS - nowMs) / 1000))
+    }
+    this.commandTimes = [...this.commandTimes, nowMs]
+    return 0
+  }
 
   /** Runs fn after every earlier call has settled: one command at a time, even across awaits. */
   private serial<T>(fn: () => Promise<T>): Promise<T> {
@@ -74,9 +91,17 @@ export class OpenSessionDO extends DurableObject<Env> {
       if (!parsed.success) return { status: 400, body: { error: 'That request was not understood.' } }
       const auth = await this.authorized(code, hostKey)
       if (!('state' in auth)) return auth
+      const retryAfterSeconds = this.commandRetryAfter(Date.now())
+      if (retryAfterSeconds > 0) return { status: 429, body: { error: 'Slow down a little and try again.' }, retryAfterSeconds }
       const db = this.env.PICKLEBALL_DB
       const prior = await findIdempotentResponse(db, auth.state.id, parsed.data.idempotencyKey)
-      if (prior) return JSON.parse(prior) as DoResult<{ version: number; host: HostSnapshot }>
+      if (prior) {
+        // Only {status, version} is stored (a host snapshot near the caps would crowd D1's row limit);
+        // the replay answers with the session as it is now, which is what the caller needs anyway.
+        const stored = JSON.parse(prior) as { status: number; version?: number; body?: { version?: number } }
+        const version = stored.version ?? stored.body?.version ?? auth.state.version
+        return { status: stored.status, body: { version, host: toHostSnapshot(auth.state) } }
+      }
 
       const now = new Date().toISOString()
       const ctx = { now, newId: () => crypto.randomUUID() }
@@ -87,7 +112,7 @@ export class OpenSessionDO extends DurableObject<Env> {
       const response: DoResult<{ version: number; host: HostSnapshot }> = { status: 200, body: { version: next.version, host: toHostSnapshot(next) } }
       await persistDiff(db, auth.state, next, {
         key: parsed.data.idempotencyKey,
-        responseJson: JSON.stringify(response),
+        responseJson: JSON.stringify({ status: 200, version: next.version }),
         now,
         cutoff: new Date(Date.parse(now) - IDEMPOTENCY_TTL_MS).toISOString(),
       })

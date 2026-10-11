@@ -1,22 +1,22 @@
 import type { APIRoute } from 'astro'
 import { getEnv } from '../../../../../../lib/env'
-import { codeFrom, doResponse, hostKeyFrom, notFound, openErrorResponse, openSessionStub } from '../../../../../../worker/pickleball/open/routeHelpers'
-import { checkRateLimit, rateLimitedResponse } from '../../../../../../worker/rateLimit.js'
+import { codeFrom, doResponse, hostIpLimited, hostKeyFrom, notFound, openErrorResponse, openSessionStub } from '../../../../../../worker/pickleball/open/routeHelpers'
 import { jsonResponse } from '../../../../../../worker/utils/responses.js'
 
 export const POST: APIRoute = async ({ request, params }) => {
   const env = getEnv()
   try {
+    const limited = await hostIpLimited(env, request)
+    if (limited) {
+      await request.arrayBuffer().catch(() => {})
+      return limited
+    }
     const code = codeFrom(params)
     if (!code) {
       await request.arrayBuffer().catch(() => {})
       return notFound()
     }
-    const rate = await checkRateLimit(env, 'open-commands', code, { limit: 120, windowMs: 60_000 })
-    if (rate.limited) {
-      await request.arrayBuffer().catch(() => {})
-      return rateLimitedResponse('Slow down a little and try again.', rate.retryAfterSeconds)
-    }
+    // The 120-per-minute-per-session limit is counted in the DO after the host key checks out.
     const body = await request.json().catch(() => null)
     if (body === null) return jsonResponse({ error: 'That request was not understood.' }, 400)
     return doResponse(await openSessionStub(env, code).command(code, hostKeyFrom(request), body))

@@ -1,6 +1,18 @@
 import { normalizePublicCode } from '../../../lib/pickleball/open/codes'
+import { checkRateLimit, clientIp, rateLimitedResponse } from '../../rateLimit.js'
 import { jsonResponse } from '../../utils/responses.js'
 import type { DoResult } from './OpenSessionDO'
+
+/**
+ * Per-IP limit on the host routes, checked before the host key is. The
+ * per-session command limit is counted inside the DO only once the key is
+ * valid, so this is what stops one address hammering a code it found on a QR
+ * board. Returns the 429 to send, or null. The caller drains any body first.
+ */
+export async function hostIpLimited(env: Env, request: Request): Promise<Response | null> {
+  const rate = await checkRateLimit(env, 'open-host-ip', clientIp(request), { limit: 120, windowMs: 60_000 })
+  return rate.limited ? rateLimitedResponse('Too many requests. Try again shortly.', rate.retryAfterSeconds) : null
+}
 
 export function openSessionStub(env: Env, code: string) {
   return env.OPEN_SESSION.get(env.OPEN_SESSION.idFromName(code))
@@ -16,6 +28,7 @@ export function hostKeyFrom(request: Request): string | null {
 }
 
 export function doResponse<T>(result: DoResult<T>): Response {
+  if (result.status === 429) return rateLimitedResponse('Slow down a little and try again.', result.retryAfterSeconds ?? 0)
   return jsonResponse(result.body, result.status)
 }
 
