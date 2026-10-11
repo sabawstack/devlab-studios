@@ -65,7 +65,7 @@ function byWait(a: QueueEntry, b: QueueEntry): number {
   return Date.parse(a.player.waitingSince) - Date.parse(b.player.waitingSince) || a.player.position - b.player.position
 }
 
-/** Per-session lookups built once so ranking a large roster stays linear in matches. */
+/** Per-session lookups built once per call; ranking is then O(players x matches) with small constants. */
 function buildIndex(state: OpenSessionState) {
   const startedTimes: number[] = []
   const finishedGames = new Map<string, number>()
@@ -76,7 +76,11 @@ function buildIndex(state: OpenSessionState) {
     if (m.status === 'PROPOSED') continue
     const t = Date.parse(m.proposedAt)
     startedTimes.push(t)
-    for (const id of ids) startedByPlayer.set(id, [...(startedByPlayer.get(id) ?? []), t])
+    for (const id of ids) {
+      const list = startedByPlayer.get(id) ?? []
+      list.push(t)
+      startedByPlayer.set(id, list)
+    }
   }
   return { startedTimes, finishedGames, startedByPlayer }
 }

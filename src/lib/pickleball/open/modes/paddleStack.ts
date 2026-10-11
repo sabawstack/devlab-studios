@@ -12,16 +12,21 @@ const SPLITS: ReadonlyArray<readonly [number, number, number, number]> = [
   [0, 3, 1, 2],
 ]
 
-/** Chooses the split of four with the fewest repeated partners, then opponents. */
+/**
+ * Chooses the split of four with the fewest repeated partners; opponent repeats only break ties
+ * (strict lexicographic, so a repeated partnership never beats a split that avoids it).
+ */
 export function splitTeams(four: readonly string[], history: PartnerHistory): Proposal {
   const scored = SPLITS.map(([a, b, c, d]) => {
     const teamA: Team = [four[a], four[b]]
     const teamB: Team = [four[c], four[d]]
     const partnerCost = (history.partners.get(pairKey(...teamA)) ?? 0) + (history.partners.get(pairKey(...teamB)) ?? 0)
     const opponentCost = teamA.reduce((sum, x) => sum + teamB.reduce((s, y) => s + (history.opponents.get(pairKey(x, y)) ?? 0), 0), 0)
-    return { proposal: { teamA, teamB }, cost: partnerCost * 100 + opponentCost }
+    return { proposal: { teamA, teamB }, partnerCost, opponentCost }
   })
-  return scored.reduce((best, next) => (next.cost < best.cost ? next : best)).proposal
+  return scored.reduce((best, next) => (
+    next.partnerCost < best.partnerCost || (next.partnerCost === best.partnerCost && next.opponentCost < best.opponentCost) ? next : best
+  )).proposal
 }
 
 function sameSet(a: readonly string[], b: readonly string[]): boolean {

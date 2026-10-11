@@ -17,6 +17,19 @@ describe('splitTeams', () => {
     expect(teamA.join('') === 'AB' || teamB.join('') === 'AB').toBe(false)
     expect(teamA.join('') === 'CD' || teamB.join('') === 'CD').toBe(false)
   })
+
+  it('prefers the only partner-free split even when it has far more opponent repeats', () => {
+    const history = pairingHistory([
+      finished('p1', ['A', 'B'], ['X', 'Y'], 'A', 11, 5),
+      finished('p2', ['C', 'D'], ['X', 'Y'], 'A', 11, 5),
+      finished('p3', ['A', 'C'], ['X', 'Y'], 'A', 11, 5),
+      ...Array.from({ length: 150 }, (_, i) => finished(`o${i}`, ['A', 'X'], ['B', 'Y'], 'A', 11, 5)),
+      ...Array.from({ length: 150 }, (_, i) => finished(`q${i}`, ['D', 'X'], ['C', 'Y'], 'A', 11, 5)),
+    ])
+    const { teamA, teamB } = splitTeams(['A', 'B', 'C', 'D'], history)
+    const teams = [teamA.join(''), teamB.join('')].map((t) => t.split('').sort().join('')).sort()
+    expect(teams).toEqual(['AD', 'BC'])
+  })
 })
 
 describe('proposeForCourt / fillProposals', () => {
