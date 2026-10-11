@@ -21,6 +21,16 @@ describe('toViewerSnapshot', () => {
     expect(json).not.toMatch(/hash|hostKey/i)
   })
 
+  it('carries exactly the allowlisted top-level and settings keys, nothing else', () => {
+    const viewer = toViewerSnapshot(state())
+    expect(Object.keys(viewer).sort()).toEqual([
+      'code', 'courts', 'expiresAt', 'fairness', 'hostDisplayName', 'name', 'onBreak',
+      'recentResults', 'roster', 'settings', 'standings', 'status', 'version', 'waiting',
+    ])
+    expect(Object.keys(viewer.settings).sort()).toEqual(['mode', 'selfCheckIn', 'target'])
+    expect(Object.keys(viewer.fairness).sort()).toEqual(['longestWait', 'repeatedPartners', 'sitOutSpread'])
+  })
+
   it('shows names on up-next courts, waiting-for-players and off courts', () => {
     const viewer = toViewerSnapshot(state())
     expect(viewer.courts.map((c) => c.state)).toEqual(['UP_NEXT', 'WAITING_FOR_PLAYERS', 'OFF'])

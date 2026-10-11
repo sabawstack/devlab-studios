@@ -105,3 +105,25 @@ export function queueOrder(state: OpenSessionState): QueueEntry[] {
       return a.games - b.games || byWait(a, b)
     })
 }
+
+export interface FairnessSummary {
+  /** Spec §5.5 "sit-out spread": most minus fewest games among active players (on break or left excluded). */
+  sitOutSpread: number
+  /** The available player waiting longest, if anyone is waiting. */
+  longestWait: { playerId: string; name: string; since: string; rounds: number } | null
+  /** Partnerships played more than once, counting every repeat (A+B three times counts 2). */
+  repeatedPartners: number
+}
+
+export function fairnessSummary(state: OpenSessionState): FairnessSummary {
+  const games = state.players.filter((p) => p.status === 'ACTIVE').map((p) => gamesPlayed(p, state.matches))
+  const longest = [...queueOrder(state)].sort(byWait)[0]
+  const repeats = [...pairingHistory(state.matches).partners.values()].reduce((sum, n) => sum + Math.max(0, n - 1), 0)
+  return {
+    sitOutSpread: games.length ? Math.max(...games) - Math.min(...games) : 0,
+    longestWait: longest
+      ? { playerId: longest.player.id, name: longest.player.name, since: longest.player.waitingSince, rounds: longest.satOut }
+      : null,
+    repeatedPartners: repeats,
+  }
+}
