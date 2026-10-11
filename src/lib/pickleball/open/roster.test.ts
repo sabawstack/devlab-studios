@@ -11,6 +11,21 @@ describe('cleanName', () => {
     expect(cleanName('2Pac')).toBe('2Pac')
   })
 
+  it('strips skin-tone modifiers and flag letters', () => {
+    expect(cleanName('Ana 👍🏽')).toBe('Ana')
+    expect(cleanName('Ana 🇵🇭')).toBe('Ana')
+  })
+
+  it('strips invisible format characters', () => {
+    expect(cleanName('Ana​')).toBe('Ana')
+    expect(cleanName('Ana‎')).toBe('Ana')
+    expect(cleanName('﻿Ana')).toBe('Ana')
+  })
+
+  it('turns tabs into spaces rather than joining the words', () => {
+    expect(cleanName('A\tB')).toBe('A B')
+  })
+
   it('caps names at 40 characters', () => {
     expect(cleanName('x'.repeat(60))).toHaveLength(40)
   })
@@ -51,5 +66,19 @@ describe('parseRosterCsv', () => {
 
   it('reports duplicates', () => {
     expect(parseRosterCsv('Ana\nana').duplicates).toEqual(['ana'])
+  })
+
+  it('treats a leading byte-order mark as part of the header, not a player', () => {
+    expect(parseRosterCsv('﻿name,skill\nAna,4').entries).toEqual([{ name: 'Ana', skill: 4, duprId: null }])
+  })
+})
+
+describe('parseRoster invisible and emoji duplicates', () => {
+  it('reports a skin-toned emoji variant as a duplicate', () => {
+    expect(parseRoster('Ana\nAna 👍🏽').duplicates).toHaveLength(1)
+  })
+
+  it('reports a name differing only by an invisible mark as a duplicate', () => {
+    expect(parseRoster('Ana\nAna‎').duplicates).toHaveLength(1)
   })
 })

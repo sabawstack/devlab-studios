@@ -2,9 +2,14 @@ import { LIMITS } from './types'
 
 // "1." "12)" "3 -" "-" "*" "•" "·" "–" "—" at the start of a line.
 const LIST_MARKER = /^\s*(?:\d+\s*[.):-]|[-*•·–—])\s*/u
-const PICTOGRAPHIC = /[\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{20E3}]/gu
+// Emoji residue: skin-tone modifiers, flag halves, tag sequences, joiners and variation selectors.
+const PICTOGRAPHIC = /[\p{Extended_Pictographic}\p{Emoji_Modifier}\p{Regional_Indicator}\u{E0020}-\u{E007F}\u{FE0F}\u{200D}\u{20E3}]/gu
+// Invisible format characters: BOM, zero-width space, LRM/RLM, bidi controls.
+const FORMAT = /\p{Cf}/gu
 // eslint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u001F\u007F]/g
+const TAB = /\t/g
+const BOM = /^﻿/
 const DUPR_ID = /^[A-Z0-9]{6}$/
 
 export interface RosterEntry {
@@ -15,8 +20,10 @@ export interface RosterEntry {
 
 export function cleanName(raw: string): string {
   return raw
+    .replace(TAB, ' ')
     .replace(LIST_MARKER, '')
     .replace(PICTOGRAPHIC, '')
+    .replace(FORMAT, '')
     .replace(CONTROL, '')
     .replace(/\s+/g, ' ')
     .trim()
@@ -61,7 +68,7 @@ export function parseRosterCsv(
   const duplicates: string[] = []
   const warnings: string[] = []
 
-  text.split(/\r?\n/).forEach((line, index) => {
+  text.replace(BOM, '').split(/\r?\n/).forEach((line, index) => {
     if (!line.trim()) return
     const cells = line.split(',').map(unquote)
     if (index === 0 && cells[0]?.toLowerCase() === 'name') return
