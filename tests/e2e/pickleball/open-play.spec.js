@@ -755,14 +755,13 @@ test.describe('TV board', () => {
         await page.setViewportSize({ width, height })
         await page.goto(`/pickleball/s/${code}/tv`)
         await expect(page.getByTestId('tv-court')).toHaveCount(courtCount)
-        await page.waitForTimeout(600)
-        const overflowing = await page.evaluate(() => [...document.querySelectorAll('body *')]
+        // Fitting is measured after layout and again when the web font lands, so wait for it to settle.
+        await page.evaluate(() => document.fonts.ready)
+        await expect.poll(() => page.getByTestId('tv-court').evaluateAll((cards) => cards.filter((el) => el.scrollHeight > el.clientHeight + 1).length)).toBe(0)
+        await expect.poll(() => page.evaluate(() => [...document.querySelectorAll('body *')]
           .filter((el) => el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0)
-          .map((el) => `${el.tagName}.${String(el.className).slice(0, 40)}`))
-        expect(overflowing).toEqual([])
+          .map((el) => `${el.tagName}.${String(el.className).slice(0, 40)}`))).toEqual([])
         expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true)
-        const spill = await page.getByTestId('tv-court').evaluateAll((cards) => cards.filter((el) => el.scrollHeight > el.clientHeight + 1).length)
-        expect(spill).toBe(0)
       })
     }
   }

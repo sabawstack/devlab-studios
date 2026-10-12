@@ -48,9 +48,15 @@ export default function TvCourt({ court }) {
     }
     const observer = new ResizeObserver(refit)
     observer.observe(card.current)
+    // The web font can arrive after the first fit; its wider glyphs would spill
+    // a card sized for the fallback font, and the card's own box doesn't change.
+    const fonts = document.fonts
+    fonts?.ready.then(refit)
+    fonts?.addEventListener('loadingdone', refit)
     return () => {
       cancelAnimationFrame(frame)
       observer.disconnect()
+      fonts?.removeEventListener('loadingdone', refit)
     }
   }, [signature])
   const live = court.state === 'PLAYING'
