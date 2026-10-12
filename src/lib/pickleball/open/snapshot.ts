@@ -4,6 +4,9 @@
 import { busyPlayerIds, fairnessSummary, gamesPlayed, queueOrder, roundsSatOut, type FairnessSummary } from './fairness'
 import { proposalBlocker } from './propose'
 import { computeStandings, type StandingRow } from './standings'
+import { tournamentCourtNote } from './tournament/courts'
+import { fixtureLabel } from './tournament/labels'
+import { toTournamentView, type TournamentView } from './tournament/view'
 import type { CaptainRecord, OpenMatch, OpenSessionState, Side, StackingMode } from './types'
 
 export interface ViewerCourt {
@@ -13,10 +16,13 @@ export interface ViewerCourt {
   teamA: string[]
   teamB: string[]
   startedAt: string | null
+  /** The tournament game on this court ("Semi-final 1"); null in open play. */
+  fixtureLabel: string | null
 }
 
 export interface ViewerSnapshot {
   code: string
+  kind: OpenSessionState['kind']
   name: string
   hostDisplayName: string
   status: 'ACTIVE' | 'ENDED'
@@ -30,6 +36,8 @@ export interface ViewerSnapshot {
   standings: StandingRow[]
   fairness: FairnessSummary
   recentResults: Array<{ matchId: string; courtLabel: string; teamA: string[]; teamB: string[]; scoreA: number | null; scoreB: number | null; winner: Side; finishedAt: string }>
+  /** Pairs, the draw, pool and overall standings (spec §6.7, §7); null in open play. */
+  tournament: TournamentView | null
 }
 
 export interface HostPlayer {
@@ -50,8 +58,10 @@ export interface HostCourt {
   position: number
   enabled: boolean
   match: OpenMatch | null
-  /** Why a free court has no proposal (a keep-together/apart rule), else null. */
+  /** Why a free court has no proposal (a keep-together/apart rule, or where the tournament is), else null. */
   blocked: string | null
+  /** The tournament game on this court ("Semi-final 1"); null in open play. */
+  fixtureLabel: string | null
 }
 
 export interface HostCaptain {
@@ -95,6 +105,12 @@ function namesOf(state: OpenSessionState, ids: readonly string[]): string[] {
   return ids.map((id) => state.players.find((p) => p.id === id)?.name ?? '—')
 }
 
+function labelFor(state: OpenSessionState, match: OpenMatch | null): string | null {
+  const t = state.tournament
+  const fixture = t && match?.fixtureId ? t.fixtures.find((f) => f.id === match.fixtureId) : undefined
+  return t && fixture ? fixtureLabel(t, fixture) : null
+}
+
 function liveMatch(state: OpenSessionState, courtId: string): OpenMatch | null {
   return state.matches.find((m) => m.courtId === courtId && m.status === 'IN_PROGRESS')
     ?? state.matches.find((m) => m.courtId === courtId && m.status === 'PROPOSED')
@@ -105,6 +121,7 @@ export function toViewerSnapshot(state: OpenSessionState): ViewerSnapshot {
   const courts = [...state.courts].sort((a, b) => a.position - b.position)
   return {
     code: state.publicCode,
+    kind: state.kind,
     name: state.name,
     hostDisplayName: state.hostDisplayName,
     status: state.status,
@@ -118,6 +135,7 @@ export function toViewerSnapshot(state: OpenSessionState): ViewerSnapshot {
         id: c.id, label: c.label, state: courtState,
         teamA: match ? namesOf(state, match.teamA) : [], teamB: match ? namesOf(state, match.teamB) : [],
         startedAt: match?.startedAt ?? null,
+        fixtureLabel: labelFor(state, match),
       }
     }),
     waiting: queueOrder(state).map((e) => ({ id: e.player.id, name: e.player.name })),
@@ -134,6 +152,7 @@ export function toViewerSnapshot(state: OpenSessionState): ViewerSnapshot {
         teamA: namesOf(state, m.teamA), teamB: namesOf(state, m.teamB),
         scoreA: m.scoreA, scoreB: m.scoreB, winner: m.winner, finishedAt: m.finishedAt,
       })),
+    tournament: toTournamentView(state),
   }
 }
 
@@ -147,10 +166,13 @@ export interface SnapshotParts {
 }
 
 export function hostCourts(state: OpenSessionState): HostCourt[] {
-  const blocker = proposalBlocker(state)
+  const blocker = state.kind === 'TOURNAMENT' ? tournamentCourtNote(state) : proposalBlocker(state)
   return [...state.courts].sort((a, b) => a.position - b.position).map((c) => {
     const match = c.enabled ? liveMatch(state, c.id) : null
-    return { id: c.id, label: c.label, position: c.position, enabled: c.enabled, match, blocked: c.enabled && !match ? blocker : null }
+    return {
+      id: c.id, label: c.label, position: c.position, enabled: c.enabled, match,
+      blocked: c.enabled && !match ? blocker : null, fixtureLabel: labelFor(state, match),
+    }
   })
 }
 
@@ -193,8 +215,11 @@ export function toCaptainSnapshot(state: OpenSessionState, captain: CaptainRecor
     viewer: parts.viewer ?? toViewerSnapshot(state),
     captain: { id: captain.id, label: captain.label, courtId: captain.courtId },
     court: court
-      ? { id: court.id, label: court.label, position: court.position, enabled: court.enabled, match: court.match ? captainMatch(court.match) : null, blocked: court.blocked }
-      : { id: captain.courtId, label: '', position: 0, enabled: false, match: null, blocked: null },
+      ? {
+          id: court.id, label: court.label, position: court.position, enabled: court.enabled,
+          match: court.match ? captainMatch(court.match) : null, blocked: court.blocked, fixtureLabel: court.fixtureLabel,
+        }
+      : { id: captain.courtId, label: '', position: 0, enabled: false, match: null, blocked: null, fixtureLabel: null },
     players: captainPlayers(state),
     finished: state.matches
       .filter((m) => m.status === 'FINISHED' && m.courtId === captain.courtId)

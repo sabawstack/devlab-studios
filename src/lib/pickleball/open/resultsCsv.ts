@@ -1,18 +1,14 @@
+import { csvText as text } from './csv'
 import { computeStandings } from './standings'
+import { tournamentResultsCsv } from './tournament/resultsCsv'
 import type { OpenSessionState } from './types'
-
-// A cell opening with = + - @ is executed as a formula by Excel and Sheets.
-// Player names are user input, so text cells are prefixed with ' to defuse that.
-function text(value: string): string {
-  const safe = /^[=+\-@]/.test(value) ? `'${value}` : value
-  return /[",\r\n]/.test(safe) || safe !== value ? `"${safe.replace(/"/g, '""')}"` : safe
-}
 
 function num(value: number | null, digits = 0): string {
   return value === null ? '' : value.toFixed(digits)
 }
 
 export function resultsCsv(state: OpenSessionState): string {
+  if (state.kind === 'TOURNAMENT') return tournamentResultsCsv(state)
   const name = (id: string) => state.players.find((p) => p.id === id)?.name ?? ''
   const court = (id: string) => state.courts.find((c) => c.id === id)?.label ?? ''
   const games = state.matches

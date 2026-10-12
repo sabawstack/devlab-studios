@@ -120,6 +120,7 @@ decided against that surface specifically:
 - Open play engine: "balanced teams" stacking splits each four so summed skill is as even as possible (entered skill, else today's win rate, else neutral), with repeated partners breaking ties. All four modes share one set of names and one-line explanations.
 - Tournament results fill later rounds through the existing bracket advancement (pools feed the bracket once complete; double elimination drops a first loss to the losers bracket). Undoing or changing a result that a started game depends on is refused, naming that game. Pair standings per pool and overall: wins, losses, point difference, head-to-head.
 - Tournament commands (generate, edit the draft, start, substitute, swap opponents) go through the same command endpoint, Durable Object and idempotency as open play. Whichever court frees next gets the next playable game of the draw; a pair with a player on a break waits and the court says so. Open-play-only commands are refused in a tournament.
+- The live board, captain and host snapshots carry an allowlisted tournament view: pairs, the draw with what each empty slot waits for, pool and overall pair standings, the champion, and the game on each court. Results CSV for a tournament lists every game with its stage and the pair standings.
 
 ### Changed
 - Docs: architecture and runbook cover Phase 2 open play (stacking modes, pair rules, captain links, self check-in, TV board, migration 0017).

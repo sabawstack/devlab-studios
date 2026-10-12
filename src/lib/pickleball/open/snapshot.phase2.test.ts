@@ -78,7 +78,7 @@ describe('Phase 2 snapshots', () => {
     const matchKeys = ['courtId', 'finishedAt', 'id', 'proposedAt', 'scoreA', 'scoreB', 'seq', 'startedAt', 'status', 'teamA', 'teamB', 'winner']
     expect(snap.court.match).not.toBeNull()
     expect(Object.keys(snap.court.match ?? {}).sort()).toEqual(matchKeys)
-    expect(Object.keys(snap.court).sort()).toEqual(['blocked', 'enabled', 'id', 'label', 'match', 'position'])
+    expect(Object.keys(snap.court).sort()).toEqual(['blocked', 'enabled', 'fixtureLabel', 'id', 'label', 'match', 'position'])
     expect(snap.finished.length).toBeGreaterThan(0)
     for (const m of snap.finished) expect(Object.keys(m).sort()).toEqual(matchKeys)
     expect(JSON.stringify(snap)).not.toContain('recordedBy')
