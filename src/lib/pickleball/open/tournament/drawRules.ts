@@ -25,7 +25,6 @@ function checkPlayers(t: TournamentState, players: readonly OpenPlayer[]): strin
     for (const id of entrant.playerIds) {
       const player = players.find((p) => p.id === id)
       if (!player) return 'That player is not in this session.'
-      if (player.status === 'LEFT') return `${player.name} has left the session.`
       if (seen.has(id)) return `${player.name} would be in two pairs.`
       seen.set(id, entrant.id)
     }

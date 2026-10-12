@@ -140,6 +140,7 @@ function substitute(t: TournamentState, edit: Extract<RunningEdit, { kind: 'SUBS
   if (!entrant.playerIds.includes(edit.outPlayerId)) return refuse('That player is not in this pair.')
   const incoming = players.find((p) => p.id === edit.inPlayerId)
   if (!incoming) return refuse('Player not found.')
+  if (incoming.id === edit.outPlayerId) return refuse('Pick a different player.')
   if (incoming.status === 'LEFT') return refuse(`${incoming.name} has left the session.`)
   const taken = t.entrants.find((e) => e.playerIds.includes(incoming.id))
   if (taken) return refuse(`${incoming.name} already plays in ${pairName(taken, players)}.`)

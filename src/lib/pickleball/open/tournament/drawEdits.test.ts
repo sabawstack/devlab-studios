@@ -164,3 +164,40 @@ describe('running edits', () => {
     expect(applyRunningEdit({ ...t, phase: 'FINISHED' }, edit, roster(9), [])).toEqual({ ok: false, reason: 'The tournament is over.' })
   })
 })
+
+describe('edit hygiene', () => {
+  const left = (players: OpenPlayer[], id: string) => players.map((p) => (p.id === id ? { ...p, status: 'LEFT' as const } : p))
+
+  it('does not reject the whole draw because an unrelated pair holds a player who left', () => {
+    const t = draft('POOL_TO_BRACKET', 16)
+    const players = left(roster(16), 'p16')
+    expect(applyDraftEdit(t, { kind: 'SWAP_PAIRS', entrantIds: [seed(t, 1).id, seed(t, 2).id] }, players, ids('x')).ok).toBe(true)
+    const mover = t.entrants.find((e) => e.poolLabel === 'A')!
+    expect(applyDraftEdit(t, { kind: 'MOVE_PAIR', entrantId: mover.id, poolLabel: 'B' }, players, ids('x')).ok).toBe(true)
+    const rr = { ...draft('ROUND_ROBIN', 9), phase: 'RUNNING' as const }
+    const result = applyRunningEdit(rr, { kind: 'SUBSTITUTE', entrantId: seed(rr, 4).id, outPlayerId: 'p8', inPlayerId: 'p9' }, left(roster(9), 'p8'), [])
+    expect(result.ok && result.tournament.entrants[3].playerIds).toEqual(['p7', 'p9'])
+  })
+
+  it('refuses substituting a player for themselves', () => {
+    const t = { ...draft('ROUND_ROBIN', 9), phase: 'RUNNING' as const }
+    expect(applyRunningEdit(t, { kind: 'SUBSTITUTE', entrantId: seed(t, 1).id, outPlayerId: 'p2', inPlayerId: 'p2' }, roster(9), []))
+      .toEqual({ ok: false, reason: 'Pick a different player.' })
+  })
+
+  it('leaves its input unchanged', () => {
+    const t = draft('POOL_TO_BRACKET', 16)
+    const before = structuredClone(t)
+    applyDraftEdit(t, { kind: 'SWAP_PAIRS', entrantIds: [seed(t, 1).id, seed(t, 2).id] }, roster(16), ids('x'))
+    applyDraftEdit(t, { kind: 'SWAP_PLAYERS', playerIds: ['p1', 'p3'] }, roster(16), ids('x'))
+    applyDraftEdit(t, { kind: 'MOVE_PAIR', entrantId: t.entrants[0].id, poolLabel: 'B' }, roster(16), ids('x'))
+    expect(t).toEqual(before)
+  })
+
+  it('refuses SWAP_PAIRS outside the draft, and any edit before the draw exists', () => {
+    const t = draft('ROUND_ROBIN', 8)
+    const edit = { kind: 'SWAP_PAIRS' as const, entrantIds: [seed(t, 1).id, seed(t, 2).id] as const }
+    expect(applyDraftEdit({ ...t, phase: 'RUNNING' }, edit, roster(8), ids('x')).ok).toBe(false)
+    expect(applyDraftEdit({ ...t, phase: 'SETUP' }, edit, roster(8), ids('x'))).toEqual({ ok: false, reason: 'Generate the draw first.' })
+  })
+})
