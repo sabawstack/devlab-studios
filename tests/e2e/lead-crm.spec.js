@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { FLAG_KEYS } from '../../src/lead-engine/config/flags.js'
+import { ADMIN_STORAGE_STATE } from './support/adminSession.js'
 
 /**
  * Lead CRM end-to-end checks.
@@ -22,10 +23,6 @@ import { FLAG_KEYS } from '../../src/lead-engine/config/flags.js'
  * which is exactly the state a deploy of this branch produces.
  */
 
-const ADMIN_EMAIL = 'smoke-test@devlabstudios.com'
-const ADMIN_PASSWORD = 'smoke-test-password-123'
-const SESSION_COOKIE = 'devlab_admin_session'
-
 /** Every Lead CRM endpoint, as an unauthenticated caller would reach them. */
 const LEAD_CRM_ENDPOINTS = [
   '/api/admin/lead-crm/dashboard',
@@ -41,25 +38,14 @@ const LEAD_CRM_ENDPOINTS = [
   '/api/admin/lead-crm/jobs',
 ]
 
-let cachedSessionCookie = null
-
-/** One sign-in per worker — /api/admin/login is rate limited, deliberately. */
-async function login(page) {
-  if (cachedSessionCookie) {
-    await page.context().addCookies([cachedSessionCookie])
-    await page.goto('/admin')
-    await expect(page.getByRole('button', { name: /log ?out/i })).toBeVisible({ timeout: 10_000 })
-    return
-  }
-
+/**
+ * The admin-auth setup project (tests/e2e/admin.setup.js) signs in ONCE per run;
+ * the admin screens below reuse that session, so this suite never spends the
+ * rate-limited /api/admin/login.
+ */
+async function openAdmin(page) {
   await page.goto('/admin')
-  await page.getByLabel('Email').fill(ADMIN_EMAIL)
-  await page.getByLabel('Password', { exact: true }).fill(ADMIN_PASSWORD)
-  await page.getByRole('button', { name: /sign in/i }).click()
-  await expect(page.getByRole('button', { name: /log ?out/i })).toBeVisible({ timeout: 10_000 })
-
-  const cookies = await page.context().cookies()
-  cachedSessionCookie = cookies.find((cookie) => cookie.name === SESSION_COOKIE) || null
+  await expect(page.getByRole('button', { name: /log ?out/i })).toBeVisible()
 }
 
 async function openAdminNavGroup(page, name) {
@@ -142,8 +128,10 @@ test.describe('crawler disclosure page', () => {
 })
 
 test.describe('Lead CRM admin screens', () => {
+  test.use({ storageState: ADMIN_STORAGE_STATE })
+
   test.beforeEach(async ({ page }) => {
-    await login(page)
+    await openAdmin(page)
   })
 
   test('appear in the CMS navigation, separate from Inquiries', async ({ page }) => {

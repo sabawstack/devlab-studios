@@ -509,14 +509,27 @@ test.describe('the mail client, with mail in it', () => {
 
 test.describe('the outbound attachment endpoints are behind the admin gate', () => {
   test('upload and delete refuse an unauthenticated caller', async ({ request, baseURL }) => {
-    // 401 or 403: the session gate answers 401, Astro's checkOrigin answers 403
-    // first for an unsafe method with no matching Origin. Either is a refusal.
+    // Same-origin, as a browser would send them, so both requests reach the
+    // SESSION gate this describes -- and it must answer 401.
+    //
+    // Without `Origin`, the multipart upload is a cross-site form POST, and
+    // Astro's checkOrigin answers 403 before middleware WITHOUT reading the
+    // body. Under `wrangler dev` that unread body poisons the kept-alive
+    // connection: the very next request on it fails with "Network connection
+    // lost", which the local ProxyWorker retries only for GET -- so this
+    // DELETE came back as a 500 (about 7 runs in 10 when reproduced). The
+    // session gate drains the body before refusing (src/middleware.ts), so
+    // nothing is left on the wire.
+    const sameOrigin = { Origin: baseURL }
     const upload = await request.post(`${baseURL}/api/admin/mailbox/outbound-attachments`, {
+      headers: sameOrigin,
       multipart: { file: { name: 'x.pdf', mimeType: 'application/pdf', buffer: Buffer.from('x') } },
     })
-    expect([401, 403], 'upload must be refused').toContain(upload.status())
+    expect(upload.status(), 'upload must require a session').toBe(401)
 
-    const remove = await request.delete(`${baseURL}/api/admin/mailbox/outbound-attachments/any-id`)
-    expect([401, 403], 'delete must be refused').toContain(remove.status())
+    const remove = await request.delete(`${baseURL}/api/admin/mailbox/outbound-attachments/any-id`, {
+      headers: sameOrigin,
+    })
+    expect(remove.status(), 'delete must require a session').toBe(401)
   })
 })

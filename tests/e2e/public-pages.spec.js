@@ -344,28 +344,42 @@ test('resume is available from Profile only and opens inline', async ({ page, re
   expect(response.headers()['content-disposition'] || '').not.toContain('attachment')
 })
 
-test('Profile hover actions stay legible and large previews remain below navigation', async ({ page }) => {
-  test.setTimeout(45_000)
-  await page.setViewportSize({ width: 1440, height: 900 })
-  await page.goto('/profile')
+// Pinned to a 1x display. This checks DESKTOP layout, so it forces a 1440x900
+// viewport -- which on the iPhone 14 profile (deviceScaleFactor 3) is nine
+// times the pixels of a desktop at the same size, and WebKit on Windows paints
+// in software. Measured: ~2 s per animation frame at 3x against ~0.25 s at 1x,
+// so every actionability check (hover, scroll, "stable") ran out the test
+// clock in a different place each run. Pixel density does not change the CSS
+// boxes this asserts on.
+test.describe('Profile previews at desktop size', () => {
+  test.use({ deviceScaleFactor: 1 })
 
-  const detailsAction = page.getByRole('button', { name: 'View details' }).first()
-  await detailsAction.hover()
-  await expect(detailsAction).toHaveCSS('color', 'rgb(255, 255, 255)')
+  test('Profile hover actions stay legible and large previews remain below navigation', async ({ page }) => {
+    test.setTimeout(45_000)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await page.goto('/profile')
 
-  const certificateButton = page.getByRole('button', { name: 'View No Code Automation with Zapier certificate full size' })
-  await certificateButton.scrollIntoViewIfNeeded()
-  await page.waitForTimeout(300)
-  await certificateButton.click()
-  const dialog = page.getByRole('dialog')
-  await expect(dialog).toBeVisible()
-  const backdropBox = await dialog.boundingBox()
-  const panelBox = await dialog.locator('.modal-viewport-panel').boundingBox()
-  const navbarBox = await page.locator('.site-navbar').boundingBox()
-  expect(backdropBox.y).toBe(0)
-  expect(backdropBox.height).toBe(900)
-  expect(panelBox.y).toBeGreaterThanOrEqual(navbarBox.y + navbarBox.height)
-  expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(900)
+    const detailsAction = page.getByRole('button', { name: 'View details' }).first()
+    await detailsAction.hover()
+    await expect(detailsAction).toHaveCSS('color', 'rgb(255, 255, 255)')
+
+    const certificateButton = page.getByRole('button', { name: 'View No Code Automation with Zapier certificate full size' })
+    // The gallery is a client:load island: its buttons are server-rendered
+    // before React attaches onClick, and a click in that window does nothing,
+    // so the dialog never opens. Astro drops `ssr` from the island once it
+    // has hydrated.
+    await expect(page.locator('astro-island', { has: certificateButton })).not.toHaveAttribute('ssr')
+    await certificateButton.click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    const backdropBox = await dialog.boundingBox()
+    const panelBox = await dialog.locator('.modal-viewport-panel').boundingBox()
+    const navbarBox = await page.locator('.site-navbar').boundingBox()
+    expect(backdropBox.y).toBe(0)
+    expect(backdropBox.height).toBe(900)
+    expect(panelBox.y).toBeGreaterThanOrEqual(navbarBox.y + navbarBox.height)
+    expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(900)
+  })
 })
 
 test('CMS decorative vector fields remain behind content and outside the accessibility tree', async ({ page }) => {

@@ -1,37 +1,32 @@
+import { randomInt } from 'node:crypto'
 import { test, expect } from '@playwright/test'
-
-const ADMIN_EMAIL = 'smoke-test@devlabstudios.com'
-const ADMIN_PASSWORD = 'smoke-test-password-123'
-
-const SESSION_COOKIE = 'devlab_admin_session'
+import { ADMIN_EMAIL, addSharedAdminSession } from './support/adminSession.js'
 
 /**
- * One real sign-in per Playwright worker, reused by every test in it.
+ * Opens the CMS as the smoke-test admin WITHOUT signing in.
  *
- * `/api/admin/login` is rate limited per IP (20 attempts / 15 min) — a
- * deliberate control that should NOT be weakened for tests. Signing in once
- * per worker keeps the suite well under it; re-authenticating per test used
- * to trip the limiter part-way through a full run and fail every subsequent
- * test with a misleading "element not found".
+ * `/api/admin/login` is rate limited per IP (20 attempts / 15 min), counting
+ * successes, and the limiter's state survives `wrangler dev` restarts. The
+ * admin-auth setup project (tests/e2e/admin.setup.js) signs in once per RUN;
+ * this reuses that session. The old once-per-WORKER sign-in was not once: every
+ * replacement worker signed in again, and back-to-back runs spent the limit.
  */
-let cachedSessionCookie = null
-
 async function login(page) {
-  if (cachedSessionCookie) {
-    await page.context().addCookies([cachedSessionCookie])
-    await page.goto('/admin')
-    await expect(page.getByRole('button', { name: /log ?out/i })).toBeVisible({ timeout: 10_000 })
-    return
-  }
-
+  await addSharedAdminSession(page)
   await page.goto('/admin')
-  await page.getByLabel('Email').fill(ADMIN_EMAIL)
-  await page.getByLabel('Password', { exact: true }).fill(ADMIN_PASSWORD)
-  await page.getByRole('button', { name: /sign in/i }).click()
-  await expect(page.getByRole('button', { name: /log ?out/i })).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByRole('button', { name: /log ?out/i })).toBeVisible()
+}
 
-  const cookies = await page.context().cookies()
-  cachedSessionCookie = cookies.find((cookie) => cookie.name === SESSION_COOKIE) || null
+/**
+ * A client address no earlier submission has used, for the per-IP limited
+ * public endpoints (/api/contact, /api/inquiries, /api/lead-magnet: 5 per 10
+ * minutes). Random rather than counted: the limiter is a Durable Object whose
+ * counters persist in .wrangler/state ACROSS runs, so a fixed or per-run
+ * counted address is spent again by every run and the sixth run inside ten
+ * minutes gets a 429 that has nothing to do with what the test asserts.
+ */
+function freshClientIp() {
+  return `10.${randomInt(256)}.${randomInt(256)}.${randomInt(1, 255)}`
 }
 
 async function openAdminNavGroup(page, name) {
@@ -136,52 +131,59 @@ test('media library inventories the bound R2 bucket and explains its purpose', a
   await expect(page.getByText('Upload Image')).toBeVisible()
 })
 
-test('site settings save round-trip persists across reload', async ({ page }) => {
-  await login(page)
-  await openAdminNavGroup(page, 'Site Management')
-  await page.getByRole('navigation').getByRole('link', { name: 'Navigation & Footer' }).click()
-  await expect(page.getByRole('heading', { name: 'Site Settings', level: 2 })).toBeVisible()
+// Both tests write the ONE site-settings row (and its version history), so run
+// in parallel they read back each other's tagline -- or restore each other's
+// version. Serial keeps them on one worker, one after the other.
+test.describe('site settings', () => {
+  test.describe.configure({ mode: 'serial' })
 
-  const taglineInput = page.getByLabel(/tagline/i).first()
-  const marker = `Smoke test tagline ${Date.now()}`
-  await taglineInput.fill(marker)
-  await page.getByRole('button', { name: /^save/i }).first().click()
-  await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10_000 })
+  test('site settings save round-trip persists across reload', async ({ page }) => {
+    await login(page)
+    await openAdminNavGroup(page, 'Site Management')
+    await page.getByRole('navigation').getByRole('link', { name: 'Navigation & Footer' }).click()
+    await expect(page.getByRole('heading', { name: 'Site Settings', level: 2 })).toBeVisible()
 
-  await page.reload()
-  await openAdminNavGroup(page, 'Site Management')
-  await page.getByRole('navigation').getByRole('link', { name: 'Navigation & Footer' }).click()
-  await expect(page.getByLabel(/tagline/i).first()).toHaveValue(marker)
-})
+    const taglineInput = page.getByLabel(/tagline/i).first()
+    const marker = `Smoke test tagline ${Date.now()}`
+    await taglineInput.fill(marker)
+    await page.getByRole('button', { name: /^save/i }).first().click()
+    await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10_000 })
 
-test('site settings changes are versioned and a prior version can be restored', async ({ page }) => {
-  await login(page)
-  await openAdminNavGroup(page, 'Site Management')
-  await page.getByRole('navigation').getByRole('link', { name: 'Navigation & Footer' }).click()
-  await expect(page.getByRole('heading', { name: 'Site Settings', level: 2 })).toBeVisible()
+    await page.reload()
+    await openAdminNavGroup(page, 'Site Management')
+    await page.getByRole('navigation').getByRole('link', { name: 'Navigation & Footer' }).click()
+    await expect(page.getByLabel(/tagline/i).first()).toHaveValue(marker)
+  })
 
-  const taglineInput = page.getByLabel(/tagline/i).first()
+  test('site settings changes are versioned and a prior version can be restored', async ({ page }) => {
+    await login(page)
+    await openAdminNavGroup(page, 'Site Management')
+    await page.getByRole('navigation').getByRole('link', { name: 'Navigation & Footer' }).click()
+    await expect(page.getByRole('heading', { name: 'Site Settings', level: 2 })).toBeVisible()
 
-  const olderMarker = `Version history tagline A ${Date.now()}`
-  await taglineInput.fill(olderMarker)
-  await page.getByRole('button', { name: /^save/i }).first().click()
-  await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10_000 })
+    const taglineInput = page.getByLabel(/tagline/i).first()
 
-  const newerMarker = `Version history tagline B ${Date.now()}`
-  await taglineInput.fill(newerMarker)
-  await page.getByRole('button', { name: /^save/i }).first().click()
-  await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10_000 })
+    const olderMarker = `Version history tagline A ${Date.now()}`
+    await taglineInput.fill(olderMarker)
+    await page.getByRole('button', { name: /^save/i }).first().click()
+    await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10_000 })
 
-  await page.getByRole('button', { name: 'Version History' }).click()
-  const versionEntries = page.locator('li').filter({ hasText: /^v\d+/ })
-  await expect(versionEntries.first()).toBeVisible()
+    const newerMarker = `Version history tagline B ${Date.now()}`
+    await taglineInput.fill(newerMarker)
+    await page.getByRole('button', { name: /^save/i }).first().click()
+    await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10_000 })
 
-  // Entries are newest-first: index 0 is the just-saved newerMarker snapshot,
-  // index 1 is the snapshot saved right before it (olderMarker).
-  page.once('dialog', (dialog) => dialog.accept())
-  await versionEntries.nth(1).getByRole('button', { name: /restore/i }).click()
+    await page.getByRole('button', { name: 'Version History' }).click()
+    const versionEntries = page.locator('li').filter({ hasText: /^v\d+/ })
+    await expect(versionEntries.first()).toBeVisible()
 
-  await expect(page.getByLabel(/tagline/i).first()).toHaveValue(olderMarker)
+    // Entries are newest-first: index 0 is the just-saved newerMarker snapshot,
+    // index 1 is the snapshot saved right before it (olderMarker).
+    page.once('dialog', (dialog) => dialog.accept())
+    await versionEntries.nth(1).getByRole('button', { name: /restore/i }).click()
+
+    await expect(page.getByLabel(/tagline/i).first()).toHaveValue(olderMarker)
+  })
 })
 
 test('hidden testimonials collection remains backward compatible by direct route', async ({ page }) => {
@@ -399,8 +401,8 @@ test('a lead persists in D1 and shows a failed delivery attempt when Resend is u
   const senderEmail = `smoke-test-lead-${Date.now()}@example.com`
   const response = await page.request.post(`${baseURL}/api/contact`, {
     // Its own client address: /api/contact shares the per-IP submission limit
-    // with every other test that posts here. See submitInquiry's note.
-    headers: { 'cf-connecting-ip': '203.0.113.251' },
+    // with every other test that posts here. See freshClientIp.
+    headers: { 'cf-connecting-ip': freshClientIp() },
     data: { name: 'Smoke Test', email: senderEmail, subject: marker, message: `Verifying lead persistence. ${marker}` },
   })
   expect(response.ok(), await response.text()).toBeTruthy()
@@ -442,8 +444,10 @@ test('the leads list returns more than one lead when the admin UI omits limit', 
   const stamp = Date.now()
   const markerA = `Limit regression A ${stamp}`
   const markerB = `Limit regression B ${stamp}`
+  const clientIp = freshClientIp()
   for (const [index, marker] of [markerA, markerB].entries()) {
     const response = await page.request.post(`${baseURL}/api/contact`, {
+      headers: { 'cf-connecting-ip': clientIp },
       data: { name: 'Smoke Test', email: `smoke-test-limit-${stamp}-${index}@example.com`, subject: marker, message: `Verifying the leads list. ${marker}` },
     })
     expect(response.ok()).toBeTruthy()
@@ -503,8 +507,14 @@ test('selecting a gallery image as thumbnail persists projects.imageUrl on save'
   await fileChooser.setFiles('tests/e2e/fixtures/sample-image.png')
   await expect(page.getByText('Pending')).toBeVisible()
 
+  // The upload itself, not the "Uploading images…" button label: that label is
+  // only on screen for as long as one local upload takes, which is often
+  // shorter than an assertion's first poll.
+  const upload = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === '/api/admin/media' && response.request().method() === 'POST',
+  )
   await page.getByRole('button', { name: /Save Project/ }).click()
-  await expect(page.getByText(/Uploading images/)).toBeVisible()
+  expect((await upload).ok(), 'the staged image is uploaded on save').toBe(true)
   await expect(page.getByText(/Project saved at/)).toBeVisible({ timeout: 15_000 })
 
   // Pick the newly-uploaded gallery image as the thumbnail (first, and only,
@@ -685,15 +695,8 @@ test('Media Library toggles between Medium icons and Details views', async ({ pa
  * edge in production, so a client can never spoof it there; locally it is
  * simply absent unless a test provides one.
  */
-let clientIpCounter = 0
-
 async function submitInquiry(page, baseURL, overrides = {}) {
-  clientIpCounter += 1
-  // The worker index is part of the address because this counter is
-  // module-scope: Playwright runs each worker in its own process, so without
-  // it every worker would start at .1 and collide on the same counter.
-  const worker = test.info().workerIndex
-  const clientIp = `10.${worker % 250}.${(clientIpCounter >> 8) % 250}.${clientIpCounter % 250}`
+  const clientIp = freshClientIp()
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const payload = {
     inquiryType: 'business_system',
@@ -820,7 +823,7 @@ test('an identical resubmission is collapsed instead of creating a second inquir
 
   const repeat = await page.request.post(`${baseURL}/api/inquiries`, {
     data: payload,
-    headers: { 'cf-connecting-ip': '203.0.113.240' },
+    headers: { 'cf-connecting-ip': freshClientIp() },
   })
   expect(repeat.ok()).toBeTruthy()
   const second = await repeat.json()
@@ -863,6 +866,7 @@ test('the inquiry endpoint refuses an oversized payload before parsing it', asyn
 
 test('the lead-magnet endpoint rejects an unknown offer', async ({ page, baseURL }) => {
   const response = await page.request.post(`${baseURL}/api/lead-magnet`, {
+    headers: { 'cf-connecting-ip': freshClientIp() },
     data: {
       fullName: 'Jo Lim',
       email: `magnet-${Date.now()}@example.com`,

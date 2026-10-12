@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { ADMIN_STORAGE_STATE } from './support/adminSession.js'
 
 /**
  * Daily digest: access control, the admin surface, and the public page's
@@ -12,31 +13,11 @@ import { test, expect } from '@playwright/test'
  * src/worker/repositories/digests.test.js).
  */
 
-const ADMIN_EMAIL = 'smoke-test@devlabstudios.com'
-const ADMIN_PASSWORD = 'smoke-test-password-123'
-const SESSION_COOKIE = 'devlab_admin_session'
-
-// One sign-in per Playwright worker, for the same reason as admin.spec.js:
-// /api/admin/login is rate limited per IP and re-authenticating per test trips
-// it part-way through a full run.
-let cachedSessionCookie = null
-
-async function login(page) {
-  if (cachedSessionCookie) {
-    await page.context().addCookies([cachedSessionCookie])
-    await page.goto('/admin')
-    await expect(page.getByRole('button', { name: /log ?out/i })).toBeVisible({ timeout: 10_000 })
-    return
-  }
-
+// Signed in ONCE per run by the admin-auth setup project (tests/e2e/admin.setup.js)
+// and reused here, so this suite never spends the rate-limited /api/admin/login.
+async function openAdmin(page) {
   await page.goto('/admin')
-  await page.getByLabel('Email').fill(ADMIN_EMAIL)
-  await page.getByLabel('Password', { exact: true }).fill(ADMIN_PASSWORD)
-  await page.getByRole('button', { name: /sign in/i }).click()
-  await expect(page.getByRole('button', { name: /log ?out/i })).toBeVisible({ timeout: 10_000 })
-
-  const cookies = await page.context().cookies()
-  cachedSessionCookie = cookies.find((cookie) => cookie.name === SESSION_COOKIE) || null
+  await expect(page.getByRole('button', { name: /log ?out/i })).toBeVisible()
 }
 
 // A bodyless DELETE carries no Content-Type, and Astro's CSRF check rejects any
@@ -62,8 +43,10 @@ test.describe('digest admin API access control', () => {
 })
 
 test.describe('digest admin', () => {
+  test.use({ storageState: ADMIN_STORAGE_STATE })
+
   test.beforeEach(async ({ page }) => {
-    await login(page)
+    await openAdmin(page)
   })
 
   test('lists digests for an authenticated admin', async ({ page, baseURL }) => {
