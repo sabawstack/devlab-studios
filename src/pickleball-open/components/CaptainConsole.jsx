@@ -52,7 +52,7 @@ export default function CaptainConsole({ code, captainKey, snapshot, status, onS
         <CourtCard court={court} nameOf={nameOf} ended={ended}
           onStart={(match) => send({ type: 'START_MATCH', matchId: match.id })}
           onGameOver={(match) => setDialog({ type: 'gameOver', match })}
-          onEdit={(match) => setDialog({ type: 'edit', match })} />
+          onEdit={snapshot.viewer.kind === 'TOURNAMENT' ? null : (match) => setDialog({ type: 'edit', match })} />
         <Panel>
           <h2 className="mb-2 text-lg font-bold">Results on {court.label}</h2>
           <ResultsList finished={snapshot.finished} nameOf={nameOf} courtLabel={courtLabel} onEdit={(match) => setDialog({ type: 'editResult', match })} />

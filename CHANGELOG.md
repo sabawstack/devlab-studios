@@ -122,6 +122,7 @@ decided against that surface specifically:
 - Tournament commands (generate, edit the draft, start, substitute, swap opponents) go through the same command endpoint, Durable Object and idempotency as open play. Whichever court frees next gets the next playable game of the draw; a pair with a player on a break waits and the court says so. Open-play-only commands are refused in a tournament.
 - The live board, captain and host snapshots carry an allowlisted tournament view: pairs, the draw with what each empty slot waits for, pool and overall pair standings, the champion, and the game on each court. Results CSV for a tournament lists every game with its stage and the pair standings.
 - Creating a session offers Open play or Tournament. A tournament console sets up the draw (format, pairs, seeding), then edits the draft by tap-to-select (players, seeds, pools, opponents) with the server's reason shown for any refused edit, and starts it.
+- Running a tournament: substitute a player in a pair that is off court, swap opponents between unstarted games of the same round by tap-to-select, and a short celebration for the champions (none under reduced motion).
 
 ### Changed
 - Docs: architecture and runbook cover Phase 2 open play (stacking modes, pair rules, captain links, self check-in, TV board, migration 0017).

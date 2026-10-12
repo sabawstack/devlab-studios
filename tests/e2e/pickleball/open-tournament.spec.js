@@ -240,3 +240,51 @@ test.describe('tournament setup and draft (screens)', () => {
     })
   }
 })
+
+async function playCourt(page, testId, loser = '6') {
+  const card = page.getByTestId(testId)
+  await card.getByRole('button', { name: 'Start' }).click()
+  await card.getByRole('button', { name: 'Game over' }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('radio').first().click()
+  await dialog.getByRole('button', { name: loser, exact: true }).click()
+  await dialog.getByRole('button', { name: `Save 11–${loser}` }).click()
+  await expect(dialog).toHaveCount(0)
+}
+
+test.describe('running a tournament (screens)', () => {
+  test('the host plays a knockout to a champion from the console', async ({ page, request }) => {
+    const { code, hostKey } = await readyTournament(request)
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await playCourt(page, 'court-1')
+    await expect(page.getByRole('article', { name: 'Final', exact: true })).toContainText('Ana & Ben')
+    await playCourt(page, 'court-2')
+    await expect(page.getByTestId('court-1')).toContainText('Final')
+    await playCourt(page, 'court-1')
+    await expect(page.getByTestId('champion')).toContainText('Ana & Ben')
+  })
+
+  test('the host substitutes a player and swaps opponents from the console', async ({ page, request }) => {
+    const { code, hostKey } = await createTournament(request, { players: 17, courtCount: 1, format: 'SINGLE_ELIMINATION' })
+    await ok(request, code, hostKey, { type: 'GENERATE_DRAW', format: 'SINGLE_ELIMINATION', pairing: 'MANUAL', seeding: 'MANUAL' })
+    const host = await hostSnapshot(request, code, hostKey)
+    await ok(request, code, hostKey, { type: 'SET_PLAYER_STATUS', playerId: host.players.find((p) => p.name === 'Quin').id, status: 'BREAK' })
+    await ok(request, code, hostKey, { type: 'START_TOURNAMENT' })
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+
+    await page.getByRole('button', { name: 'Substitute a player' }).click()
+    const sheet = page.getByRole('dialog')
+    // Seeds 1–8 in list order: quarter-final 3 is Cy & Di v Max & Ned, quarter-final 4 Eva & Fin v Kai & Lu.
+    await sheet.getByRole('combobox', { name: 'Pair' }).selectOption({ label: 'Kai & Lu' })
+    await sheet.getByRole('combobox', { name: 'Player coming off' }).selectOption({ label: 'Lu' })
+    await sheet.getByRole('combobox', { name: 'Substitute' }).selectOption({ label: 'Quin (on a break)' })
+    await sheet.getByRole('button', { name: 'Substitute' }).click()
+    await expect(page.getByRole('article', { name: 'Quarter-final 4' })).toContainText('Kai & Quin')
+
+    // Quarter-finals 3 and 4 have not started: swap their second pairs.
+    await page.getByRole('article', { name: 'Quarter-final 3' }).getByRole('button', { name: 'Max & Ned' }).click()
+    await page.getByRole('article', { name: 'Quarter-final 4' }).getByRole('button', { name: 'Kai & Quin' }).click()
+    await expect(page.getByRole('article', { name: 'Quarter-final 3' })).toContainText('Kai & Quin')
+    await expect(page.getByRole('article', { name: 'Quarter-final 4' })).toContainText('Max & Ned')
+  })
+})
