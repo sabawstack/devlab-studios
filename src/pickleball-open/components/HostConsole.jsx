@@ -17,6 +17,8 @@ import UndoToast from './UndoToast.jsx'
 import ShareSheet from './ShareSheet.jsx'
 import { TOURNAMENT_TABS } from '../tournament/tabs'
 import TournamentHost from '../tournament/TournamentHost.jsx'
+import DuprSheet from '../host/DuprSheet.jsx'
+import { readSignInResult } from '../host/duprSteps'
 import { Button, Panel } from './ui.jsx'
 
 const countLabel = (n, noun) => `${n} ${noun}${n === 1 ? '' : 's'}`
@@ -36,7 +38,11 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
   // A tournament opens on its draw until it starts; open play opens on the courts.
   const [tab, setTab] = useState(() => (tournament && tournament.phase !== 'RUNNING' ? 'draw' : 'courts'))
   const tabs = tournament ? TOURNAMENT_TABS : TABS
-  const [dialog, setDialog] = useState(null)
+  // Back from Google sign-in (?signin=…): reopen the DUPR sheet where the host left it.
+  const [dialog, setDialog] = useState(() => {
+    const signInResult = readSignInResult(window.location.search)
+    return signInResult ? { type: 'dupr', signInResult } : null
+  })
   const [undo, setUndo] = useState(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const [actionError, setActionError] = useState(null)
@@ -48,6 +54,11 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
   const dismissUndo = useCallback(() => setUndo(null), [])
   const banner = useRef(null)
   const shownError = actionError ?? error
+
+  // The sign-in outcome is read once (above); keep it out of the address bar and of a reload.
+  useEffect(() => {
+    if (readSignInResult(window.location.search)) window.history.replaceState(null, '', window.location.pathname)
+  }, [])
 
   // A new error moves into view (the banner is sticky, so this only matters near the page top).
   useEffect(() => {
@@ -120,6 +131,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
             <div className="absolute right-0 z-40 mt-2 grid w-56 gap-1 rounded-2xl bg-navy-950 p-2 shadow-elevated">
               <Button variant="ghost" onClick={() => { setMenuOpen(false); setDialog({ type: 'captains' }) }}>Court captains</Button>
               <Button variant="ghost" onClick={() => { setMenuOpen(false); download() }}>Download results (CSV)</Button>
+              <Button variant="ghost" onClick={() => { setMenuOpen(false); setDialog({ type: 'dupr' }) }}>Email me the DUPR export</Button>
               {viewer.status === 'ACTIVE' && <Button variant="ghost" onClick={() => { setMenuOpen(false); endSession() }}>End session</Button>}
               <Button variant="danger" onClick={() => { setMenuOpen(false); remove() }}>Delete now</Button>
             </div>
@@ -210,6 +222,10 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
       )}
       {dialog?.type === 'captains' && (
         <CaptainsSheet code={code} hostKey={hostKey} courts={host.courts} captains={host.captains} onHost={onHost} onClose={() => setDialog(null)} />
+      )}
+      {dialog?.type === 'dupr' && (
+        <DuprSheet code={code} hostKey={hostKey} version={viewer.version} send={send} commandError={error ? friendlyError(error) : null}
+          signInResult={dialog.signInResult ?? null} onClose={() => setDialog(null)} />
       )}
       {undo && (
         <UndoToast key={undo.savedAt} label={undo.label} savedAt={undo.savedAt} onDismiss={dismissUndo}

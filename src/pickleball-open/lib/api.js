@@ -55,3 +55,45 @@ export async function deleteSession(code, hostKey) {
 export async function checkIn(code, body) {
   return parse(await fetch(`${base(code)}/check-in`, { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) }))
 }
+
+// Google-verified host (spec §9). The devlab_pb_host cookie rides along on
+// these same-origin requests by itself; the browser adds Origin, which the
+// server checks on every write.
+const HOST_API = '/api/pickleball/open/host'
+const deviceTimeZone = () => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  } catch {
+    return 'UTC'
+  }
+}
+
+export async function fetchDuprStatus(code, hostKey) {
+  return parse(await fetch(`${base(code)}/dupr?tz=${encodeURIComponent(deviceTimeZone())}`, { headers: authHeaders({ hostKey }) }))
+}
+export async function claimSession(code, hostKey) {
+  return parse(await fetch(`${base(code)}/claim`, { method: 'POST', headers: authHeaders({ hostKey }) }))
+}
+export async function emailDuprExport(code, hostKey) {
+  return parse(await fetch(`${base(code)}/dupr-export`, {
+    method: 'POST', headers: { ...JSON_HEADERS, ...authHeaders({ hostKey }) }, body: JSON.stringify({ timeZone: deviceTimeZone() }),
+  }))
+}
+export async function fetchMe() {
+  return parse(await fetch(`${HOST_API}/me`))
+}
+export async function updateMe(patch) {
+  return parse(await fetch(`${HOST_API}/me`, { method: 'PATCH', headers: JSON_HEADERS, body: JSON.stringify(patch) }))
+}
+export async function deleteAccount() {
+  return parse(await fetch(`${HOST_API}/me`, { method: 'DELETE' }))
+}
+export async function signOut() {
+  return parse(await fetch(`${HOST_API}/sign-out`, { method: 'POST' }))
+}
+export async function fetchMySessions() {
+  return parse(await fetch(`${HOST_API}/sessions`))
+}
+export async function reopenSession(code) {
+  return parse(await fetch(`${HOST_API}/sessions/${encodeURIComponent(code)}/reopen`, { method: 'POST' }))
+}
