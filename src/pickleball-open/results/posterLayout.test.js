@@ -1,7 +1,7 @@
 // src/pickleball-open/results/posterLayout.test.js
 import { describe, expect, it } from 'vitest'
 import {
-  POSTER, entryCells, fitText, moreLabel, podiumSlots, posterFilename, posterLayout, posterModel, restRows, wrapWords,
+  BAND_LINES, POSTER, entryCells, fitText, moreLabel, podiumSlots, posterFilename, posterLayout, posterModel, posterText, restRows, wrapWords,
 } from './posterLayout'
 
 // A monospace stand-in for canvas measureText: every character is half the font size wide.
@@ -47,6 +47,21 @@ describe('fitText', () => {
     expect(fit.lines.length).toBeLessThanOrEqual(2)
     expect(fit.lines.join(' ').replace(/- /g, '-')).toBe(name)
     for (const line of fit.lines) expect(measure(line, { size: fit.size })).toBeLessThanOrEqual(280)
+  })
+  it('as a last resort breaks an unbreakable word inside, with a hyphen, so no line is wider than the box', () => {
+    const name = 'Wolfeschlegelsteinhausenbergerdorffvoral'
+    expect(name).toHaveLength(40)
+    const fit = fitText({ text: name, maxWidth: 200, maxSize: 40, minSize: 30, measure })
+    expect(fit.lines).toHaveLength(2)
+    expect(fit.lines[0].endsWith('-')).toBe(true)
+    expect(fit.lines.join('').replace(/-/g, '')).toBe(name)
+    for (const line of fit.lines) expect(measure(line, { size: fit.size })).toBeLessThanOrEqual(200)
+    expect(fit.fits).toBe(true)
+  })
+  it('even past the floor, a broken word never overflows its box', () => {
+    const fit = fitText({ text: 'x'.repeat(80), maxWidth: 30, maxSize: 20, minSize: 14, measure })
+    for (const line of fit.lines) expect(measure(line, { size: fit.size })).toBeLessThanOrEqual(30)
+    expect(fit.lines.join('').replace(/-/g, '')).toBe('x'.repeat(80))
   })
   it('respects a height limit (two lines must fit the row)', () => {
     const fit = fitText({ text: 'Maximiliano Fernandez Rodriguez', maxWidth: 300, maxSize: 40, minSize: 34, maxHeight: 52, measure })
@@ -185,6 +200,26 @@ describe('posterLayout', () => {
       }
     }
     for (const row of layout.rest.rows) expect(row.name.lines.length).toBeLessThanOrEqual(2)
+  })
+  it('a 40-character name with no spaces in a three-across tie stays inside its cell', () => {
+    const word = (i) => `Wolfeschlegelsteinhausenbergerdorffvora${i}`
+    const podium = [step(1, [word(1), word(2), word(3), word(4), word(5)]), step(2, [word(6)]), step(3, [word(7)])]
+    // A wide measure (0.62 em per character), closer to a real bold font.
+    const wide = (text, { size }) => text.length * size * 0.62
+    const layout = posterLayout(posterModel(results({ podium }), { hostName: 'M', dateText: 'd' }), wide)
+    const gold = layout.podium.find((s) => s.place === 1)
+    expect(gold.entries).toHaveLength(5)
+    for (const s of layout.podium) {
+      for (const e of s.entries) {
+        expect(e.lines.length).toBeLessThanOrEqual(2)
+        for (const line of e.lines) expect(wide(line.text, { size: s.nameSize })).toBeLessThanOrEqual(e.width)
+      }
+    }
+  })
+  it('posterText gathers every string drawn, so the font subsets for any name load', () => {
+    const model = posterModel(results({ podium: [step(1, ['Łukasz Wiśniewski'])], rest: [entry('ВасилийПетровичСидоров', 4)] }), { hostName: 'Nguyễn Văn An', dateText: 'Oct 13, 2026' })
+    const text = posterText(model)
+    for (const part of ['Sunday Open Play', 'Łukasz Wiśniewski', 'ВасилийПетровичСидоров', 'Hosted by Nguyễn Văn An', ...BAND_LINES, '2–1 · 67%']) expect(text).toContain(part)
   })
   it('with no games it says so instead of drawing a podium', () => {
     const layout = posterLayout(posterModel(results({ podium: [] }), { hostName: 'M', dateText: 'd' }), measure)

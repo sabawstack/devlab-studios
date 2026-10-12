@@ -5,7 +5,7 @@
 // never tainted), and the QR is drawn module by module from `qrcode`.
 import QRCode from 'qrcode'
 import logoAsset from '../../assets/devlabstudios-logo-only.png'
-import { posterLayout } from './posterLayout'
+import { posterLayout, posterText } from './posterLayout'
 
 const FAMILY = '"Plus Jakarta Sans", Inter, system-ui, sans-serif'
 const C = {
@@ -19,10 +19,14 @@ const STEP_TEXT = { 1: C.ink, 2: C.ink, 3: C.white }
 
 const font = ({ size, weight = 700 }) => `${weight} ${size}px ${FAMILY}`
 
-/** The site font in every weight the poster uses; a failure falls back to system fonts, never blocks. */
-async function loadFonts() {
+/**
+ * The site font in every weight the poster uses, for the poster's own text: the
+ * sample makes the browser fetch every subset those characters need (latin-ext,
+ * Cyrillic, Vietnamese), not only latin. A failure falls back to system fonts, never blocks.
+ */
+async function loadFonts(sample) {
   if (typeof document === 'undefined' || !document.fonts) return
-  await Promise.allSettled([400, 500, 600, 700].map((weight) => document.fonts.load(font({ size: 32, weight }))))
+  await Promise.allSettled([400, 500, 600, 700].map((weight) => document.fonts.load(font({ size: 32, weight }), sample)))
   await document.fonts.ready
 }
 
@@ -206,7 +210,7 @@ function dataUrlOf(blob) {
  * @returns {Promise<{ blob: Blob, dataUrl: string }>}
  */
 export async function drawPoster({ model, qrUrl }) {
-  const [, logo] = await Promise.all([loadFonts(), loadImage(logoAsset.src ?? logoAsset)])
+  const [, logo] = await Promise.all([loadFonts(posterText(model)), loadImage(logoAsset.src ?? logoAsset)])
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('This browser cannot draw the poster.')

@@ -15,6 +15,10 @@ export const POSTER = Object.freeze({ width: 1080, height: 1350, pad: 72, bandHe
 export const REST_LIMIT = Object.freeze({ maxPlace: 10, maxRows: 7 })
 
 const LINE = 1.16
+
+/** The credit band's words, always on the poster. */
+export const BAND_LINES = Object.freeze(['Made with Devlab Pickleball', 'Free open play & tournaments', 'devlabstudios.com/pickleball'])
+export const QR_CAPTION = 'Scan to host yours'
 const FLOOR = 10
 
 /** @typedef {{ size: number, weight?: number }} Font */
@@ -32,17 +36,45 @@ function tokens(text, fits) {
 }
 
 /**
- * Greedy word wrap. A single token wider than the box keeps its own line (the
- * caller shrinks the size until it fits); nothing is ever dropped.
+ * Last resort for one unbreakable word wider than the box: split it between
+ * characters, with a hyphen at the end of every piece but the last.
+ */
+function breakWord(word, maxWidth, width) {
+  const pieces = []
+  let piece = ''
+  for (const char of Array.from(word)) {
+    if (piece && width(`${piece}${char}-`) > maxWidth) {
+      pieces.push(`${piece}-`)
+      piece = char
+    } else {
+      piece += char
+    }
+  }
+  return piece ? [...pieces, piece] : pieces
+}
+
+/**
+ * Greedy word wrap. By default a single token wider than the box keeps its own
+ * line (the caller shrinks the size until it fits); with `breakWords` it is
+ * split inside the word instead, so no line is wider than the box. Nothing is
+ * ever dropped.
  * @param {string} text
  * @param {number} maxWidth
  * @param {(text: string) => number} width
+ * @param {{ breakWords?: boolean }} [options]
  * @returns {string[]}
  */
-export function wrapWords(text, maxWidth, width) {
+export function wrapWords(text, maxWidth, width, { breakWords = false } = {}) {
   const lines = []
   let line = ''
   for (const token of tokens(text, (word) => width(word) <= maxWidth)) {
+    if (breakWords && width(token.text) > maxWidth) {
+      const pieces = breakWord(token.text, maxWidth, width)
+      if (line) lines.push(line)
+      lines.push(...pieces.slice(0, -1))
+      line = pieces[pieces.length - 1]
+      continue
+    }
     const candidate = line ? `${line}${token.space ? ' ' : ''}${token.text}` : token.text
     if (!line || width(candidate) <= maxWidth) {
       line = candidate
@@ -72,11 +104,19 @@ export function fitText({ text, maxWidth, maxSize, minSize, maxLines = 2, maxHei
   for (let size = maxSize; size >= minSize; size -= 1) {
     if (ok(size, [value])) return result(size, [value])
   }
-  for (let size = maxSize; size >= FLOOR; size -= 1) {
+  // Wrapped at spaces and hyphens, shrinking, but not below a readable size.
+  const readable = Math.max(FLOOR, Math.round(minSize * 0.6))
+  for (let size = maxSize; size >= readable; size -= 1) {
     const lines = wrapWords(value, maxWidth, widthAt(size))
     if (ok(size, lines)) return result(size, lines)
   }
-  return result(FLOOR, wrapWords(value, maxWidth, widthAt(FLOOR)), false)
+  // An unbreakable word still too wide: break inside it (with a hyphen) rather than shrink to nothing.
+  for (let size = maxSize; size >= FLOOR; size -= 1) {
+    const lines = wrapWords(value, maxWidth, widthAt(size), { breakWords: true })
+    if (ok(size, lines)) return result(size, lines)
+  }
+  // Never wider than the box, even when it needs more lines than allowed.
+  return result(FLOOR, wrapWords(value, maxWidth, widthAt(FLOOR), { breakWords: true }), false)
 }
 
 /**
@@ -157,6 +197,20 @@ export function posterModel(results, { hostName, dateText }) {
     more: moreLabel(more, pairs ? 'pair' : 'player'),
     summary: summaryText(results),
   }
+}
+
+/**
+ * Every string the poster draws, so the browser can fetch the font subsets
+ * those characters need (latin-ext, Cyrillic, Vietnamese…), not only latin.
+ * @param {ReturnType<typeof posterModel>} model
+ */
+export function posterText(model) {
+  return [
+    model.title, model.subtitle, model.host, model.summary, model.more ?? '',
+    ...model.steps.flatMap((step) => [step.label, ...step.entries.flatMap((e) => [e.name, e.stat])]),
+    ...model.rest.flatMap((row) => [row.place, row.name, row.stat]),
+    ...BAND_LINES, QR_CAPTION, 'No games were saved in this session.', '0123456789',
+  ].filter(Boolean).join(' ')
 }
 
 /** "Sunday Open Play!" → "sunday-open-play-results.png". */
@@ -313,9 +367,9 @@ export function posterLayout(model, measure) {
     band: {
       top: bandTop,
       logo: { x: PAD, y: bandTop + 46, height: 128 },
-      text: { x: PAD + 124, lines: ['Made with Devlab Pickleball', 'Free open play & tournaments', 'devlabstudios.com/pickleball'] },
+      text: { x: PAD + 124, lines: [...BAND_LINES] },
       qr,
-      caption: { text: 'Scan to host yours', x: qr.x + qr.size / 2, y: qr.y + qr.size + 26 },
+      caption: { text: QR_CAPTION, x: qr.x + qr.size / 2, y: qr.y + qr.size + 26 },
     },
   }
 }
