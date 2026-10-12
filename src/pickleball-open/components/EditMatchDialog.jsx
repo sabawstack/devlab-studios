@@ -43,7 +43,7 @@ export default function EditMatchDialog({ match, players, nameOf, onSave, onSkip
           {available.length === 0 && <p className="text-sm text-mist">Nobody else is free right now.</p>}
           {available.map((p) => (
             <button key={p.id} type="button" onClick={() => replaceWith(p.id)} className="flex min-h-11 items-center justify-between rounded-xl border border-navy-700 px-3 hover:border-pickle-neon">
-              <span>{p.name}</span><span className="text-xs text-mist">{p.games} games · sat out {p.satOut}</span>
+              <span>{p.name}</span><span className="text-xs text-mist">{p.games} game{p.games === 1 ? '' : 's'} · sat out {p.satOut}</span>
             </button>
           ))}
         </div>

@@ -51,7 +51,7 @@ export default function PlayersPanel({ players, waiting, playing, mode, send }) 
                 {!onCourt && <Button variant="quiet" className="!min-h-11 !px-2 text-sm text-mist" aria-label={`${p.name} left`} onClick={() => send({ type: 'SET_PLAYER_STATUS', playerId: p.id, status: 'LEFT' })}>Left</Button>}
               </div>
               <span className="text-xs text-mist">
-                {onCourt ? 'on court' : p.busy ? 'up next' : STATUS_LABEL[p.status]} · {p.games} games · sat out {p.satOut}
+                {onCourt ? 'on court' : p.busy ? 'up next' : STATUS_LABEL[p.status]} · {p.games} game{p.games === 1 ? '' : 's'} · sat out {p.satOut}
                 {waitingNow ? ` · ${minutesSince(p.waitingSince, now)} min` : ''}
               </span>
             </li>

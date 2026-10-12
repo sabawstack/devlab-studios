@@ -24,7 +24,7 @@ export default function ModeSheet({ mode, onPick, onClose }) {
   return (
     <Sheet title="Who plays next" onClose={onClose}>
       <ModePicker value={mode} onChange={onPick} />
-      <p className="mt-4 text-sm text-mist">A change applies from the next game proposed. Games already proposed or on court stay as they are. Anyone who has sat out 2 rounds in a row still goes on next, in every mode.</p>
+      <p className="mt-4 text-sm text-mist">A change applies from the next game proposed. Games already proposed or on court stay as they are. Anyone who has sat out 2 rounds in a row still goes on next, in every mode, unless a keep-together or keep-apart rule holds them back.</p>
     </Sheet>
   )
 }
