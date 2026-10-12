@@ -14,11 +14,21 @@ import DraftEditor from './DraftEditor.jsx'
 import { commandFor, tap } from './drawTaps'
 import PairStandings from './PairStandings.jsx'
 import SubstituteSheet from './SubstituteSheet.jsx'
+import { pairsOnCourt } from './substituteCandidates'
 import TournamentSetup from './TournamentSetup.jsx'
 
-export default function TournamentHost({ host, send, tab, onTab, nameOf, courtLabel, onStart, onGameOver, onEditResult }) {
+/** A selected slot stays selected only while its game can still be swapped. */
+function stillSwappable(tournament, item) {
+  if (!item || item.kind !== 'slot') return Boolean(item)
+  const fixture = tournament.fixtures.find((f) => f.id === item.fixtureId)
+  const entrantId = fixture && (item.side === 'A' ? fixture.entrantAId : fixture.entrantBId)
+  return Boolean(fixture) && (fixture.status === 'PENDING' || fixture.status === 'READY') && !fixture.court?.live && entrantId === item.entrantId
+}
+
+export default function TournamentHost({ host, send, error, onClearError, tab, onTab, nameOf, courtLabel, onStart, onGameOver, onEditResult }) {
   const t = host.viewer.tournament
-  const [selected, setSelected] = useState(null)
+  const [pickedSlot, setSelected] = useState(null)
+  const selected = stillSwappable(t, pickedSlot) ? pickedSlot : null
   const [subbing, setSubbing] = useState(false)
   // Bumped after each Generate so the draft editor brings its heading into view.
   const [draftFocus, setDraftFocus] = useState(0)
@@ -32,12 +42,21 @@ export default function TournamentHost({ host, send, tab, onTab, nameOf, courtLa
   function onSlot(item) {
     const next = tap(selected, item)
     setSelected(next.selected)
-    if (next.chosen) send(commandFor(next.chosen, t.phase))
+    if (next.chosen) {
+      send(commandFor(next.chosen, t.phase)).then((ok) => { if (!ok) setSelected(null) })
+    }
   }
 
+  function openSubstitute() {
+    onClearError?.()
+    setSubbing(true)
+  }
+
+  // Stays open until the server accepts, so a refusal keeps its reason and the picks in the sheet.
   async function substitute(edit) {
-    setSubbing(false)
-    await send({ type: 'SUBSTITUTE_PLAYER', ...edit })
+    const ok = await send({ type: 'SUBSTITUTE_PLAYER', ...edit })
+    setSelected(null)
+    if (ok) setSubbing(false)
   }
 
   return (
@@ -63,7 +82,7 @@ export default function TournamentHost({ host, send, tab, onTab, nameOf, courtLa
                   <h2 className="text-lg font-bold">{t.formatLabel}</h2>
                   {t.phase === 'RUNNING' && <p className="text-sm text-mist">To swap opponents, tap a pair in a game that has not started, then a pair in another game of the same round.</p>}
                 </div>
-                {t.phase === 'RUNNING' && <Button variant="ghost" onClick={() => setSubbing(true)}>Substitute a player</Button>}
+                {t.phase === 'RUNNING' && <Button variant="ghost" onClick={openSubstitute}>Substitute a player</Button>}
               </div>
               <BracketView tournament={t} onSlot={t.phase === 'RUNNING' ? onSlot : null} selected={selected} />
             </div>
@@ -92,7 +111,7 @@ export default function TournamentHost({ host, send, tab, onTab, nameOf, courtLa
         </div>
       </aside>
 
-      {subbing && <SubstituteSheet tournament={t} players={host.players} onSubstitute={substitute} onClose={() => setSubbing(false)} />}
+      {subbing && <SubstituteSheet tournament={t} players={host.players} onCourtIds={pairsOnCourt(t, playing)} error={error} onSubstitute={substitute} onClose={() => setSubbing(false)} />}
     </div>
   )
 }

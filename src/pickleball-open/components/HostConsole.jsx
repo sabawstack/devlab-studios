@@ -137,7 +137,8 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
       )}
 
       {tournament ? (
-        <TournamentHost host={host} send={send} tab={tab} onTab={setTab} nameOf={nameOf} courtLabel={courtLabel}
+        <TournamentHost host={host} send={send} error={shownError ? friendlyError(shownError) : null}
+          onClearError={() => { setActionError(null); clearError() }} tab={tab} onTab={setTab} nameOf={nameOf} courtLabel={courtLabel}
           onStart={(match) => send({ type: 'START_MATCH', matchId: match.id })}
           onGameOver={(match) => setDialog({ type: 'gameOver', match })}
           onEditResult={(match) => setDialog({ type: 'editResult', match })} />

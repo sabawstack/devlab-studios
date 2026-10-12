@@ -295,10 +295,13 @@ test.describe('running a tournament (screens)', () => {
     const host = await hostSnapshot(request, code, hostKey)
     await ok(request, code, hostKey, { type: 'SET_PLAYER_STATUS', playerId: host.players.find((p) => p.name === 'Quin').id, status: 'BREAK' })
     await ok(request, code, hostKey, { type: 'START_TOURNAMENT' })
+    // A late arrival who sorts after the player on a break: the break player is still offered first.
+    await ok(request, code, hostKey, { type: 'ADD_PLAYERS', names: ['Zed'] })
     await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
 
     await page.getByRole('button', { name: 'Substitute a player' }).click()
     const sheet = page.getByRole('dialog')
+    await expect(sheet.getByRole('combobox', { name: 'Substitute' }).locator('option')).toHaveText(['Pick one', 'Quin (on a break)', 'Zed'])
     // Seeds 1–8 in list order: quarter-final 3 is Cy & Di v Max & Ned, quarter-final 4 Eva & Fin v Kai & Lu.
     await sheet.getByRole('combobox', { name: 'Pair' }).selectOption({ label: 'Kai & Lu' })
     await sheet.getByRole('combobox', { name: 'Player coming off' }).selectOption({ label: 'Lu' })
@@ -312,4 +315,83 @@ test.describe('running a tournament (screens)', () => {
     await expect(page.getByRole('article', { name: 'Quarter-final 3' })).toContainText('Kai & Quin')
     await expect(page.getByRole('article', { name: 'Quarter-final 4' })).toContainText('Max & Ned')
   })
+})
+
+/** The phone tab bar is hidden from lg, where the draw is always on screen. */
+async function openDraw(page) {
+  const nav = page.getByRole('navigation', { name: 'Sections' })
+  if (await nav.isVisible()) await nav.getByRole('button', { name: 'Draw' }).click()
+}
+
+test.describe('running a tournament (refusals, motion, widths)', () => {
+  test('a refused substitute keeps its reason and its picks inside the sheet', async ({ page, request }) => {
+    const { code, hostKey } = await createTournament(request, { players: 17, courtCount: 1, format: 'SINGLE_ELIMINATION' })
+    await ok(request, code, hostKey, { type: 'GENERATE_DRAW', format: 'SINGLE_ELIMINATION', pairing: 'MANUAL', seeding: 'MANUAL' })
+    const host = await hostSnapshot(request, code, hostKey)
+    await ok(request, code, hostKey, { type: 'SET_PLAYER_STATUS', playerId: host.players.find((p) => p.name === 'Quin').id, status: 'BREAK' })
+    await ok(request, code, hostKey, { type: 'START_TOURNAMENT' })
+    await page.route(`**/api/pickleball/open/s/${code}/commands`, (route) =>
+      route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ error: 'Kai & Lu are on court. Substitute after their game.' }) }))
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await page.getByRole('button', { name: 'Substitute a player' }).click()
+    const sheet = page.getByRole('dialog')
+    await sheet.getByRole('combobox', { name: 'Pair' }).selectOption({ label: 'Kai & Lu' })
+    await sheet.getByRole('combobox', { name: 'Player coming off' }).selectOption({ label: 'Lu' })
+    await sheet.getByRole('combobox', { name: 'Substitute' }).selectOption({ label: 'Quin (on a break)' })
+    await sheet.getByRole('button', { name: 'Substitute' }).click()
+    await expect(sheet.getByRole('alert')).toContainText('are on court')
+    await expect(sheet.getByRole('combobox', { name: 'Player coming off' })).toHaveValue(/.+/)
+    await expect(sheet.getByRole('combobox', { name: 'Substitute' })).toHaveValue(/.+/)
+  })
+
+  test('a pair on court cannot be picked as the pair to substitute in', async ({ page, request }) => {
+    const { code, hostKey } = await readyTournament(request)
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await page.getByTestId('court-1').getByRole('button', { name: 'Start' }).click()
+    await openDraw(page)
+    await page.getByRole('button', { name: 'Substitute a player' }).click()
+    await expect(page.getByRole('dialog').getByRole('option', { name: 'Ana & Ben (on court)' })).toHaveAttribute('disabled', '')
+  })
+
+  test('a refused opponent swap shows its reason in view and clears the selection', async ({ page, request }) => {
+    const { code, hostKey } = await readyTournament(request, { players: 16, courtCount: 1 })
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    // Whatever the server says about the swap is shown, and the pair stops being selected.
+    await openDraw(page)
+    const first = page.getByRole('article', { name: /Quarter-final 3/ }).getByRole('button').first()
+    await first.click()
+    await expect(first).toHaveAttribute('aria-pressed', 'true')
+    await page.route(`**/api/pickleball/open/s/${code}/commands`, (route) =>
+      route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ error: 'One of those games has already started.' }) }))
+    await page.getByRole('article', { name: /Quarter-final 4/ }).getByRole('button').first().click()
+    await expect(page.getByRole('alert')).toContainText('already started')
+    await expect(first).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  test('the champion banner does not animate under reduced motion', async ({ page, request }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    const { code, hostKey } = await readyTournament(request)
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await playCourt(page, 'court-1')
+    await playCourt(page, 'court-2')
+    await playCourt(page, 'court-1')
+    const banner = page.getByTestId('champion')
+    await expect(banner).toBeVisible()
+    await expect(banner).toHaveClass(/pb-celebrate/)
+    expect(await banner.evaluate((el) => getComputedStyle(el).animationName)).toBe('none')
+  })
+
+  for (const width of [390, 768, 1280, 1920]) {
+    test(`a running tournament fits a ${width}px screen without sideways scrolling`, async ({ page, request }) => {
+      const { code, hostKey } = await readyTournament(request, { players: 16, courtCount: 4, format: 'POOL_TO_BRACKET' })
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+      await expect(page.getByTestId('court-1')).toBeVisible()
+      expect(await noSideScroll(page)).toBe(true)
+      if (width < 1024) {
+        await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Draw' }).click()
+        expect(await noSideScroll(page)).toBe(true)
+      }
+    })
+  }
 })
