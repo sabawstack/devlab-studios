@@ -15,21 +15,28 @@ export async function drainRequestBody(request: Request): Promise<void> {
 }
 
 /**
- * The safety net behind drainRequestBody: called by src/middleware.ts on EVERY
- * response, so a route that answers without reading its body -- readBoundedJson's
- * 413 for an oversized payload, any early validation return -- cannot poison
- * the next request on wrangler dev's loopback proxy. Before this, one 413 test
- * made an unrelated test's POST fail with "Network connection lost" whenever
- * the two shared a pooled connection.
+ * Reads off and drops a request body a route is refusing without reading --
+ * LOCAL DEV / E2E ONLY, when the DRAIN_UNREAD_BODIES var is set (`.dev.vars`
+ * and the Playwright wrangler dev command set it; deployed environments never
+ * do). In production an abusive client could send a large or slow body, and a
+ * 413 must not wait for it to arrive.
  *
- * No-op when the body is absent, already read, or being streamed by the route.
+ * Why it exists: under `wrangler dev`, a response sent while the request body
+ * is unread made the NEXT request on the proxy's internal connection fail with
+ * "Network connection lost" (a 500) -- one 413 test failed an unrelated test's
+ * POST that way. Unlike drainRequestBody it never buffers: chunks are dropped
+ * as they arrive.
+ *
+ * Called from readBoundedJson's 413 paths only. A blanket version in
+ * src/middleware.ts (every response) was tried and made the pickleball suite
+ * drop 2-9 requests per run, against 0 with it off, so it stays targeted.
  */
-export async function discardUnreadBody(request: Request): Promise<void> {
+export async function discardUnreadBody(request: Request, env: { DRAIN_UNREAD_BODIES?: string } | undefined): Promise<void> {
+  if (!env?.DRAIN_UNREAD_BODIES) return
   const body = request.body
   if (!body || request.bodyUsed || body.locked) return
   // Read to the end rather than cancel(): cancelling was tried and does NOT
-  // stop the proxy failing the next request. Chunks are dropped as they
-  // arrive, so an oversized body is never buffered (unlike arrayBuffer()).
+  // stop the proxy failing the next request.
   const reader = body.getReader()
   try {
     while (!(await reader.read()).done) {

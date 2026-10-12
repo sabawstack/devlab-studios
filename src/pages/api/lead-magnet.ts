@@ -26,7 +26,7 @@ export const prerender = false
 export const POST: APIRoute = async ({ request, locals }) => {
   const env = getEnv()
 
-  const body = await readBoundedJson(request)
+  const body = await readBoundedJson(request, env)
   if (body.error) return body.error
 
   const parsed = leadMagnetRequestSchema.safeParse(body.data)

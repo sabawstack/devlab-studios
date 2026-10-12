@@ -5,7 +5,7 @@ import { getEnv } from './lib/env'
 import { getSiteSetting } from './worker/repositories/content.js'
 import { findRedirect } from './worker/repositories/redirects.js'
 import { applySecurityHeaders } from './lib/securityHeaders'
-import { discardUnreadBody, drainRequestBody } from './lib/http'
+import { drainRequestBody } from './lib/http'
 import { requirePickleballSession } from './worker/pickleball/authContext.js'
 
 const ADMIN_API_PREFIX = '/api/admin/'
@@ -127,7 +127,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
       const message = error instanceof Error ? error.message : 'Unexpected error.'
       const rawStatus = error instanceof Error ? (error as Error & { status?: unknown }).status : undefined
       const status = typeof rawStatus === 'number' ? rawStatus : 500
-      await discardUnreadBody(context.request)
       return applySecurityHeaders(
         new Response(JSON.stringify({ error: message }), { status }),
         url.pathname,
@@ -145,7 +144,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   const response = await next()
-  await discardUnreadBody(context.request)
 
   // The admin's Redirects screen (D1 `redirects` table) only needs to be
   // consulted for paths nothing else already handled — so this only ever

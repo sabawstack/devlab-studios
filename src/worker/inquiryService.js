@@ -7,6 +7,7 @@ import { qualifyInquiry } from '../lib/leads/qualification'
 import { computeIdempotencyKey, normalizeInquiry } from '../lib/leads/normalize'
 import { CONSENT_TEXT_VERSION, PRIVACY_POLICY_VERSION } from '../config/consent.js'
 import { attributeInquiry } from '../lead-engine/tracking/attribution.js'
+import { discardUnreadBody } from '../lib/http'
 
 /**
  * The submission pipeline, in one place, shared by every public form.
@@ -38,9 +39,15 @@ function jsonResponse(body, status = 200) {
  * Reads the request body with a size ceiling. Content-Length is advisory
  * (a chunked request has none), so the decoded text is checked too.
  */
-export async function readBoundedJson(request) {
+/**
+ * @param {Request} request
+ * @param {{ DRAIN_UNREAD_BODIES?: string }} [env] only to drop a refused body in local dev
+ */
+export async function readBoundedJson(request, env) {
   const declaredLength = Number(request.headers.get('content-length') || 0)
   if (declaredLength > MAX_REQUEST_BYTES) {
+    // Refused unread; see discardUnreadBody for why local dev drops it first.
+    await discardUnreadBody(request, env)
     return { error: jsonResponse({ error: 'Request payload is too large.' }, 413) }
   }
 

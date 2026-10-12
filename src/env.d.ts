@@ -5,6 +5,13 @@ interface Env {
   MEDIA_BUCKET: R2Bucket
   SESSION: KVNamespace
   ADMIN_AUTH_MODE?: string
+  /**
+   * Local dev / e2e only (.dev.vars, Playwright webServer). When set, the
+   * inquiry endpoints' 413 reads off the refused body first, which wrangler
+   * dev's loopback proxy needs (src/lib/http.ts discardUnreadBody). Never set
+   * in a deployed environment.
+   */
+  DRAIN_UNREAD_BODIES?: string
   R2_PUBLIC_BASE_URL?: string
   RESEND_API_KEY?: string
   RESEND_FROM_EMAIL?: string
