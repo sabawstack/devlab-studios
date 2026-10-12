@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MODE_INFO } from '../../lib/pickleball/open/modes/info'
 import { deleteSession, downloadResults } from '../lib/api'
 import { forgetHostedSession } from '../lib/hostKeys'
@@ -46,6 +46,13 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
   const courtLabel = useCallback((id) => host.courts.find((c) => c.id === id)?.label ?? '', [host.courts])
   const playing = useMemo(() => new Set(host.courts.flatMap((c) => (c.match?.status === 'IN_PROGRESS' ? [...c.match.teamA, ...c.match.teamB] : []))), [host.courts])
   const dismissUndo = useCallback(() => setUndo(null), [])
+  const banner = useRef(null)
+  const shownError = actionError ?? error
+
+  // A new error moves into view (the banner is sticky, so this only matters near the page top).
+  useEffect(() => {
+    if (shownError) banner.current?.scrollIntoView({ block: 'nearest' })
+  }, [shownError])
 
   async function save(match, result) {
     setDialog(null)
@@ -102,7 +109,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
           </p>
         </div>
         {tournament
-          ? <span className="rounded-xl border border-navy-700 px-4 py-2.5 text-sm font-semibold">{tournament.formatLabel}</span>
+          ? <span className="min-w-0 flex-1 truncate text-sm font-semibold text-mist sm:flex-none">{tournament.formatLabel}</span>
           : <Button variant="ghost" aria-haspopup="dialog" onClick={() => setDialog({ type: 'mode' })}>Mode: {MODE_INFO[host.settings.mode]?.label ?? 'Paddle stack'}</Button>}
         <Button variant="neon" onClick={() => setDialog({ type: 'share' })}>Share board</Button>
         {/* The menu is placed against the header, not the button: on a phone More wraps to the
@@ -120,14 +127,17 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
         </div>
       </header>
 
+      {/* Sticky, so a refusal (a draw edit the server turned down) shows wherever the host tapped. */}
       {(error || actionError) && (
-        <p role="alert" className="my-2 flex items-center justify-between rounded-xl bg-rose-500/15 px-4 py-3 text-rose-100">
-          {friendlyError(actionError ?? error)}<button type="button" onClick={() => { setActionError(null); clearError() }} className="ml-3 min-h-11 px-3 underline">OK</button>
-        </p>
+        <div ref={banner} className="sticky top-0 z-30 -mx-3 bg-ink px-3 py-2 sm:-mx-5 sm:px-5">
+          <p role="alert" className="flex items-center justify-between rounded-xl bg-rose-500/15 px-4 py-3 text-rose-100">
+            {friendlyError(actionError ?? error)}<button type="button" onClick={() => { setActionError(null); clearError() }} className="ml-3 min-h-11 px-3 underline">OK</button>
+          </p>
+        </div>
       )}
 
       {tournament ? (
-        <TournamentHost host={host} send={send} tab={tab} nameOf={nameOf} courtLabel={courtLabel}
+        <TournamentHost host={host} send={send} tab={tab} onTab={setTab} nameOf={nameOf} courtLabel={courtLabel}
           onStart={(match) => send({ type: 'START_MATCH', matchId: match.id })}
           onGameOver={(match) => setDialog({ type: 'gameOver', match })}
           onEditResult={(match) => setDialog({ type: 'editResult', match })} />

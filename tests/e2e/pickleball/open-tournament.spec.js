@@ -220,14 +220,39 @@ test.describe('tournament setup and draft (screens)', () => {
     await expect(page.getByTestId('court-1').getByRole('button', { name: 'Edit' })).toHaveCount(0)
   })
 
+  test('on a phone, Generate lands on the draft and Start lands on the courts', async ({ page, request }) => {
+    const { code, hostKey } = await createTournament(request, { players: 8, format: 'SINGLE_ELIMINATION' })
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await page.getByRole('radio', { name: /^Single elimination/ }).click()
+    await page.getByRole('button', { name: 'Generate the draw' }).click()
+    const draft = page.getByRole('heading', { name: 'Draft draw · Single elimination' })
+    await expect(draft).toBeFocused()
+    await expect(draft).toBeInViewport()
+    // The pickers fold into a summary; Change setup opens them again.
+    await expect(page.getByRole('heading', { name: 'Change the draw' })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Change setup' }).click()
+    await expect(page.getByRole('heading', { name: 'Change the draw' })).toBeVisible()
+    await page.getByRole('button', { name: 'Keep this draft' }).click()
+
+    page.once('dialog', (dialog) => dialog.accept())
+    await page.getByRole('button', { name: 'Start tournament' }).click()
+    await expect(page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Courts' })).toHaveAttribute('aria-current', 'true')
+    await expect(page.getByTestId('court-1')).toBeVisible()
+  })
+
   test('an edit the draw cannot take is refused on screen with the reason', async ({ page, request }) => {
     const { code, hostKey } = await readyTournament(request, { format: 'ROUND_ROBIN', start: false })
+    // A phone, where the games sit well below the top of the page.
+    await page.setViewportSize({ width: 390, height: 844 })
     await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
     // Round 1: Ana & Ben v Gus & Hal, Cy & Di v Eva & Fin. Swapping Gus & Hal for Eva & Fin repeats games from later rounds.
-    await page.getByRole('article', { name: 'Round 1 1' }).getByRole('button', { name: 'Gus & Hal' }).click()
-    await page.getByRole('article', { name: 'Round 1 2' }).getByRole('button', { name: 'Eva & Fin' }).click()
+    await page.getByRole('article', { name: 'Round 1 · Game 1' }).getByRole('button', { name: 'Gus & Hal' }).click()
+    await expect(page.getByText('Selected: Gus & Hal in Round 1 · Game 1')).toBeVisible()
+    await page.getByRole('article', { name: 'Round 1 · Game 2' }).getByRole('button', { name: 'Eva & Fin' }).click()
     await expect(page.getByRole('alert')).toContainText('would play each other twice')
-    await expect(page.getByRole('article', { name: 'Round 1 1' })).toContainText('Gus & Hal')
+    await expect(page.getByRole('alert')).toBeInViewport()
+    await expect(page.getByRole('article', { name: 'Round 1 · Game 1' })).toContainText('Gus & Hal')
   })
 
   for (const width of [390, 768, 1280, 1920]) {

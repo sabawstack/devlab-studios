@@ -16,10 +16,12 @@ import PairStandings from './PairStandings.jsx'
 import SubstituteSheet from './SubstituteSheet.jsx'
 import TournamentSetup from './TournamentSetup.jsx'
 
-export default function TournamentHost({ host, send, tab, nameOf, courtLabel, onStart, onGameOver, onEditResult }) {
+export default function TournamentHost({ host, send, tab, onTab, nameOf, courtLabel, onStart, onGameOver, onEditResult }) {
   const t = host.viewer.tournament
   const [selected, setSelected] = useState(null)
   const [subbing, setSubbing] = useState(false)
+  // Bumped after each Generate so the draft editor brings its heading into view.
+  const [draftFocus, setDraftFocus] = useState(0)
   const ended = host.viewer.status === 'ENDED'
   const running = t.phase === 'RUNNING' || t.phase === 'FINISHED'
   const playing = new Set(host.courts.flatMap((c) => (c.match?.status === 'IN_PROGRESS' ? [...c.match.teamA, ...c.match.teamB] : [])))
@@ -67,8 +69,12 @@ export default function TournamentHost({ host, send, tab, nameOf, courtLabel, on
             </div>
           ) : (
             <div className="grid gap-5">
-              <TournamentSetup tournament={t} activeCount={activeCount} send={send} />
-              {t.phase === 'DRAFT' && <DraftEditor tournament={t} nameOf={nameOf} send={send} />}
+              <TournamentSetup tournament={t} activeCount={activeCount} send={send} onGenerated={() => setDraftFocus((n) => n + 1)} />
+              {/* Keyed by the draw's pairs, so a new Generate starts with nothing selected. */}
+              {t.phase === 'DRAFT' && (
+                <DraftEditor key={t.pairs.map((p) => p.id).sort().join()} tournament={t} nameOf={nameOf} send={send}
+                  focusToken={draftFocus} onStarted={() => onTab?.('courts')} />
+              )}
             </div>
           )}
         </section>
@@ -78,9 +84,9 @@ export default function TournamentHost({ host, send, tab, nameOf, courtLabel, on
         <div className={section('players')}>
           <PlayersPanel players={host.players} waiting={[]} playing={playing} showSkill send={send} />
         </div>
-        <div className={`${section('results')} grid gap-4`}>
+        <div className={section('results')}>
           <Panel><h2 className="mb-2 text-lg font-bold">Standings</h2><PairStandings rows={t.standings} /></Panel>
-          <Panel><h2 className="mb-2 text-lg font-bold">Results</h2>
+          <Panel className="mt-4"><h2 className="mb-2 text-lg font-bold">Results</h2>
             <ResultsList finished={host.finished} nameOf={nameOf} courtLabel={courtLabel} onEdit={onEditResult} />
           </Panel>
         </div>

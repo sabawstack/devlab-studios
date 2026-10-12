@@ -36,16 +36,22 @@ export function roundLabel(format: TournamentFormat, fixtures: readonly Tourname
   return `Winners round ${fixture.roundNumber}`
 }
 
-/** The round label, numbered when that round has more than one game: "Semi-final 2". */
+/**
+ * The round label, numbered when that round has more than one game. Named
+ * elimination rounds take a bare number ("Semi-final 2"); numbered rounds take
+ * a game number ("Round 1 · Game 2", "Pool A · Round 1 · Game 2").
+ */
 export function fixtureLabel(t: Pick<TournamentState, 'format' | 'fixtures'>, fixture: TournamentFixture): string {
   const label = roundLabel(t.format, t.fixtures, fixture)
   const sameRound = t.fixtures
     .filter((f) => f.bracket === fixture.bracket && f.poolLabel === fixture.poolLabel && f.roundNumber === fixture.roundNumber)
     .sort((a, b) => a.position - b.position)
-  return sameRound.length > 1 ? `${label} ${sameRound.findIndex((f) => f.id === fixture.id) + 1}` : label
+  if (sameRound.length < 2) return label
+  const game = sameRound.findIndex((f) => f.id === fixture.id) + 1
+  return /round \d+$/i.test(label) ? `${label} · Game ${game}` : `${label} ${game}`
 }
 
-/** What fills an empty slot: "Winner of Semi-final 1", "Loser of Winners round 1 2", "Pool B winner", "Pool A runner-up". */
+/** What fills an empty slot: "Winner of Semi-final 1", "Loser of Winners round 1 · Game 2", "Pool B winner", "Pool A runner-up". */
 export function sourceLabel(t: Pick<TournamentState, 'format' | 'fixtures'>, source: string | null): string | null {
   if (!source) return null
   const pool = /^POOL_RANK:([A-H]):(\d+)$/.exec(source)

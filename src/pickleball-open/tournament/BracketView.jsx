@@ -25,7 +25,7 @@ function Side({ fixture, side, onSlot, selected, highlight }) {
     const chosen = isSelected(selected, item)
     return (
       <button type="button" aria-pressed={chosen} onClick={() => onSlot(item)}
-        className={`flex min-h-11 w-full items-center gap-2 rounded-lg px-2 text-left ${chosen ? 'bg-pickle-neon font-bold text-ink' : 'hover:bg-navy-800'}`}>
+        className={`flex min-h-11 w-full items-center gap-2 rounded-lg px-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pickle-neon ${chosen ? 'bg-pickle-neon font-bold text-ink' : 'hover:bg-navy-800'}`}>
         {text}
       </button>
     )

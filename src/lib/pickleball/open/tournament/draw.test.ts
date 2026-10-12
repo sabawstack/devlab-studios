@@ -44,6 +44,10 @@ describe('generateDraw', () => {
 
   it('refuses a draw bigger than the session can hold', () => {
     expect(draw('ROUND_ROBIN', 40, 100)).toEqual({ ok: false, reason: 'That draw needs 190 games, more than this session can hold (100). Use pools, or fewer pairs.' })
+    // Already pools: suggesting pools would be no help.
+    const pools = draw('POOL_TO_BRACKET', 40, 10)
+    expect(pools.ok).toBe(false)
+    if (!pools.ok) expect(pools.reason).toMatch(/^That draw needs \d+ games, more than this session can hold \(10\)\. Use fewer pairs\.$/)
   })
 
   it('draws only checked-in players, and flags the odd one out', () => {
@@ -71,10 +75,22 @@ describe('labels', () => {
     const de = draw('DOUBLE_ELIMINATION', 8)
     if (!de.ok) throw new Error(de.reason)
     expect(de.tournament.fixtures.map((f) => fixtureLabel(de.tournament, f))).toEqual([
-      'Winners round 1 1', 'Winners round 1 2', 'Winners final', 'Grand final', 'Losers round 1', 'Losers final',
+      'Winners round 1 · Game 1', 'Winners round 1 · Game 2', 'Winners final', 'Grand final', 'Losers round 1', 'Losers final',
     ])
+    const bigDe = draw('DOUBLE_ELIMINATION', 16)
+    if (!bigDe.ok) throw new Error(bigDe.reason)
+    const losersTwo = bigDe.tournament.fixtures.filter((f) => f.bracket === 'LOSERS' && f.roundNumber === 2).sort((a, b) => a.position - b.position)
+    expect(losersTwo.map((f) => fixtureLabel(bigDe.tournament, f))).toEqual(['Losers round 2 · Game 1', 'Losers round 2 · Game 2'])
     const pools = draw('POOL_TO_BRACKET', 8)
     if (!pools.ok) throw new Error(pools.reason)
     expect(fixtureLabel(pools.tournament, pools.tournament.fixtures[0])).toBe('Pool A · Round 1')
+    const bigPools = draw('POOL_TO_BRACKET', 16)
+    if (!bigPools.ok) throw new Error(bigPools.reason)
+    const poolGame = bigPools.tournament.fixtures.find((f) => f.poolLabel === 'A' && f.roundNumber === 1 && f.position === 1)!
+    expect(fixtureLabel(bigPools.tournament, poolGame)).toBe('Pool A · Round 1 · Game 2')
+    const rr = draw('ROUND_ROBIN', 8)
+    if (!rr.ok) throw new Error(rr.reason)
+    const rrGame = rr.tournament.fixtures.find((f) => f.roundNumber === 1 && f.position === 1)!
+    expect(fixtureLabel(rr.tournament, rrGame)).toBe('Round 1 · Game 2')
   })
 })

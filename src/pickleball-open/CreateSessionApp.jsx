@@ -19,7 +19,7 @@ const field = 'w-full rounded-xl border border-navy-700 bg-navy-900 px-3 py-3 te
 
 export default function CreateSessionApp({ siteKey }) {
   const [step, setStep] = useState('details')
-  const [details, setDetails] = useState({ kind: 'OPEN_PLAY', format: 'ROUND_ROBIN', name: 'Open Play',hostDisplayName: '', courtCount: 4, target: 11, mode: 'PADDLE_STACK', selfCheckIn: true })
+  const [details, setDetails] = useState({ kind: 'OPEN_PLAY', format: 'ROUND_ROBIN', name: 'Open Play', hostDisplayName: '', courtCount: 4, target: 11, mode: 'PADDLE_STACK', selfCheckIn: true })
   const [rosterMode, setRosterMode] = useState('paste')
   const [pasted, setPasted] = useState('')
   const [csvText, setCsvText] = useState('')
@@ -88,7 +88,7 @@ export default function CreateSessionApp({ siteKey }) {
             {KINDS.map(([kind, label, summary]) => (
               <button key={kind} type="button" role="radio" aria-checked={details.kind === kind}
                 onClick={() => update({ kind, name: details.name === 'Open Play' || details.name === 'Tournament' ? label : details.name })}
-                className={`min-h-16 rounded-2xl p-4 text-left ${details.kind === kind ? 'bg-pickle-neon text-ink' : 'border border-navy-700 bg-navy-900 text-white hover:border-pickle-neon'}`}>
+                className={`min-h-16 rounded-2xl p-4 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pickle-neon ${details.kind === kind ? 'bg-pickle-neon text-ink' : 'border border-navy-700 bg-navy-900 text-white hover:border-pickle-neon'}`}>
                 <span className="block text-lg font-bold">{label}</span>
                 <span className={`block text-sm ${details.kind === kind ? 'text-ink' : 'text-mist'}`}>{summary}</span>
               </button>
@@ -126,11 +126,11 @@ export default function CreateSessionApp({ siteKey }) {
               <p className="mt-3 text-sm text-mist">Once everyone is in, you choose how pairs are made and seeded, generate the draw, and edit it as much as you like before you start.</p>
             </Panel>
           ) : (
-          <Panel className="md:col-span-2">
-            <p className="mb-3 font-semibold">Who plays next</p>
-            <ModePicker value={details.mode} onChange={(mode) => update({ mode })} />
-            <p className="mt-3 text-sm text-mist">You can switch any time during the session. Anyone who has sat out 2 rounds in a row goes on next, whichever you pick (a keep-together or keep-apart rule can hold them back), and every proposed game can be edited before it starts.</p>
-          </Panel>
+            <Panel className="md:col-span-2">
+              <p className="mb-3 font-semibold">Who plays next</p>
+              <ModePicker value={details.mode} onChange={(mode) => update({ mode })} />
+              <p className="mt-3 text-sm text-mist">You can switch any time during the session. Anyone who has sat out 2 rounds in a row goes on next, whichever you pick (a keep-together or keep-apart rule can hold them back), and every proposed game can be edited before it starts.</p>
+            </Panel>
           )}
           <label className="flex min-h-11 items-center gap-3 md:col-span-2">
             <input type="checkbox" className="h-5 w-5 accent-[#c6ff2e]" checked={details.selfCheckIn} onChange={(e) => update({ selfCheckIn: e.target.checked })} />

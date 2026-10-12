@@ -57,7 +57,7 @@ export function generateDraw(players: readonly OpenPlayer[], options: DrawOption
   const entrants: TournamentEntrant[] = seeded.map((playerIds, index) => ({ id: ctx.newId(), playerIds, seed: index + 1, poolLabel: null }))
   const fixtures = withIds(generateFixtures(options.format, entrants.map((e) => ({ entrantId: e.id, seed: e.seed }))), ctx.newId)
   if (fixtures.length > maxFixtures) {
-    return { ok: false, reason: `That draw needs ${fixtures.length} games, more than this session can hold (${maxFixtures}). Use pools, or fewer pairs.` }
+    return { ok: false, reason: `That draw needs ${fixtures.length} games, more than this session can hold (${maxFixtures}). ${options.format === 'POOL_TO_BRACKET' ? 'Use fewer pairs.' : 'Use pools, or fewer pairs.'}` }
   }
   const poolOf = new Map<string, string>()
   for (const f of fixtures) {
