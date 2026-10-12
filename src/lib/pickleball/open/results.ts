@@ -212,10 +212,42 @@ export function tvRestColumns(rows: number): number {
   return 4
 }
 
-/** Columns inside one podium step: a tie of three or four sits two by two, five or more three across. */
+/**
+ * Columns inside one podium step: a shared place sits side by side on a wider
+ * step (two or three across, four as two by two, more in rows of three).
+ */
 export function podiumStepColumns(entries: number): number {
-  if (entries <= 2) return 1
-  return entries <= 4 ? 2 : 3
+  if (entries <= 3) return Math.max(1, entries)
+  return entries === 4 ? 2 : 3
+}
+
+export function ordinal(n: number): string {
+  const teen = n % 100 >= 11 && n % 100 <= 13
+  const suffix = teen ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' } as Record<number, string>)[n % 10] ?? 'th'
+  return `${n}${suffix}`
+}
+
+/**
+ * The personal line on an ended board for the player who picked their name:
+ * where they (or their pair) finished, or thanks for coming without a game.
+ * Null when nobody on the roster is picked.
+ */
+export function finishLine(viewer: ViewerSnapshot, playerId: string): string | null {
+  const me = playerId ? viewer.roster.find((p) => p.id === playerId) : undefined
+  if (!me) return null
+  const hi = `Hi ${me.name.trim().split(/\s+/)[0] || 'there'}!`
+  const results = finalResults(viewer)
+  const ranked = [...results.podium.flatMap((step) => step.entries), ...results.rest]
+  const t = viewer.tournament
+  const ownId = t ? t.pairs.find((pair) => pair.playerIds.includes(playerId))?.id : playerId
+  const mine = ranked.find((entry) => entry.id === ownId)
+  if (!mine) return `${hi} Thanks for coming 👋`
+  const tied = ranked.some((entry) => entry.id !== mine.id && entry.place === mine.place)
+  if (t) {
+    if (mine.place === 1 && t.champion?.entrantId === mine.id) return `${hi} Your pair won the tournament! 🏆`
+    return `${hi} Your pair ${tied ? 'tied for' : 'finished'} ${ordinal(mine.place)}`
+  }
+  return `${hi} You ${tied ? 'tied for' : 'finished'} ${ordinal(mine.place)} of ${ranked.length} 🎉`
 }
 
 /** The TV podium shrinks in these steps until a big tie fits, never below the floor (names stay readable across a hall). */

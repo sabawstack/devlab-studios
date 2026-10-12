@@ -533,6 +533,13 @@ test.describe('tournament final results (screens)', () => {
     await expect(page.getByRole('region', { name: 'Courts' })).toHaveCount(0)
     // The draw stays on the board under the results.
     await expect(page.getByRole('region', { name: 'Draw' })).toBeVisible()
+    // Each player hears how their pair finished.
+    const champion = table[0].name.split(' & ')[0]
+    await page.getByLabel("I'm…").selectOption({ label: champion })
+    await expect(page.getByRole('status').filter({ hasText: `Hi ${champion}! Your pair won the tournament! 🏆` })).toBeVisible()
+    const fourth = table[3].name.split(' & ')[1]
+    await page.getByLabel("I'm…").selectOption({ label: fourth })
+    await expect(page.getByRole('status').filter({ hasText: `Hi ${fourth}! Your pair finished 4th` })).toBeVisible()
     await page.getByRole('button', { name: 'Share results' }).click()
     const wl = (row) => `${row.wins}–${row.losses}`
     await expect.poll(() => page.evaluate(() => window.__shared.length)).toBe(1)

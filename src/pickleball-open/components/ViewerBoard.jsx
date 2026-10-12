@@ -1,7 +1,7 @@
 // src/pickleball-open/components/ViewerBoard.jsx
 import { useState } from 'react'
 import { MODE_INFO } from '../../lib/pickleball/open/modes/info'
-import { showsFinalResults } from '../../lib/pickleball/open/results'
+import { finishLine, showsFinalResults } from '../../lib/pickleball/open/results'
 import { viewerLink } from '../lib/hostKeys'
 import { readMe, writeMe } from '../lib/me'
 import { myStatus, statusText } from '../lib/myStatus'
@@ -21,8 +21,7 @@ const clock = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', min
 
 const COURT_STATE = { PLAYING: 'Playing', UP_NEXT: 'Walk on now', WAITING_FOR_PLAYERS: 'Waiting for players', OFF: 'Off' }
 
-function MeBanner({ status, name }) {
-  const text = statusText(status, name)
+function MeBanner({ text }) {
   if (!text) return null
   return <p className="rounded-2xl bg-pickle-neon px-4 py-3 text-lg font-bold text-ink [overflow-wrap:anywhere]" role="status">{text}</p>
 }
@@ -75,7 +74,8 @@ export default function ViewerBoard({ viewer, status, lastSnapshotAt = null, inv
             {viewer.status !== 'ACTIVE' ? 'ENDED' : fresh ? 'LIVE' : <span className="text-amber-200">Offline · showing data from {lastSnapshotAt ? clock(lastSnapshotAt) : 'earlier'}</span>}
           </p>
           <h1 className="text-2xl font-bold sm:text-3xl [overflow-wrap:anywhere]">{viewer.name}</h1>
-          <Welcome announcement={viewer.announcement} className="mt-1" />
+          {/* Once the results show, their "Thanks for playing" header takes over from the greeting and message. */}
+          {!final && <Welcome announcement={viewer.announcement} className="mt-1" />}
           <p className="text-sm text-mist">Hosted by {viewer.hostDisplayName} · {courtCount} court{courtCount === 1 ? '' : 's'} · {tournament ? tournament.formatLabel : MODE_INFO[viewer.settings.mode]?.label ?? 'Paddle stack'}</p>
           {viewer.settings.selfCheckIn && viewer.status === 'ACTIVE' && (
             <a href={`/pickleball/s/${viewer.code}/check-in`} className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-pickle-neon underline underline-offset-4">Not on the list? Check in</a>
@@ -93,6 +93,7 @@ export default function ViewerBoard({ viewer, status, lastSnapshotAt = null, inv
       {tournament && <ChampionAnnouncer champion={tournament.champion} />}
       {final ? (
         <>
+          <MeBanner text={finishLine(viewer, me)} />
           <ResultsScreen viewer={viewer} boardUrl={viewerLink(window.location.origin, viewer.code)} highlightIds={highlightIds} />
           {tournament && (
             <section aria-label="Draw" className="grid gap-3">
@@ -103,7 +104,7 @@ export default function ViewerBoard({ viewer, status, lastSnapshotAt = null, inv
         </>
       ) : (
       <>
-      <MeBanner status={mine} name={myName} />
+      <MeBanner text={statusText(mine, myName)} />
 
       <div className="grid grid-cols-3 gap-1 rounded-xl bg-navy-900 p-1 lg:hidden" role="tablist" aria-label="Board sections">
         {tabs.map(([key, label]) => (

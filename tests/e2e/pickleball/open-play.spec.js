@@ -989,6 +989,39 @@ test.describe('final results', () => {
     // No courts, no tabs: the results are the board now.
     await expect(page.getByRole('region', { name: 'Courts' })).toHaveCount(0)
     await expect(page.getByRole('tablist')).toHaveCount(0)
+    // The results header replaces the greeting and the welcome message.
+    await expect(page.getByTestId('welcome')).toHaveCount(0)
+    await expect(page.getByText(/Good (morning|afternoon|evening), players/)).toHaveCount(0)
+  })
+
+  test('a shared 1st stands side by side on one wide step, centred with the 3rd step', async ({ page, request }) => {
+    const { code } = await playedAndEnded(request)
+    for (const width of [390, 1280]) {
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto(`/pickleball/s/${code}`)
+      const names = page.getByTestId('podium-1').getByRole('listitem')
+      await expect(names).toHaveCount(2)
+      const [a, b] = await names.evaluateAll((els) => els.map((el) => el.getBoundingClientRect()))
+      expect(Math.abs(a.top - b.top)).toBeLessThan(2)
+      expect(b.left).toBeGreaterThan(a.right - 1)
+      // The podium as a whole sits in the middle of its card.
+      const podium = await page.getByRole('list', { name: 'Podium' }).evaluate((el) => {
+        const box = el.getBoundingClientRect()
+        const card = el.closest('[data-testid="final-results"]').getBoundingClientRect()
+        return { left: box.left - card.left, right: card.right - box.right }
+      })
+      expect(Math.abs(podium.left - podium.right)).toBeLessThan(3)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    }
+  })
+
+  test('a player who picked their name sees where they finished, or thanks for coming', async ({ page, request }) => {
+    const { code, gold, benched } = await playedAndEnded(request)
+    await page.goto(`/pickleball/s/${code}`)
+    await page.getByLabel("I'm…").selectOption({ label: gold[0] })
+    await expect(page.getByRole('status').filter({ hasText: `Hi ${gold[0]}! You tied for 1st of 8 🎉` })).toBeVisible()
+    await page.getByLabel("I'm…").selectOption({ label: benched[0] })
+    await expect(page.getByRole('status').filter({ hasText: `Hi ${benched[0]}! Thanks for coming 👋` })).toBeVisible()
   })
 
   test('Share results hands the exact text and link to the share sheet', async ({ page, request, baseURL }) => {
@@ -1052,6 +1085,10 @@ test.describe('final results', () => {
     await expect(page.getByTestId('final-results')).toContainText(`Didn't play: ${benched.join(', ')}`)
     await expect(page.getByTestId('tv-court')).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Share results' })).toHaveCount(0)
+    // No greeting and no welcome line once the results show.
+    await expect(page.getByText(/Good (morning|afternoon|evening), players/)).toHaveCount(0)
+    await expect(page.getByRole('contentinfo', { name: 'Welcome message' })).toHaveCount(0)
+    await expect(page.locator('footer[aria-label="Welcome message"]')).toHaveCount(0)
   })
 
   for (const [width, height] of [[1920, 1080], [1280, 720]]) {

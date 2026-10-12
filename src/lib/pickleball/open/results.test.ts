@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  durationText, finalResults, nextTvPodiumFit, podiumDisplayOrder, podiumStepColumns, previewMeta, shareText, showsFinalResults, summaryText,
+  durationText, finalResults, finishLine, ordinal, nextTvPodiumFit, podiumDisplayOrder, podiumStepColumns, previewMeta, shareText, showsFinalResults, summaryText,
   TV_PODIUM_FIT, tvRestColumns,
 } from './results'
 import { toViewerSnapshot } from './snapshot'
@@ -195,8 +195,8 @@ describe('TV layout helpers', () => {
     expect([0, 6, 8, 9, 16, 17, 36, 37, 120].map(tvRestColumns)).toEqual([1, 1, 1, 2, 2, 3, 3, 4, 4])
   })
 
-  it('podiumStepColumns puts a big tie side by side on its step', () => {
-    expect([1, 2, 3, 4, 5, 9].map(podiumStepColumns)).toEqual([1, 1, 2, 2, 3, 3])
+  it('podiumStepColumns lays a shared place side by side (two by two for four, three across beyond)', () => {
+    expect([1, 2, 3, 4, 5, 6, 9].map(podiumStepColumns)).toEqual([1, 2, 3, 2, 3, 3, 3])
   })
 
   it('nextTvPodiumFit shrinks only while overflowing, down to the floor, then lifts the cap', () => {
@@ -330,5 +330,64 @@ describe('finalResults: tournaments', () => {
     const viewer = toViewerSnapshot(state)
     const results = finalResults(viewer)
     expect(results.durationMs).toBe(Date.parse(viewer.games.lastFinishedAt!) - Date.parse(viewer.games.firstStartedAt!))
+  })
+})
+
+describe('ordinal', () => {
+  it('reads 1st, 2nd, 3rd, 4th, 11th–13th, 21st, 102nd', () => {
+    expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 102, 111].map(ordinal)).toEqual(
+      ['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '23rd', '102nd', '111th'])
+  })
+})
+
+describe('finishLine (the personal banner on an ended board)', () => {
+  it('open play: your place of how many were ranked', () => {
+    const viewer = toViewerSnapshot(ended(clearOrder()))
+    expect(finishLine(viewer, 'D')).toBe('Hi D! You finished 4th of 6 🎉')
+    expect(finishLine(viewer, 'A')).toBe('Hi A! You finished 1st of 6 🎉')
+  })
+
+  it('open play: a shared place says tied, and uses the first name only', () => {
+    const state = openPlay(['Ana Lopez', 'Ben', 'Cy', 'Di'], [finished('m1', ['Ana Lopez', 'Ben'], ['Cy', 'Di'], 'A', 11, 4, 0)])
+    const named = { ...state, players: state.players.map((p) => ({ ...p, name: p.id })) }
+    const viewer = toViewerSnapshot(ended(named))
+    expect(finishLine(viewer, 'Ana Lopez')).toBe('Hi Ana! You tied for 1st of 4 🎉')
+    expect(finishLine(viewer, 'Cy')).toBe('Hi Cy! You tied for 3rd of 4 🎉')
+  })
+
+  it('open play: a player with no games is thanked for coming; nobody picked is null', () => {
+    const viewer = toViewerSnapshot(ended(clearOrder()))
+    expect(finishLine(viewer, 'G')).toBe('Hi G! Thanks for coming 👋')
+    expect(finishLine(viewer, '')).toBeNull()
+    expect(finishLine(viewer, 'nobody')).toBeNull()
+  })
+
+  it('tournaments: the champions are told they won; others where their pair finished', () => {
+    const state = playedTournament('SINGLE_ELIMINATION', 8)
+    const viewer = toViewerSnapshot(state)
+    const results = finalResults(viewer)
+    const pairOf = (entrantId: string) => viewer.tournament!.pairs.find((p) => p.id === entrantId)!
+    const winner = pairOf(results.podium[0].entries[0].id).playerIds[0]
+    const runnerUp = pairOf(results.podium[1].entries[0].id).playerIds[1]
+    const third = pairOf(results.podium[2].entries[0].id).playerIds[0]
+    const first = (id: string) => viewer.roster.find((p) => p.id === id)!.name.split(' ')[0]
+    expect(finishLine(viewer, winner)).toBe(`Hi ${first(winner)}! Your pair won the tournament! 🏆`)
+    expect(finishLine(viewer, runnerUp)).toBe(`Hi ${first(runnerUp)}! Your pair finished 2nd`)
+    expect(finishLine(viewer, third)).toBe(`Hi ${first(third)}! Your pair tied for 3rd`)
+  })
+
+  it('tournaments ended early: 1st place is a finish, not a win', () => {
+    const ctx = makeCtx()
+    let state = tournamentSession(8, 2, 'SINGLE_ELIMINATION')
+    state = run(state, { type: 'GENERATE_DRAW', format: 'SINGLE_ELIMINATION', pairing: 'BALANCED', seeding: 'BY_SKILL' }, ctx(1))
+    state = run(state, { type: 'START_TOURNAMENT' }, ctx(2))
+    const game = state.matches.find((m) => m.status === 'PROPOSED')!
+    state = run(state, { type: 'RECORD_RESULT', matchId: game.id, winner: 'A', scoreA: 11, scoreB: 3 }, ctx(3))
+    state = run(state, { type: 'END_SESSION' }, ctx(4))
+    const viewer = toViewerSnapshot(state)
+    const winnerId = state.tournament!.entrants.find((e) => e.id === finalResults(viewer).podium[0].entries[0].id)!.playerIds[0]
+    expect(finishLine(viewer, winnerId)).toMatch(/Your pair finished 1st$/)
+    const benched = state.tournament!.entrants.find((e) => finalResults(viewer).didntPlay.includes(viewer.tournament!.pairs.find((p) => p.id === e.id)!.name))!.playerIds[0]
+    expect(finishLine(viewer, benched)).toMatch(/Thanks for coming 👋$/)
   })
 })

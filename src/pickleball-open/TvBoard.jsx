@@ -153,8 +153,10 @@ export default function TvBoard({ code }) {
   // One overlay fills the courts area at a time: the final results, or the coming draw.
   const overlay = showsFinalResults(viewer) ? 'results' : preStart ? 'draw' : null
   const grid = { '--tv-cols': cols, '--tv-rows': rows }
-  const greeting = greetingFor(new Date(now))
-  const announcement = viewer.announcement
+  // The results' "Thanks for playing" header replaces the greeting and the welcome line.
+  const results = overlay === 'results'
+  const greeting = results ? null : greetingFor(new Date(now))
+  const announcement = results ? '' : viewer.announcement
 
   return (
     <main className={`grid grid-cols-1 gap-4 p-4 lg:h-screen lg:grid-cols-[minmax(0,1fr)_minmax(18rem,26vw)] lg:gap-[1.2vw] lg:overflow-hidden lg:p-[1.2vw] ${announcement ? 'lg:grid-rows-[minmax(0,1fr)_auto]' : ''}`}>
@@ -162,7 +164,7 @@ export default function TvBoard({ code }) {
       <header className="lg:hidden">
         <p className="text-sm font-bold text-pickle-neon"><LiveState viewer={viewer} live={live} lastAt={lastSnapshotAt} /> · {modeLabel}</p>
         <h1 className={`text-2xl font-bold ${WRAP}`}>{viewer.name}</h1>
-        <p className="text-base font-semibold text-pickle-neon">{greeting}</p>
+        {greeting && <p className="text-base font-semibold text-pickle-neon">{greeting}</p>}
         <p className="whitespace-nowrap text-lg font-bold tracking-[0.05em] text-pickle-neon">{formatPublicCode(code)}</p>
       </header>
       <section
@@ -184,7 +186,7 @@ export default function TvBoard({ code }) {
         <header>
           <p className="text-[clamp(0.9rem,1.1vw,1.5rem)] font-bold text-pickle-neon"><LiveState viewer={viewer} live={live} lastAt={lastSnapshotAt} /> · {modeLabel}</p>
           <h1 className={`text-[clamp(1.25rem,1.8vw,2.5rem)] font-bold leading-tight ${WRAP}`}>{viewer.name}</h1>
-          <p className="text-[clamp(0.9rem,1.1vw,1.5rem)] font-semibold text-pickle-neon">{greeting}</p>
+          {greeting && <p className="text-[clamp(0.9rem,1.1vw,1.5rem)] font-semibold text-pickle-neon">{greeting}</p>}
         </header>
         <div className="flex items-center gap-[1vw]">
           <QrCode url={qrUrl} size={qrSize} label={qrLabel} />
