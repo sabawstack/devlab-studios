@@ -17,6 +17,8 @@ function MeBanner({ status }) {
     WAITING: `You're #${status.place} in line`,
     BREAK: "You're on a break",
     NEXT_GAME: `Your next game: ${status.label}`,
+    WAITING_POOLS: 'Waiting for the pools to finish',
+    WAITING_RESULTS: 'Waiting for other results to set your next game',
     DONE: 'Your games are done. Thanks for playing!',
   }[status.kind]
   if (!text) return null

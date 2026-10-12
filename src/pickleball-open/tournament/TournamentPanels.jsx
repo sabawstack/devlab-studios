@@ -12,26 +12,32 @@ export default function TournamentPanels({ viewer, courtsGrid, me, section }) {
   const t = viewer.tournament
   const myPair = t.pairs.find((p) => p.playerIds.includes(me))?.id ?? null
   const coming = nextGames(t)
+  const finished = t.phase === 'FINISHED'
+  // Once finished a phone's Courts tab has no courts, so the final standings show there too (every tab but Draw).
+  const standingsClass = finished ? `${section('draw').startsWith('hidden') ? 'block' : 'hidden'} lg:block` : section('standings')
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
       <div className="grid content-start gap-5">
         <ChampionBanner champion={t.champion} />
         {t.phase === 'SETUP' && <p className="text-mist">The host is setting up the draw.</p>}
         {t.phase === 'DRAFT' && <p className="rounded-xl bg-navy-900 px-4 py-3 text-mist">Draft draw: the host may still change pairs and games before the start.</p>}
-        <section className={section('courts')} aria-label="Courts">
-          {courtsGrid}
-          {coming.length > 0 && (
-            // Bordered rather than a filled panel, so the game cards inside stand out from it.
-            <div className="mt-4 rounded-2xl border border-navy-800 p-3">
-              <h2 className="mb-2 font-bold">Coming up</h2>
-              <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(min(100%,15rem),1fr))]">
-                {coming.map((game) => <GameCard key={game.id} fixture={game} highlight={myPair} />)}
+        {/* Once there are champions the courts are idle: the banner and standings say it all. */}
+        {!finished && (
+          <section className={section('courts')} aria-label="Courts">
+            {courtsGrid}
+            {coming.length > 0 && (
+              // Bordered rather than a filled panel, so the game cards inside stand out from it.
+              <div className="mt-4 rounded-2xl border border-navy-800 p-3">
+                <h2 className="mb-2 font-bold">Coming up</h2>
+                <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(min(100%,15rem),1fr))]">
+                  {coming.map((game) => <GameCard key={game.id} fixture={game} highlight={myPair} />)}
+                </div>
               </div>
-            </div>
-          )}
-        </section>
+            )}
+          </section>
+        )}
       </div>
-      <aside className={`${section('standings')} grid content-start gap-4`}>
+      <aside className={`${standingsClass} grid content-start gap-4`}>
         <Panel><h2 className="mb-2 text-lg font-bold">Standings</h2><PairStandings rows={t.standings} highlight={myPair} /></Panel>
       </aside>
       {/* The draw takes the full width on wide screens, so a bracket's rounds fit side by side. */}

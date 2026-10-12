@@ -407,6 +407,8 @@ test.describe('tournament board and TV (screens)', () => {
     await expect(final).toContainText('Ana & Ben')
     await playToChampion(request, code, hostKey)
     await expect(page.getByTestId('champion')).toContainText('Ana & Ben')
+    // The courts are idle once there are champions, so the board drops them.
+    await expect(page.getByRole('region', { name: 'Courts' })).toHaveCount(0)
   })
 
   test('a player who picks their name sees their next game', async ({ page, request }) => {
@@ -462,6 +464,9 @@ test.describe('tournament board and TV (screens)', () => {
         // Names at least 24 px tall at 1080p and 18 px at 720p, as for open play.
         const sizes = await page.getByTestId('tv-court').evaluateAll((cards) => cards.map((el) => parseFloat(getComputedStyle(el).fontSize)))
         for (const size of sizes) expect(size).toBeGreaterThanOrEqual(height === 1080 ? 24 : 18)
+        const comingUp = await page.getByRole('region', { name: 'Coming up' }).locator('li').evaluateAll((rows) => rows.map((el) => parseFloat(getComputedStyle(el).fontSize)))
+        expect(comingUp.length).toBeGreaterThan(0)
+        for (const size of comingUp) expect(size).toBeGreaterThanOrEqual(height === 1080 ? 24 : 18)
       })
     }
   }
@@ -480,4 +485,25 @@ test.describe('tournament board and TV (screens)', () => {
       expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true)
     })
   }
+
+  test('an ended tournament shows its champions once, with "Session ended" under them', async ({ page, request }) => {
+    const { code, hostKey } = await readyTournament(request)
+    await playToChampion(request, code, hostKey)
+    await ok(request, code, hostKey, { type: 'END_SESSION' })
+    await page.setViewportSize({ width: 1920, height: 1080 })
+    await page.goto(`/pickleball/s/${code}/tv`)
+    await expect(page.getByTestId('champion')).toContainText('Ana & Ben')
+    await expect(page.getByText('Session ended', { exact: true })).toHaveCount(1)
+    await expect(page.getByTestId('tv-court')).toHaveCount(0)
+    await expect.poll(() => spilling(page), { timeout: 5000 }).toEqual([])
+  })
+
+  test('before the start the TV says the draw is coming instead of showing empty courts', async ({ page, request }) => {
+    const { code } = await readyTournament(request, { start: false })
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await page.goto(`/pickleball/s/${code}/tv`)
+    await expect(page.getByTestId('tv-draw-note')).toContainText('may still change')
+    await expect(page.getByTestId('tv-court')).toHaveCount(0)
+    await expect(page.getByRole('region', { name: 'Coming up' })).toHaveCount(0)
+  })
 })

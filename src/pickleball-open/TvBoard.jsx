@@ -86,8 +86,8 @@ function ComingUp({ tournament }) {
     <section aria-label="Coming up" className="flex max-h-[30vh] min-h-0 shrink flex-col">
       <h2 className={H2}>Coming up</h2>
       {rows.length === 0
-        ? <p className="mt-1 text-[clamp(1rem,1.3vw,1.75rem)] text-mist">Waiting for results</p>
-        : <FitList rows={rows} className="mt-1 grid gap-1 text-[clamp(1rem,1.2vw,1.6rem)]" />}
+        ? <p className="mt-1 text-[clamp(1.125rem,1.4vw,1.75rem)] text-mist">Waiting for results</p>
+        : <FitList rows={rows} className="mt-1 grid gap-1 text-[clamp(1.125rem,1.4vw,1.75rem)]" />}
     </section>
   )
 }
@@ -144,6 +144,10 @@ export default function TvBoard({ code }) {
   const tournament = viewer.tournament
   const modeLabel = tournament ? tournament.formatLabel : MODE_INFO[viewer.settings.mode]?.label ?? 'Paddle stack'
   const champion = tournament?.phase === 'FINISHED' ? tournament.champion : null
+  // Before the start there is nothing on court yet: say so instead of showing empty courts.
+  const preStart = tournament?.phase === 'SETUP' || tournament?.phase === 'DRAFT'
+  // One overlay fills the courts area at a time: the champions (with "Session ended" under them), the end, or the coming draw.
+  const overlay = champion ? 'champion' : ended ? 'ended' : preStart ? 'draw' : null
   const grid = { '--tv-cols': cols, '--tv-rows': rows }
 
   return (
@@ -159,10 +163,21 @@ export default function TvBoard({ code }) {
         style={grid}
         className="grid min-h-0 grid-cols-1 gap-3 lg:gap-[1vw] lg:[grid-template-columns:repeat(var(--tv-cols),minmax(0,1fr))] lg:[grid-template-rows:repeat(var(--tv-rows),minmax(0,1fr))]"
       >
-        {ended && <p className="grid place-items-center rounded-2xl bg-navy-900 p-8 text-center text-[clamp(2rem,6vw,7rem)] font-bold lg:col-span-full lg:row-span-full" role="status">Session ended</p>}
-        {champion && <div className="grid place-items-center lg:col-span-full lg:row-span-full"><ChampionBanner champion={champion} tv /></div>}
-        {!ended && !champion && courts.length === 0 && <p className="grid place-items-center rounded-2xl bg-navy-900 p-8 text-center text-[clamp(1.5rem,3.5vw,4rem)] font-bold text-mist lg:col-span-full lg:row-span-full">No courts are in play right now</p>}
-        {!ended && !champion && courts.map((court) => <TvCourt key={court.id} court={court} />)}
+        {overlay === 'ended' && <p className="grid place-items-center rounded-2xl bg-navy-900 p-8 text-center text-[clamp(2rem,6vw,7rem)] font-bold lg:col-span-full lg:row-span-full" role="status">Session ended</p>}
+        {overlay === 'champion' && (
+          <div className="grid place-content-center justify-items-center gap-[1.5vw] text-center lg:col-span-full lg:row-span-full">
+            <ChampionBanner champion={champion} tv />
+            {ended && <p className="text-[clamp(1.25rem,2.5vw,3rem)] font-bold text-mist">Session ended</p>}
+          </div>
+        )}
+        {overlay === 'draw' && (
+          <div className="grid place-content-center rounded-2xl bg-navy-900 p-8 text-center lg:col-span-full lg:row-span-full" data-testid="tv-draw-note">
+            <p className="text-[clamp(2rem,5vw,6rem)] font-bold leading-tight">{tournament.phase === 'SETUP' ? 'The draw is coming soon' : 'Draft draw'}</p>
+            <p className="mt-[0.5em] text-[clamp(1.25rem,2.5vw,3rem)] text-mist">Pairs and games may still change before the start.</p>
+          </div>
+        )}
+        {!overlay && courts.length === 0 && <p className="grid place-items-center rounded-2xl bg-navy-900 p-8 text-center text-[clamp(1.5rem,3.5vw,4rem)] font-bold text-mist lg:col-span-full lg:row-span-full">No courts are in play right now</p>}
+        {!overlay && courts.map((court) => <TvCourt key={court.id} court={court} />)}
       </section>
       <aside className="hidden min-h-0 flex-col gap-[1vw] overflow-hidden lg:flex">
         <header>
@@ -176,7 +191,7 @@ export default function TvBoard({ code }) {
             <p className="whitespace-nowrap text-[clamp(1rem,1.5vw,2.25rem)] font-bold tracking-[0.04em] text-pickle-neon">{formatPublicCode(code)}</p>
           </div>
         </div>
-        {!ended && !champion && (tournament ? <ComingUp tournament={tournament} /> : <UpNext viewer={viewer} />)}
+        {!overlay && (tournament ? <ComingUp tournament={tournament} /> : <UpNext viewer={viewer} />)}
         {/* Fairness is about open-play rotation; a tournament's draw decides who plays. */}
         {!tournament && <div className="shrink-0"><FairnessPanel fairness={viewer.fairness} tv /></div>}
         <section aria-label={panel === 'standings' ? 'Standings' : 'Recent results'} data-testid="tv-panel" className="flex min-h-0 flex-1 flex-col overflow-hidden">

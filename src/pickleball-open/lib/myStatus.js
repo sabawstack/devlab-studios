@@ -1,10 +1,34 @@
 // src/pickleball-open/lib/myStatus.js
-/** A tournament player's next unplayed game, or that their games are done (spec §7 "You're up next"). */
+const OVER = new Set(['FINISHED', 'BYE'])
+/** Bracket losses a pair can take before it is out (pool games never knock a pair out). */
+const LIVES = { SINGLE_ELIMINATION: 1, POOL_TO_BRACKET: 1, DOUBLE_ELIMINATION: 2 }
+
+const plays = (f, pairId) => f.entrantAId === pairId || f.entrantBId === pairId
+const lost = (f, pairId) => f.status === 'FINISHED' && f.winner !== null && f.winner !== undefined
+  && (f.winner === 'A' ? f.entrantBId : f.entrantAId) === pairId
+
+/** Whether a pair with no game placed can still play: it is only out once it cannot (spec §7 "You're up next"). */
+function isOut(tournament, pairId) {
+  const { fixtures, format } = tournament
+  const bracketGames = fixtures.filter((f) => f.bracket !== 'POOL')
+  const losses = bracketGames.filter((f) => lost(f, pairId)).length
+  if (LIVES[format] && losses >= LIVES[format]) return true
+  // Pools resolved and the pair was not drawn into the bracket: it did not qualify.
+  if (format === 'POOL_TO_BRACKET') return !bracketGames.some((f) => plays(f, pairId))
+  // Round robin: every game is drawn up front, so no game left means done.
+  return format === 'ROUND_ROBIN'
+}
+
+/** A tournament player's next game, a wait for other results, or that their games are really done. */
 function tournamentStatus(tournament, playerId) {
   const pair = tournament.pairs.find((p) => p.playerIds.includes(playerId))
   if (!pair || tournament.phase === 'SETUP' || tournament.phase === 'DRAFT') return { kind: 'NONE' }
-  const next = tournament.fixtures.find((f) => (f.entrantAId === pair.id || f.entrantBId === pair.id) && f.status !== 'FINISHED' && f.status !== 'BYE')
-  return next ? { kind: 'NEXT_GAME', label: next.label } : { kind: 'DONE' }
+  if (tournament.phase === 'FINISHED') return { kind: 'DONE' }
+  const next = tournament.fixtures.find((f) => plays(f, pair.id) && !OVER.has(f.status))
+  if (next) return { kind: 'NEXT_GAME', label: next.label }
+  const poolsRunning = tournament.fixtures.some((f) => f.bracket === 'POOL' && !OVER.has(f.status))
+  if (poolsRunning) return { kind: 'WAITING_POOLS' }
+  return isOut(tournament, pair.id) ? { kind: 'DONE' } : { kind: 'WAITING_RESULTS' }
 }
 
 /** Where the player who picked "I'm …" on this phone is right now. */

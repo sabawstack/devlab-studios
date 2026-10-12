@@ -73,7 +73,7 @@ export default function BracketView({ tournament, onSlot = null, selected = null
   return (
     <div className="grid gap-5" data-testid="draw">
       {pools.length > 0 && (
-        <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,20rem),1fr))]">
+        <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,20rem),1fr))]">
           {pools.map((section) => (
             <section key={section.key} aria-label={section.title} className="grid content-start gap-3 rounded-2xl border border-navy-800 p-3">
               <h3 className="text-lg font-bold text-pickle-neon">{section.title}</h3>
