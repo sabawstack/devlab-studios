@@ -264,7 +264,11 @@ export function applyCommand(state: OpenSessionState, command: OpenCommand, ctx:
       return syncFixture(withPlayers(next, new Set([...match.teamA, ...match.teamB]), { waitingSince: ctx.now }), match, 'ABANDON')
     }
     case 'END_SESSION':
-      return ok({ ...withoutMatches(state, (m) => m.status === 'PROPOSED'), status: 'ENDED' })
+      // The first end time is kept: ending again (a retry, a second tap) does not move it.
+      return ok({
+        ...withoutMatches(state, (m) => m.status === 'PROPOSED'), status: 'ENDED',
+        settings: { ...state.settings, endedAt: state.settings.endedAt ?? ctx.now },
+      })
     case 'SET_MODE':
       // Applies to the next proposal only (spec §5.2): nothing proposed or playing is rewritten.
       return ok({ ...state, settings: { ...state.settings, mode: command.mode } })

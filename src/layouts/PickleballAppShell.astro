@@ -9,8 +9,10 @@ interface Props {
   title: string
   description?: string
   indexable?: boolean
+  /** Link preview tags (a shared board link): og:title and og:description. */
+  og?: { title: string; description: string }
 }
-const { title, description, indexable = false } = Astro.props
+const { title, description, indexable = false, og } = Astro.props
 ---
 <!doctype html>
 <html lang="en">
@@ -23,6 +25,10 @@ const { title, description, indexable = false } = Astro.props
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
     {!indexable && <meta name="robots" content="noindex, nofollow" />}
     {description && <meta name="description" content={description} />}
+    {og && <meta property="og:type" content="website" />}
+    {og && <meta property="og:title" content={og.title} />}
+    {og && <meta property="og:description" content={og.description} />}
+    {og && <meta property="og:site_name" content="Devlab Pickleball" />}
     <meta name="theme-color" content="#0b1426" />
     <title>{title}</title>
   </head>

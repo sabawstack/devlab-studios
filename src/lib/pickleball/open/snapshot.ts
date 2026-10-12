@@ -30,6 +30,10 @@ export interface ViewerSnapshot {
   settings: { target: number; mode: StackingMode; selfCheckIn: boolean }
   /** The host's welcome message, public by design; '' when there is none. */
   announcement: string
+  /** When the host ended the session; null while active (or not recorded). */
+  endedAt: string | null
+  /** Saved games: how many, and the first start and last finish (the results summary). */
+  games: { count: number; firstStartedAt: string | null; lastFinishedAt: string | null }
   version: number
   courts: ViewerCourt[]
   waiting: Array<{ id: string; name: string }>
@@ -119,6 +123,18 @@ function liveMatch(state: OpenSessionState, courtId: string): OpenMatch | null {
     ?? null
 }
 
+function gameTimes(matches: readonly OpenMatch[]): ViewerSnapshot['games'] {
+  const saved = matches.filter((m) => m.status === 'FINISHED')
+  const extreme = (values: Array<string | null>, pick: (a: number, b: number) => number) => values
+    .filter((v): v is string => v !== null)
+    .reduce<string | null>((best, v) => (best === null || pick(Date.parse(v), Date.parse(best)) < 0 ? v : best), null)
+  return {
+    count: saved.length,
+    firstStartedAt: extreme(saved.map((m) => m.startedAt ?? m.proposedAt), (a, b) => a - b),
+    lastFinishedAt: extreme(saved.map((m) => m.finishedAt), (a, b) => b - a),
+  }
+}
+
 export function toViewerSnapshot(state: OpenSessionState): ViewerSnapshot {
   const courts = [...state.courts].sort((a, b) => a.position - b.position)
   return {
@@ -130,6 +146,8 @@ export function toViewerSnapshot(state: OpenSessionState): ViewerSnapshot {
     expiresAt: state.expiresAt,
     settings: { target: state.settings.target, mode: state.settings.mode, selfCheckIn: state.settings.selfCheckIn },
     announcement: state.settings.announcement,
+    endedAt: state.settings.endedAt,
+    games: gameTimes(state.matches),
     version: state.version,
     courts: courts.map((c) => {
       const match = c.enabled ? liveMatch(state, c.id) : null

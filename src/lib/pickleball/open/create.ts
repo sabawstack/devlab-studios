@@ -50,7 +50,7 @@ export function buildInitialState(
     hostDisplayName: input.hostDisplayName.trim(),
     location: input.location?.trim() || null,
     status: 'ACTIVE',
-    settings: normalizeSettings({ ...input.settings, rules: [], announcement }),
+    settings: normalizeSettings({ ...input.settings, rules: [], announcement, endedAt: null }),
     players: uniquePlayers(input.players, ctx),
     courts: Array.from({ length: courtCount }, (_, i) => ({ id: ctx.newId(), label: `Court ${i + 1}`, position: i + 1, enabled: true })),
     matches: [],

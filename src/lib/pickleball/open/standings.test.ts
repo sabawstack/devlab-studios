@@ -114,4 +114,54 @@ describe('computeStandings', () => {
     const rows = computeStandings(['A', 'B', 'C', 'D'].map((id) => player(id)), [live])
     expect(rows.every((row) => row.played === 0)).toBe(true)
   })
+
+  describe('place (ties share it)', () => {
+    const places = (rows: { name: string; place: number | null }[]) => Object.fromEntries(rows.map((row) => [row.name, row.place]))
+
+    it('is the rank when nobody is tied', () => {
+      const rows = computeStandings(['A', 'B', 'C', 'D'].map((id) => player(id)), [
+        finished('m1', ['A', 'B'], ['C', 'D'], 'A', 11, 4, 1),
+        finished('m2', ['A', 'C'], ['B', 'D'], 'A', 11, 6, 2),
+      ])
+      expect(rows.map((row) => [row.name, row.rank, row.place])).toEqual([['A', 1, 1], ['B', 2, 2], ['C', 3, 3], ['D', 4, 4]])
+    })
+
+    it('is shared by players level on win %, points won % and who never met (1, 2, 2, 4)', () => {
+      // A wins both. Zed and Amy each win once 11-5 against s/t, and never meet: tied on every key.
+      const players = ['A', 'b', 'Zed', 'Amy', 's', 't', 'u', 'v'].map((id) => player(id))
+      const rows = computeStandings(players, [
+        finished('m1', ['A', 'b'], ['u', 'v'], 'A', 11, 0, 1),
+        finished('m2', ['A', 'Zed'], ['s', 't'], 'A', 11, 5, 2),
+        finished('m3', ['b', 'Amy'], ['s', 't'], 'A', 11, 5, 3),
+      ])
+      // A and b (2-0, same share, team-mates) share 1st; Zed and Amy share 3rd; the next place is 5th.
+      const p = places(rows)
+      expect([p.A, p.b, p.Zed]).toEqual([1, 1, 3])
+      expect(p.Zed).toBe(p.Amy)
+      expect(rows.filter((row) => row.place === p.Zed)).toHaveLength(2)
+      const next = rows.find((row) => row.played > 0 && (row.place ?? 0) > (p.Zed ?? 0))
+      expect(next?.place).toBe((p.Zed ?? 0) + 2)
+    })
+
+    it('is not shared when head-to-head separates the tied players', () => {
+      const players = ['Zed', 'Amy', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y'].map((id) => player(id))
+      const rows = computeStandings(players, [
+        finished('m1', ['Zed', 'r'], ['Amy', 's'], 'A', 11, 9, 1),
+        finished('m2', ['Amy', 't'], ['u', 'v'], 'A', 11, 9, 2),
+        finished('m3', ['Zed', 'w'], ['x', 'y'], 'B', 9, 11, 3),
+      ])
+      const zed = rows.find((row) => row.name === 'Zed')
+      const amy = rows.find((row) => row.name === 'Amy')
+      expect(zed?.place).toBe(zed?.rank)
+      expect(amy?.place).toBe(amy?.rank)
+      expect(zed?.place).not.toBe(amy?.place)
+    })
+
+    it('is null for a player with no games', () => {
+      const rows = computeStandings([player('A'), player('B'), player('C'), player('D'), player('New')], [finished('m1', ['A', 'B'], ['C', 'D'], 'A', 11, 4, 1)])
+      expect(rows.find((row) => row.name === 'New')?.place).toBeNull()
+      // A and B both 1-0 with the same share, team-mates who never faced each other: both 1st.
+      expect(places(rows)).toMatchObject({ A: 1, B: 1, C: 3, D: 3 })
+    })
+  })
 })

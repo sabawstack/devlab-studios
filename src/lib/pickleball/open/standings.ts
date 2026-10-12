@@ -19,6 +19,12 @@ export interface StandingRow {
    */
   pointsPct: number | null
   rank: number | null
+  /**
+   * The place for a podium or a results list: the rank, except that players
+   * still level after win %, points won % and head-to-head share the higher
+   * place (1, 2, 2, 4). Name order alone never separates them. Null with no games.
+   */
+  place: number | null
 }
 
 const EPSILON = 1e-9
@@ -59,6 +65,7 @@ function toRow(p: OpenPlayer, t: Tally): StandingRow {
     winRate: t.played ? t.wins / t.played : null,
     pointsPct: t.scoredGames ? t.shareSum / t.scoredGames : null,
     rank: null,
+    place: null,
   }
 }
 
@@ -80,10 +87,17 @@ function pairKey(a: string, b: string): string {
   return a < b ? `${a}|${b}` : `${b}|${a}`
 }
 
-/** Reorders a fully tied group by head-to-head wins if every pair met (spec §5.3 rule 4); else by name. */
-function breakTie(group: StandingRow[], finished: readonly OpenMatch[]): StandingRow[] {
+interface TieGroup { rows: StandingRow[]; levels: number[] }
+
+/**
+ * Reorders a fully tied group by head-to-head wins if every pair met (spec §5.3
+ * rule 4); else by name. `levels` holds, per row, a key that is equal for rows
+ * head-to-head did not separate (they share a place).
+ */
+function breakTie(group: StandingRow[], finished: readonly OpenMatch[]): TieGroup {
   const byName = [...group].sort((a, b) => a.name.localeCompare(b.name))
-  if (group.length < 2) return byName
+  const level = byName.map(() => 0)
+  if (group.length < 2) return { rows: byName, levels: level }
   const ids = new Set(group.map((row) => row.playerId))
   const met = new Set<string>()
   const h2h = new Map(group.map((row) => [row.playerId, 0]))
@@ -98,8 +112,9 @@ function breakTie(group: StandingRow[], finished: readonly OpenMatch[]): Standin
     }
   }
   const allMet = byName.every((a, i) => byName.slice(i + 1).every((b) => met.has(pairKey(a.playerId, b.playerId))))
-  if (!allMet) return byName
-  return byName.sort((a, b) => (h2h.get(b.playerId) ?? 0) - (h2h.get(a.playerId) ?? 0))
+  if (!allMet) return { rows: byName, levels: level }
+  const rows = [...byName].sort((a, b) => (h2h.get(b.playerId) ?? 0) - (h2h.get(a.playerId) ?? 0))
+  return { rows, levels: rows.map((row) => -(h2h.get(row.playerId) ?? 0)) }
 }
 
 export function computeStandings(players: readonly OpenPlayer[], matches: readonly OpenMatch[]): StandingRow[] {
@@ -117,8 +132,14 @@ export function computeStandings(players: readonly OpenPlayer[], matches: readon
   while (i < ranked.length) {
     let j = i + 1
     while (j < ranked.length && compareCore(ranked[i], ranked[j]) === 0) j += 1
-    ordered.push(...breakTie(ranked.slice(i, j), finished))
+    const { rows: group, levels } = breakTie(ranked.slice(i, j), finished)
+    // Competition places: a row level with the one above it takes that row's place.
+    const start = i
+    group.forEach((row, k) => {
+      const place = k > 0 && levels[k] === levels[k - 1] ? (ordered[ordered.length - 1].place as number) : start + k + 1
+      ordered.push({ ...row, rank: start + k + 1, place })
+    })
     i = j
   }
-  return [...ordered.map((row, index) => ({ ...row, rank: index + 1 })), ...unranked]
+  return [...ordered, ...unranked]
 }

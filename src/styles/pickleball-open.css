@@ -7,7 +7,10 @@
 .pb-pulse { animation: pb-pulse 1.6s ease-in-out infinite; }
 .pb-anim .pb-fade-cycle { animation: pb-fade-cycle 4s ease-in-out infinite; }
 .pb-flip { animation: pb-flip 420ms ease-out; }
-.pb-celebrate { animation: pb-celebrate 900ms ease-out 2; transform-origin: center; }
+/* Final results, once on arrival: the podium steps grow up from the floor, then the names fade in.
+ * Scale rather than slide, so nothing moves outside its box (no scrollbar while it plays). */
+.pb-rise { animation: pb-rise 700ms cubic-bezier(0.2, 0.8, 0.2, 1) var(--pb-delay, 0ms) both; transform-origin: center bottom; }
+.pb-fade-in { animation: pb-fade-in 500ms ease-out var(--pb-delay, 0ms) both; }
 /* The TV welcome line when it is wider than the screen: two copies slide left by one copy's width, seamlessly. */
 .pb-marquee { animation: pb-marquee var(--pb-marquee-s, 20s) linear infinite; }
 /* Small-scale motion for the landing page's 32px feature icons. */
@@ -36,8 +39,9 @@
 @keyframes pb-spot { 0%, 30%, 100% { opacity: 0; } 6%, 22% { opacity: 0.5; } }
 @keyframes pb-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @keyframes pb-sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-@keyframes pb-celebrate { 0% { transform: scale(0.85); opacity: 0; } 55% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes pb-rise { from { transform: scaleY(0.05); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
+@keyframes pb-fade-in { from { opacity: 0; } to { opacity: 1; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .pb-anim *, .pb-flip, .pb-pulse, .pb-celebrate, .pb-marquee { animation: none !important; }
+  .pb-anim *, .pb-flip, .pb-pulse, .pb-marquee, .pb-rise, .pb-fade-in { animation: none !important; }
 }

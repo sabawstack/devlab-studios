@@ -2,10 +2,12 @@
 // in large type, filling a TV-sized screen with 1–16 courts and no scrolling.
 // Below lg it is a scrolling single column with a compact header instead.
 // The side panel alternates standings and recent results (just standings while
-// there are no results). Nothing on this screen is truncated.
+// there are no results). Nothing on this screen is truncated. Once the session
+// ends (or a tournament's last game is in) the final results fill the courts area.
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { formatPublicCode } from '../lib/pickleball/open/codes'
 import { MODE_INFO } from '../lib/pickleball/open/modes/info'
+import { showsFinalResults } from '../lib/pickleball/open/results'
 import { greetingFor } from './lib/greeting'
 import { checkInLink, viewerLink } from './lib/hostKeys'
 import { PANEL_MS, PANELS, tvColumns, tvRows } from './lib/tvLayout'
@@ -17,7 +19,8 @@ import QrCode from './components/QrCode.jsx'
 import TvCourt from './components/TvCourt.jsx'
 import TvMarquee from './components/TvMarquee.jsx'
 import { nextGames } from './tournament/bracketLayout'
-import ChampionBanner from './tournament/ChampionBanner.jsx'
+import ResultsScreen from './components/results/ResultsScreen.jsx'
+import ChampionAnnouncer from './tournament/ChampionAnnouncer.jsx'
 
 const STALE_MS = 15_000
 const WRAP = '[overflow-wrap:anywhere]'
@@ -145,11 +148,10 @@ export default function TvBoard({ code }) {
   const qrSize = Math.round(Math.min(220, Math.max(120, width * 0.08)))
   const tournament = viewer.tournament
   const modeLabel = tournament ? tournament.formatLabel : MODE_INFO[viewer.settings.mode]?.label ?? 'Paddle stack'
-  const champion = tournament?.phase === 'FINISHED' ? tournament.champion : null
   // Before the start there is nothing on court yet: say so instead of showing empty courts.
   const preStart = tournament?.phase === 'SETUP' || tournament?.phase === 'DRAFT'
-  // One overlay fills the courts area at a time: the champions (with "Session ended" under them), the end, or the coming draw.
-  const overlay = champion ? 'champion' : ended ? 'ended' : preStart ? 'draw' : null
+  // One overlay fills the courts area at a time: the final results, or the coming draw.
+  const overlay = showsFinalResults(viewer) ? 'results' : preStart ? 'draw' : null
   const grid = { '--tv-cols': cols, '--tv-rows': rows }
   const greeting = greetingFor(new Date(now))
   const announcement = viewer.announcement
@@ -168,13 +170,7 @@ export default function TvBoard({ code }) {
         style={grid}
         className="grid min-h-0 grid-cols-1 gap-3 lg:gap-[1vw] lg:[grid-template-columns:repeat(var(--tv-cols),minmax(0,1fr))] lg:[grid-template-rows:repeat(var(--tv-rows),minmax(0,1fr))]"
       >
-        {overlay === 'ended' && <p className="grid place-items-center rounded-2xl bg-navy-900 p-8 text-center text-[clamp(2rem,6vw,7rem)] font-bold lg:col-span-full lg:row-span-full" role="status">Session ended</p>}
-        {overlay === 'champion' && (
-          <div className="grid place-content-center justify-items-center gap-[1.5vw] text-center lg:col-span-full lg:row-span-full">
-            <ChampionBanner champion={champion} tv />
-            {ended && <p className="text-[clamp(1.25rem,2.5vw,3rem)] font-bold text-mist">Session ended</p>}
-          </div>
-        )}
+        {overlay === 'results' && <ResultsScreen viewer={viewer} tv />}
         {overlay === 'draw' && (
           <div className="grid place-content-center rounded-2xl bg-navy-900 p-8 text-center lg:col-span-full lg:row-span-full" data-testid="tv-draw-note">
             <p className="text-[clamp(2rem,5vw,6rem)] font-bold leading-tight">{tournament.phase === 'SETUP' ? 'The draw is coming soon' : 'Draft draw'}</p>
@@ -198,13 +194,17 @@ export default function TvBoard({ code }) {
           </div>
         </div>
         {!overlay && (tournament ? <ComingUp tournament={tournament} /> : <UpNext viewer={viewer} />)}
-        {/* Fairness is about open-play rotation; a tournament's draw decides who plays. */}
-        {!tournament && <div className="shrink-0"><FairnessPanel fairness={viewer.fairness} tv /></div>}
-        <section aria-label={panel === 'standings' ? 'Standings' : 'Recent results'} data-testid="tv-panel" className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <h2 className={H2}>{panel === 'standings' ? 'Standings' : 'Recent results'}</h2>
-          {panel === 'standings' ? <Standings viewer={viewer} /> : <Results viewer={viewer} />}
-        </section>
+        {/* Fairness is about open-play rotation; a tournament's draw decides who plays. The final results already rank everyone. */}
+        {!tournament && overlay !== 'results' && <div className="shrink-0"><FairnessPanel fairness={viewer.fairness} tv /></div>}
+        {overlay !== 'results' && (
+          <section aria-label={panel === 'standings' ? 'Standings' : 'Recent results'} data-testid="tv-panel" className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <h2 className={H2}>{panel === 'standings' ? 'Standings' : 'Recent results'}</h2>
+            {panel === 'standings' ? <Standings viewer={viewer} /> : <Results viewer={viewer} />}
+          </section>
+        )}
       </aside>
+      {/* Outside the side panel, which phones hide: a hidden live region is never announced. */}
+      {tournament && <ChampionAnnouncer champion={tournament.champion} />}
       {announcement && (
         <footer aria-label="Welcome message" className="rounded-2xl bg-navy-900 px-4 py-2 text-xl font-semibold lg:col-span-2 lg:-mt-[0.6vw] lg:px-[1.2vw] lg:py-[0.2vw] lg:text-[clamp(1rem,1.5vw,2.25rem)] lg:leading-tight">
           <TvMarquee text={announcement} />

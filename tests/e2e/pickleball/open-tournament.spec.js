@@ -286,7 +286,7 @@ test.describe('running a tournament (screens)', () => {
     await playCourt(page, 'court-2')
     await expect(page.getByTestId('court-1')).toContainText('Final')
     await playCourt(page, 'court-1')
-    await expect(page.getByTestId('champion')).toContainText('Ana & Ben')
+    await expect(page.getByTestId('podium-1')).toContainText('Ana & Ben')
   })
 
   test('the host substitutes a player and swaps opponents from the console', async ({ page, request }) => {
@@ -368,17 +368,21 @@ test.describe('running a tournament (refusals, motion, widths)', () => {
     await expect(first).toHaveAttribute('aria-pressed', 'false')
   })
 
-  test('the champion banner does not animate under reduced motion', async ({ page, request }) => {
+  test('the podium celebration does not animate under reduced motion, and the champions are announced', async ({ page, request }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     const { code, hostKey } = await readyTournament(request)
     await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
     await playCourt(page, 'court-1')
     await playCourt(page, 'court-2')
     await playCourt(page, 'court-1')
-    const banner = page.getByTestId('champion')
-    await expect(banner).toBeVisible()
-    await expect(banner).toHaveClass(/pb-celebrate/)
-    expect(await banner.evaluate((el) => getComputedStyle(el).animationName)).toBe('none')
+    const podium = page.getByTestId('podium-1')
+    await expect(podium).toBeVisible()
+    const animated = podium.locator('.pb-rise, .pb-fade-in')
+    expect(await animated.count()).toBeGreaterThan(0)
+    const names = await animated.evaluateAll((els) => els.map((el) => getComputedStyle(el).animationName))
+    expect(names.every((name) => name === 'none')).toBe(true)
+    // The live region stays mounted from the start, so the announcement is heard (the podium replaced the banner).
+    await expect(page.getByTestId('champion-announcement')).toHaveText('Champions: Ana & Ben')
   })
 
   for (const width of [390, 768, 1280, 1920]) {
@@ -406,7 +410,7 @@ test.describe('tournament board and TV (screens)', () => {
     await ok(request, code, hostKey, { type: 'RECORD_RESULT', matchId: host.courts[0].match.id, winner: 'A', scoreA: 11, scoreB: 4 })
     await expect(final).toContainText('Ana & Ben')
     await playToChampion(request, code, hostKey)
-    await expect(page.getByTestId('champion')).toContainText('Ana & Ben')
+    await expect(page.getByTestId('podium-1')).toContainText('Ana & Ben')
     // The courts are idle once there are champions, so the board drops them.
     await expect(page.getByRole('region', { name: 'Courts' })).toHaveCount(0)
   })
@@ -428,7 +432,7 @@ test.describe('tournament board and TV (screens)', () => {
     await expect(page.getByTestId('tv-court').first()).toContainText('Semi-final 1')
     await expect(page.getByTestId('fairness')).toHaveCount(0)
     await playToChampion(request, code, hostKey)
-    await expect(page.getByTestId('champion')).toContainText('Ana & Ben')
+    await expect(page.getByTestId('podium-1')).toContainText('Ana & Ben')
   })
 
   for (const width of [390, 768, 1280, 1920]) {
@@ -447,8 +451,9 @@ test.describe('tournament board and TV (screens)', () => {
 
   // The same standard as the open-play TV (open-play.spec.js): legible across a hall, nothing truncated or spilling.
   const LONG_NAMES = NAMES.map((name, i) => (i % 3 === 0 ? `${name} Montgomery-Alexandrovich` : name))
+  // A visually hidden live region (sr-only, the champions announcement) is clipped by design, not truncated text.
   const spilling = (page) => page.evaluate(() => [...document.querySelectorAll('body *')]
-    .filter((el) => (el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0 && el.dataset.marquee !== 'scrolling') || (el.dataset.testid === 'tv-court' && el.scrollHeight > el.clientHeight + 1))
+    .filter((el) => (el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0 && el.dataset.marquee !== 'scrolling' && !el.classList.contains('sr-only')) || (el.dataset.testid === 'tv-court' && el.scrollHeight > el.clientHeight + 1))
     .map((el) => `${el.tagName}.${String(el.className).slice(0, 40)}`))
   for (const [format, players, courtCount] of [['POOL_TO_BRACKET', 16, 4], ['SINGLE_ELIMINATION', 16, 2]]) {
     for (const [width, height] of [[1920, 1080], [1280, 720]]) {
@@ -477,7 +482,7 @@ test.describe('tournament board and TV (screens)', () => {
       await playToChampion(request, code, hostKey)
       await page.setViewportSize({ width, height })
       await page.goto(`/pickleball/s/${code}/tv`)
-      await expect(page.getByTestId('champion')).toBeVisible()
+      await expect(page.getByTestId('podium-1')).toBeVisible()
       await expect(page.getByRole('region', { name: 'Coming up' })).toHaveCount(0)
       await page.evaluate(() => document.fonts.ready)
       // The celebration scales the banner for a moment; measure once it has settled.
@@ -486,14 +491,14 @@ test.describe('tournament board and TV (screens)', () => {
     })
   }
 
-  test('an ended tournament shows its champions once, with "Session ended" under them', async ({ page, request }) => {
+  test('an ended tournament shows its final results on the TV, champions on top', async ({ page, request }) => {
     const { code, hostKey } = await readyTournament(request)
     await playToChampion(request, code, hostKey)
     await ok(request, code, hostKey, { type: 'END_SESSION' })
     await page.setViewportSize({ width: 1920, height: 1080 })
     await page.goto(`/pickleball/s/${code}/tv`)
-    await expect(page.getByTestId('champion')).toContainText('Ana & Ben')
-    await expect(page.getByText('Session ended', { exact: true })).toHaveCount(1)
+    await expect(page.getByTestId('podium-1')).toContainText('Ana & Ben')
+    await expect(page.getByTestId('final-results')).toHaveCount(1)
     await expect(page.getByTestId('tv-court')).toHaveCount(0)
     await expect.poll(() => spilling(page), { timeout: 5000 }).toEqual([])
   })
@@ -505,5 +510,51 @@ test.describe('tournament board and TV (screens)', () => {
     await expect(page.getByTestId('tv-draw-note')).toContainText('may still change')
     await expect(page.getByTestId('tv-court')).toHaveCount(0)
     await expect(page.getByRole('region', { name: 'Coming up' })).toHaveCount(0)
+  })
+})
+
+test.describe('tournament final results (screens)', () => {
+  test('a round robin played to the end: the board opens on the podium of pairs, in standings order, and shares it', async ({ page, request, baseURL }) => {
+    const { code, hostKey } = await readyTournament(request, { format: 'ROUND_ROBIN' })
+    await playToChampion(request, code, hostKey)
+    const board = await (await request.get(`/api/pickleball/open/s/${code}/state`)).json()
+    const table = board.tournament.standings
+    await page.addInitScript(() => {
+      window.__shared = []
+      navigator.share = (data) => { window.__shared.push(data); return Promise.resolve() }
+    })
+    await page.goto(`/pickleball/s/${code}`)
+    await expect(page.getByTestId('final-results')).toBeVisible()
+    for (const [place, row] of [[1, table[0]], [2, table[1]], [3, table[2]]]) {
+      await expect(page.getByTestId(`podium-${place}`)).toContainText(row.name)
+      expect(row.name).toMatch(/ & /)
+    }
+    await expect(page.getByTestId('final-results').getByRole('table')).toContainText(table[3].name)
+    await expect(page.getByRole('region', { name: 'Courts' })).toHaveCount(0)
+    // The draw stays on the board under the results.
+    await expect(page.getByRole('region', { name: 'Draw' })).toBeVisible()
+    await page.getByRole('button', { name: 'Share results' }).click()
+    const wl = (row) => `${row.wins}–${row.losses}`
+    await expect.poll(() => page.evaluate(() => window.__shared.length)).toBe(1)
+    expect(await page.evaluate(() => window.__shared[0])).toEqual({
+      title: 'Final standings · Saturday Cup',
+      text: [
+        '🏆 Saturday Cup — final standings',
+        `🥇 ${table[0].name} (${wl(table[0])})  🥈 ${table[1].name} (${wl(table[1])})  🥉 ${table[2].name} (${wl(table[2])})`,
+        `Full results: ${baseURL}/pickleball/s/${code}`,
+      ].join('\n'),
+      url: `${baseURL}/pickleball/s/${code}`,
+    })
+  })
+
+  test('a knockout: the two losing semi-finalists share 3rd on the host console, which keeps the CSV download', async ({ page, request }) => {
+    const { code, hostKey } = await readyTournament(request)
+    await playToChampion(request, code, hostKey)
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await expect(page.getByTestId('podium-1')).toContainText('Ana & Ben')
+    await expect(page.getByTestId('podium-3').getByRole('listitem')).toHaveCount(2)
+    const download = page.waitForEvent('download')
+    await page.getByTestId('final-results').getByRole('button', { name: 'Download results (CSV)' }).click()
+    expect((await download).suggestedFilename()).toMatch(/\.csv$/)
   })
 })

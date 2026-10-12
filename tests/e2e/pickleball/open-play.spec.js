@@ -763,19 +763,21 @@ test.describe('TV board', () => {
         await expect.poll(() => page.getByTestId('tv-court').evaluateAll((cards) => cards.filter((el) => el.scrollHeight > el.clientHeight + 1).length)).toBe(0)
         await expect.poll(() => page.evaluate(() => [...document.querySelectorAll('body *')]
           // A scrolling welcome line overflows on purpose: it shows the whole message as it moves.
-          .filter((el) => el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0 && el.dataset.marquee !== 'scrolling')
+          // A visually hidden (sr-only) label is clipped by design, not truncated text.
+          .filter((el) => el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0 && el.dataset.marquee !== 'scrolling' && !el.classList.contains('sr-only'))
           .map((el) => `${el.tagName}.${String(el.className).slice(0, 40)}`))).toEqual([])
         expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true)
       })
     }
   }
 
-  test('an ended session says so in big type instead of showing courts', async ({ page, request }) => {
+  test('an ended session shows the final results instead of courts', async ({ page, request }) => {
     const { code, hostKey } = await createSession(request)
     expect((await command(request, code, hostKey, { type: 'END_SESSION' })).status()).toBe(200)
     await page.setViewportSize({ width: 1920, height: 1080 })
     await page.goto(`/pickleball/s/${code}/tv`)
-    await expect(page.getByText('Session ended')).toBeVisible()
+    await expect(page.getByTestId('final-results')).toContainText('Thanks for playing, everyone!')
+    await expect(page.getByTestId('final-results')).toContainText('No games were saved in this session.')
     await expect(page.getByTestId('tv-court')).toHaveCount(0)
   })
 
@@ -935,5 +937,179 @@ test.describe('welcome message', () => {
       expect(await tv.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth && document.documentElement.scrollHeight <= window.innerHeight)).toBe(true)
       await context.close()
     }
+  })
+})
+
+test.describe('final results', () => {
+  const nameOf = (host, id) => host.players.find((p) => p.id === id).name
+  const byName = (a, b) => a.localeCompare(b)
+
+  /**
+   * One court, two games, then the end: the first game's winners (11–4) share 1st,
+   * the second's (11–9) share 3rd, and the ninth player never played.
+   */
+  async function playedAndEnded(request) {
+    const session = await createSession(request, { courtCount: 1 })
+    const { code, hostKey } = session
+    let host = await hostSnapshot(request, code, hostKey)
+    const first = host.courts[0].match
+    expect((await command(request, code, hostKey, { type: 'RECORD_RESULT', matchId: first.id, winner: 'A', scoreA: 11, scoreB: 4 })).status()).toBe(200)
+    host = await hostSnapshot(request, code, hostKey)
+    const second = host.courts[0].match
+    expect((await command(request, code, hostKey, { type: 'RECORD_RESULT', matchId: second.id, winner: 'A', scoreA: 11, scoreB: 9 })).status()).toBe(200)
+    expect((await command(request, code, hostKey, { type: 'END_SESSION' })).status()).toBe(200)
+    host = await hostSnapshot(request, code, hostKey)
+    const gold = first.teamA.map((id) => nameOf(host, id)).sort(byName)
+    const bronze = second.teamA.map((id) => nameOf(host, id)).sort(byName)
+    const played = new Set([...first.teamA, ...first.teamB, ...second.teamA, ...second.teamB])
+    const benched = host.players.filter((p) => !played.has(p.id)).map((p) => p.name).sort(byName)
+    return { ...session, gold, bronze, benched }
+  }
+
+  const expectedText = (gold, bronze, url) => [
+    '🏆 Sunday Open Play — final standings',
+    `🥇 ${gold.map((n) => `${n} (1–0)`).join(', ')}  🥉 ${bronze.map((n) => `${n} (1–0)`).join(', ')}`,
+    `Full results: ${url}`,
+  ].join('\n')
+
+  test('the board link opens straight on the podium, the list and who did not play', async ({ page, request }) => {
+    const { code, gold, bronze, benched } = await playedAndEnded(request)
+    await page.goto(`/pickleball/s/${code}`)
+    const results = page.getByTestId('final-results')
+    await expect(results).toContainText('Thanks for playing, everyone! 🏆')
+    await expect(results).toContainText('Final standings')
+    for (const name of gold) await expect(page.getByTestId('podium-1')).toContainText(name)
+    for (const name of bronze) await expect(page.getByTestId('podium-3')).toContainText(name)
+    await expect(page.getByTestId('podium-2')).toHaveCount(0)
+    // Below the podium: the two 1–0 losers' places are shared (5, 5), then 7, 7.
+    await expect(results.getByRole('table').locator('tbody tr td:first-child')).toHaveText(['5', '5', '7', '7'])
+    await expect(page.getByTestId('didnt-play')).toHaveText(`Didn't play: ${benched.join(', ')}`)
+    await expect(page.getByTestId('results-summary')).toHaveText(/^8 players · 2 games · \d+ min$/)
+    await expect(results).toContainText('Results stay available until')
+    // No courts, no tabs: the results are the board now.
+    await expect(page.getByRole('region', { name: 'Courts' })).toHaveCount(0)
+    await expect(page.getByRole('tablist')).toHaveCount(0)
+  })
+
+  test('Share results hands the exact text and link to the share sheet', async ({ page, request, baseURL }) => {
+    const { code, gold, bronze } = await playedAndEnded(request)
+    await page.addInitScript(() => {
+      window.__shared = []
+      navigator.share = (data) => { window.__shared.push(data); return Promise.resolve() }
+    })
+    await page.goto(`/pickleball/s/${code}`)
+    await page.getByRole('button', { name: 'Share results' }).click()
+    await expect.poll(() => page.evaluate(() => window.__shared.length)).toBe(1)
+    const url = `${baseURL}/pickleball/s/${code}`
+    expect(await page.evaluate(() => window.__shared[0])).toEqual({ title: 'Final standings · Sunday Open Play', text: expectedText(gold, bronze, url), url })
+  })
+
+  test('without a share sheet the text is copied and says "Copied"; a refused copy shows the text to select', async ({ page, context, request, baseURL }) => {
+    const { code, gold, bronze } = await playedAndEnded(request)
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: baseURL })
+    await page.addInitScript(() => { Object.defineProperty(navigator, 'share', { value: undefined, configurable: true }) })
+    await page.goto(`/pickleball/s/${code}`)
+    await page.getByRole('button', { name: 'Share results' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Copied' })).toBeVisible()
+    const url = `${baseURL}/pickleball/s/${code}`
+    // The Windows clipboard hands line breaks back as CRLF.
+    expect((await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, '\n')).toBe(expectedText(gold, bronze, url))
+
+    await page.evaluate(() => { navigator.clipboard.writeText = () => Promise.reject(new Error('denied')) })
+    await page.getByRole('button', { name: 'Share results' }).click()
+    await expect(page.getByRole('alert')).toContainText("Couldn't copy")
+    await expect(page.getByLabel('Results to share')).toHaveValue(expectedText(gold, bronze, url))
+  })
+
+  test('the host console shows the results and keeps the CSV download there', async ({ page, request }) => {
+    const { code, hostKey, gold } = await playedAndEnded(request)
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    const results = page.getByTestId('final-results')
+    for (const name of gold) await expect(page.getByTestId('podium-1')).toContainText(name)
+    await expect(results.getByRole('button', { name: 'Share results' })).toBeVisible()
+    const download = page.waitForEvent('download')
+    await results.getByRole('button', { name: 'Download results (CSV)' }).click()
+    expect((await download).suggestedFilename()).toMatch(/\.csv$/)
+  })
+
+  test('a game still on court when the session ended can be saved from the results screen', async ({ page, request }) => {
+    const { code, hostKey } = await createSession(request, { courtCount: 1 })
+    const host = await hostSnapshot(request, code, hostKey)
+    expect((await command(request, code, hostKey, { type: 'START_MATCH', matchId: host.courts[0].match.id })).status()).toBe(200)
+    expect((await command(request, code, hostKey, { type: 'END_SESSION' })).status()).toBe(200)
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await expect(page.getByTestId('final-results')).toBeVisible()
+    await expect(page.getByText('Still on court')).toBeVisible()
+    await page.getByTestId('court-1').getByRole('button', { name: 'Game over' }).click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+  })
+
+  test('the TV shows the same results, without buttons', async ({ page, request }) => {
+    const { code, gold, benched } = await playedAndEnded(request)
+    await page.setViewportSize({ width: 1920, height: 1080 })
+    await page.goto(`/pickleball/s/${code}/tv`)
+    for (const name of gold) await expect(page.getByTestId('podium-1')).toContainText(name)
+    await expect(page.getByTestId('final-results')).toContainText(`Didn't play: ${benched.join(', ')}`)
+    await expect(page.getByTestId('tv-court')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Share results' })).toHaveCount(0)
+  })
+
+  for (const [width, height] of [[1920, 1080], [1280, 720]]) {
+    test(`a big field's results fit a ${width}×${height} TV with nothing truncated or scrolling`, async ({ page, request }) => {
+      const longName = (i) => `Maximilian-Alexandrovich Montgomery ${String(i).padStart(2, '0')}`.slice(0, 40)
+      const { code, hostKey } = await createSession(request, { courtCount: 16, players: Array.from({ length: 70 }, (_, i) => ({ name: longName(i) })) })
+      const host = await hostSnapshot(request, code, hostKey)
+      for (const [i, court] of host.courts.entries()) {
+        const res = await command(request, code, hostKey, { type: 'RECORD_RESULT', matchId: court.match.id, winner: i % 2 ? 'A' : 'B', scoreA: i % 2 ? 11 : 3 + (i % 7), scoreB: i % 2 ? 3 + (i % 7) : 11 })
+        expect(res.status()).toBe(200)
+      }
+      expect((await command(request, code, hostKey, { type: 'END_SESSION' })).status()).toBe(200)
+      await page.setViewportSize({ width, height })
+      await page.goto(`/pickleball/s/${code}/tv`)
+      await expect(page.getByTestId('final-results')).toBeVisible()
+      await page.evaluate(() => document.fonts.ready)
+      // The celebration plays once on arrival; measure once it has settled.
+      await page.waitForTimeout(1500)
+      await expect.poll(() => page.evaluate(() => [...document.querySelectorAll('body *')]
+        .filter((el) => el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0 && el.dataset.marquee !== 'scrolling' && !el.classList.contains('sr-only'))
+        .map((el) => `${el.tagName}.${String(el.className).slice(0, 40)}`))).toEqual([])
+      expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight && document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+      // The results card holds everything it shows: nothing spills below it.
+      expect(await page.getByTestId('final-results').evaluate((el) => el.scrollHeight > el.clientHeight + 1)).toBe(false)
+      // Type readable across a hall: names at least 18 px even at 720p.
+      const rows = page.getByTestId('tv-results-rest').locator('li')
+      const sizes = await rows.evaluateAll((els) => els.map((el) => parseFloat(getComputedStyle(el).fontSize)))
+      expect(sizes.length).toBeGreaterThan(0)
+      for (const size of sizes) expect(size).toBeGreaterThanOrEqual(18)
+      const podiumNames = await page.getByTestId('podium-1').locator('li span').first().evaluate((el) => parseFloat(getComputedStyle(el).fontSize))
+      expect(podiumNames).toBeGreaterThanOrEqual(18)
+      // Whatever does not fit is hidden whole, counted, and sent to the phone board: never half-shown.
+      const hidden = await page.getByTestId('tv-results-rest').locator('li.invisible').count()
+      if (hidden > 0) await expect(page.getByTestId('tv-results-more')).toContainText('scan the QR')
+      else await expect(page.getByTestId('tv-results-more')).toHaveCount(0)
+    })
+  }
+
+  test('link previews: the live board while active, the podium once ended (still noindex)', async ({ request }) => {
+    const { code, hostKey } = await createSession(request, { courtCount: 1 })
+    const meta = async () => {
+      const html = await (await request.get(`/pickleball/s/${code}`)).text()
+      const tag = (attr, name) => html.match(new RegExp(`<meta ${attr}="${name}" content="([^"]*)"`))?.[1]
+      return { title: html.match(/<title>([^<]*)<\/title>/)?.[1], ogTitle: tag('property', 'og:title'), ogDescription: tag('property', 'og:description'), robots: tag('name', 'robots') }
+    }
+    expect(await meta()).toEqual({
+      title: 'Sunday Open Play · live board', ogTitle: 'Sunday Open Play · live board',
+      ogDescription: 'Live courts, queue and standings. No app needed.', robots: 'noindex, nofollow',
+    })
+    const host = await hostSnapshot(request, code, hostKey)
+    const match = host.courts[0].match
+    expect((await command(request, code, hostKey, { type: 'RECORD_RESULT', matchId: match.id, winner: 'B', scoreA: 6, scoreB: 11 })).status()).toBe(200)
+    expect((await command(request, code, hostKey, { type: 'END_SESSION' })).status()).toBe(200)
+    const winners = match.teamB.map((id) => nameOf(host, id)).sort(byName).join(', ')
+    const losers = match.teamA.map((id) => nameOf(host, id)).sort(byName).join(', ')
+    expect(await meta()).toEqual({
+      title: 'Final standings · Sunday Open Play', ogTitle: 'Final standings · Sunday Open Play',
+      ogDescription: `🥇 ${winners} · 🥉 ${losers}`, robots: 'noindex, nofollow',
+    })
   })
 })

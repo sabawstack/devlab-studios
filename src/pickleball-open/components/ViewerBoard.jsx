@@ -1,11 +1,16 @@
 // src/pickleball-open/components/ViewerBoard.jsx
 import { useState } from 'react'
 import { MODE_INFO } from '../../lib/pickleball/open/modes/info'
+import { showsFinalResults } from '../../lib/pickleball/open/results'
+import { viewerLink } from '../lib/hostKeys'
 import { readMe, writeMe } from '../lib/me'
 import { myStatus, statusText } from '../lib/myStatus'
 import { useNow } from '../lib/useNow'
 import { BOARD_TABS } from '../tournament/tabs'
+import BracketView from '../tournament/BracketView.jsx'
+import ChampionAnnouncer from '../tournament/ChampionAnnouncer.jsx'
 import TournamentPanels from '../tournament/TournamentPanels.jsx'
+import ResultsScreen from './results/ResultsScreen.jsx'
 import StandingsTable from './StandingsTable.jsx'
 import Welcome from './Welcome.jsx'
 import { Panel, TeamNames } from './ui.jsx'
@@ -34,6 +39,10 @@ export default function ViewerBoard({ viewer, status, lastSnapshotAt = null, inv
   const section = (key) => `${tab === key ? 'block' : 'hidden'} lg:block`
   const tournament = viewer.tournament
   const tabs = tournament ? BOARD_TABS : [['courts', 'Courts'], ['standings', 'Standings'], ['results', 'Results']]
+  // Once ended (or a tournament's last game is in), the board opens straight on the final standings.
+  const final = showsFinalResults(viewer)
+  const myPair = tournament?.pairs.find((p) => p.playerIds.includes(me))?.id
+  const highlightIds = [me, myPair].filter(Boolean)
   const courtsGrid = (
     <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
       {viewer.courts.map((court) => (
@@ -81,6 +90,19 @@ export default function ViewerBoard({ viewer, status, lastSnapshotAt = null, inv
         </label>
       </header>
 
+      {tournament && <ChampionAnnouncer champion={tournament.champion} />}
+      {final ? (
+        <>
+          <ResultsScreen viewer={viewer} boardUrl={viewerLink(window.location.origin, viewer.code)} highlightIds={highlightIds} />
+          {tournament && (
+            <section aria-label="Draw" className="grid gap-3">
+              <h2 className="text-lg font-bold">The draw</h2>
+              <BracketView tournament={tournament} highlight={myPair ?? null} />
+            </section>
+          )}
+        </>
+      ) : (
+      <>
       <MeBanner status={mine} name={myName} />
 
       <div className="grid grid-cols-3 gap-1 rounded-xl bg-navy-900 p-1 lg:hidden" role="tablist" aria-label="Board sections">
@@ -116,6 +138,8 @@ export default function ViewerBoard({ viewer, status, lastSnapshotAt = null, inv
           </Panel>
         </aside>
       </div>
+      )}
+      </>
       )}
       <footer className="grid gap-3 pt-2 text-center">
         <p className="text-xs text-mist">Results are deleted from the live service 7 days after the last change to this session ({expires}). No sign-up; this phone only remembers which name you picked.</p>

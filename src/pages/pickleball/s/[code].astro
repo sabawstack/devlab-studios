@@ -1,11 +1,37 @@
 ---
 // src/pages/pickleball/s/[code].astro
+// The board link. Its <title> and link-preview tags come from the public viewer
+// snapshot (the same allowlisted data the board shows): the final standings
+// once a session has ended, else "live board". Still noindex (the shell's default).
 import PickleballAppShell from '../../../layouts/PickleballAppShell.astro'
 import SessionApp from '../../../pickleball-open/SessionApp.jsx'
 import { normalizePublicCode } from '../../../lib/pickleball/open/codes'
+import { previewMeta, type PreviewMeta } from '../../../lib/pickleball/open/results'
+import type { ViewerSnapshot } from '../../../lib/pickleball/open/snapshot'
+import { getEnv } from '../../../lib/env'
+import { openSessionStub } from '../../../worker/pickleball/open/routeHelpers'
+import { checkRateLimit, clientIp } from '../../../worker/rateLimit.js'
 
 const code = normalizePublicCode(Astro.params.code ?? '') ?? ''
+
+/** The preview tags, or null (unknown code, rate limited, or the read failed): the page itself always loads. */
+async function readPreview(): Promise<PreviewMeta | null> {
+  if (!code) return null
+  try {
+    const env = getEnv()
+    // The same per-address budget as the board's own state polling.
+    const rate = await checkRateLimit(env, 'open-state', clientIp(Astro.request), { limit: 1200, windowMs: 60_000 })
+    if (rate.limited) return null
+    const viewer = (await openSessionStub(env, code).viewer(code)) as ViewerSnapshot | null
+    return viewer ? previewMeta(viewer) : null
+  } catch (error) {
+    console.log(JSON.stringify({ event: 'pickleball_open.error', route: 'board-preview', error: error instanceof Error ? error.message : 'unknown' }))
+    return null
+  }
+}
+
+const preview = await readPreview()
 ---
-<PickleballAppShell title="Live board — Devlab Pickleball">
+<PickleballAppShell title={preview ? preview.title : 'Live board — Devlab Pickleball'} description={preview?.description} og={preview ?? undefined}>
   <SessionApp code={code} client:only="react" />
 </PickleballAppShell>

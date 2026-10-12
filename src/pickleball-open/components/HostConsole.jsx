@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MODE_INFO } from '../../lib/pickleball/open/modes/info'
+import { showsFinalResults } from '../../lib/pickleball/open/results'
 import { deleteSession, downloadResults } from '../lib/api'
-import { forgetHostedSession } from '../lib/hostKeys'
+import { forgetHostedSession, viewerLink } from '../lib/hostKeys'
 import { useCommandQueue } from '../lib/useCommandQueue'
 import AnnouncementSheet, { WelcomePreview } from './AnnouncementSheet.jsx'
 import CaptainsSheet from './CaptainsSheet.jsx'
@@ -12,6 +13,7 @@ import GameOverDialog from './GameOverDialog.jsx'
 import ModeSheet from './ModePicker.jsx'
 import PlayersPanel from './PlayersPanel.jsx'
 import ResultsList from './ResultsList.jsx'
+import ResultsScreen from './results/ResultsScreen.jsx'
 import RulesPanel from './RulesPanel.jsx'
 import StandingsTable from './StandingsTable.jsx'
 import UndoToast from './UndoToast.jsx'
@@ -36,8 +38,8 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
   const credentials = useMemo(() => ({ hostKey }), [hostKey])
   const { send, pending, error, clearError } = useCommandQueue(code, credentials, onHost)
   const tournament = host.viewer.tournament
-  // A tournament opens on its draw until it starts; open play opens on the courts.
-  const [tab, setTab] = useState(() => (tournament && tournament.phase !== 'RUNNING' ? 'draw' : 'courts'))
+  // A tournament opens on its draw until it starts; then (and in open play) on the courts, or the final results there.
+  const [tab, setTab] = useState(() => (tournament && (tournament.phase === 'SETUP' || tournament.phase === 'DRAFT') ? 'draw' : 'courts'))
   const tabs = tournament ? TOURNAMENT_TABS : TABS
   // Back from Google sign-in (?signin=…): reopen the DUPR sheet where the host left it.
   const [dialog, setDialog] = useState(() => {
@@ -107,6 +109,14 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
   }
 
   const section = (key) => `${tab === key ? 'block' : 'hidden'} lg:block`
+  // Ended (or a tournament's last game in): the final standings replace the courts. The CSV stays to hand here.
+  const final = showsFinalResults(viewer)
+  const resultsScreen = final && (
+    <ResultsScreen viewer={viewer} boardUrl={viewerLink(window.location.origin, code)}
+      actions={<Button variant="ghost" onClick={download}>Download results (CSV)</Button>} />
+  )
+  // A game still on court when the host ended the session can still be saved.
+  const liveCourts = host.courts.filter((c) => c.match?.status === 'IN_PROGRESS')
 
   return (
     <div className="mx-auto max-w-[1600px] px-3 pb-24 pt-3 sm:px-5 lg:pb-8">
@@ -153,13 +163,29 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
       <WelcomePreview announcement={viewer.announcement} onEdit={() => setDialog({ type: 'announcement' })} />
 
       {tournament ? (
-        <TournamentHost host={host} send={send} error={shownError ? friendlyError(shownError) : null}
+        <TournamentHost host={host} send={send} resultsScreen={resultsScreen} error={shownError ? friendlyError(shownError) : null}
           onClearError={() => { setActionError(null); clearError() }} tab={tab} onTab={setTab} nameOf={nameOf} courtLabel={courtLabel}
           onStart={(match) => send({ type: 'START_MATCH', matchId: match.id })}
           onGameOver={(match) => setDialog({ type: 'gameOver', match })}
           onEditResult={(match) => setDialog({ type: 'editResult', match })} />
       ) : (
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(300px,380px)]">
+        {final ? (
+          <section className={`${section('courts')} grid content-start gap-4`} aria-label="Final results">
+            {resultsScreen}
+            {liveCourts.length > 0 && (
+              <div className="grid gap-2">
+                <h2 className="font-bold">Still on court</h2>
+                <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
+                  {liveCourts.map((court) => (
+                    <CourtCard key={court.id} court={court} nameOf={nameOf} ended onStart={null} onEdit={null}
+                      onGameOver={(match) => setDialog({ type: 'gameOver', match })} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        ) : (
         <section className={section('courts')} aria-label="Courts">
           <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
             {host.courts.map((court) => (
@@ -179,6 +205,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
           </Panel>
           <div className="mt-4"><FairnessPanel fairness={host.fairness} /></div>
         </section>
+        )}
 
         <aside className="grid content-start gap-5">
           <div className={`${section('players')} grid gap-5`}>

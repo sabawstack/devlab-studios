@@ -15,6 +15,10 @@ function isPairRule(value: unknown): value is PairRule {
     && rule.playerIds[0] !== rule.playerIds[1]
 }
 
+function isIsoDate(value: unknown): value is string {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value) && !Number.isNaN(Date.parse(value))
+}
+
 export function normalizeSettings(raw: unknown): SessionSettings {
   const value = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
   return {
@@ -27,5 +31,6 @@ export function normalizeSettings(raw: unknown): SessionSettings {
       : [],
     // A session from before the welcome message existed has none (not the default).
     announcement: typeof value.announcement === 'string' ? cleanAnnouncement(value.announcement) : DEFAULT_SETTINGS.announcement,
+    endedAt: isIsoDate(value.endedAt) ? value.endedAt : null,
   }
 }

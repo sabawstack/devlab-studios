@@ -20,6 +20,12 @@ export interface SessionSettings {
   rules: readonly PairRule[]
   /** The welcome message on the board, check-in page and TV; empty means none. Plain text. */
   announcement: string
+  /**
+   * When the host ended the session (set once by END_SESSION; null while active,
+   * and for sessions ended before this was stored). Kept with the settings JSON
+   * so no column is needed; the results screen measures the session with it.
+   */
+  endedAt: string | null
 }
 
 export type PlayerStatus = 'ACTIVE' | 'BREAK' | 'LEFT'
@@ -127,6 +133,7 @@ export const DEFAULT_SETTINGS: SessionSettings = {
   selfCheckIn: true,
   rules: [],
   announcement: '',
+  endedAt: null,
 }
 
 export function addMs(iso: string, ms: number): string {

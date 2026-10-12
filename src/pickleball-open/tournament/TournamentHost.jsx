@@ -2,14 +2,15 @@
 // The host console's tournament area (spec §6): setup and draft editor before
 // Start; then courts, the live draw (with opponent swaps by tap-to-select),
 // substitutions and standings. The console around it
-// keeps the header, the Game over dialog, undo, results and the menu.
+// keeps the header, the Game over dialog, undo, results and the menu. Once the
+// tournament is over, the final results (resultsScreen) replace the courts.
 import { useState } from 'react'
 import { Button, Panel } from '../components/ui.jsx'
 import CourtCard from '../components/CourtCard.jsx'
 import PlayersPanel from '../components/PlayersPanel.jsx'
 import ResultsList from '../components/ResultsList.jsx'
 import BracketView from './BracketView.jsx'
-import ChampionBanner from './ChampionBanner.jsx'
+import ChampionAnnouncer from './ChampionAnnouncer.jsx'
 import DraftEditor from './DraftEditor.jsx'
 import { commandFor, tap } from './drawTaps'
 import PairStandings from './PairStandings.jsx'
@@ -26,7 +27,7 @@ function stillSwappable(tournament, item) {
   return Boolean(fixture) && placed && (fixture.status === 'PENDING' || fixture.status === 'READY') && !fixture.court?.live && entrantId === item.entrantId
 }
 
-export default function TournamentHost({ host, send, error, onClearError, tab, onTab, nameOf, courtLabel, onStart, onGameOver, onEditResult }) {
+export default function TournamentHost({ host, resultsScreen = null, send, error, onClearError, tab, onTab, nameOf, courtLabel, onStart, onGameOver, onEditResult }) {
   const t = host.viewer.tournament
   const [pickedSlot, setSelected] = useState(null)
   const selected = stillSwappable(t, pickedSlot) ? pickedSlot : null
@@ -65,8 +66,20 @@ export default function TournamentHost({ host, send, error, onClearError, tab, o
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(300px,380px)]">
       <div className="grid content-start gap-5">
-        <ChampionBanner champion={t.champion} />
-        {running ? (
+        <ChampionAnnouncer champion={t.champion} />
+        {resultsScreen ? (
+          <section className={`${section('courts')} grid content-start gap-4`} aria-label="Final results">
+            {resultsScreen}
+            {/* A game still on court when the host ended the session can still be saved. */}
+            {host.courts.some((c) => c.match?.status === 'IN_PROGRESS') && (
+              <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
+                {host.courts.filter((c) => c.match?.status === 'IN_PROGRESS').map((court) => (
+                  <CourtCard key={court.id} court={court} nameOf={nameOf} ended onStart={onStart} onGameOver={onGameOver} onEdit={null} />
+                ))}
+              </div>
+            )}
+          </section>
+        ) : running ? (
           <section className={section('courts')} aria-label="Courts">
             <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
               {host.courts.map((court) => (
