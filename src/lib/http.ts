@@ -14,6 +14,34 @@ export async function drainRequestBody(request: Request): Promise<void> {
   await request.arrayBuffer().catch(() => {})
 }
 
+/**
+ * The safety net behind drainRequestBody: called by src/middleware.ts on EVERY
+ * response, so a route that answers without reading its body -- readBoundedJson's
+ * 413 for an oversized payload, any early validation return -- cannot poison
+ * the next request on wrangler dev's loopback proxy. Before this, one 413 test
+ * made an unrelated test's POST fail with "Network connection lost" whenever
+ * the two shared a pooled connection.
+ *
+ * No-op when the body is absent, already read, or being streamed by the route.
+ */
+export async function discardUnreadBody(request: Request): Promise<void> {
+  const body = request.body
+  if (!body || request.bodyUsed || body.locked) return
+  // Read to the end rather than cancel(): cancelling was tried and does NOT
+  // stop the proxy failing the next request. Chunks are dropped as they
+  // arrive, so an oversized body is never buffered (unlike arrayBuffer()).
+  const reader = body.getReader()
+  try {
+    while (!(await reader.read()).done) {
+      // discard
+    }
+  } catch {
+    // The client went away mid-body: there is nothing left to protect.
+  } finally {
+    reader.releaseLock()
+  }
+}
+
 export async function readJsonBody(request: Request): Promise<Record<string, unknown>> {
   const body = await request.json()
   return (body ?? {}) as Record<string, unknown>
