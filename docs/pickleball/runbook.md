@@ -188,6 +188,35 @@ UPDATE open_captains SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL
 A running DO keeps its cached copy until it next reloads, so prefer the host's
 "Turn off" button or `DELETE .../captains/{id}`.
 
+### Apply migration 0018
+
+Same commands as 0017. The preview Worker and D1 live in the personal
+Cloudflare account, so preview needs `CLOUDFLARE_ACCOUNT_ID` inline, and the
+preview deploy does not apply D1 migrations: apply it by hand.
+
+```bash
+CLOUDFLARE_ACCOUNT_ID=<preview account ID> npx wrangler d1 migrations apply devlab-pickleball-preview --remote --env preview
+```
+
+Read back (expect three rows):
+
+```sql
+SELECT name FROM sqlite_master WHERE name IN ('open_tournaments', 'open_tournament_entrants', 'open_tournament_fixtures');
+```
+
+### Inspect a tournament
+
+```sql
+SELECT format, pairing, seeding, phase, started_at FROM open_tournaments WHERE session_id = (SELECT id FROM open_sessions WHERE public_code = ?);
+SELECT bracket, pool_label, round_number, position, entrant_a_id, entrant_b_id, source_a, source_b, winner_entrant_id, status
+  FROM open_tournament_fixtures WHERE session_id = (SELECT id FROM open_sessions WHERE public_code = ?)
+  ORDER BY CASE bracket WHEN 'POOL' THEN 0 WHEN 'MAIN' THEN 1 ELSE 2 END, COALESCE(pool_label, ''), round_number, position;
+```
+
+Do not edit fixture rows by hand: a running DO keeps its cached copy, and the
+engine's validity rules are not re-checked on load. A stuck tournament is fixed
+from the console (undo or edit a result, substitute, swap opponents).
+
 ### Check-in floods
 
 Self check-in is anonymous. A 429 reads "Too many check-ins from this network"

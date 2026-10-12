@@ -118,6 +118,47 @@ diffs and the results CSV.
 - **Migration.** `0017_open_captains.sql` adds `open_captains` and
   `open_matches.recorded_by`.
 
+### Phase 3 additions (tournaments)
+
+- **Kind.** A tournament is an `open_sessions` row with `kind = 'TOURNAMENT'`,
+  fixed at creation. It shares courts, players, matches, captains, idempotency,
+  the Durable Object and the purge with open play.
+- **Tables** (`0018_open_tournaments.sql`): `open_tournaments` (format,
+  pairing, seeding, phase, start), `open_tournament_entrants` (pairs, seed,
+  pool) and `open_tournament_fixtures` (the reused generator's slots plus a
+  winner). All cascade from `open_sessions`; `open_matches.fixture_id` links a
+  game to its fixture. Rows have no order column: `tournament/order.ts` is the
+  one order, and the loader reads it back in SQL.
+- **Engine** (`src/lib/pickleball/open/tournament/`). Pairing and seeding
+  (`pairing.ts`, randomness injected as `CommandContext.random`), the draft
+  (`draw.ts`), its rules (`drawRules.ts`) and edits (`drawEdits.ts`),
+  advancement and corrections (`progress.ts`), pair standings (`standings.ts`),
+  the court loop (`courts.ts`) and the commands (`commands.ts`). It wraps the old
+  app's `generateFixtures`, `advanceBracket`, `nextPlayableFixture`,
+  `rankTournamentStandings` and `resolvePoolQualifiers` unchanged;
+  `reuse.test.ts` pins that they import nothing Phase 5 deletes.
+- **Phases.** SETUP -> DRAFT (unrestricted edits, each re-validated) -> RUNNING
+  (substitute off-court players; swap opponents only between unstarted games of
+  the same round of the same pool or bracket) -> FINISHED (every game played;
+  champion known).
+- **Courts.** A court takes the next READY fixture whose pairs are not already
+  on court. A PROPOSED game is not "on court"; stale proposals are withdrawn
+  after edits. Fixture labels read "Round 1 · Game 2" and
+  "Pool A · Round 1 · Game 2".
+- **Roles.** Captains can play, save, undo and edit tournament games but cannot
+  change the draw (draft edits, substitutions, swaps, start).
+- **Snapshots.** `toTournamentView` (allowlist: names, ids, scores, court labels)
+  is in the viewer snapshot and so in the host and captain ones; courts carry
+  `fixtureLabel`. `myStatus` says done only when the player's pair is out or the
+  tournament is finished.
+- **TV.** Standings, recent results and next games (not the bracket, which is on
+  phones); a draft/setup note before the start; the champions when finished
+  ("Session ended" if the host ended it).
+- **Results CSV.** Tournament games with their stage, then overall pair
+  standings and per-pool pair standings.
+- **Rate limit.** The host and captain routes share a per-IP limit of 600 per
+  minute (`hostIpLimited`).
+
 ## Foundational pieces
 
 1. **UI shell** — a React Router SPA island (`src/pickleball-app/`), mounted
@@ -295,7 +336,7 @@ full role→permission matrix.
 | C3 | Tournaments, pools to bracket — seeded qualification from pools into a bracket (`6d0a026`) | Complete |
 | C4 | Tournaments, double elimination — losers bracket (`73e7608`, `bbe4abc`) | Complete |
 | C5 | Public and TV bracket view, tournament documentation (`0c2ae5d`) | Complete |
-| Open play | Free, no-login open play — `open_*` tables, `OpenSessionDO`, live QR board, 7-day purge (migration `0016`); the operator app above is legacy until Phase 5 of that spec | Phase 2 built (preview), release pending |
+| Open play | Free, no-login open play — `open_*` tables, `OpenSessionDO`, live QR board, 7-day purge (migration `0016`); the operator app above is legacy until Phase 5 of that spec | Phase 3 built (preview), release pending |
 
 **Deliberately not built** (disclosed, not overlooked): the public sanitized
 leaderboard extension to `toPublicSessionView` (spec §9 — deferred, requires
