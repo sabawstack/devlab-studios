@@ -275,6 +275,15 @@ export function applyCommand(state: OpenSessionState, command: OpenCommand, ctx:
       const skill = command.skill === null ? null : Math.round(command.skill * 100) / 100
       return ok(withPlayers(state, new Set([target.id]), { skill }))
     }
+    case 'SET_PLAYER_DUPR_ID': {
+      // Allowed after the session ends: the DUPR export is often sent then (spec §9.3).
+      const target = state.players.find((p) => p.id === command.playerId)
+      if (!target) return fail(404, 'Player not found.')
+      const duprId = command.duprId === null ? null : command.duprId.trim().toUpperCase()
+      const holder = duprId ? state.players.find((p) => p.id !== target.id && p.duprId === duprId) : undefined
+      if (holder) return fail(409, `${holder.name} already has DUPR ID ${duprId}.`)
+      return ok(withPlayers(state, new Set([target.id]), { duprId }))
+    }
     case 'ADD_RULE':
       return addRule(state, command.rule)
     case 'REMOVE_RULE':
