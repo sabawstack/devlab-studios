@@ -27,14 +27,15 @@ export default function CourtCard({ court, nameOf, ended = false, onStart, onGam
         <h3 className="text-lg font-bold">{court.label}</h3>
         <span className={`text-xs ${proposed ? 'font-bold text-pickle-neon' : 'text-mist'}`}>{proposed ? 'Up next' : `${minutesSince(match.startedAt)} min`}</span>
       </div>
+      {court.fixtureLabel && <p className="-mt-2 text-xs font-bold uppercase tracking-[0.08em] text-pickle-neon">{court.fixtureLabel}</p>}
       <div className="grid gap-1 text-[15px]">
         <TeamNames side="A" names={match.teamA.map(nameOf)} />
         <TeamNames side="B" names={match.teamB.map(nameOf)} />
       </div>
       {proposed ? (
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="neon" onClick={() => onStart(match)}>Start</Button>
-          <Button variant="ghost" onClick={() => onEdit(match)}>Edit</Button>
+          <Button variant="neon" className={onEdit ? '' : 'col-span-2'} onClick={() => onStart(match)}>Start</Button>
+          {onEdit && <Button variant="ghost" onClick={() => onEdit(match)}>Edit</Button>}
           <Button variant="quiet" className="col-span-2 !min-h-11 text-sm" onClick={() => onGameOver(match)}>Already played? Enter result</Button>
         </div>
       ) : (

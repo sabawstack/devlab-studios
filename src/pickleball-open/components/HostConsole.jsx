@@ -15,6 +15,8 @@ import RulesPanel from './RulesPanel.jsx'
 import StandingsTable from './StandingsTable.jsx'
 import UndoToast from './UndoToast.jsx'
 import ShareSheet from './ShareSheet.jsx'
+import { TOURNAMENT_TABS } from '../tournament/tabs'
+import TournamentHost from '../tournament/TournamentHost.jsx'
 import { Button, Panel } from './ui.jsx'
 
 const countLabel = (n, noun) => `${n} ${noun}${n === 1 ? '' : 's'}`
@@ -30,7 +32,10 @@ function friendlyError(message) {
 export default function HostConsole({ code, hostKey, host, status, onHost }) {
   const credentials = useMemo(() => ({ hostKey }), [hostKey])
   const { send, pending, error, clearError } = useCommandQueue(code, credentials, onHost)
-  const [tab, setTab] = useState('courts')
+  const tournament = host.viewer.tournament
+  // A tournament opens on its draw until it starts; open play opens on the courts.
+  const [tab, setTab] = useState(() => (tournament && tournament.phase !== 'RUNNING' ? 'draw' : 'courts'))
+  const tabs = tournament ? TOURNAMENT_TABS : TABS
   const [dialog, setDialog] = useState(null)
   const [undo, setUndo] = useState(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -96,7 +101,9 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
             {viewer.status === 'ENDED' && <span className="ml-2 text-pickle-neon">· Ended</span>}
           </p>
         </div>
-        <Button variant="ghost" aria-haspopup="dialog" onClick={() => setDialog({ type: 'mode' })}>Mode: {MODE_INFO[host.settings.mode]?.label ?? 'Paddle stack'}</Button>
+        {tournament
+          ? <span className="rounded-xl border border-navy-700 px-4 py-2.5 text-sm font-semibold">{tournament.formatLabel}</span>
+          : <Button variant="ghost" aria-haspopup="dialog" onClick={() => setDialog({ type: 'mode' })}>Mode: {MODE_INFO[host.settings.mode]?.label ?? 'Paddle stack'}</Button>}
         <Button variant="neon" onClick={() => setDialog({ type: 'share' })}>Share board</Button>
         {/* The menu is placed against the header, not the button: on a phone More wraps to the
             left edge, and a menu anchored to its right side ran off the screen. */}
@@ -119,6 +126,12 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
         </p>
       )}
 
+      {tournament ? (
+        <TournamentHost host={host} send={send} tab={tab} nameOf={nameOf} courtLabel={courtLabel}
+          onStart={(match) => send({ type: 'START_MATCH', matchId: match.id })}
+          onGameOver={(match) => setDialog({ type: 'gameOver', match })}
+          onEditResult={(match) => setDialog({ type: 'editResult', match })} />
+      ) : (
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(300px,380px)]">
         <section className={section('courts')} aria-label="Courts">
           <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
@@ -142,7 +155,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
 
         <aside className="grid content-start gap-5">
           <div className={`${section('players')} grid gap-5`}>
-            <PlayersPanel players={host.players} waiting={viewer.waiting} playing={playing} mode={host.settings.mode} send={send} />
+            <PlayersPanel players={host.players} waiting={viewer.waiting} playing={playing} showSkill={host.settings.mode === 'BALANCED'} send={send} />
             <RulesPanel rules={host.settings.rules} players={host.players} send={send} />
           </div>
           <div className={section('results')}>
@@ -153,9 +166,10 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
           </div>
         </aside>
       </div>
+      )}
 
-      <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-3 border-t border-navy-800 bg-ink lg:hidden" aria-label="Sections">
-        {TABS.map(([key, label]) => (
+      <nav className={`fixed inset-x-0 bottom-0 z-20 grid ${tabs.length === 4 ? 'grid-cols-4' : 'grid-cols-3'} border-t border-navy-800 bg-ink lg:hidden`} aria-label="Sections">
+        {tabs.map(([key, label]) => (
           <button key={key} type="button" aria-current={tab === key} onClick={() => setTab(key)}
             className={`min-h-14 text-sm ${tab === key ? 'font-bold text-pickle-neon' : 'text-mist'}`}>{label}</button>
         ))}

@@ -176,3 +176,67 @@ test.describe('tournaments (API)', () => {
     expect(again.host.viewer.tournament.pairs).toEqual(first.host.viewer.tournament.pairs)
   })
 })
+
+/** A tournament created, drawn and (optionally) started over the API, ready for a screen test. */
+async function readyTournament(request, { players = 8, courtCount = 2, format = 'SINGLE_ELIMINATION', start = true } = {}) {
+  const session = await createTournament(request, { players, courtCount, format })
+  await ok(request, session.code, session.hostKey, { type: 'GENERATE_DRAW', format, pairing: 'MANUAL', seeding: 'MANUAL' })
+  if (start) await ok(request, session.code, session.hostKey, { type: 'START_TOURNAMENT' })
+  return session
+}
+
+const noSideScroll = (page) => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+
+test.describe('tournament setup and draft (screens)', () => {
+  test('a host sets up a tournament in the browser: format, draw, a swap, then start', async ({ page }) => {
+    const ip = freshIp()
+    await page.route('**/api/pickleball/open/sessions', (route) =>
+      route.request().method() === 'POST' ? route.continue({ headers: { ...route.request().headers(), 'cf-connecting-ip': ip } }) : route.continue())
+    await page.goto('/pickleball/new')
+    await page.getByRole('radio', { name: /^Tournament/ }).click()
+    await page.getByRole('radio', { name: /^Single elimination/ }).click()
+    await page.getByLabel('Your name (shown as "Hosted by")').fill('Coach Mike')
+    await page.getByRole('button', { name: 'Next: add players' }).click()
+    await page.getByLabel(/Paste names/).fill(NAMES.slice(0, 8).join('\n'))
+    await expect(page.locator('input[name="cf-turnstile-response"]')).toHaveValue(/.+/, { timeout: 30_000 })
+    await page.getByRole('button', { name: /^Start session/ }).click()
+    await page.getByRole('link', { name: 'I saved it — go to courts' }).click()
+
+    await expect(page.getByRole('heading', { name: 'Set up the draw' })).toBeVisible()
+    await page.getByRole('radio', { name: /^In list order/ }).click()
+    await page.getByRole('radio', { name: /^You choose/ }).click()
+    await page.getByRole('button', { name: 'Generate the draw' }).click()
+    await expect(page.getByRole('heading', { name: 'Draft draw · Single elimination' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Seed 1: Ana & Ben' })).toBeVisible()
+
+    // Tap-to-select: Ana, then Cy, swaps them between pairs 1 and 2.
+    await page.getByRole('button', { name: 'Select Ana' }).click()
+    await page.getByRole('button', { name: 'Select Cy' }).click()
+    await expect(page.getByRole('button', { name: 'Seed 1: Cy & Ben' })).toBeVisible()
+
+    page.once('dialog', (dialog) => dialog.accept())
+    await page.getByRole('button', { name: 'Start tournament' }).click()
+    await expect(page.getByTestId('court-1')).toContainText('Semi-final 1')
+    await expect(page.getByTestId('court-1').getByRole('button', { name: 'Edit' })).toHaveCount(0)
+  })
+
+  test('an edit the draw cannot take is refused on screen with the reason', async ({ page, request }) => {
+    const { code, hostKey } = await readyTournament(request, { format: 'ROUND_ROBIN', start: false })
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    // Round 1: Ana & Ben v Gus & Hal, Cy & Di v Eva & Fin. Swapping Gus & Hal for Eva & Fin repeats games from later rounds.
+    await page.getByRole('article', { name: 'Round 1 1' }).getByRole('button', { name: 'Gus & Hal' }).click()
+    await page.getByRole('article', { name: 'Round 1 2' }).getByRole('button', { name: 'Eva & Fin' }).click()
+    await expect(page.getByRole('alert')).toContainText('would play each other twice')
+    await expect(page.getByRole('article', { name: 'Round 1 1' })).toContainText('Gus & Hal')
+  })
+
+  for (const width of [390, 768, 1280, 1920]) {
+    test(`the draft editor fits a ${width}px screen without sideways scrolling`, async ({ page, request }) => {
+      const { code, hostKey } = await readyTournament(request, { players: 16, courtCount: 4, format: 'POOL_TO_BRACKET', start: false })
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+      await expect(page.getByRole('heading', { name: /^Draft draw/ })).toBeVisible()
+      expect(await noSideScroll(page)).toBe(true)
+    })
+  }
+})

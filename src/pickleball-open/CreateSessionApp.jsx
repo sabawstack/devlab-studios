@@ -7,14 +7,19 @@ import { createSession } from './lib/api'
 import { rememberHostedSession } from './lib/hostKeys'
 import HostLinkPanel from './components/HostLinkPanel.jsx'
 import { ModePicker } from './components/ModePicker.jsx'
+import { FormatPicker } from './tournament/Choice.jsx'
 import { Button, Panel } from './components/ui.jsx'
 
 const TARGETS = [11, 15, 21]
+const KINDS = [
+  ['OPEN_PLAY', 'Open play', 'Players rotate through the courts all session.'],
+  ['TOURNAMENT', 'Tournament', 'Fixed pairs play a draw: round robin, pools or a bracket.'],
+]
 const field = 'w-full rounded-xl border border-navy-700 bg-navy-900 px-3 py-3 text-base text-white placeholder:text-mist/70 focus:border-pickle-neon focus:outline-none'
 
 export default function CreateSessionApp({ siteKey }) {
   const [step, setStep] = useState('details')
-  const [details, setDetails] = useState({ name: 'Open Play', hostDisplayName: '', courtCount: 4, target: 11, mode: 'PADDLE_STACK', selfCheckIn: true })
+  const [details, setDetails] = useState({ kind: 'OPEN_PLAY', format: 'ROUND_ROBIN', name: 'Open Play',hostDisplayName: '', courtCount: 4, target: 11, mode: 'PADDLE_STACK', selfCheckIn: true })
   const [rosterMode, setRosterMode] = useState('paste')
   const [pasted, setPasted] = useState('')
   const [csvText, setCsvText] = useState('')
@@ -53,6 +58,8 @@ export default function CreateSessionApp({ siteKey }) {
         hostDisplayName: details.hostDisplayName,
         courtCount: details.courtCount,
         settings: { mode: details.mode, target: details.target, scoringStyle: 'SIDEOUT', selfCheckIn: details.selfCheckIn },
+        kind: details.kind,
+        ...(details.kind === 'TOURNAMENT' ? { tournament: { format: details.format } } : {}),
         players: roster.entries,
         turnstileToken: turnstile.token,
       })
@@ -77,6 +84,16 @@ export default function CreateSessionApp({ siteKey }) {
 
       {step === 'details' && (
         <form className="mt-6 grid gap-5 md:grid-cols-2" onSubmit={(event) => { event.preventDefault(); setStep('players') }}>
+          <div className="grid gap-2 sm:grid-cols-2 md:col-span-2" role="radiogroup" aria-label="What are you running?">
+            {KINDS.map(([kind, label, summary]) => (
+              <button key={kind} type="button" role="radio" aria-checked={details.kind === kind}
+                onClick={() => update({ kind, name: details.name === 'Open Play' || details.name === 'Tournament' ? label : details.name })}
+                className={`min-h-16 rounded-2xl p-4 text-left ${details.kind === kind ? 'bg-pickle-neon text-ink' : 'border border-navy-700 bg-navy-900 text-white hover:border-pickle-neon'}`}>
+                <span className="block text-lg font-bold">{label}</span>
+                <span className={`block text-sm ${details.kind === kind ? 'text-ink' : 'text-mist'}`}>{summary}</span>
+              </button>
+            ))}
+          </div>
           <label className="grid gap-1.5 text-sm text-mist">Session name
             <input required maxLength={60} className={field} value={details.name} onChange={(e) => update({ name: e.target.value })} />
           </label>
@@ -102,11 +119,19 @@ export default function CreateSessionApp({ siteKey }) {
             </div>
             <p className="mt-3 text-sm text-mist">Sudden death or win by 2: both are accepted when you enter the score.</p>
           </Panel>
+          {details.kind === 'TOURNAMENT' ? (
+            <Panel className="md:col-span-2">
+              <p className="mb-3 font-semibold">Format</p>
+              <FormatPicker value={details.format} onChange={(format) => update({ format })} />
+              <p className="mt-3 text-sm text-mist">Once everyone is in, you choose how pairs are made and seeded, generate the draw, and edit it as much as you like before you start.</p>
+            </Panel>
+          ) : (
           <Panel className="md:col-span-2">
             <p className="mb-3 font-semibold">Who plays next</p>
             <ModePicker value={details.mode} onChange={(mode) => update({ mode })} />
             <p className="mt-3 text-sm text-mist">You can switch any time during the session. Anyone who has sat out 2 rounds in a row goes on next, whichever you pick (a keep-together or keep-apart rule can hold them back), and every proposed game can be edited before it starts.</p>
           </Panel>
+          )}
           <label className="flex min-h-11 items-center gap-3 md:col-span-2">
             <input type="checkbox" className="h-5 w-5 accent-[#c6ff2e]" checked={details.selfCheckIn} onChange={(e) => update({ selfCheckIn: e.target.checked })} />
             <span>Let players check themselves in by QR <span className="text-sm text-mist">(you can turn this off any time)</span></span>
