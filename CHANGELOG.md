@@ -51,6 +51,10 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+### Changed
+
+- The `/pickleball` landing page's ten feature cards are grouped into three bands (Run the courts, Share the game, Tournaments and records), each card with a small hand-drawn animated SVG icon (`FeatureIcons.jsx`, new `pb-lift`/`pb-grow`/`pb-spot`/`pb-sweep` keyframes that stop for reduced motion) and one short line of copy; phrases pinned by the public-pages spec are kept.
+
 ### Fixed
 
 - Pickleball phase 5 final review fixes: redirect lookup now prefers an exact row over a wildcard of equal length (trailing-slash requests), a failed Google host sign-in callback clears the in-flight OAuth cookie, and the 0020 runbook/plan describe production applying 0016-0020 together with the 2.0.0 release.

@@ -4,6 +4,10 @@ import HeroRallyArt from '../../components/pickleball/art/HeroRallyArt.jsx'
 import PaddleStackArt from '../../components/pickleball/art/PaddleStackArt.jsx'
 import ScoreTapArt from '../../components/pickleball/art/ScoreTapArt.jsx'
 import QrBoardArt from '../../components/pickleball/art/QrBoardArt.jsx'
+import {
+  PaddleQueueIcon, FairnessBarsIcon, LinkedPlayersIcon, CourtGridIcon,
+  WhistleIcon, TvBoardIcon, KeyIcon, BracketIcon, UploadFileIcon, ClockLockIcon,
+} from '../../components/pickleball/art/FeatureIcons.jsx'
 import ResumeBanner from '../../pickleball-open/ResumeBanner.jsx'
 import ContactForm from '../../components/islands/ContactForm.jsx'
 import { resolveTurnstileSiteKey } from '../../lib/turnstileSiteKey'
@@ -33,17 +37,44 @@ const steps = [
   { Art: QrBoardArt, title: 'Everyone follows by QR', body: 'Players scan one code to see who is on every court, who is up next and the standings. No app, no account.' },
 ]
 
-const features = [
-  { title: 'Fair rotation, your way', body: 'Paddle stack (fewest games first), winners play winners, by standing or balanced teams. Pick one when you start and switch any time; whichever you pick, anyone who has sat out 2 rounds in a row goes on next.' },
-  { title: 'Fairness you can see', body: 'The console shows the spread of games played, the longest current wait and how often partners repeat, live.' },
-  { title: 'Keep friends together', body: 'Set two players to always partner, or never share a court. Every rotation keeps it, or the court waits and says why.' },
-  { title: 'One person, every court', body: 'Up to 16 courts on one screen. Any proposed game can be edited before it starts, and a wrong score can be undone or fixed.' },
-  { title: 'Court captains', body: 'Send a helper a link that runs one court from their own phone: start its games, save and fix its results. Turn it off and it stops working at once.' },
-  { title: 'A TV board for the venue', body: 'Every court, who is up next, standings and fairness numbers on one screen, readable from across the hall.' },
-  { title: 'Casual tournaments', body: 'Round robin, pools then a bracket, or single or double elimination. Random, balanced or list-order pairs, a draft draw you can edit, and the live bracket on every phone.' },
-  { title: 'Free, with no sign-up', body: 'No account to run a session, for the host or the players. Your host link is your key; the board link is view-only.' },
-  { title: 'DUPR export', body: 'The host can email themselves a DUPR match file with every game with a valid score (no tie, a team reached 6) and four different DUPR IDs, ready to upload as a club. Google sign-in is asked for this and nothing else.' },
-  { title: 'Private by default', body: 'Sessions are deleted from the live service 7 days after the last change to them. Download the results as a spreadsheet any time before then.' },
+// The feature cards, grouped into three bands. Copy stays to one short line
+// each (the guide has the detail); a few phrases are pinned by
+// tests/e2e/pickleball/pickleball-public-pages.spec.js and must stay as-is.
+const featureBands = [
+  {
+    id: 'run-courts',
+    eyebrow: 'For the host',
+    title: 'Run the courts',
+    grid: 'sm:grid-cols-2 xl:grid-cols-4',
+    features: [
+      { Icon: PaddleQueueIcon, title: 'Fair rotation, your way', body: 'Paddle stack (fewest games first), winners play winners, by standing or balanced teams. Switch any time.' },
+      { Icon: FairnessBarsIcon, title: 'Fairness you can see', body: 'The live spread of games played, the longest current wait and how often partners repeat.' },
+      { Icon: LinkedPlayersIcon, title: 'Keep friends together', body: 'Set two players to always partner or never share a court; every rotation keeps it.' },
+      { Icon: CourtGridIcon, title: 'One person, every court', body: 'Up to 16 courts on one screen. Edit any game before it starts; undo or fix a score.' },
+    ],
+  },
+  {
+    id: 'share-game',
+    eyebrow: 'For helpers and the hall',
+    title: 'Share the game',
+    grid: 'md:grid-cols-3',
+    features: [
+      { Icon: WhistleIcon, title: 'Court captains', body: 'Give a helper a link to run one court from their phone. Turn it off and it stops at once.' },
+      { Icon: TvBoardIcon, title: 'A TV board for the venue', body: 'Every court, who is up next and the standings, in large type readable across the hall.' },
+      { Icon: KeyIcon, title: 'Free, with no sign-up', body: 'No account for the host or the players. Your host link is your key; the board link is view‑only.' },
+    ],
+  },
+  {
+    id: 'tournaments-records',
+    eyebrow: 'Beyond open play',
+    title: 'Tournaments and records',
+    grid: 'md:grid-cols-3',
+    features: [
+      { Icon: BracketIcon, title: 'Casual tournaments', body: 'Round robin, pools then a bracket, or single or double elimination, from a draw you can edit.' },
+      { Icon: UploadFileIcon, title: 'DUPR export', body: 'Email yourself a CSV of every game with a valid score (no tie, a team reached 6) and four different DUPR IDs. Google sign-in is asked for this alone.' },
+      { Icon: ClockLockIcon, title: 'Private by default', body: 'Sessions are deleted from the live service 7 days after their last change. Download the results first.' },
+    ],
+  },
 ]
 
 const faqs = [
@@ -88,14 +119,30 @@ const faqs = [
       </ol>
     </section>
 
-    <section class="mt-20 grid gap-4 md:grid-cols-2 md:[&>*:last-child:nth-child(odd)]:col-span-2" aria-label="Features">
-      {features.map(({ title, body }) => (
-        <div class="rounded-2xl border border-[#193480] p-6">
-          <h3 class="text-xl font-bold text-white">{title}</h3>
-          <p class="mt-2 text-[#b5c4e1]">{body}</p>
-        </div>
+    <div class="mt-20 space-y-14">
+      {featureBands.map(({ id, eyebrow, title, grid, features }) => (
+        <section aria-labelledby={`${id}-heading`}>
+          <p class="text-sm font-semibold text-[#c6ff2e]">{eyebrow}</p>
+          <div class="mt-1 flex items-center gap-5">
+            <h2 id={`${id}-heading`} class="shrink-0 text-2xl font-bold text-white md:text-3xl">{title}</h2>
+            <span class="h-px flex-1 bg-[#193480]" aria-hidden="true"></span>
+          </div>
+          <ul class={`mt-6 grid gap-4 ${grid}`}>
+            {features.map(({ Icon, title: featureTitle, body }) => (
+              <li class="flex gap-4 rounded-2xl border border-[#193480] bg-[#0f1d47] p-5 transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:flex-col">
+                <div class="pb-anim flex h-12 w-12 shrink-0 items-center justify-center rounded-xl sm:h-14 sm:w-14 sm:rounded-2xl bg-[#c6ff2e]/10 ring-1 ring-inset ring-[#c6ff2e]/25" data-testid="pb-artwork">
+                  <Icon className="h-8 w-8 sm:h-10 sm:w-10" />
+                </div>
+                <div>
+                  <h3 class="text-lg font-bold text-white">{featureTitle}</h3>
+                  <p class="mt-1 text-[15px] leading-relaxed text-[#b5c4e1]">{body}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
       ))}
-    </section>
+    </div>
 
     <section class="mt-20" aria-labelledby="faq-heading">
       <h2 id="faq-heading" class="text-3xl font-bold text-white">Questions</h2>
