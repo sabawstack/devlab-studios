@@ -3,8 +3,10 @@
 import { useState } from 'react'
 import { checkIn } from './lib/api'
 import { writeMe } from './lib/me'
+import { useOpenSession } from './lib/useOpenSession'
 import ExpiredNotice from './components/ExpiredNotice.jsx'
 import { Button, Panel } from './components/ui.jsx'
+import Welcome from './components/Welcome.jsx'
 
 const field = 'w-full rounded-xl border border-navy-700 bg-navy-900 px-3 py-3 text-base text-white placeholder:text-mist/70 focus:border-pickle-neon focus:outline-none'
 const MESSAGES = {
@@ -18,6 +20,8 @@ export default function CheckInApp({ code }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [done, setDone] = useState(null)
+  // The public board, live, for the session name and the host's welcome message.
+  const { viewer } = useOpenSession(code, null)
   const update = (patch) => setForm((current) => ({ ...current, ...patch }))
 
   async function submit(event) {
@@ -55,9 +59,10 @@ export default function CheckInApp({ code }) {
   return (
     <main className="mx-auto grid max-w-md gap-5 px-4 py-10">
       <div>
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-pickle-neon">Open play</p>
-        <h1 className="mt-2 text-3xl font-bold">Check in</h1>
-        <p className="mt-1 text-mist">Type the name you want on the board. First names or nicknames are fine: the board is public.</p>
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-pickle-neon">Check in</p>
+        <h1 className="mt-2 text-3xl font-bold [overflow-wrap:anywhere]">{viewer ? viewer.name : 'Check in'}</h1>
+        {viewer && <Welcome announcement={viewer.announcement} className="mt-2" />}
+        <p className="mt-3 text-mist">Type the name you want on the board. First names or nicknames are fine: the board is public.</p>
       </div>
       <form onSubmit={submit} className="grid gap-4">
         <label className="grid gap-1.5 text-sm text-mist">Your name

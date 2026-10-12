@@ -1,4 +1,5 @@
 import type { OpenCommand } from '../../schemas/pickleball/open/commands'
+import { cleanAnnouncement } from './announcement'
 import { busyPlayerIds, gamesPlayed, matchIncludes, pairKey } from './fairness'
 import { addProposal, fillProposals, proposeForCourt } from './propose'
 import { cleanName } from './roster'
@@ -269,6 +270,14 @@ export function applyCommand(state: OpenSessionState, command: OpenCommand, ctx:
       return ok({ ...state, settings: { ...state.settings, mode: command.mode } })
     case 'SET_SELF_CHECK_IN':
       return ok({ ...state, settings: { ...state.settings, selfCheckIn: command.enabled } })
+    case 'SET_ANNOUNCEMENT': {
+      // Host only (not a captain command). Allowed after the end: a thank-you is often written then.
+      const announcement = cleanAnnouncement(command.text)
+      if (command.text.trim().length > LIMITS.maxAnnouncementLength) {
+        return fail(400, `Keep the welcome message to ${LIMITS.maxAnnouncementLength} characters.`)
+      }
+      return ok({ ...state, settings: { ...state.settings, announcement } })
+    }
     case 'SET_PLAYER_SKILL': {
       const target = state.players.find((p) => p.id === command.playerId)
       if (!target) return fail(404, 'Player not found.')

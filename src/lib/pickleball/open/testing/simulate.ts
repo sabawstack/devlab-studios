@@ -44,7 +44,7 @@ export interface SimulationResult {
 export function simulate({ players, courts, rounds, seed, mode = 'PADDLE_STACK', rules = [], skills = false }: SimulationOptions): SimulationResult {
   const random = mulberry32(seed)
   let state: OpenSessionState = sessionState({
-    settings: { mode, target: 11, scoringStyle: 'SIDEOUT', selfCheckIn: true, rules },
+    settings: { mode, target: 11, scoringStyle: 'SIDEOUT', selfCheckIn: true, rules, announcement: '' },
     courts: Array.from({ length: courts }, (_, i) => court(`c${i}`, i + 1)),
     players: Array.from({ length: players }, (_, i) => player(`p${i}`, { position: i, skill: skills ? 1 + (i % 5) : null })),
   })

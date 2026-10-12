@@ -6,6 +6,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { formatPublicCode } from '../lib/pickleball/open/codes'
 import { MODE_INFO } from '../lib/pickleball/open/modes/info'
+import { greetingFor } from './lib/greeting'
 import { checkInLink, viewerLink } from './lib/hostKeys'
 import { PANEL_MS, PANELS, tvColumns, tvRows } from './lib/tvLayout'
 import { useNow } from './lib/useNow'
@@ -14,6 +15,7 @@ import FairnessPanel from './components/FairnessPanel.jsx'
 import FitList from './components/FitList.jsx'
 import QrCode from './components/QrCode.jsx'
 import TvCourt from './components/TvCourt.jsx'
+import TvMarquee from './components/TvMarquee.jsx'
 import { nextGames } from './tournament/bracketLayout'
 import ChampionBanner from './tournament/ChampionBanner.jsx'
 
@@ -149,13 +151,16 @@ export default function TvBoard({ code }) {
   // One overlay fills the courts area at a time: the champions (with "Session ended" under them), the end, or the coming draw.
   const overlay = champion ? 'champion' : ended ? 'ended' : preStart ? 'draw' : null
   const grid = { '--tv-cols': cols, '--tv-rows': rows }
+  const greeting = greetingFor(new Date(now))
+  const announcement = viewer.announcement
 
   return (
-    <main className="grid grid-cols-1 gap-4 p-4 lg:h-screen lg:grid-cols-[minmax(0,1fr)_minmax(18rem,26vw)] lg:gap-[1.2vw] lg:overflow-hidden lg:p-[1.2vw]">
+    <main className={`grid grid-cols-1 gap-4 p-4 lg:h-screen lg:grid-cols-[minmax(0,1fr)_minmax(18rem,26vw)] lg:gap-[1.2vw] lg:overflow-hidden lg:p-[1.2vw] ${announcement ? 'lg:grid-rows-[minmax(0,1fr)_auto]' : ''}`}>
       {/* Below lg there is no side panel, so the essentials sit in a compact header. */}
       <header className="lg:hidden">
         <p className="text-sm font-bold text-pickle-neon"><LiveState viewer={viewer} live={live} lastAt={lastSnapshotAt} /> · {modeLabel}</p>
         <h1 className={`text-2xl font-bold ${WRAP}`}>{viewer.name}</h1>
+        <p className="text-base font-semibold text-pickle-neon">{greeting}</p>
         <p className="whitespace-nowrap text-lg font-bold tracking-[0.05em] text-pickle-neon">{formatPublicCode(code)}</p>
       </header>
       <section
@@ -183,6 +188,7 @@ export default function TvBoard({ code }) {
         <header>
           <p className="text-[clamp(0.9rem,1.1vw,1.5rem)] font-bold text-pickle-neon"><LiveState viewer={viewer} live={live} lastAt={lastSnapshotAt} /> · {modeLabel}</p>
           <h1 className={`text-[clamp(1.25rem,1.8vw,2.5rem)] font-bold leading-tight ${WRAP}`}>{viewer.name}</h1>
+          <p className="text-[clamp(0.9rem,1.1vw,1.5rem)] font-semibold text-pickle-neon">{greeting}</p>
         </header>
         <div className="flex items-center gap-[1vw]">
           <QrCode url={qrUrl} size={qrSize} label={qrLabel} />
@@ -199,6 +205,11 @@ export default function TvBoard({ code }) {
           {panel === 'standings' ? <Standings viewer={viewer} /> : <Results viewer={viewer} />}
         </section>
       </aside>
+      {announcement && (
+        <footer aria-label="Welcome message" className="rounded-2xl bg-navy-900 px-4 py-2 text-xl font-semibold lg:col-span-2 lg:-mt-[0.6vw] lg:px-[1.2vw] lg:py-[0.2vw] lg:text-[clamp(1rem,1.5vw,2.25rem)] lg:leading-tight">
+          <TvMarquee text={announcement} />
+        </footer>
+      )}
     </main>
   )
 }

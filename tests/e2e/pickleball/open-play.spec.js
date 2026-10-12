@@ -153,6 +153,7 @@ test.describe('open play UI', () => {
     await expect(page.getByRole('heading', { name: 'Two links. Keep the first one to yourself.' })).toBeVisible()
     await page.getByRole('link', { name: 'I saved it — go to courts' }).click()
     await expect(page.getByTestId('court-1')).toContainText('Up next')
+    await expect(page.getByTestId('welcome-preview')).toContainText('Welcome to Open Play!')
     expect(page.url()).not.toContain('#host=')
   })
 
@@ -761,7 +762,8 @@ test.describe('TV board', () => {
         await page.evaluate(() => document.fonts.ready)
         await expect.poll(() => page.getByTestId('tv-court').evaluateAll((cards) => cards.filter((el) => el.scrollHeight > el.clientHeight + 1).length)).toBe(0)
         await expect.poll(() => page.evaluate(() => [...document.querySelectorAll('body *')]
-          .filter((el) => el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0)
+          // A scrolling welcome line overflows on purpose: it shows the whole message as it moves.
+          .filter((el) => el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0 && el.dataset.marquee !== 'scrolling')
           .map((el) => `${el.tagName}.${String(el.className).slice(0, 40)}`))).toEqual([])
         expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true)
       })
@@ -802,4 +804,136 @@ test.describe('TV board', () => {
       }
     })
   }
+})
+
+test.describe('welcome message', () => {
+  const DEFAULT = 'Welcome to Sunday Open Play! Check the board for your court, play fair and have fun.'
+  const GREETING = /Good (morning|afternoon|evening), players 👋/
+
+  async function asCaptain(request, code, hostKey, cmd) {
+    const host = await hostSnapshot(request, code, hostKey)
+    const made = await request.post(`/api/pickleball/open/s/${code}/captains`, { headers: { 'X-Host-Key': hostKey }, data: { courtId: host.courts[0].id } })
+    const { captainKey } = await made.json()
+    return request.post(`/api/pickleball/open/s/${code}/commands`, {
+      headers: { 'X-Captain-Key': captainKey },
+      data: { idempotencyKey: crypto.randomUUID(), command: cmd },
+    })
+  }
+
+  test('a new session starts with the default message for its kind, and the board greets players', async ({ page, request }) => {
+    const { code } = await createSession(request)
+    expect((await (await request.get(`/api/pickleball/open/s/${code}/state`)).json()).announcement).toBe(DEFAULT)
+    const cup = await createSession(request, { name: 'Club Cup', kind: 'TOURNAMENT', tournament: { format: 'ROUND_ROBIN' } })
+    expect((await (await request.get(`/api/pickleball/open/s/${cup.code}/state`)).json()).announcement)
+      .toBe('Welcome to Club Cup! Check the board for your next game, and good luck!')
+
+    await page.goto(`/pickleball/s/${code}`)
+    await expect(page.getByTestId('welcome')).toContainText(GREETING)
+    await expect(page.getByTestId('welcome-message')).toHaveText(DEFAULT)
+    // The status banner says hello by first name once a player picks theirs.
+    await page.getByLabel("I'm…").selectOption({ label: 'Ana' })
+    await expect(page.getByRole('status').filter({ hasText: /^Hi Ana, you're up on Court \d: walk on$/ })).toBeVisible()
+  })
+
+  test('a session can start with the host’s own message, or none', async ({ request }) => {
+    const own = await createSession(request, { settings: { mode: 'PADDLE_STACK', target: 11, scoringStyle: 'SIDEOUT', announcement: '  Bring water 💧 ' } })
+    expect((await (await request.get(`/api/pickleball/open/s/${own.code}/state`)).json()).announcement).toBe('Bring water 💧')
+    const none = await createSession(request, { settings: { mode: 'PADDLE_STACK', target: 11, scoringStyle: 'SIDEOUT', announcement: '' } })
+    expect((await (await request.get(`/api/pickleball/open/s/${none.code}/state`)).json()).announcement).toBe('')
+  })
+
+  test('the create form fills the default, follows the name and kind until the host edits it', async ({ page }) => {
+    await page.goto('/pickleball/new')
+    const field = page.getByLabel(/^Welcome message/)
+    await expect(field).toHaveValue('Welcome to Open Play! Check the board for your court, play fair and have fun.')
+    await page.getByLabel('Session name').fill('Friday Social')
+    await expect(field).toHaveValue('Welcome to Friday Social! Check the board for your court, play fair and have fun.')
+    await page.getByRole('radio', { name: /^Tournament/ }).click()
+    await expect(field).toHaveValue('Welcome to Friday Social! Check the board for your next game, and good luck!')
+    await field.fill('Bring water')
+    await page.getByLabel('Session name').fill('Friday Cup')
+    await expect(field).toHaveValue('Bring water')
+    await field.fill('a'.repeat(141))
+    await expect(page.getByText('141/140: keep it to 140 characters')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Next: add players' })).toBeDisabled()
+  })
+
+  test('the host edits the message and the board, TV and check-in page update live; clearing leaves only the greeting', async ({ page, browser, request }) => {
+    const { code, hostKey } = await createSession(request)
+    const boardContext = await browser.newContext()
+    const board = await boardContext.newPage()
+    await board.goto(`/pickleball/s/${code}`)
+    const checkIn = await boardContext.newPage()
+    await checkIn.goto(`/pickleball/s/${code}/check-in`)
+    const tvContext = await browser.newContext({ viewport: { width: 1920, height: 1080 } })
+    const tv = await tvContext.newPage()
+    await tv.goto(`/pickleball/s/${code}/tv`)
+    await expect(tv.getByTestId('tv-announcement')).toContainText(DEFAULT)
+    await expect(checkIn.getByRole('heading', { name: 'Sunday Open Play' })).toBeVisible()
+    await expect(checkIn.getByTestId('welcome-message')).toHaveText(DEFAULT)
+
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    const preview = page.getByRole('region', { name: 'Welcome message' })
+    await expect(preview).toContainText(DEFAULT)
+    await page.getByRole('button', { name: 'More' }).click()
+    await page.getByRole('button', { name: 'Edit welcome message' }).click()
+    const sheet = page.getByRole('dialog', { name: 'Edit welcome message' })
+    await expect(sheet.getByRole('textbox')).toHaveValue(DEFAULT)
+    await sheet.getByRole('textbox').fill('a'.repeat(141))
+    await expect(sheet.getByRole('alert')).toHaveText('Keep it to 140 characters.')
+    await expect(sheet.getByRole('button', { name: 'Save' })).toBeDisabled()
+    await sheet.getByRole('textbox').fill('  Courts close at 9 tonight ')
+    await expect(sheet.getByTestId('announcement-count')).toHaveText('25/140')
+    await sheet.getByRole('button', { name: 'Save' }).click()
+    await expect(preview).toContainText('Courts close at 9 tonight')
+    await expect(board.getByTestId('welcome-message')).toHaveText('Courts close at 9 tonight')
+    await expect(tv.getByTestId('tv-announcement')).toContainText('Courts close at 9 tonight')
+    await expect(checkIn.getByTestId('welcome-message')).toHaveText('Courts close at 9 tonight')
+
+    await preview.getByRole('button', { name: 'Edit' }).click()
+    await page.getByRole('dialog', { name: 'Edit welcome message' }).getByRole('button', { name: 'Clear message' }).click()
+    await expect(preview).toContainText('none')
+    await expect(board.getByTestId('welcome-message')).toHaveCount(0)
+    await expect(board.getByTestId('welcome')).toContainText(GREETING)
+    await expect(tv.getByTestId('tv-announcement')).toHaveCount(0)
+    await expect(tv.getByRole('complementary').getByText(GREETING)).toBeVisible()
+    await boardContext.close()
+    await tvContext.close()
+  })
+
+  test('only the host can change it: a captain is refused', async ({ request }) => {
+    const { code, hostKey } = await createSession(request)
+    const refused = await asCaptain(request, code, hostKey, { type: 'SET_ANNOUNCEMENT', text: 'Captain was here' })
+    expect(refused.status()).toBe(403)
+    expect((await refused.json()).error).toBe('Only the host can do that.')
+    const tooLong = await command(request, code, hostKey, { type: 'SET_ANNOUNCEMENT', text: 'a'.repeat(141) })
+    expect(tooLong.status()).toBe(400)
+    expect((await (await request.get(`/api/pickleball/open/s/${code}/state`)).json()).announcement).toBe(DEFAULT)
+  })
+
+  test('on the TV a line that fits stays still, a longer one scrolls, and with reduced motion it wraps instead', async ({ browser, request }) => {
+    const long = `${'Welcome everyone to the club night, '.repeat(3)}courts close at nine, please bring water and have fun!`.slice(0, 140)
+    const { code, hostKey } = await createSession(request)
+    for (const reducedMotion of ['no-preference', 'reduce']) {
+      const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, reducedMotion })
+      const tv = await context.newPage()
+      expect((await command(request, code, hostKey, { type: 'SET_ANNOUNCEMENT', text: 'Have fun' })).status()).toBe(200)
+      await tv.goto(`/pickleball/s/${code}/tv`)
+      const line = tv.getByTestId('tv-announcement')
+      await expect(line).toContainText('Have fun')
+      if (reducedMotion === 'no-preference') await expect(line).toHaveAttribute('data-marquee', 'static')
+      expect((await command(request, code, hostKey, { type: 'SET_ANNOUNCEMENT', text: long })).status()).toBe(200)
+      await expect(line).toContainText(long.trim())
+      if (reducedMotion === 'no-preference') {
+        await expect(line).toHaveAttribute('data-marquee', 'scrolling')
+        expect(await tv.locator('.pb-marquee').evaluate((el) => getComputedStyle(el).animationName)).toBe('pb-marquee')
+      } else {
+        // No motion: the whole message wraps on screen, nothing is cut off and nothing animates.
+        await expect(tv.locator('.pb-marquee')).toHaveCount(0)
+        expect(await line.evaluate((el) => el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1)).toBe(true)
+      }
+      expect(await tv.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth && document.documentElement.scrollHeight <= window.innerHeight)).toBe(true)
+      await context.close()
+    }
+  })
 })

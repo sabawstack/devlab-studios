@@ -46,3 +46,19 @@ export function myStatus(viewer, playerId) {
   if (place >= 0) return { kind: 'WAITING', place: place + 1 }
   return { kind: 'NONE' }
 }
+
+/** The status banner, greeting the player by first name ("Hi Ana! You're #3 in line"); null when there is nothing to say. */
+export function statusText(status, name) {
+  const first = String(name ?? '').trim().split(/\s+/)[0] || 'there'
+  switch (status.kind) {
+    case 'PLAYING': return `Hi ${first}, you're playing on ${status.court}`
+    case 'UP_NEXT': return `Hi ${first}, you're up on ${status.court}: walk on`
+    case 'WAITING': return `Hi ${first}! You're #${status.place} in line`
+    case 'BREAK': return `Hi ${first}, you're on a break`
+    case 'NEXT_GAME': return `Hi ${first}, your next game: ${status.label}`
+    case 'WAITING_POOLS': return `Hi ${first}, waiting for the pools to finish`
+    case 'WAITING_RESULTS': return `Hi ${first}, waiting for other results to set your next game`
+    case 'DONE': return `Hi ${first}! Your games are done. Thanks for playing!`
+    default: return null
+  }
+}

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { stackingModeSchema, tournamentFormatSchema } from './commands'
+import { announcementSchema, stackingModeSchema, tournamentFormatSchema } from './commands'
 
 export const createSessionSchema = z.object({
   name: z.string().trim().min(1).max(60),
@@ -12,6 +12,8 @@ export const createSessionSchema = z.object({
     scoringStyle: z.enum(['SIDEOUT', 'RALLY']),
     // Optional: older clients send no value and get the default (on).
     selfCheckIn: z.boolean().optional(),
+    // Optional: an older client sends none and gets the default welcome message.
+    announcement: announcementSchema.optional(),
   }),
   players: z.array(z.object({
     name: z.string().max(200),

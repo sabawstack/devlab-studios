@@ -20,6 +20,27 @@ describe('buildInitialState', () => {
     expect(state.version).toBe(1)
   })
 
+  it('fills the default welcome message for open play and tournaments', () => {
+    const base = { name: 'Sunday', hostDisplayName: 'Mike', location: null, courtCount: 1, settings: DEFAULT_SETTINGS, players: [] }
+    expect(buildInitialState(base, ctx()).settings.announcement)
+      .toBe('Welcome to Sunday! Check the board for your court, play fair and have fun.')
+    expect(buildInitialState({ ...base, kind: 'TOURNAMENT', tournamentFormat: 'ROUND_ROBIN' }, ctx()).settings.announcement)
+      .toBe('Welcome to Sunday! Check the board for your next game, and good luck!')
+  })
+
+  it('shortens the session name in the default so it stays within 140 characters', () => {
+    const name = 'The Saturday Morning Mixed Doubles Social Ladder At Riverside '.repeat(2)
+    const state = buildInitialState({ name, hostDisplayName: 'Mike', location: null, courtCount: 1, settings: DEFAULT_SETTINGS, players: [] }, ctx())
+    expect(state.settings.announcement.length).toBeLessThanOrEqual(140)
+    expect(state.settings.announcement).toMatch(/^Welcome to The Saturday Morning .*…! Check the board for your court, play fair and have fun\.$/)
+  })
+
+  it('keeps the host’s own message, cleaned, and an empty one means no message', () => {
+    const base = { name: 'Sunday', hostDisplayName: 'Mike', location: null, courtCount: 1, settings: DEFAULT_SETTINGS, players: [] }
+    expect(buildInitialState({ ...base, announcement: '  Bring water 💧\n' }, ctx()).settings.announcement).toBe('Bring water 💧')
+    expect(buildInitialState({ ...base, announcement: '' }, ctx()).settings.announcement).toBe('')
+  })
+
   it('caps players at 128', () => {
     const players = Array.from({ length: 140 }, (_, i) => ({ name: `P${i}`, skill: null, duprId: null }))
     const state = buildInitialState({ name: 'x', hostDisplayName: 'y', location: null, courtCount: 1, settings: DEFAULT_SETTINGS, players }, ctx())

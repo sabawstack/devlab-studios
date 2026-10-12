@@ -54,6 +54,7 @@ export const POST: APIRoute = async ({ request }) => {
       const state = buildInitialState(
         {
           name, hostDisplayName, location: location ?? null, courtCount, settings, kind, tournamentFormat: tournament?.format,
+          announcement: settings.announcement,
           players: players.map((p) => ({ name: p.name, skill: p.skill ?? null, duprId: p.duprId ?? null })),
         },
         { now: new Date().toISOString(), newId: () => crypto.randomUUID(), publicCode: generatePublicCode(), sessionId: crypto.randomUUID() },

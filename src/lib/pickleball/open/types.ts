@@ -18,6 +18,8 @@ export interface SessionSettings {
   /** Players may add themselves from the check-in link (spec §4.2). */
   selfCheckIn: boolean
   rules: readonly PairRule[]
+  /** The welcome message on the board, check-in page and TV; empty means none. Plain text. */
+  announcement: string
 }
 
 export type PlayerStatus = 'ACTIVE' | 'BREAK' | 'LEFT'
@@ -115,6 +117,7 @@ export const LIMITS = {
   retentionMs: 7 * 24 * 60 * 60 * 1000,
   maxRules: 32,
   maxCaptains: 32,
+  maxAnnouncementLength: 140,
 } as const
 
 export const DEFAULT_SETTINGS: SessionSettings = {
@@ -123,6 +126,7 @@ export const DEFAULT_SETTINGS: SessionSettings = {
   scoringStyle: 'SIDEOUT',
   selfCheckIn: true,
   rules: [],
+  announcement: '',
 }
 
 export function addMs(iso: string, ms: number): string {

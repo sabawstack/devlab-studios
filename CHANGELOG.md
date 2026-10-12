@@ -51,6 +51,10 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+### Added
+
+- Pickleball welcome message: the player board, check-in page and TV greet players by local time ("Good morning, players 👋") and show the host's message under the session name. A default is filled in at creation (open play and tournament wording); the host edits or clears it on the create form or from the console (More → Edit welcome message, host-only `SET_ANNOUNCEMENT`, 140 characters). It lives in the settings JSON (sessions from before have none) and in the viewer snapshot as `announcement`; on the TV a line too long for the screen scrolls, and wraps instead under reduced motion. The board's status banner now says hello by first name ("Hi Ana! You're #3 in line").
+
 ## [2.0.0] - 2026-10-13
 
 ### Changed

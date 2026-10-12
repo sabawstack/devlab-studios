@@ -168,7 +168,7 @@ test.describe('Pickleball public pages', () => {
   test('the guide and landing page describe the stacking modes and rules', async ({ page }) => {
     await page.goto('/pickleball/how-it-works')
     const guide = await mainCopy(page)
-    for (const claim of ['Winners play winners', 'By standing', 'Balanced teams', 'Keep friends together', 'Hand a court to a captain', 'TV board']) expect(guide).toContain(claim)
+    for (const claim of ['Winners play winners', 'By standing', 'Balanced teams', 'Keep friends together', 'Hand a court to a captain', 'TV board', 'welcome message']) expect(guide).toContain(claim)
     await page.goto('/pickleball')
     const landing = await mainCopy(page)
     for (const claim of ['winners play winners', 'Fairness you can see', 'Keep friends together', 'Court captains', 'TV board']) expect(landing).toContain(claim)

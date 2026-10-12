@@ -28,6 +28,8 @@ export interface ViewerSnapshot {
   status: 'ACTIVE' | 'ENDED'
   expiresAt: string
   settings: { target: number; mode: StackingMode; selfCheckIn: boolean }
+  /** The host's welcome message, public by design; '' when there is none. */
+  announcement: string
   version: number
   courts: ViewerCourt[]
   waiting: Array<{ id: string; name: string }>
@@ -127,6 +129,7 @@ export function toViewerSnapshot(state: OpenSessionState): ViewerSnapshot {
     status: state.status,
     expiresAt: state.expiresAt,
     settings: { target: state.settings.target, mode: state.settings.mode, selfCheckIn: state.settings.selfCheckIn },
+    announcement: state.settings.announcement,
     version: state.version,
     courts: courts.map((c) => {
       const match = c.enabled ? liveMatch(state, c.id) : null

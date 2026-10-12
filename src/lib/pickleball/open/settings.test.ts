@@ -5,8 +5,15 @@ import { DEFAULT_SETTINGS } from './types'
 describe('normalizeSettings', () => {
   it('fills fields a Phase 1 session never stored, in a fixed key order', () => {
     const legacy = normalizeSettings({ mode: 'PADDLE_STACK', target: 15, scoringStyle: 'RALLY' })
-    expect(legacy).toEqual({ mode: 'PADDLE_STACK', target: 15, scoringStyle: 'RALLY', selfCheckIn: true, rules: [] })
-    expect(Object.keys(legacy)).toEqual(['mode', 'target', 'scoringStyle', 'selfCheckIn', 'rules'])
+    expect(legacy).toEqual({ mode: 'PADDLE_STACK', target: 15, scoringStyle: 'RALLY', selfCheckIn: true, rules: [], announcement: '' })
+    expect(Object.keys(legacy)).toEqual(['mode', 'target', 'scoringStyle', 'selfCheckIn', 'rules', 'announcement'])
+  })
+
+  it('a session from before the welcome message has no message; a stored one is cleaned and capped', () => {
+    expect(normalizeSettings({ mode: 'BALANCED', target: 11 }).announcement).toBe('')
+    expect(normalizeSettings({ ...DEFAULT_SETTINGS, announcement: '  Hi all 👋 ' }).announcement).toBe('Hi all 👋')
+    expect(normalizeSettings({ ...DEFAULT_SETTINGS, announcement: 'x'.repeat(300) }).announcement).toHaveLength(140)
+    expect(normalizeSettings({ ...DEFAULT_SETTINGS, announcement: 42 }).announcement).toBe('')
   })
 
   it('keeps valid rules and drops malformed ones', () => {

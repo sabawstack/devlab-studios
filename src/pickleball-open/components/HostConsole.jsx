@@ -3,6 +3,7 @@ import { MODE_INFO } from '../../lib/pickleball/open/modes/info'
 import { deleteSession, downloadResults } from '../lib/api'
 import { forgetHostedSession } from '../lib/hostKeys'
 import { useCommandQueue } from '../lib/useCommandQueue'
+import AnnouncementSheet, { WelcomePreview } from './AnnouncementSheet.jsx'
 import CaptainsSheet from './CaptainsSheet.jsx'
 import CourtCard from './CourtCard.jsx'
 import EditMatchDialog from './EditMatchDialog.jsx'
@@ -129,6 +130,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
           <Button variant="ghost" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>More</Button>
           {menuOpen && (
             <div className="absolute right-0 z-40 mt-2 grid w-56 gap-1 rounded-2xl bg-navy-950 p-2 shadow-elevated">
+              <Button variant="ghost" onClick={() => { setMenuOpen(false); setDialog({ type: 'announcement' }) }}>Edit welcome message</Button>
               <Button variant="ghost" onClick={() => { setMenuOpen(false); setDialog({ type: 'captains' }) }}>Court captains</Button>
               <Button variant="ghost" onClick={() => { setMenuOpen(false); download() }}>Download results (CSV)</Button>
               <Button variant="ghost" onClick={() => { setMenuOpen(false); clearError(); setDialog({ type: 'dupr' }) }}>Email me the DUPR export</Button>
@@ -147,6 +149,8 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
           </p>
         </div>
       )}
+
+      <WelcomePreview announcement={viewer.announcement} onEdit={() => setDialog({ type: 'announcement' })} />
 
       {tournament ? (
         <TournamentHost host={host} send={send} error={shownError ? friendlyError(shownError) : null}
@@ -219,6 +223,10 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
       {dialog?.type === 'share' && (
         <ShareSheet code={code} selfCheckIn={host.settings.selfCheckIn} onClose={() => setDialog(null)}
           onToggleCheckIn={() => send({ type: 'SET_SELF_CHECK_IN', enabled: !host.settings.selfCheckIn })} />
+      )}
+      {dialog?.type === 'announcement' && (
+        <AnnouncementSheet initial={viewer.announcement} onClose={() => setDialog(null)}
+          onSave={(text) => { setDialog(null); send({ type: 'SET_ANNOUNCEMENT', text: text.trim() }) }} />
       )}
       {dialog?.type === 'captains' && (
         <CaptainsSheet code={code} hostKey={hostKey} courts={host.courts} captains={host.captains} onHost={onHost} onClose={() => setDialog(null)} />

@@ -8,6 +8,8 @@
 .pb-anim .pb-fade-cycle { animation: pb-fade-cycle 4s ease-in-out infinite; }
 .pb-flip { animation: pb-flip 420ms ease-out; }
 .pb-celebrate { animation: pb-celebrate 900ms ease-out 2; transform-origin: center; }
+/* The TV welcome line when it is wider than the screen: two copies slide left by one copy's width, seamlessly. */
+.pb-marquee { animation: pb-marquee var(--pb-marquee-s, 20s) linear infinite; }
 /* Small-scale motion for the landing page's 32px feature icons. */
 .pb-anim .pb-lift { animation: pb-lift 2.4s ease-in-out infinite; transform-box: fill-box; }
 .pb-anim .pb-grow { animation: pb-grow 3s ease-in-out infinite; transform-box: fill-box; transform-origin: center bottom; }
@@ -32,9 +34,10 @@
 @keyframes pb-lift { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2.5px); } }
 @keyframes pb-grow { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.72); } }
 @keyframes pb-spot { 0%, 30%, 100% { opacity: 0; } 6%, 22% { opacity: 0.5; } }
+@keyframes pb-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @keyframes pb-sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes pb-celebrate { 0% { transform: scale(0.85); opacity: 0; } 55% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .pb-anim *, .pb-flip, .pb-pulse, .pb-celebrate { animation: none !important; }
+  .pb-anim *, .pb-flip, .pb-pulse, .pb-celebrate, .pb-marquee { animation: none !important; }
 }

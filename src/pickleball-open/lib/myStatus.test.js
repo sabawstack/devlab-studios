@@ -1,6 +1,6 @@
 // src/pickleball-open/lib/myStatus.test.js
 import { describe, expect, it } from 'vitest'
-import { myStatus } from './myStatus'
+import { myStatus, statusText } from './myStatus'
 
 const viewer = {
   roster: [{ id: 'a', name: 'Ana' }, { id: 'b', name: 'Ben' }, { id: 'c', name: 'Cyd' }, { id: 'd', name: 'Dex' }],
@@ -89,5 +89,25 @@ describe('myStatus once a pair has no game placed', () => {
       fixtures: [game('Quarter-final 1', 'MAIN', 'A', null, 'BYE', 'A'), game('Semi-final 1', 'MAIN', null, 'B', 'PENDING')],
     })
     expect(myStatus(cup, 'a1')).toEqual({ kind: 'WAITING_RESULTS' })
+  })
+})
+
+describe('statusText: the personal hello', () => {
+  it('greets the player by first name in every open-play status', () => {
+    expect(statusText({ kind: 'WAITING', place: 3 }, 'Ana Cruz')).toBe("Hi Ana! You're #3 in line")
+    expect(statusText({ kind: 'UP_NEXT', court: 'Court 2' }, 'Ana')).toBe("Hi Ana, you're up on Court 2: walk on")
+    expect(statusText({ kind: 'PLAYING', court: 'Court 2' }, 'Ana')).toBe("Hi Ana, you're playing on Court 2")
+    expect(statusText({ kind: 'BREAK' }, '  Ana  ')).toBe("Hi Ana, you're on a break")
+  })
+
+  it('prefixes the tournament statuses the same way', () => {
+    expect(statusText({ kind: 'NEXT_GAME', label: 'Semi-final 1' }, 'Ben')).toBe('Hi Ben, your next game: Semi-final 1')
+    expect(statusText({ kind: 'WAITING_POOLS' }, 'Ben')).toBe('Hi Ben, waiting for the pools to finish')
+    expect(statusText({ kind: 'WAITING_RESULTS' }, 'Ben')).toBe('Hi Ben, waiting for other results to set your next game')
+    expect(statusText({ kind: 'DONE' }, 'Ben')).toBe('Hi Ben! Your games are done. Thanks for playing!')
+  })
+
+  it('has nothing to say when the player is not placed', () => {
+    expect(statusText({ kind: 'NONE' }, 'Ana')).toBeNull()
   })
 })

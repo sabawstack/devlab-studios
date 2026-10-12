@@ -2,11 +2,12 @@
 import { useState } from 'react'
 import { MODE_INFO } from '../../lib/pickleball/open/modes/info'
 import { readMe, writeMe } from '../lib/me'
-import { myStatus } from '../lib/myStatus'
+import { myStatus, statusText } from '../lib/myStatus'
 import { useNow } from '../lib/useNow'
 import { BOARD_TABS } from '../tournament/tabs'
 import TournamentPanels from '../tournament/TournamentPanels.jsx'
 import StandingsTable from './StandingsTable.jsx'
+import Welcome from './Welcome.jsx'
 import { Panel, TeamNames } from './ui.jsx'
 
 // Polling keeps the board current when the socket can't open, so "live" means fresh data, not an open socket.
@@ -15,19 +16,10 @@ const clock = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', min
 
 const COURT_STATE = { PLAYING: 'Playing', UP_NEXT: 'Walk on now', WAITING_FOR_PLAYERS: 'Waiting for players', OFF: 'Off' }
 
-function MeBanner({ status }) {
-  const text = {
-    PLAYING: `You're playing on ${status.court}`,
-    UP_NEXT: `You're up on ${status.court}: walk on`,
-    WAITING: `You're #${status.place} in line`,
-    BREAK: "You're on a break",
-    NEXT_GAME: `Your next game: ${status.label}`,
-    WAITING_POOLS: 'Waiting for the pools to finish',
-    WAITING_RESULTS: 'Waiting for other results to set your next game',
-    DONE: 'Your games are done. Thanks for playing!',
-  }[status.kind]
+function MeBanner({ status, name }) {
+  const text = statusText(status, name)
   if (!text) return null
-  return <p className="rounded-2xl bg-pickle-neon px-4 py-3 text-lg font-bold text-ink" role="status">{text}</p>
+  return <p className="rounded-2xl bg-pickle-neon px-4 py-3 text-lg font-bold text-ink [overflow-wrap:anywhere]" role="status">{text}</p>
 }
 
 export default function ViewerBoard({ viewer, status, lastSnapshotAt = null, invalidHostLink, revokedCaptainLink = false, signInNotice = null }) {
@@ -68,12 +60,13 @@ export default function ViewerBoard({ viewer, status, lastSnapshotAt = null, inv
       {signInNotice && <p role="status" className="rounded-xl bg-amber-400/15 px-4 py-3 text-amber-100">{signInNotice}</p>}
       {invalidHostLink && <p role="alert" className="rounded-xl bg-amber-400/15 px-4 py-3 text-amber-100">That host link isn't valid for this session. You're seeing the player board.</p>}
       <header className="flex flex-wrap items-end gap-3">
-        <div className="flex-1">
+        <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
           <p className="flex items-center gap-2 text-xs font-bold text-pickle-neon">
             <span className={`h-2 w-2 rounded-full bg-pickle-neon ${viewer.status === 'ACTIVE' ? 'pb-pulse' : ''}`} aria-hidden="true" />
             {viewer.status !== 'ACTIVE' ? 'ENDED' : fresh ? 'LIVE' : <span className="text-amber-200">Offline · showing data from {lastSnapshotAt ? clock(lastSnapshotAt) : 'earlier'}</span>}
           </p>
-          <h1 className="text-2xl font-bold sm:text-3xl">{viewer.name}</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl [overflow-wrap:anywhere]">{viewer.name}</h1>
+          <Welcome announcement={viewer.announcement} className="mt-1" />
           <p className="text-sm text-mist">Hosted by {viewer.hostDisplayName} · {courtCount} court{courtCount === 1 ? '' : 's'} · {tournament ? tournament.formatLabel : MODE_INFO[viewer.settings.mode]?.label ?? 'Paddle stack'}</p>
           {viewer.settings.selfCheckIn && viewer.status === 'ACTIVE' && (
             <a href={`/pickleball/s/${viewer.code}/check-in`} className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-pickle-neon underline underline-offset-4">Not on the list? Check in</a>
@@ -88,7 +81,7 @@ export default function ViewerBoard({ viewer, status, lastSnapshotAt = null, inv
         </label>
       </header>
 
-      <MeBanner status={mine} />
+      <MeBanner status={mine} name={myName} />
 
       <div className="grid grid-cols-3 gap-1 rounded-xl bg-navy-900 p-1 lg:hidden" role="tablist" aria-label="Board sections">
         {tabs.map(([key, label]) => (

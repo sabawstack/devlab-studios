@@ -25,7 +25,7 @@ describe('Phase 2 repository', () => {
     await createOpenSession(d1, state, 'hash')
     raw.prepare(`UPDATE open_sessions SET settings_json = '{"mode":"PADDLE_STACK","target":11,"scoringStyle":"SIDEOUT"}'`).run()
     const loaded = await loadOpenSession(d1, 'ABCDE23456', NOW)
-    expect(loaded?.state.settings).toEqual({ mode: 'PADDLE_STACK', target: 11, scoringStyle: 'SIDEOUT', selfCheckIn: true, rules: [] })
+    expect(loaded?.state.settings).toEqual({ mode: 'PADDLE_STACK', target: 11, scoringStyle: 'SIDEOUT', selfCheckIn: true, rules: [], announcement: '' })
     expect(loaded?.state.matches.every((m) => m.recordedBy === null)).toBe(true)
     expect(loaded?.captains).toEqual([])
     // Still accepts a command after the deploy.

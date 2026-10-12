@@ -1,6 +1,7 @@
 // Settings are stored as JSON (open_sessions.settings_json). Sessions created
 // before a field existed load without it, so every read goes through this:
 // one canonical shape, with a fixed key order (diffState compares JSON).
+import { cleanAnnouncement } from './announcement'
 import { DEFAULT_SETTINGS, type PairRule, type SessionSettings, type StackingMode } from './types'
 
 export const STACKING_MODES: readonly StackingMode[] = ['PADDLE_STACK', 'WINNERS_LOSERS', 'BY_STANDING', 'BALANCED']
@@ -24,5 +25,7 @@ export function normalizeSettings(raw: unknown): SessionSettings {
     rules: Array.isArray(value.rules)
       ? value.rules.filter(isPairRule).map((rule) => ({ kind: rule.kind, playerIds: [rule.playerIds[0], rule.playerIds[1]] as const }))
       : [],
+    // A session from before the welcome message existed has none (not the default).
+    announcement: typeof value.announcement === 'string' ? cleanAnnouncement(value.announcement) : DEFAULT_SETTINGS.announcement,
   }
 }

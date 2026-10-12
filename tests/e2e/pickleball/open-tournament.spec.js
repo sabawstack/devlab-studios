@@ -448,7 +448,7 @@ test.describe('tournament board and TV (screens)', () => {
   // The same standard as the open-play TV (open-play.spec.js): legible across a hall, nothing truncated or spilling.
   const LONG_NAMES = NAMES.map((name, i) => (i % 3 === 0 ? `${name} Montgomery-Alexandrovich` : name))
   const spilling = (page) => page.evaluate(() => [...document.querySelectorAll('body *')]
-    .filter((el) => (el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0) || (el.dataset.testid === 'tv-court' && el.scrollHeight > el.clientHeight + 1))
+    .filter((el) => (el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0 && el.dataset.marquee !== 'scrolling') || (el.dataset.testid === 'tv-court' && el.scrollHeight > el.clientHeight + 1))
     .map((el) => `${el.tagName}.${String(el.className).slice(0, 40)}`))
   for (const [format, players, courtCount] of [['POOL_TO_BRACKET', 16, 4], ['SINGLE_ELIMINATION', 16, 2]]) {
     for (const [width, height] of [[1920, 1080], [1280, 720]]) {

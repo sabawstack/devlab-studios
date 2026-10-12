@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useTurnstile, VERIFICATION_MESSAGES } from '../components/islands/useTurnstile.js'
 import { OPEN_SESSION_TURNSTILE_ACTION } from '../lib/pickleball/open/constants'
+import { defaultAnnouncement } from '../lib/pickleball/open/announcement'
 import { parseRoster, parseRosterCsv } from '../lib/pickleball/open/roster'
 import { LIMITS } from '../lib/pickleball/open/types'
 import { createSession } from './lib/api'
@@ -19,7 +20,7 @@ const field = 'w-full rounded-xl border border-navy-700 bg-navy-900 px-3 py-3 te
 
 export default function CreateSessionApp({ siteKey }) {
   const [step, setStep] = useState('details')
-  const [details, setDetails] = useState({ kind: 'OPEN_PLAY', format: 'ROUND_ROBIN', name: 'Open Play', hostDisplayName: '', courtCount: 4, target: 11, mode: 'PADDLE_STACK', selfCheckIn: true })
+  const [details, setDetails] = useState({ kind: 'OPEN_PLAY', format: 'ROUND_ROBIN', name: 'Open Play', hostDisplayName: '', courtCount: 4, target: 11, mode: 'PADDLE_STACK', selfCheckIn: true, announcement: null })
   const [rosterMode, setRosterMode] = useState('paste')
   const [pasted, setPasted] = useState('')
   const [csvText, setCsvText] = useState('')
@@ -37,6 +38,9 @@ export default function CreateSessionApp({ siteKey }) {
     return { entries: parsed.names.map((name) => ({ name, skill: null, duprId: null })), duplicates: parsed.duplicates, warnings: [] }
   }, [rosterMode, pasted, csvText])
 
+  // The welcome message follows the name and kind until the host types their own (then announcement is a string).
+  const announcement = details.announcement ?? defaultAnnouncement(details.kind, details.name)
+  const announcementOver = announcement.trim().length > LIMITS.maxAnnouncementLength
   const overCap = Math.max(0, roster.entries.length - LIMITS.maxPlayers)
   const update = (patch) => setDetails((current) => ({ ...current, ...patch }))
 
@@ -57,7 +61,7 @@ export default function CreateSessionApp({ siteKey }) {
         name: details.name,
         hostDisplayName: details.hostDisplayName,
         courtCount: details.courtCount,
-        settings: { mode: details.mode, target: details.target, scoringStyle: 'SIDEOUT', selfCheckIn: details.selfCheckIn },
+        settings: { mode: details.mode, target: details.target, scoringStyle: 'SIDEOUT', selfCheckIn: details.selfCheckIn, announcement: announcement.trim() },
         kind: details.kind,
         ...(details.kind === 'TOURNAMENT' ? { tournament: { format: details.format } } : {}),
         players: roster.entries,
@@ -136,7 +140,15 @@ export default function CreateSessionApp({ siteKey }) {
             <input type="checkbox" className="h-5 w-5 accent-[#c6ff2e]" checked={details.selfCheckIn} onChange={(e) => update({ selfCheckIn: e.target.checked })} />
             <span>Let players check themselves in by QR <span className="text-sm text-mist">(you can turn this off any time)</span></span>
           </label>
-          <Button type="submit" variant="primary" className="md:col-span-2 text-lg">Next: add players</Button>
+          <div className="grid gap-1.5 md:col-span-2">
+            <label className="grid gap-1.5 text-sm text-mist">Welcome message (players see it on the board, check-in page and TV; leave empty for none)
+              <textarea rows={2} className={field} value={announcement} onChange={(e) => update({ announcement: e.target.value })} />
+            </label>
+            <p className={`text-right text-xs ${announcementOver ? 'font-bold text-rose-200' : 'text-mist'}`} aria-live="polite">
+              {announcement.trim().length}/{LIMITS.maxAnnouncementLength}{announcementOver ? `: keep it to ${LIMITS.maxAnnouncementLength} characters` : ''}
+            </p>
+          </div>
+          <Button type="submit" variant="primary" className="md:col-span-2 text-lg" disabled={announcementOver}>Next: add players</Button>
         </form>
       )}
 

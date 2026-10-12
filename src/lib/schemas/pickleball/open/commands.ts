@@ -5,6 +5,8 @@ const side = z.enum(['A', 'B'])
 const score = z.number().int().min(0).max(99).nullable()
 export const stackingModeSchema = z.enum(['PADDLE_STACK', 'WINNERS_LOSERS', 'BY_STANDING', 'BALANCED'])
 export const tournamentFormatSchema = z.enum(['ROUND_ROBIN', 'POOL_TO_BRACKET', 'SINGLE_ELIMINATION', 'DOUBLE_ELIMINATION'])
+// The welcome message (spec 2026-10-13 §A): plain text, at most 140 characters once trimmed; '' clears it.
+export const announcementSchema = z.string().max(1000).trim().max(140)
 const rule = z.object({ kind: z.enum(['TOGETHER', 'APART']), playerIds: z.tuple([id, id]) })
 
 const draftEdit = z.discriminatedUnion('kind', [
@@ -32,6 +34,7 @@ export const commandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('SET_PLAYER_SKILL'), playerId: id, skill: z.number().min(1).max(8).nullable() }),
   // DUPR IDs are 6 letters or digits (spec §9.3); null clears one. Host only: captains never get it.
   z.object({ type: z.literal('SET_PLAYER_DUPR_ID'), playerId: id, duprId: z.string().trim().regex(/^[A-Za-z0-9]{6}$/).nullable() }),
+  z.object({ type: z.literal('SET_ANNOUNCEMENT'), text: announcementSchema }),
   z.object({ type: z.literal('ADD_RULE'), rule }),
   z.object({ type: z.literal('REMOVE_RULE'), rule }),
   // Tournaments (spec §6). Generate and edit the draft, start, then the two running edits.

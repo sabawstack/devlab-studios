@@ -24,7 +24,7 @@ describe('toViewerSnapshot', () => {
   it('carries exactly the allowlisted top-level and settings keys, nothing else', () => {
     const viewer = toViewerSnapshot(state())
     expect(Object.keys(viewer).sort()).toEqual([
-      'code', 'courts', 'expiresAt', 'fairness', 'hostDisplayName', 'kind', 'name', 'onBreak',
+      'announcement', 'code', 'courts', 'expiresAt', 'fairness', 'hostDisplayName', 'kind', 'name', 'onBreak',
       'recentResults', 'roster', 'settings', 'standings', 'status', 'tournament', 'version', 'waiting',
     ])
     expect(Object.keys(viewer.settings).sort()).toEqual(['mode', 'selfCheckIn', 'target'])
