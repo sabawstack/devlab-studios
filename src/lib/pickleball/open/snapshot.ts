@@ -74,8 +74,11 @@ export interface HostSnapshot {
 
 export type CaptainPlayer = Omit<HostPlayer, 'skill' | 'duprId'>
 
-/** A match as a captain sees it: who saved a result (recordedBy) stays with the host. */
-export type CaptainMatch = Omit<OpenMatch, 'recordedBy'>
+/**
+ * A match as a captain sees it: who saved a result (recordedBy) stays with the
+ * host, and the fixture id stays out too (the court carries its fixture label).
+ */
+export type CaptainMatch = Omit<OpenMatch, 'recordedBy' | 'fixtureId'>
 
 export type CaptainCourt = Omit<HostCourt, 'match'> & { match: CaptainMatch | null }
 

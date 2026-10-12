@@ -1,3 +1,5 @@
+import type { RandomInt, TournamentState } from './tournament/types'
+
 export type StackingMode = 'PADDLE_STACK' | 'WINNERS_LOSERS' | 'BY_STANDING' | 'BALANCED'
 export type TargetPoints = 11 | 15 | 21
 export type ScoringStyle = 'SIDEOUT' | 'RALLY'
@@ -60,6 +62,8 @@ export interface OpenMatch {
   finishedAt: string | null
   /** Who saved the result: 'Host' or a captain's label. Null until saved. */
   recordedBy: string | null
+  /** The tournament fixture this game plays (spec §6.6); null in open play. */
+  fixtureId: string | null
 }
 
 export type SessionStatus = 'ACTIVE' | 'ENDED'
@@ -76,6 +80,8 @@ export interface OpenSessionState {
   players: readonly OpenPlayer[]
   courts: readonly OpenCourt[]
   matches: readonly OpenMatch[]
+  /** Set when kind is TOURNAMENT, null for open play. */
+  tournament: TournamentState | null
   version: number
   createdAt: string
   lastActivityAt: string
@@ -87,6 +93,8 @@ export interface CommandContext {
   newId: () => string
   /** Who is acting: 'Host' or a captain's label. Treated as 'Host' when absent. */
   actor?: string
+  /** Crypto randomness for random pairing and seeding; supplied by the Durable Object. */
+  random?: RandomInt
 }
 
 /** A court captain link (spec §3.3). Only the SHA-256 of its secret is kept. */

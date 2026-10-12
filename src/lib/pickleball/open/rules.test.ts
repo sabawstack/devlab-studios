@@ -110,7 +110,7 @@ describe('proposals with rules', () => {
       players: base.players.map((p) => (p.id === 'a' ? { ...p, waitingSince: at(-60) } : p)),
       matches: [{
         id: 'm0', courtId: 'c2', seq: 1, status: 'IN_PROGRESS' as const, teamA: ['b', 'c'] as [string, string], teamB: ['d', 'e'] as [string, string],
-        scoreA: null, scoreB: null, winner: null, proposedAt: at(0), startedAt: at(0), finishedAt: null, recordedBy: null,
+        scoreA: null, scoreB: null, winner: null, proposedAt: at(0), startedAt: at(0), finishedAt: null, recordedBy: null, fixtureId: null,
       }],
     }
     const p = proposeForCourt(state)!

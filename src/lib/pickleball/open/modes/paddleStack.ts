@@ -6,6 +6,8 @@ import type { OpenSessionState, Team } from '../types'
 export interface Proposal {
   teamA: Team
   teamB: Team
+  /** Set only for a tournament game: the fixture this proposal plays. */
+  fixtureId?: string
 }
 
 /** What every mode receives (built once per proposal by propose.ts). */

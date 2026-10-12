@@ -1,6 +1,7 @@
 import { fillProposals } from './propose'
 import { cleanName, type RosterEntry } from './roster'
 import { normalizeSettings } from './settings'
+import { emptyTournament, type TournamentFormat } from './tournament/types'
 import { addMs, LIMITS, type CommandContext, type OpenPlayer, type OpenSessionState, type SessionSettings } from './types'
 
 export interface CreateSessionInput {
@@ -11,6 +12,10 @@ export interface CreateSessionInput {
   /** Rules are always empty at creation: they name player ids, which do not exist yet. */
   settings: Pick<SessionSettings, 'mode' | 'target' | 'scoringStyle'> & { selfCheckIn?: boolean }
   players: readonly RosterEntry[]
+  /** Open play unless stated. A session's kind never changes after creation. */
+  kind?: OpenSessionState['kind']
+  /** The format a tournament starts with; the host can change it until Start. */
+  tournamentFormat?: TournamentFormat
 }
 
 function uniquePlayers(entries: readonly RosterEntry[], ctx: CommandContext): OpenPlayer[] {
@@ -35,7 +40,7 @@ export function buildInitialState(
   const state: OpenSessionState = {
     id: ctx.sessionId,
     publicCode: ctx.publicCode,
-    kind: 'OPEN_PLAY',
+    kind: input.kind ?? 'OPEN_PLAY',
     name: input.name.trim(),
     hostDisplayName: input.hostDisplayName.trim(),
     location: input.location?.trim() || null,
@@ -44,6 +49,7 @@ export function buildInitialState(
     players: uniquePlayers(input.players, ctx),
     courts: Array.from({ length: courtCount }, (_, i) => ({ id: ctx.newId(), label: `Court ${i + 1}`, position: i + 1, enabled: true })),
     matches: [],
+    tournament: input.kind === 'TOURNAMENT' ? emptyTournament(input.tournamentFormat) : null,
     version: 1,
     createdAt: ctx.now,
     lastActivityAt: ctx.now,

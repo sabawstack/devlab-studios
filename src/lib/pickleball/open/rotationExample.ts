@@ -21,7 +21,7 @@ export function rotationExample(rounds = 4, mode: StackingMode = 'PADDLE_STACK')
   const ctx = (minute: number) => ({ now: iso(minute), newId: () => `x${(n += 1)}` })
   let state: OpenSessionState = {
     id: 'example', publicCode: 'EXAMPLE234', kind: 'OPEN_PLAY', name: 'Example', hostDisplayName: 'Host', location: null,
-    status: 'ACTIVE', settings: { ...DEFAULT_SETTINGS, mode }, version: 1, createdAt: iso(0), lastActivityAt: iso(0), expiresAt: iso(10_000),
+    status: 'ACTIVE', settings: { ...DEFAULT_SETTINGS, mode }, version: 1, createdAt: iso(0), lastActivityAt: iso(0), expiresAt: iso(10_000), tournament: null,
     players: NAMES.map((name, i) => ({
       id: name, name, skill: mode === 'BALANCED' ? SKILLS[i] : null, duprId: null, status: 'ACTIVE',
       gamesOffset: 0, joinedAt: iso(0), waitingSince: iso(0), position: i + 1,

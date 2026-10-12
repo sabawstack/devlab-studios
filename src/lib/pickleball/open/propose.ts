@@ -44,6 +44,7 @@ export function addProposal(state: OpenSessionState, courtId: string, proposal: 
       {
         id: ctx.newId(), courtId, seq, status: 'PROPOSED', teamA: proposal.teamA, teamB: proposal.teamB,
         scoreA: null, scoreB: null, winner: null, proposedAt: ctx.now, startedAt: null, finishedAt: null, recordedBy: null,
+        fixtureId: proposal.fixtureId ?? null,
       },
     ],
   }

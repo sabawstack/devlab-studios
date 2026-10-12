@@ -22,14 +22,14 @@ export function finished(
 ): OpenMatch {
   return {
     id, courtId, seq: minute, status: 'FINISHED', teamA, teamB, scoreA, scoreB, winner,
-    proposedAt: at(minute), startedAt: at(minute), finishedAt: at(minute + 10), recordedBy: 'Host',
+    proposedAt: at(minute), startedAt: at(minute), finishedAt: at(minute + 10), recordedBy: 'Host', fixtureId: null,
   }
 }
 
 export function sessionState(overrides: Partial<OpenSessionState> = {}): OpenSessionState {
   return {
     id: 's1', publicCode: 'ABCDE23456', kind: 'OPEN_PLAY', name: 'Sunday', hostDisplayName: 'Mike', location: null,
-    status: 'ACTIVE', settings: DEFAULT_SETTINGS, players: [], courts: [court('c1', 1)], matches: [],
+    status: 'ACTIVE', settings: DEFAULT_SETTINGS, players: [], courts: [court('c1', 1)], matches: [], tournament: null,
     version: 1, createdAt: T0, lastActivityAt: T0, expiresAt: at(7 * 24 * 60), ...overrides,
   }
 }
