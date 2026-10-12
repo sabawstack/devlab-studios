@@ -1065,6 +1065,61 @@ test.describe('final results', () => {
     expect((await download).suggestedFilename()).toMatch(/\.csv$/)
   })
 
+  // Decodes the preview's PNG in the page: its type and real pixel size.
+  const posterImage = (preview) => preview.evaluate(async (img) => {
+    const decoded = new Image()
+    decoded.src = img.src
+    await decoded.decode()
+    return { type: img.src.slice(5, img.src.indexOf(';')), width: decoded.naturalWidth, height: decoded.naturalHeight }
+  })
+
+  test('Save poster shows a 1080×1350 PNG and downloads it as {session}-results.png', async ({ page, request }) => {
+    const { code } = await playedAndEnded(request)
+    // No share sheet that takes files: Download is the only way out.
+    await page.addInitScript(() => { Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true }) })
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto(`/pickleball/s/${code}`)
+    const results = page.getByTestId('final-results')
+    await expect(results).toContainText('Names appear as entered in the session.')
+    const save = results.getByRole('button', { name: 'Save poster' })
+    expect((await save.boundingBox()).height).toBeGreaterThanOrEqual(44)
+    await save.click()
+    const sheet = page.getByRole('dialog', { name: 'Results poster' })
+    const preview = sheet.getByTestId('poster-preview')
+    await expect(preview).toBeVisible()
+    // Shown, not just present: the page's CSP lets the preview load.
+    await expect.poll(() => preview.evaluate((img) => img.complete && img.naturalWidth)).toBe(1080)
+    expect(await posterImage(preview)).toEqual({ type: 'image/png', width: 1080, height: 1350 })
+    await expect(sheet.getByRole('button', { name: 'Share' })).toHaveCount(0)
+    const download = page.waitForEvent('download')
+    await sheet.getByRole('link', { name: 'Download' }).click()
+    expect((await download).suggestedFilename()).toBe('sunday-open-play-results.png')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  })
+
+  test('on the host console, Share hands the poster PNG to a share sheet that takes files', async ({ page, request }) => {
+    const { code, hostKey } = await playedAndEnded(request)
+    await page.addInitScript(() => {
+      window.__sharedFiles = []
+      navigator.canShare = (data) => Array.isArray(data?.files)
+      navigator.share = (data) => { window.__sharedFiles.push(...data.files.map((f) => ({ name: f.name, type: f.type, size: f.size }))); return Promise.resolve() }
+    })
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await page.getByTestId('final-results').getByRole('button', { name: 'Save poster' }).click()
+    const sheet = page.getByRole('dialog', { name: 'Results poster' })
+    await expect(sheet.getByTestId('poster-preview')).toBeVisible()
+    await sheet.getByRole('button', { name: 'Share' }).click()
+    await expect.poll(() => page.evaluate(() => window.__sharedFiles.length)).toBe(1)
+    const [file] = await page.evaluate(() => window.__sharedFiles)
+    expect(file).toMatchObject({ name: 'sunday-open-play-results.png', type: 'image/png' })
+    expect(file.size).toBeGreaterThan(10_000)
+    // A share sheet that fails says so in place; Download still works.
+    await page.evaluate(() => { navigator.share = () => Promise.reject(Object.assign(new Error('nope'), { name: 'NotAllowedError' })) })
+    await sheet.getByRole('button', { name: 'Share' }).click()
+    await expect(sheet.getByRole('alert')).toContainText("Couldn't share the poster")
+    await expect(sheet.getByRole('link', { name: 'Download' })).toBeVisible()
+  })
+
   test('a game still on court when the session ended can be saved from the results screen', async ({ page, request }) => {
     const { code, hostKey } = await createSession(request, { courtCount: 1 })
     const host = await hostSnapshot(request, code, hostKey)
@@ -1085,6 +1140,7 @@ test.describe('final results', () => {
     await expect(page.getByTestId('final-results')).toContainText(`Didn't play: ${benched.join(', ')}`)
     await expect(page.getByTestId('tv-court')).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Share results' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Save poster' })).toHaveCount(0)
     // No greeting and no welcome line once the results show.
     await expect(page.getByText(/Good (morning|afternoon|evening), players/)).toHaveCount(0)
     await expect(page.getByRole('contentinfo', { name: 'Welcome message' })).toHaveCount(0)

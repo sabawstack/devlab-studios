@@ -563,5 +563,18 @@ test.describe('tournament final results (screens)', () => {
     const download = page.waitForEvent('download')
     await page.getByTestId('final-results').getByRole('button', { name: 'Download results (CSV)' }).click()
     expect((await download).suggestedFilename()).toMatch(/\.csv$/)
+    // The poster of pairs renders at its full size.
+    await page.getByTestId('final-results').getByRole('button', { name: 'Save poster' }).click()
+    const preview = page.getByRole('dialog', { name: 'Results poster' }).getByTestId('poster-preview')
+    await expect(preview).toBeVisible()
+    expect(await preview.evaluate(async (img) => {
+      const decoded = new Image()
+      decoded.src = img.src
+      await decoded.decode()
+      return [decoded.naturalWidth, decoded.naturalHeight]
+    })).toEqual([1080, 1350])
+    const poster = page.waitForEvent('download')
+    await page.getByRole('dialog', { name: 'Results poster' }).getByRole('link', { name: 'Download' }).click()
+    expect((await poster).suggestedFilename()).toBe('saturday-cup-results.png')
   })
 })

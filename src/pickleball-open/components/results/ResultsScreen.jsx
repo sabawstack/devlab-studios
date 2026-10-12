@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { finalResults, nextTvPodiumFit, summaryText } from '../../../lib/pickleball/open/results'
 import Podium from './Podium.jsx'
 import RestList from './RestList.jsx'
+import SavePosterButton from './SavePosterButton.jsx'
 import ShareResultsButton from './ShareResultsButton.jsx'
 import TvRest from './TvRest.jsx'
 
@@ -87,6 +88,7 @@ export default function ResultsScreen({ viewer, boardUrl = '', actions = null, h
       </div>
       <div className="flex flex-wrap items-start gap-3">
         <ShareResultsButton results={results} url={boardUrl} />
+        <SavePosterButton results={results} viewer={viewer} />
         {actions}
       </div>
     </section>
