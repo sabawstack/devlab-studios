@@ -154,6 +154,7 @@ decided against that surface specifically:
 - The public board and TV for a tournament: the game each court is playing, what is coming up, the draw (pools side by side, then the bracket), pair standings, a player's own next game (or that they wait for the pools or other results; "done" only once their pair is out or the tournament is over), and the champions, which replace the idle courts. The TV hides the open-play fairness panel in a tournament, says when the draw is still coming or may change, and shows the champions once with "Session ended" under them after the session ends.
 
 ### Changed
+- CMS redirects: a `from_path` ending in `/*` now matches every path below it (`/pickleball/live/*` covers `/pickleball/live/{any code}` and deeper). An exact row still wins, then the longest wildcard; the table is still consulted only on a 404.
 - Docs: architecture and runbook cover Phase 3 tournaments (kind, migration 0018, the engine around the reused fixture modules, phases, snapshots).
 - Docs: architecture and runbook cover Phase 2 open play (stacking modes, pair rules, captain links, self check-in, TV board, migration 0017).
 - Open play rate limits are sized for a whole club on one Wi-Fi address: live connections 300 per minute per IP (was 30) and public board reads 1,200 per minute per IP (was 60), so the 5-second polling fallback no longer locks a club out. Host and captain routes allow 600 per minute per IP (was 120), so a host and several court captains polling from one club Wi-Fi are not refused.

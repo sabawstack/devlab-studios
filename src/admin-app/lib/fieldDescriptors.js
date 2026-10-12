@@ -33,7 +33,7 @@ export const certificationFields = [
 ]
 
 export const redirectFields = [
-  { name: 'fromPath', label: 'From Path', type: 'text', required: true, help: 'Must start with / — e.g. /old-page' },
+  { name: 'fromPath', label: 'From Path', type: 'text', required: true, help: 'Must start with / — e.g. /old-page. End it with /* to match every path below it, e.g. /old-section/*.' },
   { name: 'toPath', label: 'To Path', type: 'text', required: true },
   { name: 'statusCode', label: 'Status Code', type: 'select', options: [{ value: 301, label: '301 (Permanent)' }, { value: 302, label: '302 (Temporary)' }] },
   { name: 'note', label: 'Note', type: 'textarea' },

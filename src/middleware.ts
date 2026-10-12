@@ -147,7 +147,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // The admin's Redirects screen (D1 `redirects` table) only needs to be
   // consulted for paths nothing else already handled — so this only ever
-  // runs on an actual 404, not on every request/asset.
+  // runs on an actual 404, not on every request/asset. A row matches its exact
+  // path, or every path below it when its from_path ends in /* (findRedirect).
   if (context.request.method === 'GET' && response.status === 404) {
     const env = getEnv()
     if (env.DB) {
