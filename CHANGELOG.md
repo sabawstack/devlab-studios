@@ -51,6 +51,8 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-13
+
 ### Changed
 
 - The `/pickleball` landing page's ten feature cards are grouped into three bands (Run the courts, Share the game, Tournaments and records), each card with a small hand-drawn animated SVG icon (`FeatureIcons.jsx`, new `pb-lift`/`pb-grow`/`pb-spot`/`pb-sweep` keyframes that stop for reduced motion) and one short line of copy; phrases pinned by the public-pages spec are kept.
