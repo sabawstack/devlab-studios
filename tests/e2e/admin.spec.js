@@ -1034,10 +1034,11 @@ test('the Inquiries screen shows qualification reasons, attribution, and consent
 })
 
 test('the inquiry endpoint starts refusing once one address submits too often', async ({ page, baseURL }) => {
-  // One fixed address for every attempt: the limiter keys on the client IP, so
-  // varying it (as every other test here deliberately does) would spread the
-  // attempts across separate counters and never reach the limit.
-  const clientIp = '198.51.100.7'
+  // One address for every attempt (the limiter keys on the client IP), but a
+  // fresh one per run: the counters persist across runs, so a fixed address
+  // would already be spent and the 429 would prove nothing about the limit.
+  const clientIp = freshClientIp()
+  let accepted = 0
   let sawTooMany = false
 
   for (let attempt = 1; attempt <= 12; attempt += 1) {
@@ -1059,9 +1060,32 @@ test('the inquiry endpoint starts refusing once one address submits too often', 
       break
     }
     expect(response.ok()).toBeTruthy()
+    accepted += 1
   }
 
   expect(sawTooMany, 'expected a 429 within 12 submissions from one address').toBe(true)
+  // The limit is 5 per 10 minutes: refusing sooner would turn real visitors away.
+  expect(accepted, 'submissions accepted before the 429').toBeGreaterThanOrEqual(5)
+})
+
+test('a cross-origin form POST is refused by checkOrigin before any route runs', async ({ playwright, baseURL }) => {
+  // Astro's CSRF check, which answers 403 before src/middleware.ts. Its own
+  // request context, disposed at the end, so the forged Origin goes nowhere
+  // else. The body is EMPTY on purpose: checkOrigin never reads it, and under
+  // wrangler dev an unread body breaks the next request on the proxy's
+  // connection (see discardUnreadBody in src/lib/http.ts) -- which this 403
+  // path bypasses.
+  const forged = await playwright.request.newContext({ baseURL })
+  try {
+    const response = await forged.post('/api/inquiries', {
+      headers: { Origin: 'https://attacker.example', 'Content-Type': 'application/x-www-form-urlencoded' },
+      data: '',
+    })
+    expect(response.status()).toBe(403)
+    expect(await response.text()).toMatch(/cross-site/i)
+  } finally {
+    await forged.dispose()
+  }
 })
 
 test('the password change endpoint rejects an unauthenticated caller', async ({ request, baseURL }) => {

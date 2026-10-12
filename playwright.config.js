@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 import { MAILBOX_OUTBOX_TOKEN } from './tests/e2e/support/mailboxTransmitter.js'
 
+const STATIC_E2E_STATE = '.wrangler/state-static-e2e'
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
@@ -33,7 +35,13 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: 'npm run build && npm run preview -- --port 4173',
+      // Its own copy of the local state, not the `.wrangler/state` that
+      // wrangler dev below has open: two workerd processes writing the same
+      // D1 files intermittently failed with "internal error" and hung a page.
+      // See scripts/e2e/snapshot-static-state.mjs. DRAIN_UNREAD_BODIES for
+      // this server comes from .dev.vars (astro preview takes no --var).
+      command: `npm run build && node scripts/e2e/snapshot-static-state.mjs ${STATIC_E2E_STATE} && npm run preview -- --port 4173`,
+      env: { E2E_STATIC_PERSIST: STATIC_E2E_STATE },
       port: 4173,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
@@ -46,7 +54,10 @@ export default defineConfig({
         'npx wrangler d1 migrations apply devlab-pickleball --local && node scripts/pickleball/apply-e2e-fixtures.mjs && node scripts/mailbox/apply-e2e-fixtures.mjs && npx wrangler dev --port 8787 --local ' +
         // Lets the mailbox suite act as the transmitter: see
         // tests/e2e/support/mailboxTransmitter.js.
-        `--var MAILBOX_OUTBOX_TOKEN:${MAILBOX_OUTBOX_TOKEN}`,
+        `--var MAILBOX_OUTBOX_TOKEN:${MAILBOX_OUTBOX_TOKEN} ` +
+        // Lets a refused inquiry body be read off before the 413, which wrangler
+        // dev's loopback proxy needs (see discardUnreadBody in src/lib/http.ts).
+        '--var DRAIN_UNREAD_BODIES:1',
       url: 'http://localhost:8787/api/health',
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
