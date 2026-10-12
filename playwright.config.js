@@ -51,7 +51,7 @@ export default defineConfig({
       // SQLite file — writing to it from a second process while miniflare has
       // it open can drop in-flight connections. See the script's header.
       command:
-        'npx wrangler d1 migrations apply devlab-pickleball --local && node scripts/pickleball/apply-e2e-fixtures.mjs && node scripts/mailbox/apply-e2e-fixtures.mjs && npx wrangler dev --port 8787 --local ' +
+        'npx wrangler d1 migrations apply devlab-pickleball --local && node scripts/mailbox/apply-e2e-fixtures.mjs && npx wrangler dev --port 8787 --local ' +
         // Lets the mailbox suite act as the transmitter: see
         // tests/e2e/support/mailboxTransmitter.js.
         `--var MAILBOX_OUTBOX_TOKEN:${MAILBOX_OUTBOX_TOKEN} ` +

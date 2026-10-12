@@ -24,9 +24,7 @@
     "cms:hash-admin-password": "node scripts/cms/hash-admin-password.mjs",
     "cms:mirror-preview": "node scripts/cms/mirror-production-to-preview.mjs",
     "lead-engine:seed": "node scripts/lead-engine/seed.mjs > scripts/lead-engine/seed.sql",
-    "lead-engine:zoho": "node scripts/lead-engine/zoho-setup.mjs",
-    "pickleball:create-organization": "node scripts/pickleball/create-organization.mjs",
-    "pickleball:seed:demo": "node scripts/pickleball/seed/generate-demo-seed.mjs > scripts/pickleball/seed/demo-seed.sql"
+    "lead-engine:zoho": "node scripts/lead-engine/zoho-setup.mjs"
   },
   "lint-staged": {
     "*.{js,jsx}": "eslint --fix",

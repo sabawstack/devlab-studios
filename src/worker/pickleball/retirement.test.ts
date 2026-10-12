@@ -72,3 +72,35 @@ describe('the operator app is retired: SessionCoordinatorDO', () => {
     expect(read('src/env.d.ts')).not.toContain('SESSION_COORDINATOR')
   })
 })
+
+describe('the operator app is retired: its code and data tooling', () => {
+  /** The files directly in dir (not in its subfolders). */
+  const topLevel = (dir: string): string[] =>
+    readdirSync(join(ROOT, dir)).filter((name) => statSync(join(ROOT, dir, name)).isFile()).sort()
+
+  it('of the old worker code only oauth.js remains (host sign-in reuses it)', () => {
+    expect(topLevel('src/worker/pickleball')).toEqual(['oauth.js', 'oauth.test.js', 'retirement.test.ts'])
+    expect(topLevel('src/worker/repositories/pickleball')).toEqual([])
+  })
+
+  it('of the old domain code only webCrypto and the five reused tournament modules remain', () => {
+    expect(topLevel('src/lib/pickleball')).toEqual(['webCrypto.js', 'webCrypto.test.js'])
+    expect(topLevel('src/lib/schemas/pickleball')).toEqual([])
+    expect(existsSync(join(ROOT, 'src/lib/pickleball/scoring'))).toBe(false)
+    const modules = topLevel('src/lib/pickleball/tournament').filter((name) => !name.endsWith('.test.ts'))
+    expect(modules).toEqual(['advanceBracket.ts', 'generateFixtures.ts', 'nextPlayableFixture.ts', 'rankTournamentStandings.ts', 'resolvePoolQualifiers.ts'])
+  })
+
+  it('the organization bootstrap, demo seed and e2e fixtures are gone', () => {
+    expect(existsSync(join(ROOT, 'scripts/pickleball'))).toBe(false)
+    expect(existsSync(join(ROOT, '_bootstrap-org-tmp.sql'))).toBe(false)
+    expect(read('package.json')).not.toMatch(/pickleball:(create-organization|seed:demo)/)
+    expect(read('playwright.config.js')).not.toContain('scripts/pickleball')
+  })
+
+  it('the operator session secret is no longer configured anywhere', () => {
+    for (const file of ['src/env.d.ts', '.env.example', 'wrangler.jsonc']) {
+      expect(read(file), file).not.toContain('PICKLEBALL_SESSION_SECRET')
+    }
+  })
+})

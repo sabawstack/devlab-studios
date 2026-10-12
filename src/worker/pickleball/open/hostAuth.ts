@@ -26,8 +26,6 @@ const CLIENT_ID_PLACEHOLDER = 'REPLACE_ME'
  */
 interface Stash { verifier: string; state: string; returnTo: string; optIn: boolean; replaces: string | null }
 
-/** The old operator app's in-flight cookie (auth/google/start.ts), deleted in Phase 5. */
-export const LEGACY_OAUTH_COOKIE = 'devlab_pb_oauth'
 const LOGIN_HASH_PATTERN = /^[A-Za-z0-9_-]{43}$/
 
 type AuthEnv = Pick<Env, 'PICKLEBALL_DB' | 'RATE_LIMITER' | 'GOOGLE_OAUTH_CLIENT_ID' | 'GOOGLE_OAUTH_CLIENT_SECRET' | 'PICKLEBALL_OAUTH_REDIRECT_BASE_URL'>
@@ -105,15 +103,6 @@ function readStash(request: Request): Stash | null {
 /** True while a host sign-in is in flight in this browser. */
 export function hasHostSignInPending(request: Request): boolean {
   return cookieFrom(request, HOST_OAUTH_COOKIE) !== null
-}
-
-/**
- * Whether Google's callback belongs to a host sign-in: when its own in-flight
- * cookie is present, or when neither flow's is (an expired attempt then lands
- * on My sessions with "sign-in failed" rather than the old app's JSON error).
- */
-export function hostOwnsCallback(request: Request): boolean {
-  return hasHostSignInPending(request) || cookieFrom(request, LEGACY_OAUTH_COOKIE) === null
 }
 
 /**

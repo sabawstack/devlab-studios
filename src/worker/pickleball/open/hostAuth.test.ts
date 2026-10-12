@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createSqliteD1 } from '../../repositories/pickleball/open/testing/sqliteD1'
-import { finishHostSignIn, hasHostSignInPending, hostOwnsCallback, safeReturnPath, startHostSignIn, type GoogleDeps } from './hostAuth'
+import { finishHostSignIn, hasHostSignInPending, safeReturnPath, startHostSignIn, type GoogleDeps } from './hostAuth'
 import { currentHost } from './hostSession'
 
 const MIGRATIONS = ['0016_open_sessions', '0017_open_captains', '0018_open_tournaments', '0019_hosts'].map((m) => `migrations/pickleball/${m}.sql`)
@@ -161,15 +161,5 @@ describe('finishHostSignIn', () => {
     const response = await finishHostSignIn({ ...env, PICKLEBALL_DB: open.PICKLEBALL_DB }, callback(stash, `?code=abc&state=${state}`), google())
     expect(response.headers.get('Location')).toBe('/pickleball/s/ABCDE23456?signin=ok')
     expect(check).toHaveBeenCalledTimes(1)
-  })
-})
-
-describe('hostOwnsCallback', () => {
-  it('gives Google’s callback to a host sign-in unless only the old app’s sign-in is in flight', () => {
-    const request = (cookie: string | null) => callback(cookie, '?code=abc&state=s')
-    expect(hostOwnsCallback(request('devlab_pb_host_oauth=x'))).toBe(true)
-    expect(hostOwnsCallback(request('devlab_pb_oauth=x'))).toBe(false)
-    expect(hostOwnsCallback(request(null))).toBe(true)
-    expect(hostOwnsCallback(request('devlab_pb_oauth=x; devlab_pb_host_oauth=y'))).toBe(true)
   })
 })

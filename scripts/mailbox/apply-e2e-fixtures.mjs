@@ -42,8 +42,7 @@ const DMARC_KEY = 'mailbox/att/preview/dmarc.zip'
 
 /**
  * 'wrangler' resolves to <pkg>/wrangler-dist/cli.js; the launcher we want is
- * <pkg>/bin/wrangler.js, two levels up and back down. Same resolution as
- * scripts/pickleball/apply-e2e-fixtures.mjs.
+ * <pkg>/bin/wrangler.js, two levels up and back down.
  */
 function resolveWranglerBin() {
   return join(dirname(require.resolve('wrangler')), '..', 'bin', 'wrangler.js')
