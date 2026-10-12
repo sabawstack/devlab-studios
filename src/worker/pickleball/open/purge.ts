@@ -1,3 +1,4 @@
+import { purgeExpiredHostLogins } from '../../repositories/pickleball/open/hosts'
 import { purgeExpiredOpenSessions } from '../../repositories/pickleball/open/openSessions'
 
 const BATCH = 500
@@ -18,4 +19,12 @@ export async function runOpenSessionPurge(
     if (codes.length < BATCH) break
   }
   return total
+}
+
+/**
+ * Removes expired host logins (30 days after sign-in). Host accounts
+ * themselves never expire (spec §3.2); only "Delete my account" removes one.
+ */
+export async function runHostLoginPurge(env: Pick<Env, 'PICKLEBALL_DB'>, { now }: { now: Date }): Promise<number> {
+  return purgeExpiredHostLogins(env.PICKLEBALL_DB, now.toISOString())
 }

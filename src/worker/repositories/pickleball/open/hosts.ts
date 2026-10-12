@@ -112,12 +112,12 @@ export async function updateHostProfile(
  * drop the link from memory.
  */
 export async function deleteHost(db: D1Database, hostId: string): Promise<string[]> {
-  const linked = await db.prepare('SELECT public_code FROM open_sessions WHERE host_id = ?').bind(hostId).all<{ public_code: string }>()
-  await db.batch([
-    db.prepare('UPDATE open_sessions SET host_id = NULL WHERE host_id = ?').bind(hostId),
+  // RETURNING inside the same batch: a claim landing just before the delete is still reported.
+  const [unlinked] = await db.batch<{ public_code: string }>([
+    db.prepare('UPDATE open_sessions SET host_id = NULL WHERE host_id = ? RETURNING public_code').bind(hostId),
     db.prepare('DELETE FROM hosts WHERE id = ?').bind(hostId),
   ])
-  return linked.results.map((row) => row.public_code)
+  return (unlinked?.results ?? []).map((row) => row.public_code)
 }
 
 /** The host's claimed sessions that have not expired, most recently active first (spec §9.5). */

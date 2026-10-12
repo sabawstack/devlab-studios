@@ -242,3 +242,37 @@ test.describe('the DUPR export (API)', () => {
     await other.dispose()
   })
 })
+
+test.describe('account deletion and cross-site requests (API)', () => {
+  test('deleting the account unlinks its sessions, keeps them running and signs it out on every device', async ({ request, playwright, baseURL }) => {
+    const { code, hostKey, email } = await readyToExport(request, baseURL)
+    const laptop = await playwright.request.newContext({ baseURL })
+    await signIn(laptop, baseURL, email, `${code}-laptop`)
+
+    const deleted = await request.delete('/api/pickleball/open/host/me', { headers: writeHeaders(baseURL, code) })
+    expect(deleted.status()).toBe(200)
+    expect(await deleted.json()).toEqual({ deleted: true, unlinkedSessions: 1 })
+    expect(deleted.headers()['set-cookie']).toContain('devlab_pb_host=;')
+    expect((await (await laptop.get('/api/pickleball/open/host/me', { headers: { 'cf-connecting-ip': ipFor(`${code}-laptop`) } })).json()).host).toBeNull()
+
+    // The session is untouched apart from the link, and can be linked again by a new sign-in.
+    expect((await request.get(`/api/pickleball/open/s/${code}/host`, { headers: { 'X-Host-Key': hostKey, 'cf-connecting-ip': ipFor(code) } })).status()).toBe(200)
+    expect((await (await dupr(request, code, hostKey)).json())).toMatchObject({ host: null, claim: 'UNCLAIMED', exported: 1 })
+    const again = await signIn(request, baseURL, email, `${code}-again`)
+    expect(again).toMatchObject({ email, duprClubId: null, marketingOptIn: false })
+    expect((await claim(request, baseURL, code, hostKey)).status()).toBe(200)
+    await laptop.dispose()
+  })
+
+  test('host routes refuse a request from another site, or one that does not say where it came from', async ({ request, baseURL }) => {
+    const { code, hostKey } = await readyToExport(request, baseURL)
+    const evil = { Origin: 'https://evil.example', 'cf-connecting-ip': ipFor(code) }
+    expect((await request.post(`/api/pickleball/open/s/${code}/claim`, { headers: { ...evil, 'X-Host-Key': hostKey } })).status()).toBe(403)
+    expect((await request.post(`/api/pickleball/open/s/${code}/dupr-export`, { headers: { ...evil, 'X-Host-Key': hostKey }, data: {} })).status()).toBe(403)
+    expect((await request.patch('/api/pickleball/open/host/me', { headers: evil, data: { marketingOptIn: true } })).status()).toBe(403)
+    expect((await request.delete('/api/pickleball/open/host/me', { headers: evil })).status()).toBe(403)
+    expect((await request.delete('/api/pickleball/open/host/me', { headers: { 'cf-connecting-ip': ipFor(code) } })).status()).toBe(403)
+    const me = await (await request.get('/api/pickleball/open/host/me', { headers: { 'cf-connecting-ip': ipFor(code) } })).json()
+    expect(me.host).toMatchObject({ duprClubId: '12345', marketingOptIn: false })
+  })
+})

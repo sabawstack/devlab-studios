@@ -32,9 +32,14 @@ class Statement {
     return { success: true, meta: { changes: Number(result.changes) } }
   }
 
-  runSync(): { changes: number } {
+  /** Inside batch(): like D1, a statement with RETURNING gives its rows back. */
+  runSync(): { changes: number; results: unknown[] } {
+    if (/\bRETURNING\b/i.test(this.sql)) {
+      const rows = this.db.prepare(this.sql).all(...this.params)
+      return { changes: rows.length, results: rows }
+    }
     const result = this.db.prepare(this.sql).run(...this.params)
-    return { changes: Number(result.changes) }
+    return { changes: Number(result.changes), results: [] }
   }
 }
 
@@ -50,7 +55,7 @@ export function createSqliteD1(migrationFiles: readonly string[]): { d1: D1Datab
       try {
         const results = statements.map((statement) => statement.runSync())
         raw.exec('COMMIT')
-        return results.map((result) => ({ success: true, meta: { changes: result.changes } }))
+        return results.map((result) => ({ success: true, results: result.results, meta: { changes: result.changes } }))
       } catch (error) {
         raw.exec('ROLLBACK')
         throw error

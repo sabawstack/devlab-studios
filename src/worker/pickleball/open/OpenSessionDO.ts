@@ -384,6 +384,13 @@ export class OpenSessionDO extends DurableObject<Env> {
     })
   }
 
+  /** After an account is deleted (D1 already unlinked it): drop the link from memory too. */
+  async forgetHost(hostId: string): Promise<void> {
+    return this.serial(async () => {
+      if (this.loaded?.access.hostId === hostId) this.loaded = { ...this.loaded, access: { ...this.loaded.access, hostId: null } }
+    })
+  }
+
   /** Called by the purge cron after it deleted this session's rows. */
   async evict(): Promise<void> {
     return this.serial(async () => this.closeAll())

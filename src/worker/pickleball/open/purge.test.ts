@@ -3,7 +3,8 @@ import { createSqliteD1 } from '../../repositories/pickleball/open/testing/sqlit
 import { createOpenSession } from '../../repositories/pickleball/open/openSessions'
 import { buildInitialState } from '../../../lib/pickleball/open/create'
 import { DEFAULT_SETTINGS } from '../../../lib/pickleball/open/types'
-import { runOpenSessionPurge } from './purge'
+import { runHostLoginPurge, runOpenSessionPurge } from './purge'
+import { createHostLogin, upsertHost } from '../../repositories/pickleball/open/hosts'
 
 function stubNamespace(evict: () => Promise<void>) {
   return { idFromName: (name: string) => name, get: () => ({ evict }) } as unknown as Env['OPEN_SESSION']
@@ -24,5 +25,15 @@ describe('runOpenSessionPurge', () => {
     expect(purged).toBe(2)
     expect(evict).toHaveBeenCalledTimes(2)
     expect((raw.prepare('SELECT COUNT(*) AS n FROM open_sessions').get() as { n: number }).n).toBe(0)
+  })
+
+  it('removes expired host logins and keeps the host and live logins', async () => {
+    const { d1, raw } = createSqliteD1(['0016_open_sessions', '0017_open_captains', '0018_open_tournaments', '0019_hosts'].map((m) => `migrations/pickleball/${m}.sql`))
+    const host = await upsertHost(d1, { googleSub: 'g', email: 'mo@example.com', displayName: 'Mo', marketingOptIn: false }, { now: '2026-08-01T00:00:00.000Z', newId: () => 'h1' })
+    await createHostLogin(d1, { tokenHash: 'old', hostId: host.id, now: '2026-08-01T00:00:00.000Z' })
+    await createHostLogin(d1, { tokenHash: 'new', hostId: host.id, now: '2026-10-08T00:00:00.000Z' })
+    expect(await runHostLoginPurge({ PICKLEBALL_DB: d1 }, { now: new Date('2026-10-09T00:00:00.000Z') })).toBe(1)
+    expect((raw.prepare('SELECT COUNT(*) AS n FROM hosts').get() as { n: number }).n).toBe(1)
+    expect((raw.prepare('SELECT token_hash FROM host_logins').get() as { token_hash: string }).token_hash).toBe('new')
   })
 })
