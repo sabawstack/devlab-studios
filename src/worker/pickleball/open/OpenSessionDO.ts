@@ -16,7 +16,7 @@ import {
   hostCourts, toCaptainSnapshot, toHostSnapshot, toViewerSnapshot, type CaptainSnapshot, type HostSnapshot, type ViewerSnapshot,
 } from '../../../lib/pickleball/open/snapshot'
 import { LIMITS, type CaptainRecord, type OpenSessionState } from '../../../lib/pickleball/open/types'
-import { randomBase64Url, sha256Base64Url } from '../../../lib/pickleball/webCrypto.js'
+import { randomBase64Url, randomInt, sha256Base64Url } from '../../../lib/pickleball/webCrypto.js'
 import {
   deleteOpenSession, findIdempotentResponse, insertCaptain, loadOpenSession, persistDiff, revokeCaptain as revokeCaptainRow,
   type LoadedSession,
@@ -152,7 +152,7 @@ export class OpenSessionDO extends DurableObject<Env> {
       }
 
       const now = new Date().toISOString()
-      const ctx = { now, newId: () => crypto.randomUUID(), actor: actor.role === 'captain' ? actor.captain.label : 'Host' }
+      const ctx = { now, newId: () => crypto.randomUUID(), actor: actor.role === 'captain' ? actor.captain.label : 'Host', random: randomInt }
       const result = applyCommand(loaded.state, parsed.data.command, ctx)
       if (!result.ok) return { status: result.status, body: { error: result.error } }
 

@@ -49,10 +49,13 @@ export const POST: APIRoute = async ({ request }) => {
 
     const hostKey = randomBase64Url(16)
     const hostKeyHash = await sha256Base64Url(hostKey)
-    const { name, hostDisplayName, location, courtCount, settings, players } = parsed.data
+    const { name, hostDisplayName, location, courtCount, settings, players, kind, tournament } = parsed.data
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const state = buildInitialState(
-        { name, hostDisplayName, location: location ?? null, courtCount, settings, players: players.map((p) => ({ name: p.name, skill: p.skill ?? null, duprId: p.duprId ?? null })) },
+        {
+          name, hostDisplayName, location: location ?? null, courtCount, settings, kind, tournamentFormat: tournament?.format,
+          players: players.map((p) => ({ name: p.name, skill: p.skill ?? null, duprId: p.duprId ?? null })),
+        },
         { now: new Date().toISOString(), newId: () => crypto.randomUUID(), publicCode: generatePublicCode(), sessionId: crypto.randomUUID() },
       )
       try {

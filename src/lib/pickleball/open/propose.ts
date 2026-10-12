@@ -4,6 +4,7 @@ import { proposeWinnersLosers } from './modes/winnersLosers'
 import { proposeBalanced } from './modes/balanced'
 import { proposeByStanding } from './modes/byStanding'
 import { activeRules } from './rules'
+import { proposeFixture } from './tournament/courts'
 import { LIMITS, type CommandContext, type OpenSessionState, type StackingMode } from './types'
 
 const PROPOSERS: Record<StackingMode, ModeProposer> = {
@@ -20,6 +21,7 @@ const PROPOSERS: Record<StackingMode, ModeProposer> = {
  */
 export function proposeForCourt(state: OpenSessionState, exclude?: readonly string[]): Proposal | null {
   if (state.status !== 'ACTIVE' || state.matches.length >= LIMITS.maxMatches) return null
+  if (state.kind === 'TOURNAMENT') return proposeFixture(state)
   const queue = queueOrder(state)
   if (queue.length < 4) return null
   return PROPOSERS[state.settings.mode]({ state, queue, history: pairingHistory(state.matches), rules: activeRules(state), exclude })
@@ -27,7 +29,7 @@ export function proposeForCourt(state: OpenSessionState, exclude?: readonly stri
 
 /** Why a free court has no proposal, when the reason is not simply "fewer than 4 waiting". */
 export function proposalBlocker(state: OpenSessionState): string | null {
-  if (state.status !== 'ACTIVE') return null
+  if (state.status !== 'ACTIVE' || state.kind === 'TOURNAMENT') return null
   if (state.matches.length >= LIMITS.maxMatches) return `This session has reached ${LIMITS.maxMatches} games.`
   if (queueOrder(state).length < 4) return null
   return proposeForCourt(state)

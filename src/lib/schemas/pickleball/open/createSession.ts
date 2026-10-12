@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { stackingModeSchema } from './commands'
+import { stackingModeSchema, tournamentFormatSchema } from './commands'
 
 export const createSessionSchema = z.object({
   name: z.string().trim().min(1).max(60),
@@ -18,6 +18,9 @@ export const createSessionSchema = z.object({
     skill: z.number().min(1).max(8).nullable().optional(),
     duprId: z.string().regex(/^[A-Za-z0-9]{6}$/).nullable().optional(),
   })).max(128),
+  // Optional: an older client sends neither and gets open play.
+  kind: z.enum(['OPEN_PLAY', 'TOURNAMENT']).optional(),
+  tournament: z.object({ format: tournamentFormatSchema }).optional(),
   turnstileToken: z.string().max(2048).optional(),
 })
 

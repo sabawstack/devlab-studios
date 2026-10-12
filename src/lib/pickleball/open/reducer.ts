@@ -4,6 +4,8 @@ import { addProposal, fillProposals, proposeForCourt } from './propose'
 import { cleanName } from './roster'
 import { activeRules, keepsRules, ruleViolation } from './rules'
 import { validateResult } from './scoreValidation'
+import { applyTournamentCommand, leavingRefusal, OPEN_PLAY_ONLY, syncFixture, undoBlocker } from './tournament/commands'
+import { withoutStaleProposals } from './tournament/courts'
 import { addMs, LIMITS, type CommandContext, type OpenMatch, type OpenPlayer, type OpenSessionState, type PairRule, type Team } from './types'
 
 type Failure = { ok: false; status: 400 | 404 | 409; error: string }
@@ -99,6 +101,8 @@ function setPlayerStatus(state: OpenSessionState, playerId: string, status: Open
   if (target.status === status) return ok(state)
   const playing = state.matches.some((m) => m.status === 'IN_PROGRESS' && matchIncludes(m, playerId))
   if (status !== 'ACTIVE' && playing) return fail(409, `${target.name} is playing. Finish or abandon their game first.`)
+  const inPair = status === 'LEFT' ? leavingRefusal(state, playerId) : null
+  if (inPair) return fail(409, inPair)
   const cleared = status === 'ACTIVE' ? state : withoutMatches(state, (m) => m.status === 'PROPOSED' && matchIncludes(m, playerId))
   if (status === 'ACTIVE') return ok(returnLevel(cleared, target, ctx))
   return ok(withPlayers(cleared, new Set([playerId]), { status }))
@@ -176,7 +180,8 @@ function recordResult(state: OpenSessionState, command: Extract<OpenCommand, { t
     startedAt: match.startedAt ?? ctx.now, finishedAt: editing ? match.finishedAt : ctx.now, recordedBy: ctx.actor ?? 'Host',
   }
   const next = withMatch(state, saved)
-  return ok(editing ? next : withPlayers(next, new Set([...match.teamA, ...match.teamB]), { waitingSince: ctx.now }))
+  if (editing) return syncFixture(next, saved, 'EDIT')
+  return syncFixture(withPlayers(next, new Set([...match.teamA, ...match.teamB]), { waitingSince: ctx.now }), saved, 'FINISH')
 }
 
 function undoResult(state: OpenSessionState, matchId: string, ctx: CommandContext): CommandResult {
@@ -186,6 +191,8 @@ function undoResult(state: OpenSessionState, matchId: string, ctx: CommandContex
   if (Date.parse(ctx.now) - Date.parse(match.finishedAt) > LIMITS.undoWindowMs) {
     return fail(409, 'The 2-minute undo has passed. Edit the result instead.')
   }
+  const dependent = undoBlocker(state, match)
+  if (dependent) return fail(409, dependent)
   if (state.matches.some((m) => m.id !== matchId && m.courtId === match.courtId && m.status === 'IN_PROGRESS')) {
     return fail(409, 'That court has already started its next game. Edit the result instead.')
   }
@@ -193,11 +200,15 @@ function undoResult(state: OpenSessionState, matchId: string, ctx: CommandContex
   const nowPlaying = state.matches.find((m) => m.id !== matchId && m.status === 'IN_PROGRESS' && ids.some((id) => matchIncludes(m, id)))
   if (nowPlaying) return fail(409, 'Someone from that game is already playing again. Edit the result instead.')
   const cleared = withoutMatches(state, (m) => m.status === 'PROPOSED' && (m.courtId === match.courtId || ids.some((id) => matchIncludes(m, id))))
-  return ok(withMatch(cleared, { ...match, status: 'IN_PROGRESS', winner: null, scoreA: null, scoreB: null, finishedAt: null, recordedBy: null }))
+  const reopened = { ...match, status: 'IN_PROGRESS' as const, winner: null, scoreA: null, scoreB: null, finishedAt: null, recordedBy: null }
+  return syncFixture(withMatch(cleared, reopened), reopened, 'UNDO')
 }
 
 export function applyCommand(state: OpenSessionState, command: OpenCommand, ctx: CommandContext): CommandResult {
   const ended = state.status === 'ENDED'
+  if (state.kind === 'TOURNAMENT' && OPEN_PLAY_ONLY.has(command.type)) {
+    return fail(409, 'That is for open play. In a tournament the draw decides who plays whom.')
+  }
   switch (command.type) {
     case 'ADD_PLAYERS':
       return addPlayers(state, command.names, ctx)
@@ -236,7 +247,8 @@ export function applyCommand(state: OpenSessionState, command: OpenCommand, ctx:
       const match = state.matches.find((m) => m.id === command.matchId)
       if (!match) return fail(404, 'Game not found.')
       if (match.status !== 'PROPOSED') return fail(409, 'This game has already started.')
-      return ok(withMatch(state, { ...match, status: 'IN_PROGRESS', startedAt: ctx.now }))
+      const started = { ...match, status: 'IN_PROGRESS' as const, startedAt: ctx.now }
+      return syncFixture(withMatch(state, started), started, 'START')
     }
     case 'RECORD_RESULT':
     case 'EDIT_RESULT':
@@ -248,7 +260,7 @@ export function applyCommand(state: OpenSessionState, command: OpenCommand, ctx:
       if (!match) return fail(404, 'Game not found.')
       if (match.status !== 'IN_PROGRESS') return fail(409, 'Only a game in progress can be abandoned.')
       const next = withMatch(state, { ...match, status: 'ABANDONED', finishedAt: ctx.now })
-      return ok(withPlayers(next, new Set([...match.teamA, ...match.teamB]), { waitingSince: ctx.now }))
+      return syncFixture(withPlayers(next, new Set([...match.teamA, ...match.teamB]), { waitingSince: ctx.now }), match, 'ABANDON')
     }
     case 'END_SESSION':
       return ok({ ...withoutMatches(state, (m) => m.status === 'PROPOSED'), status: 'ENDED' })
@@ -267,6 +279,12 @@ export function applyCommand(state: OpenSessionState, command: OpenCommand, ctx:
       return addRule(state, command.rule)
     case 'REMOVE_RULE':
       return removeRule(state, command.rule)
+    case 'GENERATE_DRAW':
+    case 'EDIT_DRAW':
+    case 'START_TOURNAMENT':
+    case 'SUBSTITUTE_PLAYER':
+    case 'SWAP_OPPONENTS':
+      return applyTournamentCommand(state, command, ctx)
   }
 }
 
@@ -275,7 +293,7 @@ export function touch(state: OpenSessionState, now: string): OpenSessionState {
   return { ...state, version: state.version + 1, lastActivityAt: now, expiresAt: addMs(now, LIMITS.retentionMs) }
 }
 
-/** Every successful command: touch, then fill free courts. */
+/** Every successful command: touch, withdraw tournament proposals the draw no longer backs, then fill free courts. */
 export function finalizeCommand(state: OpenSessionState, ctx: CommandContext): OpenSessionState {
-  return fillProposals(touch(state, ctx.now), ctx)
+  return fillProposals(withoutStaleProposals(touch(state, ctx.now)), ctx)
 }

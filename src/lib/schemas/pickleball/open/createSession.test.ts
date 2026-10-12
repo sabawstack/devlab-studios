@@ -24,3 +24,25 @@ describe('commandSchema', () => {
     expect(commandSchema.safeParse({ type: 'SET_SELF_CHECK_IN', enabled: false }).success).toBe(true)
   })
 })
+
+describe('tournament schemas (Phase 3)', () => {
+  const settings = { mode: 'PADDLE_STACK', target: 11, scoringStyle: 'SIDEOUT' }
+
+  it('a session can be a tournament with a format; a client that sends neither gets open play', () => {
+    expect(createSessionSchema.safeParse({ ...base, settings, kind: 'TOURNAMENT', tournament: { format: 'POOL_TO_BRACKET' } }).success).toBe(true)
+    expect(createSessionSchema.safeParse({ ...base, settings }).success).toBe(true)
+    expect(createSessionSchema.safeParse({ ...base, settings, kind: 'LEAGUE' }).success).toBe(false)
+    expect(createSessionSchema.safeParse({ ...base, settings, kind: 'TOURNAMENT', tournament: { format: 'SWISS' } }).success).toBe(false)
+  })
+
+  it('parses the tournament commands and rejects bad shapes', () => {
+    expect(commandSchema.safeParse({ type: 'GENERATE_DRAW', format: 'DOUBLE_ELIMINATION', pairing: 'BALANCED', seeding: 'BY_SKILL' }).success).toBe(true)
+    expect(commandSchema.safeParse({ type: 'GENERATE_DRAW', format: 'ROUND_ROBIN', pairing: 'SNAKE', seeding: 'RANDOM' }).success).toBe(false)
+    expect(commandSchema.safeParse({ type: 'EDIT_DRAW', edit: { kind: 'MOVE_PAIR', entrantId: 'e1', poolLabel: 'B' } }).success).toBe(true)
+    expect(commandSchema.safeParse({ type: 'EDIT_DRAW', edit: { kind: 'MOVE_PAIR', entrantId: 'e1', poolLabel: 'Z' } }).success).toBe(false)
+    expect(commandSchema.safeParse({ type: 'EDIT_DRAW', edit: { kind: 'SET_OPPONENT', fixtureId: 'f1', side: 'C', entrantId: 'e2' } }).success).toBe(false)
+    expect(commandSchema.safeParse({ type: 'SWAP_OPPONENTS', fixtureId: 'f1', side: 'A', otherFixtureId: 'f2', otherSide: 'B' }).success).toBe(true)
+    expect(commandSchema.safeParse({ type: 'SUBSTITUTE_PLAYER', entrantId: 'e1', outPlayerId: 'p1' }).success).toBe(false)
+    expect(commandSchema.safeParse({ type: 'START_TOURNAMENT' }).success).toBe(true)
+  })
+})
