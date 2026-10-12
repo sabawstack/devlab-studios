@@ -117,6 +117,7 @@ export default function SiteSettingsManager() {
   const [value, setValue] = useState(clone(siteSettingsContent))
   const [status, setStatus] = useState('Loading site settings...')
   const [isSaving, setIsSaving] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false)
 
   const loadContent = useCallback(async () => {
     try {
@@ -125,15 +126,20 @@ export default function SiteSettingsManager() {
         setStatus('Admin API is protected. Sign in through Cloudflare Access before editing site settings.')
         return
       }
+      // Every other outcome below puts a value in the form that is safe to
+      // edit and save -- the static fallback is offered precisely so a save
+      // can seed D1.
       if (response.status === 503) {
         const payload = await response.json()
         setValue(clone(siteSettingsContent))
         setStatus(`${payload.error} Loaded static fallback. Save to seed D1.`)
+        setIsLoaded(true)
         return
       }
       if (!response.ok) {
         setValue(clone(siteSettingsContent))
         setStatus(`Unable to load site settings (${response.status}). Loaded static fallback.`)
+        setIsLoaded(true)
         return
       }
 
@@ -141,9 +147,11 @@ export default function SiteSettingsManager() {
       const nextValue = data?.navigation?.length ? data : siteSettingsContent
       setValue(clone(nextValue))
       setStatus(data?.navigation?.length ? 'Loaded site settings from D1.' : 'No site settings stored in D1 yet. Loaded static fallback; save to persist it.')
+      setIsLoaded(true)
     } catch {
       setValue(clone(siteSettingsContent))
       setStatus('Unable to reach the site settings API. Loaded static fallback.')
+      setIsLoaded(true)
     }
   }, [])
 
@@ -202,7 +210,7 @@ export default function SiteSettingsManager() {
           <button
             type="button"
             onClick={saveContent}
-            disabled={isSaving}
+            disabled={isSaving || !isLoaded}
             className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Save size={16} />
@@ -224,115 +232,121 @@ export default function SiteSettingsManager() {
         {status}
       </div>
 
-      <ArrayEditor
-        title="Navigation"
-        description="Primary header navigation."
-        items={value.navigation || []}
-        onChange={(navigation) => setValue((current) => ({ ...current, navigation }))}
-        createItem={(index) => ({
-          id: makeId('nav'),
-          label: '',
-          href: '/',
-          sortOrder: (index + 1) * 10,
-          status: 'published',
-        })}
-        fields={[
-          { key: 'label', label: 'Label' },
-          { key: 'href', label: 'Path' },
-        ]}
-      />
+      {/* Locked until the stored settings have loaded. The form starts out
+          showing the static fallback, so an edit made before the fetch lands is
+          silently overwritten by it, and a Save in that window writes the
+          fallback over what is in D1. */}
+      <fieldset disabled={!isLoaded} className="contents">
+        <ArrayEditor
+          title="Navigation"
+          description="Primary header navigation."
+          items={value.navigation || []}
+          onChange={(navigation) => setValue((current) => ({ ...current, navigation }))}
+          createItem={(index) => ({
+            id: makeId('nav'),
+            label: '',
+            href: '/',
+            sortOrder: (index + 1) * 10,
+            status: 'published',
+          })}
+          fields={[
+            { key: 'label', label: 'Label' },
+            { key: 'href', label: 'Path' },
+          ]}
+        />
 
-      <section className="rounded-md border border-slate-200 bg-white">
-        <SectionHeader title="CTA Labels" description="Header and mobile CTA button labels." />
-        <div className="grid gap-4 px-5 py-5 md:grid-cols-2">
-          <label className="grid gap-1.5 text-sm font-semibold text-slate-800">
-            Header CTA
-            <input
-              value={value.ctas?.navbarContactLabel || ''}
-              onChange={(event) => setValue((current) => ({ ...current, ctas: { ...(current.ctas || {}), navbarContactLabel: event.target.value } }))}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm font-normal text-slate-800 outline-none transition focus:border-slate-500"
-            />
-          </label>
-          <label className="grid gap-1.5 text-sm font-semibold text-slate-800">
-            Mobile CTA
-            <input
-              value={value.ctas?.mobileContactLabel || ''}
-              onChange={(event) => setValue((current) => ({ ...current, ctas: { ...(current.ctas || {}), mobileContactLabel: event.target.value } }))}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm font-normal text-slate-800 outline-none transition focus:border-slate-500"
-            />
-          </label>
-        </div>
-      </section>
-
-      <section className="rounded-md border border-slate-200 bg-white">
-        <SectionHeader title="Footer Identity" description="Main footer copy and contact info." />
-        <div className="grid gap-4 px-5 py-5 md:grid-cols-2">
-          {[
-            ['companyName', 'Company Name'],
-            ['tagline', 'Tagline'],
-            ['email', 'Email'],
-            ['location', 'Location'],
-            ['copyright', 'Copyright'],
-          ].map(([key, label]) => (
-            <label key={key} className="grid gap-1.5 text-sm font-semibold text-slate-800">
-              {label}
+        <section className="rounded-md border border-slate-200 bg-white">
+          <SectionHeader title="CTA Labels" description="Header and mobile CTA button labels." />
+          <div className="grid gap-4 px-5 py-5 md:grid-cols-2">
+            <label className="grid gap-1.5 text-sm font-semibold text-slate-800">
+              Header CTA
               <input
-                value={value.footer?.[key] || ''}
-                onChange={(event) => setValue((current) => ({ ...current, footer: { ...(current.footer || {}), [key]: event.target.value } }))}
+                value={value.ctas?.navbarContactLabel || ''}
+                onChange={(event) => setValue((current) => ({ ...current, ctas: { ...(current.ctas || {}), navbarContactLabel: event.target.value } }))}
                 className="rounded-md border border-slate-300 px-3 py-2 text-sm font-normal text-slate-800 outline-none transition focus:border-slate-500"
               />
             </label>
-          ))}
-        </div>
-      </section>
+            <label className="grid gap-1.5 text-sm font-semibold text-slate-800">
+              Mobile CTA
+              <input
+                value={value.ctas?.mobileContactLabel || ''}
+                onChange={(event) => setValue((current) => ({ ...current, ctas: { ...(current.ctas || {}), mobileContactLabel: event.target.value } }))}
+                className="rounded-md border border-slate-300 px-3 py-2 text-sm font-normal text-slate-800 outline-none transition focus:border-slate-500"
+              />
+            </label>
+          </div>
+        </section>
 
-      <ArrayEditor
-        title="Quick Links"
-        description="Footer quick links."
-        items={value.footer?.quickLinks || []}
-        onChange={(quickLinks) => setValue((current) => ({ ...current, footer: { ...(current.footer || {}), quickLinks } }))}
-        createItem={(index) => ({
-          id: makeId(`quick-link-${index + 1}`),
-          label: '',
-          href: '/',
-        })}
-        fields={[
-          { key: 'label', label: 'Label' },
-          { key: 'href', label: 'Path' },
-        ]}
-      />
+        <section className="rounded-md border border-slate-200 bg-white">
+          <SectionHeader title="Footer Identity" description="Main footer copy and contact info." />
+          <div className="grid gap-4 px-5 py-5 md:grid-cols-2">
+            {[
+              ['companyName', 'Company Name'],
+              ['tagline', 'Tagline'],
+              ['email', 'Email'],
+              ['location', 'Location'],
+              ['copyright', 'Copyright'],
+            ].map(([key, label]) => (
+              <label key={key} className="grid gap-1.5 text-sm font-semibold text-slate-800">
+                {label}
+                <input
+                  value={value.footer?.[key] || ''}
+                  onChange={(event) => setValue((current) => ({ ...current, footer: { ...(current.footer || {}), [key]: event.target.value } }))}
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm font-normal text-slate-800 outline-none transition focus:border-slate-500"
+                />
+              </label>
+            ))}
+          </div>
+        </section>
 
-      <ArrayEditor
-        title="Social Links"
-        description="Footer outbound links."
-        items={value.footer?.socialLinks || []}
-        onChange={(socialLinks) => setValue((current) => ({ ...current, footer: { ...(current.footer || {}), socialLinks } }))}
-        createItem={(index) => ({
-          id: makeId(`social-link-${index + 1}`),
-          label: '',
-          href: '',
-        })}
-        fields={[
-          { key: 'label', label: 'Label' },
-          { key: 'href', label: 'URL' },
-        ]}
-      />
+        <ArrayEditor
+          title="Quick Links"
+          description="Footer quick links."
+          items={value.footer?.quickLinks || []}
+          onChange={(quickLinks) => setValue((current) => ({ ...current, footer: { ...(current.footer || {}), quickLinks } }))}
+          createItem={(index) => ({
+            id: makeId(`quick-link-${index + 1}`),
+            label: '',
+            href: '/',
+          })}
+          fields={[
+            { key: 'label', label: 'Label' },
+            { key: 'href', label: 'Path' },
+          ]}
+        />
 
-      <ArrayEditor
-        title="Legal Links"
-        description="Footer Privacy/Terms links."
-        items={value.footer?.legalLinks || []}
-        onChange={(legalLinks) => setValue((current) => ({ ...current, footer: { ...(current.footer || {}), legalLinks } }))}
-        createItem={(index) => ({
-          id: makeId(`legal-link-${index + 1}`),
-          label: '',
-          href: '/',
-        })}
-        fields={[
-          { key: 'label', label: 'Label' },
-          { key: 'href', label: 'Path' },
-        ]}
-      />
+        <ArrayEditor
+          title="Social Links"
+          description="Footer outbound links."
+          items={value.footer?.socialLinks || []}
+          onChange={(socialLinks) => setValue((current) => ({ ...current, footer: { ...(current.footer || {}), socialLinks } }))}
+          createItem={(index) => ({
+            id: makeId(`social-link-${index + 1}`),
+            label: '',
+            href: '',
+          })}
+          fields={[
+            { key: 'label', label: 'Label' },
+            { key: 'href', label: 'URL' },
+          ]}
+        />
+
+        <ArrayEditor
+          title="Legal Links"
+          description="Footer Privacy/Terms links."
+          items={value.footer?.legalLinks || []}
+          onChange={(legalLinks) => setValue((current) => ({ ...current, footer: { ...(current.footer || {}), legalLinks } }))}
+          createItem={(index) => ({
+            id: makeId(`legal-link-${index + 1}`),
+            label: '',
+            href: '/',
+          })}
+          fields={[
+            { key: 'label', label: 'Label' },
+            { key: 'href', label: 'Path' },
+          ]}
+        />
+      </fieldset>
     </div>
   )
 }

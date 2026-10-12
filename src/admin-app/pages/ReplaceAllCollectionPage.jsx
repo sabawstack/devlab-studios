@@ -77,10 +77,13 @@ function ReplaceAllCollectionPage() {
           <button type="button" onClick={() => setShowHistory((v) => !v)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
             {showHistory ? 'Hide History' : 'Version History'}
           </button>
-          <button type="button" onClick={addItem} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          {/* Both stay disabled until the collection has loaded. Before that,
+              an added item is overwritten when the fetch lands, and Save All
+              would replace the whole collection with an empty list. */}
+          <button type="button" onClick={addItem} disabled={status !== 'ready'} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60">
             Add {config.label.replace(/s$/, '')}
           </button>
-          <button type="button" onClick={handleSaveAll} disabled={status === 'saving'} className="rounded-lg bg-brand-teal px-4 py-2 text-sm font-semibold text-white hover:brightness-95 disabled:opacity-60">
+          <button type="button" onClick={handleSaveAll} disabled={status !== 'ready'} className="rounded-lg bg-brand-teal px-4 py-2 text-sm font-semibold text-white hover:brightness-95 disabled:opacity-60">
             {status === 'saving' ? 'Saving…' : 'Save All'}
           </button>
         </div>
