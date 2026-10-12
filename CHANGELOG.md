@@ -86,6 +86,7 @@ decided against that surface specifically:
 - **Open play: anyone holding the public QR code could lock the host out.** Host commands were limited to 120 per minute per session, counted before the host key was checked, so a stranger sending junk could use up the host's allowance. The session limit now counts only commands with a valid host key, and every host route also has its own per-address limit (600 per minute) checked first.
 
 ### Added
+- Free sessions, Phase 4: migration `0019` adds `hosts` (Google-verified DUPR exporters; marketing opt-in off by default; never expires), `host_logins` (hashed login tokens), `open_sessions.host_id` (the claim, unlinked when an account is deleted), `open_host_keys` (extra host links) and `open_dupr_exports` (the 5-a-day log). Session rows still all cascade from `open_sessions`.
 - The host guide and landing page describe tournaments (formats, pairing and seeding, the editable draft, substitutes, the live bracket), with a bracket illustration. The public-pages copy guard no longer bans "tournament" or "bracket".
 - Free sessions can be tournaments: migration `0018_open_tournaments.sql` adds `open_tournaments`, `open_tournament_entrants` and `open_tournament_fixtures` (all cascade from `open_sessions`, so the 7-day purge covers them), and matches record the fixture they play.
 - Tournament pairs can be drawn at random (an unbiased crypto shuffle), balanced by skill (strongest with weakest) or taken in list order, and seeded at random, by mean pair skill or in the host's order.
