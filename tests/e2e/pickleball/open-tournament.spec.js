@@ -8,13 +8,13 @@ const NAMES = ['Ana', 'Ben', 'Cy', 'Di', 'Eva', 'Fin', 'Gus', 'Hal', 'Ivy', 'Jo'
 // Each create claims its own address: creation is limited to 10 per IP per day (see open-play.spec.js).
 const freshIp = () => `10.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 254) + 1}`
 
-async function createTournament(request, { players = 8, courtCount = 2, format = 'ROUND_ROBIN' } = {}) {
+async function createTournament(request, { players = 8, courtCount = 2, format = 'ROUND_ROBIN', names = NAMES } = {}) {
   const response = await request.post('/api/pickleball/open/sessions', {
     headers: { 'cf-connecting-ip': freshIp() },
     data: {
       name: 'Saturday Cup', hostDisplayName: 'Coach Mike', courtCount, kind: 'TOURNAMENT', tournament: { format },
       settings: { mode: 'PADDLE_STACK', target: 11, scoringStyle: 'SIDEOUT' },
-      players: NAMES.slice(0, players).map((name, i) => ({ name, skill: 5 - (i % 5), duprId: 'AB12C3' })),
+      players: names.slice(0, players).map((name, i) => ({ name, skill: 5 - (i % 5), duprId: 'AB12C3' })),
     },
   })
   expect(response.status()).toBe(201)
@@ -178,8 +178,8 @@ test.describe('tournaments (API)', () => {
 })
 
 /** A tournament created, drawn and (optionally) started over the API, ready for a screen test. */
-async function readyTournament(request, { players = 8, courtCount = 2, format = 'SINGLE_ELIMINATION', start = true } = {}) {
-  const session = await createTournament(request, { players, courtCount, format })
+async function readyTournament(request, { players = 8, courtCount = 2, format = 'SINGLE_ELIMINATION', start = true, names = NAMES } = {}) {
+  const session = await createTournament(request, { players, courtCount, format, names })
   await ok(request, session.code, session.hostKey, { type: 'GENERATE_DRAW', format, pairing: 'MANUAL', seeding: 'MANUAL' })
   if (start) await ok(request, session.code, session.hostKey, { type: 'START_TOURNAMENT' })
   return session
@@ -392,6 +392,92 @@ test.describe('running a tournament (refusals, motion, widths)', () => {
         await page.getByRole('navigation', { name: 'Sections' }).getByRole('button', { name: 'Draw' }).click()
         expect(await noSideScroll(page)).toBe(true)
       }
+    })
+  }
+})
+
+test.describe('tournament board and TV (screens)', () => {
+  test('a second screen sees the bracket fill as results are saved, then the champions', async ({ page, request }) => {
+    const { code, hostKey } = await readyTournament(request)
+    await page.goto(`/pickleball/s/${code}`)
+    const final = page.getByRole('article', { name: 'Final', exact: true })
+    await expect(final).toContainText('Winner of Semi-final 1')
+    const host = await hostSnapshot(request, code, hostKey)
+    await ok(request, code, hostKey, { type: 'RECORD_RESULT', matchId: host.courts[0].match.id, winner: 'A', scoreA: 11, scoreB: 4 })
+    await expect(final).toContainText('Ana & Ben')
+    await playToChampion(request, code, hostKey)
+    await expect(page.getByTestId('champion')).toContainText('Ana & Ben')
+  })
+
+  test('a player who picks their name sees their next game', async ({ page, request }) => {
+    const { code, hostKey } = await readyTournament(request, { courtCount: 1 })
+    const host = await hostSnapshot(request, code, hostKey)
+    await page.goto(`/pickleball/s/${code}`)
+    await page.getByLabel("I'm…").selectOption({ label: 'Cy' })
+    await expect(page.getByRole('status').filter({ hasText: 'Your next game: Semi-final 2' })).toBeVisible()
+    await ok(request, code, hostKey, { type: 'RECORD_RESULT', matchId: host.courts[0].match.id, winner: 'A', scoreA: 11, scoreB: 4 })
+    await expect(page.getByRole('status').filter({ hasText: "You're up on Court 1: walk on" })).toBeVisible()
+  })
+
+  test('the TV board names the game on each court, then shows the champions', async ({ page, request }) => {
+    const { code, hostKey } = await readyTournament(request)
+    await page.setViewportSize({ width: 1920, height: 1080 })
+    await page.goto(`/pickleball/s/${code}/tv`)
+    await expect(page.getByTestId('tv-court').first()).toContainText('Semi-final 1')
+    await expect(page.getByTestId('fairness')).toHaveCount(0)
+    await playToChampion(request, code, hostKey)
+    await expect(page.getByTestId('champion')).toContainText('Ana & Ben')
+  })
+
+  for (const width of [390, 768, 1280, 1920]) {
+    test(`the board's draw and the TV fit a ${width}px screen without sideways scrolling`, async ({ page, request }) => {
+      const { code } = await readyTournament(request, { players: 16, courtCount: 4, format: 'POOL_TO_BRACKET' })
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto(`/pickleball/s/${code}`)
+      if (width < 1024) await page.getByRole('tab', { name: 'Draw' }).click()
+      await expect(page.getByRole('region', { name: 'Pool A' })).toBeVisible()
+      expect(await noSideScroll(page)).toBe(true)
+      await page.goto(`/pickleball/s/${code}/tv`)
+      await expect(page.getByTestId('tv-court')).toHaveCount(4)
+      expect(await noSideScroll(page)).toBe(true)
+    })
+  }
+
+  // The same standard as the open-play TV (open-play.spec.js): legible across a hall, nothing truncated or spilling.
+  const LONG_NAMES = NAMES.map((name, i) => (i % 3 === 0 ? `${name} Montgomery-Alexandrovich` : name))
+  const spilling = (page) => page.evaluate(() => [...document.querySelectorAll('body *')]
+    .filter((el) => (el.scrollWidth > el.clientWidth + 1 && el.clientWidth > 0) || (el.dataset.testid === 'tv-court' && el.scrollHeight > el.clientHeight + 1))
+    .map((el) => `${el.tagName}.${String(el.className).slice(0, 40)}`))
+  for (const [format, players, courtCount] of [['POOL_TO_BRACKET', 16, 4], ['SINGLE_ELIMINATION', 16, 2]]) {
+    for (const [width, height] of [[1920, 1080], [1280, 720]]) {
+      test(`a running ${format} TV with long names fits ${width}×${height}, nothing truncated, type readable across a hall`, async ({ page, request }) => {
+        const { code } = await readyTournament(request, { players, courtCount, format, names: LONG_NAMES })
+        await page.setViewportSize({ width, height })
+        await page.goto(`/pickleball/s/${code}/tv`)
+        await expect(page.getByTestId('tv-court')).toHaveCount(courtCount)
+        await expect(page.getByRole('region', { name: 'Coming up' })).toBeVisible()
+        await page.evaluate(() => document.fonts.ready)
+        await expect.poll(() => spilling(page)).toEqual([])
+        expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight && document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+        // Names at least 24 px tall at 1080p and 18 px at 720p, as for open play.
+        const sizes = await page.getByTestId('tv-court').evaluateAll((cards) => cards.map((el) => parseFloat(getComputedStyle(el).fontSize)))
+        for (const size of sizes) expect(size).toBeGreaterThanOrEqual(height === 1080 ? 24 : 18)
+      })
+    }
+  }
+
+  for (const [width, height] of [[1920, 1080], [1280, 720]]) {
+    test(`the TV's champions fit ${width}×${height} with nothing truncated`, async ({ page, request }) => {
+      const { code, hostKey } = await readyTournament(request, { names: LONG_NAMES })
+      await playToChampion(request, code, hostKey)
+      await page.setViewportSize({ width, height })
+      await page.goto(`/pickleball/s/${code}/tv`)
+      await expect(page.getByTestId('champion')).toBeVisible()
+      await expect(page.getByRole('region', { name: 'Coming up' })).toHaveCount(0)
+      await page.evaluate(() => document.fonts.ready)
+      // The celebration scales the banner for a moment; measure once it has settled.
+      await expect.poll(() => spilling(page), { timeout: 5000 }).toEqual([])
+      expect(await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight)).toBe(true)
     })
   }
 })

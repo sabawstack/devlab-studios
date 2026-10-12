@@ -8,7 +8,7 @@ export default function ChampionBanner({ champion, tv = false }) {
     <div role="status" aria-live="polite">
       {champion && (
         <div data-testid="champion"
-          className={`pb-celebrate rounded-2xl bg-pickle-neon text-ink ${tv ? 'p-[1vw] text-[clamp(1.5rem,3vw,4rem)]' : 'px-5 py-4 text-xl'}`}>
+          className={`pb-celebrate rounded-2xl bg-pickle-neon text-ink ${tv ? 'max-w-full p-[0.4em] text-[clamp(2rem,5vw,7rem)] leading-tight' : 'px-5 py-4 text-xl'}`}>
           <p className="text-[0.6em] font-bold uppercase tracking-[0.14em]">Champions</p>
           <p className="font-bold [overflow-wrap:anywhere]">{champion.name}</p>
         </div>

@@ -21,3 +21,22 @@ describe('myStatus', () => {
     expect(myStatus(viewer, 'zz')).toEqual({ kind: 'NONE' })
   })
 })
+
+describe('myStatus in a tournament', () => {
+  const tournament = {
+    phase: 'RUNNING',
+    pairs: [{ id: 'e1', playerIds: ['c', 'q'] }, { id: 'e2', playerIds: ['b', 'x'] }, { id: 'e3', playerIds: ['k', 'l'] }],
+    fixtures: [
+      { label: 'Semi-final 1', entrantAId: 'e1', entrantBId: 'e3', status: 'FINISHED' },
+      { label: 'Final', entrantAId: 'e1', entrantBId: null, status: 'PENDING' },
+    ],
+  }
+  const cup = { ...viewer, tournament, roster: [...viewer.roster, { id: 'k', name: 'Kit' }] }
+
+  it('names the next game instead of a place in line, and says when a pair is done', () => {
+    expect(myStatus(cup, 'c')).toEqual({ kind: 'NEXT_GAME', label: 'Final' })
+    expect(myStatus(cup, 'k')).toEqual({ kind: 'DONE' })
+    expect(myStatus(cup, 'b')).toEqual({ kind: 'UP_NEXT', court: 'Court 3' })
+    expect(myStatus({ ...cup, tournament: { ...tournament, phase: 'DRAFT' } }, 'c')).toEqual({ kind: 'NONE' })
+  })
+})

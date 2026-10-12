@@ -38,7 +38,7 @@ export default function TvCourt({ court }) {
   const card = useRef(null)
   const content = useRef(null)
   const [size, setSize] = useState(null)
-  const signature = `${court.label}|${court.state}|${court.teamA.join('/')}|${court.teamB.join('/')}`
+  const signature = `${court.label}|${court.state}|${court.fixtureLabel ?? ''}|${court.teamA.join('/')}|${court.teamB.join('/')}`
   useEffect(() => {
     let frame = 0
     const refit = () => {
@@ -72,6 +72,7 @@ export default function TvCourt({ court }) {
           <h2 className="text-[1.1em] font-bold text-pickle-neon">{court.label}</h2>
           <span className={`text-[0.55em] font-bold uppercase tracking-[0.08em] ${live ? 'text-mist' : 'text-pickle-neon'}`}>{STATE_LABEL[court.state]}</span>
         </div>
+        {court.fixtureLabel && <p className="text-[0.55em] font-bold uppercase tracking-[0.08em] text-mist">{court.fixtureLabel}</p>}
         {court.teamA.length > 0 && (
           <div className="mt-[0.25em] font-semibold">
             <Team players={court.teamA} color="border-pickle-neon" />

@@ -14,6 +14,8 @@ import FairnessPanel from './components/FairnessPanel.jsx'
 import FitList from './components/FitList.jsx'
 import QrCode from './components/QrCode.jsx'
 import TvCourt from './components/TvCourt.jsx'
+import { nextGames } from './tournament/bracketLayout'
+import ChampionBanner from './tournament/ChampionBanner.jsx'
 
 const STALE_MS = 15_000
 const WRAP = '[overflow-wrap:anywhere]'
@@ -57,13 +59,37 @@ function LiveState({ viewer, live, lastAt }) {
   return <span className="text-amber-200">Offline · showing data from {clock(lastAt)}</span>
 }
 
+/** Tournament standings are by pair (spec §6.7); open play's are by player. */
+function PairTable({ tournament }) {
+  const rows = tournament.standings.filter((row) => row.played > 0).slice(0, 16).map((row) => ({
+    key: row.entrantId,
+    content: <span className="flex justify-between gap-2"><span className={WRAP}><b className="text-pickle-neon">{row.rank}</b> {row.name}</span><span className="shrink-0 text-mist">{row.wins}–{row.losses}</span></span>,
+  }))
+  if (rows.length === 0) return <p className="mt-1 text-mist">No games finished yet</p>
+  return <FitList rows={rows} className="mt-1 grid gap-1 text-[clamp(1rem,1.3vw,1.75rem)]" />
+}
+
 function Standings({ viewer }) {
+  if (viewer.tournament) return <PairTable tournament={viewer.tournament} />
   const rows = viewer.standings.filter((row) => row.rank !== null).slice(0, 16).map((row) => ({
     key: row.playerId,
     content: <span className="flex justify-between gap-2"><span className={WRAP}><b className="text-pickle-neon">{row.rank}</b> {row.name}</span><span className="shrink-0 text-mist">{row.wins}–{row.losses}</span></span>,
   }))
   if (rows.length === 0) return <p className="mt-1 text-mist">No games finished yet</p>
   return <FitList rows={rows} className="mt-1 grid gap-1 text-[clamp(1rem,1.3vw,1.75rem)]" />
+}
+
+/** A tournament's next games from the draw, in the order courts take them. */
+function ComingUp({ tournament }) {
+  const rows = nextGames(tournament, 6).map((game) => ({ key: game.id, content: <span className={WRAP}><b>{game.label}</b>: {game.nameA} vs {game.nameB}</span> }))
+  return (
+    <section aria-label="Coming up" className="flex max-h-[30vh] min-h-0 shrink flex-col">
+      <h2 className={H2}>Coming up</h2>
+      {rows.length === 0
+        ? <p className="mt-1 text-[clamp(1rem,1.3vw,1.75rem)] text-mist">Waiting for results</p>
+        : <FitList rows={rows} className="mt-1 grid gap-1 text-[clamp(1rem,1.2vw,1.6rem)]" />}
+    </section>
+  )
 }
 
 /** Who walks on next: only as many whole names as the space left allows, so the fairness numbers below always show. */
@@ -115,7 +141,9 @@ export default function TvBoard({ code }) {
   const qrUrl = checkIn ? checkInLink(origin, code) : viewerLink(origin, code)
   const qrLabel = checkIn ? 'QR code for self check-in' : 'QR code for the player board'
   const qrSize = Math.round(Math.min(220, Math.max(120, width * 0.08)))
-  const modeLabel = MODE_INFO[viewer.settings.mode]?.label ?? 'Paddle stack'
+  const tournament = viewer.tournament
+  const modeLabel = tournament ? tournament.formatLabel : MODE_INFO[viewer.settings.mode]?.label ?? 'Paddle stack'
+  const champion = tournament?.phase === 'FINISHED' ? tournament.champion : null
   const grid = { '--tv-cols': cols, '--tv-rows': rows }
 
   return (
@@ -132,8 +160,9 @@ export default function TvBoard({ code }) {
         className="grid min-h-0 grid-cols-1 gap-3 lg:gap-[1vw] lg:[grid-template-columns:repeat(var(--tv-cols),minmax(0,1fr))] lg:[grid-template-rows:repeat(var(--tv-rows),minmax(0,1fr))]"
       >
         {ended && <p className="grid place-items-center rounded-2xl bg-navy-900 p-8 text-center text-[clamp(2rem,6vw,7rem)] font-bold lg:col-span-full lg:row-span-full" role="status">Session ended</p>}
-        {!ended && courts.length === 0 && <p className="grid place-items-center rounded-2xl bg-navy-900 p-8 text-center text-[clamp(1.5rem,3.5vw,4rem)] font-bold text-mist lg:col-span-full lg:row-span-full">No courts are in play right now</p>}
-        {!ended && courts.map((court) => <TvCourt key={court.id} court={court} />)}
+        {champion && <div className="grid place-items-center lg:col-span-full lg:row-span-full"><ChampionBanner champion={champion} tv /></div>}
+        {!ended && !champion && courts.length === 0 && <p className="grid place-items-center rounded-2xl bg-navy-900 p-8 text-center text-[clamp(1.5rem,3.5vw,4rem)] font-bold text-mist lg:col-span-full lg:row-span-full">No courts are in play right now</p>}
+        {!ended && !champion && courts.map((court) => <TvCourt key={court.id} court={court} />)}
       </section>
       <aside className="hidden min-h-0 flex-col gap-[1vw] overflow-hidden lg:flex">
         <header>
@@ -147,8 +176,9 @@ export default function TvBoard({ code }) {
             <p className="whitespace-nowrap text-[clamp(1rem,1.5vw,2.25rem)] font-bold tracking-[0.04em] text-pickle-neon">{formatPublicCode(code)}</p>
           </div>
         </div>
-        {!ended && <UpNext viewer={viewer} />}
-        <div className="shrink-0"><FairnessPanel fairness={viewer.fairness} tv /></div>
+        {!ended && !champion && (tournament ? <ComingUp tournament={tournament} /> : <UpNext viewer={viewer} />)}
+        {/* Fairness is about open-play rotation; a tournament's draw decides who plays. */}
+        {!tournament && <div className="shrink-0"><FairnessPanel fairness={viewer.fairness} tv /></div>}
         <section aria-label={panel === 'standings' ? 'Standings' : 'Recent results'} data-testid="tv-panel" className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <h2 className={H2}>{panel === 'standings' ? 'Standings' : 'Recent results'}</h2>
           {panel === 'standings' ? <Standings viewer={viewer} /> : <Results viewer={viewer} />}

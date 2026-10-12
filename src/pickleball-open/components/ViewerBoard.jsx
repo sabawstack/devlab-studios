@@ -3,9 +3,10 @@ import { useState } from 'react'
 import { MODE_INFO } from '../../lib/pickleball/open/modes/info'
 import { readMe, writeMe } from '../lib/me'
 import { myStatus } from '../lib/myStatus'
+import { BOARD_TABS } from '../tournament/tabs'
+import TournamentPanels from '../tournament/TournamentPanels.jsx'
 import StandingsTable from './StandingsTable.jsx'
 import { Panel, TeamNames } from './ui.jsx'
-
 
 const COURT_STATE = { PLAYING: 'Playing', UP_NEXT: 'Walk on now', WAITING_FOR_PLAYERS: 'Waiting for players', OFF: 'Off' }
 
@@ -15,6 +16,8 @@ function MeBanner({ status }) {
     UP_NEXT: `You're up on ${status.court}: walk on`,
     WAITING: `You're #${status.place} in line`,
     BREAK: "You're on a break",
+    NEXT_GAME: `Your next game: ${status.label}`,
+    DONE: 'Your games are done. Thanks for playing!',
   }[status.kind]
   if (!text) return null
   return <p className="rounded-2xl bg-pickle-neon px-4 py-3 text-lg font-bold text-ink" role="status">{text}</p>
@@ -28,6 +31,27 @@ export default function ViewerBoard({ viewer, status, invalidHostLink, revokedCa
   const expires = new Date(viewer.expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
   const courtCount = viewer.courts.filter((c) => c.state !== 'OFF').length
   const section = (key) => `${tab === key ? 'block' : 'hidden'} lg:block`
+  const tournament = viewer.tournament
+  const tabs = tournament ? BOARD_TABS : [['courts', 'Courts'], ['standings', 'Standings'], ['results', 'Results']]
+  const courtsGrid = (
+    <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
+      {viewer.courts.map((court) => (
+        <article key={`${court.id}-${court.teamA.join()}`} className={`pb-flip rounded-2xl p-4 ${court.state === 'UP_NEXT' ? 'border-2 border-pickle-neon' : 'bg-navy-900'}`}>
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-2xl font-bold text-pickle-neon">{court.label}</h2>
+            <span className={`text-xs ${court.state === 'UP_NEXT' ? 'font-bold text-pickle-neon' : 'text-mist'}`}>{COURT_STATE[court.state]}</span>
+          </div>
+          {court.fixtureLabel && <p className="text-xs font-bold uppercase tracking-[0.08em] text-mist">{court.fixtureLabel}</p>}
+          {court.teamA.length > 0 && (
+            <div className="mt-2 grid gap-1 text-[15px]">
+              <TeamNames side="A" names={court.teamA} emphasis={myName ? [myName] : []} />
+              <TeamNames side="B" names={court.teamB} emphasis={myName ? [myName] : []} />
+            </div>
+          )}
+        </article>
+      ))}
+    </div>
+  )
 
   return (
     <main className="mx-auto grid max-w-[1500px] gap-4 px-3 pb-10 pt-4 sm:px-5">
@@ -40,7 +64,7 @@ export default function ViewerBoard({ viewer, status, invalidHostLink, revokedCa
             {viewer.status === 'ACTIVE' ? 'LIVE' : 'ENDED'}{status !== 'open' && <span className="text-amber-200"> · reconnecting</span>}
           </p>
           <h1 className="text-2xl font-bold sm:text-3xl">{viewer.name}</h1>
-          <p className="text-sm text-mist">Hosted by {viewer.hostDisplayName} · {courtCount} court{courtCount === 1 ? '' : 's'} · {MODE_INFO[viewer.settings.mode]?.label ?? 'Paddle stack'}</p>
+          <p className="text-sm text-mist">Hosted by {viewer.hostDisplayName} · {courtCount} court{courtCount === 1 ? '' : 's'} · {tournament ? tournament.formatLabel : MODE_INFO[viewer.settings.mode]?.label ?? 'Paddle stack'}</p>
           {viewer.settings.selfCheckIn && viewer.status === 'ACTIVE' && (
             <a href={`/pickleball/s/${viewer.code}/check-in`} className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-pickle-neon underline underline-offset-4">Not on the list? Check in</a>
           )}
@@ -57,30 +81,16 @@ export default function ViewerBoard({ viewer, status, invalidHostLink, revokedCa
       <MeBanner status={mine} />
 
       <div className="grid grid-cols-3 gap-1 rounded-xl bg-navy-900 p-1 lg:hidden" role="tablist" aria-label="Board sections">
-        {[['courts', 'Courts'], ['standings', 'Standings'], ['results', 'Results']].map(([key, label]) => (
+        {tabs.map(([key, label]) => (
           <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
             className={`min-h-11 rounded-lg text-sm ${tab === key ? 'bg-pickle-neon font-bold text-ink' : 'text-mist'}`}>{label}</button>
         ))}
       </div>
 
+      {tournament ? <TournamentPanels viewer={viewer} courtsGrid={courtsGrid} me={me} section={section} /> : (
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
         <section className={section('courts')} aria-label="Courts">
-          <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
-            {viewer.courts.map((court) => (
-              <article key={`${court.id}-${court.teamA.join()}`} className={`pb-flip rounded-2xl p-4 ${court.state === 'UP_NEXT' ? 'border-2 border-pickle-neon' : 'bg-navy-900'}`}>
-                <div className="flex items-baseline justify-between">
-                  <h2 className="text-2xl font-bold text-pickle-neon">{court.label}</h2>
-                  <span className={`text-xs ${court.state === 'UP_NEXT' ? 'font-bold text-pickle-neon' : 'text-mist'}`}>{COURT_STATE[court.state]}</span>
-                </div>
-                {court.teamA.length > 0 && (
-                  <div className="mt-2 grid gap-1 text-[15px]">
-                    <TeamNames side="A" names={court.teamA} emphasis={myName ? [myName] : []} />
-                    <TeamNames side="B" names={court.teamB} emphasis={myName ? [myName] : []} />
-                  </div>
-                )}
-              </article>
-            ))}
-          </div>
+          {courtsGrid}
           <Panel className="mt-4">
             <h2 className="font-bold">Waiting</h2>
             <ol className="mt-2 flex flex-wrap gap-1.5 text-sm">
@@ -103,6 +113,7 @@ export default function ViewerBoard({ viewer, status, invalidHostLink, revokedCa
           </Panel>
         </aside>
       </div>
+      )}
       <footer className="grid gap-3 pt-2 text-center">
         <p className="text-xs text-mist">Results are deleted from the live service 7 days after the last change to this session ({expires}). No sign-up; this phone only remembers which name you picked.</p>
         <a href="/pickleball/new" className="mx-auto inline-flex min-h-11 items-center rounded-xl border border-navy-700 px-5 hover:bg-navy-900">Run your own games, free</a>
