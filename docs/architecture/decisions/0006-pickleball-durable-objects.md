@@ -1,7 +1,7 @@
 # ADR 0006: Durable Objects for Pickleball session coordination
 
 ## Status
-Accepted
+Accepted (amended 2026-10, see "Amendment" at the end)
 
 ## Context
 Devlab Pickleball's Open Play queue needs concurrency-safe court assignment:
@@ -42,3 +42,12 @@ top of it — see the commit implementing this ADR for that verification.
   later (Phase 6 needs a WebSocket hub regardless). Rejected in favor of
   solving both problems with one primitive, per user confirmation before
   this phase began.
+
+## Amendment (2026-10, Pickleball 2.0)
+`SessionCoordinatorDO` was deleted with the logged-in app it served (wrangler
+tag `v4`, `deleted_classes`). The free sessions that replaced it use the same
+pattern with one change: `OpenSessionDO` (one per session,
+`idFromName(publicCode)`) keeps the session in memory after one load from D1 and
+writes only the changed rows per command, instead of re-deriving from D1 on every
+call. D1 is still the source of truth. The custom entrypoint stays, for
+`OpenSessionDO`, `RateLimiterDO` and `scheduled()`.

@@ -1,5 +1,7 @@
 # Devlab Pickleball — Realtime Infrastructure Design
 
+> **Superseded (2026-10-12).** This describes the logged-in operator app, retired in 2.0.0 by Phase 5 of `docs/superpowers/specs/2026-10-11-pickleball-free-open-play-design.md`. Kept as history: the routes, tables and files it names no longer exist.
+
 **Sub-project 1 of 3 for Phase 4.1** (the other two — the operator SPA, and the scorekeeper/correction UI — are separate specs that build on this one). Parent spec: `docs/superpowers/specs/2026-08-24-devlab-pickleball-design.md` (§6, §9, §10, §11).
 
 ## Context

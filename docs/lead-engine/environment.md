@@ -92,7 +92,7 @@ and `wrangler.jsonc`.
 | `LEAD_*_WORKFLOW` (×5) | Workflows | **No** | Commented out. See [cloudflare-workflows.md](cloudflare-workflows.md). |
 | `MAILBOX_BUCKET` | R2 | For the mailbox | `devlab-mailbox` / `devlab-mailbox-preview`. Raw `.eml` and attachments. **Private — never the public `MEDIA_BUCKET`.** Commented out until the buckets exist; absent, mail is still stored and Diagnostics reports that originals are not. See [mailbox.md](mailbox.md). |
 
-`IMAGES`, `MEDIA_BUCKET` (R2), `PICKLEBALL_DB` and `SESSION_COORDINATOR` exist
+`IMAGES`, `MEDIA_BUCKET` (R2), `PICKLEBALL_DB` and `OPEN_SESSION` exist
 on the Worker but are not used by this engine. `RATE_LIMITER` is used by the
 outbox endpoints.
 

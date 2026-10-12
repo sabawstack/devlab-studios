@@ -1,5 +1,7 @@
 # Devlab Pickleball — Phase 1 (Foundation) Implementation Plan
 
+> **Superseded (2026-10-12).** This describes the logged-in operator app, retired in 2.0.0 by Phase 5 of `docs/superpowers/specs/2026-10-11-pickleball-free-open-play-design.md`. Kept as history: the routes, tables and files it names no longer exist.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Stand up the isolated Pickleball subsystem's foundation — its own D1 database, Google-OAuth-based multi-org auth with RBAC, and CRUD for organizations/memberships/players/venues/courts/sessions — with a minimal SPA shell an operator can actually log into.

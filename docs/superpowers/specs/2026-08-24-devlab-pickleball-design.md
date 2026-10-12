@@ -1,5 +1,7 @@
 # Devlab Pickleball — Design Spec
 
+> **Superseded (2026-10-12).** This describes the logged-in operator app, retired in 2.0.0 by Phase 5 of `docs/superpowers/specs/2026-10-11-pickleball-free-open-play-design.md`. Kept as history: the routes, tables and files it names no longer exist.
+
 **Status:** Draft for review
 **Date:** 2026-08-24
 **Scope:** Full architecture and data model for the Devlab Pickleball operational subsystem. Implementation proceeds phase-by-phase from this spec (see §14).

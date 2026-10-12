@@ -1,5 +1,7 @@
 # Devlab Pickleball Phase 5 — Performance/OPI Backend Implementation Plan
 
+> **Superseded (2026-10-12).** This describes the logged-in operator app, retired in 2.0.0 by Phase 5 of `docs/superpowers/specs/2026-10-11-pickleball-free-open-play-design.md`. Kept as history: the routes, tables and files it names no longer exist.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build the OPI aggregation engine (session + all-time snapshots), wire it into game finalization and correction/reopen, and replace the two placeholder algorithms Phases 3-4 deliberately left as marked seams: Open Play's midpoint-split team pairing (`balanceTeams`) and queue selection's missing repeat-avoidance tiebreak.

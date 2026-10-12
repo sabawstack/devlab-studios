@@ -1,5 +1,7 @@
 # Devlab Pickleball Phase 6 Remainder + Performance UI Implementation Plan
 
+> **Superseded (2026-10-12).** This describes the logged-in operator app, retired in 2.0.0 by Phase 5 of `docs/superpowers/specs/2026-10-11-pickleball-free-open-play-design.md`. Kept as history: the routes, tables and files it names no longer exist.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build the UI half of Phase 5 (leaderboard, player profile) that Plan D's backend already supports, plus the remaining pieces of Phase 6 the spec calls for: QR sharing of the public link, a TV/kiosk display variant of the public live view, and the plain `/pickleball/methodology` page.

@@ -1,5 +1,7 @@
 # Devlab Pickleball Operator UI — Foundation Implementation Plan
 
+> **Superseded (2026-10-12).** This describes the logged-in operator app, retired in 2.0.0 by Phase 5 of `docs/superpowers/specs/2026-10-11-pickleball-free-open-play-design.md`. Kept as history: the routes, tables and files it names no longer exist.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build the foundation every later operator-UI plan depends on: the API client, the WebSocket realtime hook, the session-scoped layout route, and the three simplest real pages (Players, Venues, Sessions list/create, and a session's overview page) — establishing this codebase's first-ever UI-level Playwright e2e pattern along the way.

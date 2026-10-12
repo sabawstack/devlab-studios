@@ -1,5 +1,7 @@
 # Devlab Pickleball Fixed Pairs Implementation Plan
 
+> **Superseded (2026-10-12).** This describes the logged-in operator app, retired in 2.0.0 by Phase 5 of `docs/superpowers/specs/2026-10-11-pickleball-free-open-play-design.md`. Kept as history: the routes, tables and files it names no longer exist.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make `FIXED_PAIRS` a real session type — partners stay together, the queue's unit of work becomes the pair, and a fixed-pairs session can actually be run from check-in to finished game.

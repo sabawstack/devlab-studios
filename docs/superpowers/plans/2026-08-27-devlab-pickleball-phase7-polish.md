@@ -1,5 +1,7 @@
 # Devlab Pickleball Phase 7 (Polish) Implementation Plan
 
+> **Superseded (2026-10-12).** This describes the logged-in operator app, retired in 2.0.0 by Phase 5 of `docs/superpowers/specs/2026-10-11-pickleball-free-open-play-design.md`. Kept as history: the routes, tables and files it names no longer exist.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Close out the Devlab Pickleball sub-project's final phase: an accountability-focused audit log (schema, write points, ADMIN-only UI), an operators/roles management UI, a consolidated facilitator dashboard, and the remaining documentation deliverables.

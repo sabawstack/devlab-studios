@@ -10,7 +10,7 @@ Snapshot as of 2026-07-31, taken as Phase 0 of the Astro/CMS rebuild program (se
 | `MEDIA_BUCKET` | R2 bucket | `devlab-studios` |
 | `ASSETS` | Static assets | `./dist` (SPA fallback) |
 | `IMAGES` | Cloudflare Images | Responsive variants via `optimizeImage()` |
-| `SESSION_COORDINATOR` | Durable Object | `SessionCoordinatorDO` (Pickleball) |
+| `OPEN_SESSION` | Durable Object | `OpenSessionDO` (Pickleball, one per free session) |
 | `RATE_LIMITER` | Durable Object | `RateLimiterDO` (shared limiter) |
 | `AI` | Workers AI | Daily Insights digest summaries only |
 

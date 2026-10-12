@@ -1,5 +1,7 @@
 # Devlab Pickleball — Platform Admin & Self-Serve Pilot Orgs Design
 
+> **Superseded (2026-10-12).** This describes the logged-in operator app, retired in 2.0.0 by Phase 5 of `docs/superpowers/specs/2026-10-11-pickleball-free-open-play-design.md`. Kept as history: the routes, tables and files it names no longer exist.
+
 Extends the existing Devlab Pickleball subsystem (`docs/superpowers/specs/2026-08-24-devlab-pickleball-design.md` and its successors). This spec covers three additions on top of the already-shipped, single-org-per-invite system: a platform-level super-admin tier, self-serve pilot organization creation gated by a super-admin-issued invite, and per-role operator quotas per organization. It also covers a small, unrelated-in-code but related-in-purpose public marketing addition: a "Be a beta-tester" CTA on the main site's `/services` page.
 
 ## Context

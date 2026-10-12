@@ -132,7 +132,13 @@ counter in `contact.ts` did not survive across isolates and is gone.
 | `admin-lead-retry` | admin email, else IP | 10 per 5 min |
 | `admin-media-write` | admin email, else IP | 60 per 5 min |
 | `digest-generate` | client IP | 4 per hour |
-| `public-state` (Pickleball) | client IP | 60 per min |
+| `open-create` (Pickleball) | client IP | 10 per day; fails closed |
+| `open-state` (Pickleball) | client IP | 1200 per min |
+| `open-ws` (Pickleball) | client IP | 300 connects per min |
+| `open-host-ip` (Pickleball) | client IP | 600 per min |
+| `open-checkin-ip` (Pickleball) | client IP | 30 per 10 min; fails closed |
+| `open-host-account` (Pickleball) | client IP | 120 per min |
+| `open-host-signin` (Pickleball) | client IP | 20 per 10 min |
 
 `clientIp()` prefers `cf-connecting-ip`, which Cloudflare's edge sets and a
 caller cannot spoof; `x-forwarded-for` is only a fallback for non-edge contexts.

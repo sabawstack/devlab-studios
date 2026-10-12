@@ -1,5 +1,7 @@
 # Devlab Pickleball — OPI Methodology
 
+> **Retired (2.0.0).** OPI and its public page (`/pickleball/methodology`) were removed with the logged-in app. One idea survives: free-session standings break ties by the same per-game share of points won (`src/lib/pickleball/open/standings.ts`). The rest of this document is history.
+
 OPI (Open Play Performance Index) is a Devlab-original performance metric.
 It is **not** an official USA Pickleball rating, DUPR, UTR-P, or Elo system,
 and the software computing it is not USA-Pickleball-certified — this

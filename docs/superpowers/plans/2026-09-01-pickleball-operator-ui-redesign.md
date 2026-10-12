@@ -1,5 +1,7 @@
 # Pickleball Operator UI/UX Redesign Implementation Plan
 
+> **Superseded (2026-10-12).** This describes the logged-in operator app, retired in 2.0.0 by Phase 5 of `docs/superpowers/specs/2026-10-11-pickleball-free-open-play-design.md`. Kept as history: the routes, tables and files it names no longer exist.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Transform the authenticated Pickleball operator app (`src/pickleball-app/`) into a premium, game-dashboard-style experience — reusing Devlab Studio's existing design tokens exclusively — without touching any backend/scoring/queue/OPI/auth/DB/Durable-Object semantics.

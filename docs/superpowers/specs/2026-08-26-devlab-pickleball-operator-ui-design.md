@@ -1,5 +1,7 @@
 # Devlab Pickleball — Operator SPA, Scorekeeper, and Public Live View Design
 
+> **Superseded (2026-10-12).** This describes the logged-in operator app, retired in 2.0.0 by Phase 5 of `docs/superpowers/specs/2026-10-11-pickleball-free-open-play-design.md`. Kept as history: the routes, tables and files it names no longer exist.
+
 **Sub-project 2 of Phase 4.1** (sub-project 1, realtime infrastructure, is merged to `main`). This spec covers the entire remaining UI surface for Phase 4.1: the authenticated operator SPA (players/venues/sessions management, check-in, queue, courts, games), the interactive scorekeeper/correction screen, and a plain (non-TV-styled) public live view page. Parent specs: `docs/superpowers/specs/2026-08-24-devlab-pickleball-design.md` (§7, §11), `docs/superpowers/specs/2026-08-25-devlab-pickleball-realtime-design.md` (the WebSocket layer this UI consumes).
 
 ## Context

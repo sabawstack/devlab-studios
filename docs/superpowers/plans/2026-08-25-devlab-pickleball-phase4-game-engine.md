@@ -1,5 +1,7 @@
 # Devlab Pickleball — Phase 4 (Game Engine) Implementation Plan
 
+> **Superseded (2026-10-12).** This describes the logged-in operator app, retired in 2.0.0 by Phase 5 of `docs/superpowers/specs/2026-10-11-pickleball-free-open-play-design.md`. Kept as history: the routes, tables and files it names no longer exist.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A rally-driven, event-sourced side-out scoring engine — record who won each rally, derive score/serve/side-out automatically, undo the last rally, finish/abandon a game, and reopen+correct a finalized one — all serialized through the existing `SessionCoordinatorDO`, with the event log as canonical state and the `games` row as a rebuildable projection.

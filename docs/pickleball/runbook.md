@@ -1,129 +1,31 @@
-# Devlab Pickleball — Local Development Runbook
+# Devlab Pickleball — Runbook
 
-## One-time setup
+Devlab Pickleball is the free, no-login session tool at `/pickleball`
+(`architecture.md`, `schema.md`, `realtime.md`). The logged-in operator app that
+came before it was retired in 2.0.0; "Retire the legacy tables" below records how
+its data was removed.
 
-1. Create a Google OAuth 2.0 Client ID (Web application) in Google Cloud Console.
-   Authorized redirect URI: `http://localhost:8787/api/pickleball/auth/google/callback`.
-2. Add to your local `.dev.vars` (gitignored):
+## Local development
+
+1. Apply migrations: `npx wrangler d1 migrations apply devlab-pickleball --local`.
+2. `npm run build`, then `npx wrangler dev --local`, and open
+   `http://localhost:8787/pickleball/new`. No account is needed to run a session.
+3. Host sign-in for the DUPR export (optional): add to `.dev.vars` (gitignored)
    ```
    GOOGLE_OAUTH_CLIENT_ID=<from Google Cloud Console>
    GOOGLE_OAUTH_CLIENT_SECRET=<from Google Cloud Console>
-   PICKLEBALL_SESSION_SECRET=<any long random string>
    PICKLEBALL_OAUTH_REDIRECT_BASE_URL=http://localhost:8787
-   PICKLEBALL_TEST_AUTH_ENABLED=true
    ```
-3. Apply migrations: `npx wrangler d1 migrations apply devlab-pickleball --local`
-4. Bootstrap your first organization:
-   ```bash
-   npm run pickleball:create-organization -- "Your Club Name" "your-club-slug" "your-email@example.com" > /tmp/org.sql
-   npx wrangler d1 execute devlab-pickleball --local --file=/tmp/org.sql
-   ```
-5. Run `npx wrangler dev --local`, visit `http://localhost:8787/pickleball/app`, sign in with Google.
+   with `http://localhost:8787/api/pickleball/auth/google/callback` as an
+   authorized redirect URI. For e2e, `PICKLEBALL_TEST_AUTH_ENABLED=true` instead
+   lets `POST /api/pickleball/open/host/test-login` stand in for Google.
 
 ## Running tests
 
-- Unit: `npm run test:unit -- src/lib/pickleball src/worker/pickleball`
-- E2E: `npx playwright test --project=worker tests/e2e/pickleball/` (requires the bootstrap step above to have run first, so the `test-login` fixture email has an active membership)
-  - The cross-organization isolation test needs a *second* organization and an org-scoped scoring
-    ruleset, neither of which any Phase 1 API can create. `scripts/pickleball/apply-e2e-fixtures.mjs`
-    seeds them idempotently (`e2e-cross-org-b`, `org-b-admin@example.com`,
-    `e2e-cross-org-b-ruleset`); `playwright.config.js` runs it as part of the `worker` project's
-    `wrangler dev` command, so it happens automatically *before* the server opens the local D1.
-    If you start `wrangler dev` yourself and let Playwright reuse it, run the script once by hand
-    first: `node scripts/pickleball/apply-e2e-fixtures.mjs`.
-
-## Demo data
-
-`scripts/pickleball/seed/generate-demo-seed.mjs` prints a fresh-DB-only demo dataset (spec §13) —
-mirrors `scripts/cms/generate-project-seed.mjs`'s pattern (print SQL, apply with `wrangler d1
-execute --file=`), not idempotent (plain INSERTs, no `ON CONFLICT`). Produces 1 organization, 1
-venue, 4 courts, 16 players, 1 DRAFT session, 1 LIVE session with a populated queue (8 players) and
-two finished games, plus an extra completed history session whose games are there purely to give
-different players eligible-games counts spanning all three OPI confidence tiers (PROVISIONAL,
-DEVELOPING, ESTABLISHED). Also seeds one org-scoped custom scoring ruleset, demoing the Settings
-page.
-
-```bash
-npm run pickleball:seed:demo -- your-email@example.com   # writes scripts/pickleball/seed/demo-seed.sql
-npx wrangler d1 execute devlab-pickleball --local --file=scripts/pickleball/seed/demo-seed.sql
-```
-
-The email argument becomes the seeded organization's ADMIN `invited_email` (defaults to
-`admin@example.com`) — sign in with that Google account to reach it. Only ever run this against a
-database that doesn't already have `seed-org` in it.
-
-## Platform admin
-
-The platform admin & self-serve pilot org feature (spec
-`2026-09-01-devlab-pickleball-platform-pilot-design.md`) lets a small set of
-platform admins invite pilot clubs to self-serve create their own
-organization, and suspend/reactivate any organization. There is no UI or API
-to grant `users.is_platform_admin` itself — this is deliberate (spec
-Decision 1): it's a platform-level bootstrap action, not something any
-in-app role should be able to grant itself or anyone else.
-
-### Promote the first platform admin
-
-The only way to set the flag in production is a direct SQL statement against
-the remote D1 database — the same pattern `scripts/pickleball/create-organization.mjs`
-uses for org bootstrap, just inline since there's only one column to touch:
-
-```bash
-npx wrangler d1 execute devlab-pickleball --remote --command "UPDATE users SET is_platform_admin = 1 WHERE email = '<email>'"
-```
-
-The target user must already have signed in once (via Google OAuth) so their
-`users` row exists — if the `UPDATE` matches zero rows, have them sign in
-first, then re-run it. Locally, run the same command against the local DB
-(drop `--remote`, or point at `devlab-pickleball-preview` for the preview
-environment).
-
-### Issue a pilot invite
-
-A platform admin can invite a pilot either from the operator app's Platform
-page (`/pickleball/app/platform`, visible only to `is_platform_admin`
-sessions) or directly via the API:
-
-```bash
-curl -X POST http://localhost:8787/api/pickleball/platform/org-invites \
-  -H 'Content-Type: application/json' \
-  --cookie "<platform admin's session cookie>" \
-  -d '{"invitedEmail": "pilot@example.com", "maxAdmins": 1, "maxFacilitators": 3, "maxScorekeepers": 5}'
-```
-
-`maxAdmins`/`maxFacilitators`/`maxScorekeepers` are optional and nullable —
-omit any of them (or pass `null`) for an unlimited seat cap on that role. The
-response's `acceptUrl` is what gets sent to the invitee; they sign in with
-Google, land on the accept-invite page, and create their own club, which
-carries the invite's seat caps onto the new `organizations` row.
-
-### Suspend / reactivate an organization
-
-From the Platform page's organizations list, or via the API:
-
-```bash
-# Suspend — 403s every org-scoped request against it. Its public spectator
-# route is the one exception: it 404s instead, matching the same "not found"
-# shape/status it already returns for an unknown or revoked code, so an
-# anonymous spectator can't distinguish "suspended" from "doesn't exist"
-curl -X POST http://localhost:8787/api/pickleball/platform/organizations/<organizationId>/suspend \
-  -H 'Content-Type: application/json' --cookie "<platform admin's session cookie>" -d '{}'
-
-# Reactivate
-curl -X POST http://localhost:8787/api/pickleball/platform/organizations/<organizationId>/reactivate \
-  -H 'Content-Type: application/json' --cookie "<platform admin's session cookie>" -d '{}'
-```
-
-Both routes authenticate via `requirePlatformAdmin` (Google identity +
-`is_platform_admin`, no org membership required), so a platform admin can
-suspend and later reactivate an organization even if it's the only org they
-personally belong to. This no-lockout guarantee extends to the operator SPA
-itself: `/auth/session` (session bootstrap, called on every page load) and
-`/auth/switch-org` also recognize a platform admin whose `activeOrgId`
-points at the SUSPENDED org and return a valid session with
-`activeOrgId: null` instead of 403ing them out to the login page — so the
-Platform page (gated only on `isPlatformAdmin`) stays reachable in-browser
-to reactivate the org, not just via direct API calls.
+- Unit: `npm run test:unit -- src/lib/pickleball src/worker/pickleball src/worker/repositories/pickleball`
+- E2E: `npx playwright test --project=worker tests/e2e/pickleball/`. The `worker`
+  project's server command applies the pickleball migrations to the local D1
+  itself; no fixtures are needed.
 
 ## Free open play
 
@@ -344,7 +246,62 @@ failures `pickleball_open.ws_error`; clients only ever see a generic 500.
   `/pickleball/my-sessions` and reopens it (a new host link; at most 10 extra
   per session). Otherwise it expires on its own 7 days after its last activity.
 
+### Retire the legacy tables (migration 0020)
+
+`0020_drop_legacy_pickleball.sql` drops the operator app's 27 tables and its
+trigger. It was applied to preview, then to production with the 2.0.0 release,
+in this order, each command with `CLOUDFLARE_ACCOUNT_ID=<personal account ID>`
+and a freshly pasted `CLOUDFLARE_API_TOKEN` inline (`--env preview` for preview):
+
+1. Deploy the code that no longer uses the tables first (preview: push
+   `development`; production: the release deploy of `main`).
+2. `npx wrangler d1 migrations list <db> --remote`: `0020` must be the only
+   pending file. `migrations apply` cannot stop at a file, so if `0016`–`0019`
+   are pending too, stop and ask the owner.
+3. List the tables and count the 27 legacy tables' rows (Task 8 of
+   `docs/superpowers/plans/2026-10-12-pickleball-free-open-play-phase5.md` has
+   the exact SQL). Production held 3 `users`, 1 `organizations`, 6
+   `audit_events` (the owner's own accounts) and at most the 1 seeded
+   `scoring_rulesets` row; anything else means stop.
+4. Record a Time Travel bookmark: `npx wrangler d1 time-travel info <db>`.
+5. Back up outside the repo:
+   `npx wrangler d1 export <db> --remote --output "$HOME/devlab-backups/pickleball-2.0/<db>-before-0020.sql"`.
+6. `npx wrangler d1 migrations apply <db> --remote`.
+7. Read the table list back: only `open_*`, `hosts`, `host_logins` and D1's own
+   `d1_migrations` / `_cf_*` remain, with no trigger.
+
+To restore, either `npx wrangler d1 time-travel restore <db> --bookmark=<bookmark>`
+(within 30 days; it rolls back **everything** after the bookmark, including free
+sessions), or apply the export to a new database and copy rows out of it.
+
+### Redirects for the retired app's links
+
+The old URLs answer through the CMS `redirects` table (`DB`, not
+`PICKLEBALL_DB`), consulted by `src/middleware.ts` only on a 404; a `from_path`
+ending in `/*` covers everything below it. Rows, all 301: `/pickleball/app` and
+`/pickleball/app/*` → `/pickleball/new`, `/pickleball/methodology` →
+`/pickleball/rotation`, `/pickleball/live/*` → `/pickleball`. They are written
+with guarded inserts (never the seed script), so re-running is a no-op:
+
+```sql
+INSERT INTO redirects (id, from_path, to_path, status_code, note, created_at, updated_at)
+SELECT 'redirect-pickleball-app', '/pickleball/app', '/pickleball/new', 301, 'Pickleball 2.0: the logged-in app was retired.', datetime('now'), datetime('now')
+WHERE NOT EXISTS (SELECT 1 FROM redirects WHERE from_path = '/pickleball/app');
+INSERT INTO redirects (id, from_path, to_path, status_code, note, created_at, updated_at)
+SELECT 'redirect-pickleball-app-all', '/pickleball/app/*', '/pickleball/new', 301, 'Pickleball 2.0: every page of the retired app.', datetime('now'), datetime('now')
+WHERE NOT EXISTS (SELECT 1 FROM redirects WHERE from_path = '/pickleball/app/*');
+INSERT INTO redirects (id, from_path, to_path, status_code, note, created_at, updated_at)
+SELECT 'redirect-pickleball-methodology', '/pickleball/methodology', '/pickleball/rotation', 301, 'Pickleball 2.0: OPI retired; the rotation page explains the new engine.', datetime('now'), datetime('now')
+WHERE NOT EXISTS (SELECT 1 FROM redirects WHERE from_path = '/pickleball/methodology');
+INSERT INTO redirects (id, from_path, to_path, status_code, note, created_at, updated_at)
+SELECT 'redirect-pickleball-live-all', '/pickleball/live/*', '/pickleball', 301, 'Pickleball 2.0: old live and TV links (QR codes) of the retired app.', datetime('now'), datetime('now')
+WHERE NOT EXISTS (SELECT 1 FROM redirects WHERE from_path = '/pickleball/live/*');
+```
+
+They can also be edited on the admin's Redirects screen. Deleting one turns
+those old links into 404s, nothing worse.
+
 ## Notes
 
 - `PICKLEBALL_TEST_AUTH_ENABLED` must never be set in `wrangler.jsonc`'s committed `vars` — it exists only for local/CI `.dev.vars`.
-- Organization creation is invite-only by design — there is no unsolicited self-serve signup. New organizations are created either via `scripts/pickleball/create-organization.mjs`, or by a pilot accepting a platform admin's org invite (see "Platform admin" above).
+- Nobody needs an account to run or view a session. The only accounts are `hosts`, created when a host signs in with Google for the DUPR export.

@@ -1,74 +1,53 @@
 # Devlab Pickleball — Realtime
 
-One Durable Object instance per session (`SessionCoordinatorDO`, keyed by
-`idFromName(sessionId)`) serializes every mutating command for that session
-and broadcasts a full state snapshot to every connected WebSocket client
-after each successful mutation. See
-`docs/architecture/decisions/0006-pickleball-durable-objects.md` for why a
-DO was chosen over, e.g., D1 optimistic locking.
+One `OpenSessionDO` per free session (`src/worker/pickleball/open/OpenSessionDO.ts`,
+binding `OPEN_SESSION`, `idFromName(publicCode)`) serializes every command and
+holds that session's WebSockets. D1 is the source of truth: the object loads the
+session once, keeps it in memory, writes only changed rows per command in one
+`db.batch()`, updates memory after the batch succeeds, and broadcasts from
+memory. See ADR 0006 and `architecture.md`.
 
-## Channels
+## The socket
 
-- **Operator channel** — `GET /pickleball/rt/:sessionId`, requires the
-  signed session cookie (`requirePickleballSession`) and an active
-  membership in the session's organization. The Astro route resolves and
-  authorizes the session first, then forwards the upgrade request to the DO
-  with `X-Pickleball-Channel: operator` and `X-Pickleball-Session-Id`
-  headers — the query-string forms described in earlier design drafts
-  (`?role=operator`) were not what shipped. Carries the full internal state:
-  registration/attendance detail, queue internals, audit-adjacent fields
-  (never raw emails beyond what the role already sees via REST).
-- **Public channel** — `GET /pickleball/rt/public/:code`, no auth required.
-  Resolves the public code to a session via `public_session_tokens`
-  (404 if unknown, revoked, or `public_view_enabled` is off), then forwards
-  to the DO with `X-Pickleball-Channel: public`. As with the operator
-  channel, the code is a path segment (`/pickleball/rt/public/:code`), not
-  a `?code=` query parameter. Carries a strictly sanitized DTO built by a
-  dedicated `toPublicSessionView(state)` allowlist mapper (never the
-  internal shape with fields stripped — so a newly added internal field can
-  never leak by omission): session id/name/type/status, court id/name/status/current
-  game id, and per-game id/court/format/status/scores/serving side/final
-  result. No player-identifying fields (no session_player ids, no display
-  names) and no queue or leaderboard data are exposed — the public
-  sanitized leaderboard named in `architecture.md`'s "Deliberately not
-  built" list is a disclosed future increment, not part of this DTO today.
+`GET /pickleball/rt/open/{code}` with `Upgrade: websocket` (300 connects per
+minute per IP, bucket `open-ws`). The route forwards the upgrade to the session's
+object with `X-Open-Code`; the object answers 404 if the session does not exist
+or has expired. Sockets hibernate between messages.
 
-## Wire format
+Every socket starts as a **viewer** and immediately receives
+`{ type: 'VIEWER', payload }`. To become the host or a captain, the client sends
+`{ type: 'AUTH', hostKey }` or `{ type: 'AUTH', captainKey }` (the secret from
+the URL fragment, at most 128 characters). Answers:
 
-Every message is `{ type: 'STATE', sessionId, seq, payload: <full snapshot> }`
-— a full-snapshot-not-diff protocol by design (Decision 3 of the realtime
-design), so a client never needs merge/patch logic: on any message, replace
-the whole local view with `payload`. `seq` is an in-memory monotonic counter
-that resets to 0 whenever the DO hibernates and wakes fresh; it is
-informational only (useful for debugging/ordering in logs) and clients never
-compare it against a prior value, because every message already carries a
-complete snapshot rather than a diff to reconcile. `useSessionRealtime`
-(`src/pickleball-app/lib/useSessionRealtime.js`) reads only `parsed.payload`
-off each `STATE` message and ignores `sessionId`/`seq` entirely.
+| Message | Meaning |
+|---|---|
+| `{ type: 'HOST', payload }` | The key is the host's (the session's own or an extra host link); host snapshots follow |
+| `{ type: 'CAPTAIN', payload }` | A live captain link; captain snapshots follow |
+| `{ type: 'AUTH_FAILED' }` | The key was refused; the client forgets it |
+| `{ type: 'AUTH_ERROR' }` | The server failed while checking; the client keeps the key, closes and reconnects |
+| `{ type: 'CAPTAIN_REVOKED' }` | The host turned this captain link off; the socket is now a viewer |
 
-## Reconnect behavior
+`{ type: 'RESYNC' }` asks for the current snapshot again. After every successful
+command each socket gets the snapshot for its role, each built at most once per
+broadcast. Snapshots are allowlists (`src/lib/pickleball/open/snapshot.ts`): the
+viewer one carries names, courts, matches, results and standings, never skill,
+DUPR IDs, secrets, claims or host data.
 
-`useSessionRealtime` (`src/pickleball-app/lib/useSessionRealtime.js`) opens
-the socket, tracks `status` (`'connecting' | 'open' | 'closed'`), and on
-close reconnects with capped exponential backoff
-(`nextBackoffDelayMs`: 1s, 2s, 4s, capped at 8s), keeping the last known
-snapshot visible rather than blanking the UI. A reconnect always gets a
-fresh full snapshot from the DO — there is no resync protocol to get wrong,
-because D1 already holds the true state regardless of client connectivity
-(§57 edge case #24).
+A deleted or purged session closes its sockets with code **4404**; the client
+then shows the "session ended" page and stops reconnecting.
 
-The public live view and TV/kiosk display additionally fall back to polling
-`GET /api/pickleball/public/:code/state` every 5 seconds whenever the socket
-isn't `'open'` (`usePublicSessionView`,
-`src/pickleball-app/lib/usePublicSessionView.js`) — graceful degradation so
-a public viewer's screen keeps advancing during a socket outage instead of
-freezing (spec §9).
+## Reconnect and polling
 
-## Concurrency guarantee
+`src/pickleball-open/lib/useOpenSession.js` loads the snapshot over HTTP first
+(`GET /api/pickleball/open/s/{code}/state`, or `…/host` / `…/captain` with the
+key header), then opens the socket. If the socket closes for any other reason,
+it polls the same route every 5 seconds and reconnects after 1, 2, 4, then every
+8 seconds, keeping the last snapshot on screen. A socket counts as live only once
+it has delivered the snapshot the page signed in for.
 
-Because the DO processes one request at a time, two simultaneous
-court-assignment calls for the same session are naturally serialized: the
-second call's reads already reflect the first call's writes. This is what
-makes `assignCourt` safe against a player being assigned to two courts at
-once without any client-side button-disabling — see the concurrency e2e
-test in `tests/e2e/pickleball/pickleball-queue.spec.js`.
+## Concurrency
+
+Commands go through `POST /api/pickleball/open/s/{code}/commands` to the same
+object, which runs them one at a time against memory. A result for a match that
+is already finished gets 409 with who saved it; a retried command with the same
+`idempotencyKey` returns the first response (`open_idempotency`).

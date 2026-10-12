@@ -1,19 +1,15 @@
 # Devlab Pickleball — Architecture
 
-Devlab Pickleball is an operational platform for running recreational pickleball
-sessions: check-in, queueing, court assignment, live scoring, statistics, a
-custom performance index (OPI), and anonymous realtime public viewing. It is
-not CMS content — it lives beside the existing public website and Admin CMS as
-a third, independent subsystem sharing one Astro/Worker deployment but nothing
-else load-bearing: separate D1 database, separate auth mechanism, separate
-session cookie, separate migrations, separate repositories, separate UI shell.
+Devlab Pickleball is a free public web tool for running doubles open play and
+casual tournaments with no account: a host creates a session, players follow a
+live QR board on their own phones, and everything about a session is deleted 7
+days after its last activity. The only accounts are optional Google sign-ins
+for hosts who want a DUPR export. It shares the Astro/Worker deployment with the
+public site and the Admin CMS, and nothing else load-bearing: its own D1
+database (`PICKLEBALL_DB`), migrations (`migrations/pickleball/`), repositories,
+schemas and UI.
 
-**Non-goal, stated everywhere this matters:** OPI is a Devlab-original metric,
-not an official USA Pickleball rating, DUPR, UTR-P, or Elo system. The scoring
-engine aligns with standard side-out scoring concepts but the software is not
-USA-Pickleball-certified.
-
-## Free open play (2026-10)
+## Free sessions
 
 Spec: `docs/superpowers/specs/2026-10-11-pickleball-free-open-play-design.md`.
 
@@ -21,9 +17,7 @@ Spec: `docs/superpowers/specs/2026-10-11-pickleball-free-open-play-design.md`.
 session at `/pickleball/new`, players scan a QR code to watch a live board at
 `/pickleball/s/{code}`, and the host records one final score per game. The
 session is deleted 7 days after its last activity. The logged-in operator app
-described in the rest of this document is **legacy until Phase 5** of that spec
-and is untouched by this feature; the two share only the `PICKLEBALL_DB`
-database and the Worker.
+that came before it was retired in Phase 5 (below).
 
 **Tables** (migration `0016_open_sessions.sql`): `open_sessions`,
 `open_courts`, `open_players`, `open_matches` and `open_idempotency`. None has a
@@ -94,7 +88,7 @@ diffs and the results CSV.
 - **Rules.** Keep-together / keep-apart pairs live in `settings_json` and are
   read through `normalizeSettings`.
 - **Scores.** Every result needs both scores (no winner-only). Standings order
-  by win rate, then OPI per-game points share, then head-to-head, then name.
+  by win rate, then the per-game share of points won, then head-to-head, then name.
 - **Captains.** `OpenSessionDO` resolves an actor per call: the host, or a
   captain whose key hash is in `open_captains` (`captain` role on commands and
   WebSocket). Captains are checked from memory on every call, so revoking a link
@@ -134,9 +128,9 @@ diffs and the results CSV.
   (`draw.ts`), its rules (`drawRules.ts`) and edits (`drawEdits.ts`),
   advancement and corrections (`progress.ts`), pair standings (`standings.ts`),
   the court loop (`courts.ts`) and the commands (`commands.ts`). It wraps the old
-  app's `generateFixtures`, `advanceBracket`, `nextPlayableFixture`,
+  app's pure `generateFixtures`, `advanceBracket`, `nextPlayableFixture`,
   `rankTournamentStandings` and `resolvePoolQualifiers` unchanged;
-  `reuse.test.ts` pins that they import nothing Phase 5 deletes.
+  `reuse.test.ts` pins that they import nothing Phase 5 deleted.
 - **Phases.** SETUP -> DRAFT (unrestricted edits, each re-validated) -> RUNNING
   (substitute off-court players; swap opponents only between unstarted games of
   the same round of the same pool or bracket) -> FINISHED (every game played;
@@ -175,10 +169,8 @@ diffs and the results CSV.
   SameSite=Lax, 30 days, `Path=/api/pickleball/open`. Every write that trusts
   the cookie must come from this site (`sameOrigin.ts`).
 - **Google.** `hostAuth.ts` reuses `oauth.js` (PKCE) and the one registered
-  `/api/pickleball/auth/google/callback`. When the `devlab_pb_oauth` cookie
-  (the legacy operator flow) is present the callback takes the legacy branch;
-  otherwise it hands host sign-ins to `finishHostSignIn` (the legacy branch goes
-  in Phase 5). Only a verified Google email is accepted. Outcomes return to the
+  `/api/pickleball/auth/google/callback`, which only calls `finishHostSignIn`
+  (its only caller since Phase 5). Only a verified Google email is accepted. Outcomes return to the
   starting page as `?signin=...`.
 - **Claim and access.** `OpenSessionDO` keeps `HostAccess` (claim and extra key
   hashes) beside the cached session and is its only writer: `claim` (write-once;
@@ -206,130 +198,49 @@ diffs and the results CSV.
   environment); with it on nothing is emailed and the response carries the
   message.
 - **Phase 5.** `phase5Safety.test.ts` pins that none of this imports what
-  Phase 5 deletes.
+  Phase 5 deleted.
 
-## Foundational pieces
+### Phase 5 (the logged-in app retired)
 
-1. **UI shell** — a React Router SPA island (`src/pickleball-app/`), mounted
-   at `src/pages/pickleball/app/[...path].astro` (`client:only="react"`),
-   mirroring the existing `admin-app/` pattern, for the authenticated operator
-   experience. The public marketing/methodology pages are plain Astro. The
-   public live view and TV/kiosk display are Astro pages with one React
-   island each for the realtime-subscribing widget.
-2. **Data isolation** — a dedicated D1 database, bound as `PICKLEBALL_DB`
-   (prod: `devlab-pickleball`, preview: `devlab-pickleball-preview`). Own
-   migrations folder `migrations/pickleball/`, own repositories
-   `src/worker/repositories/pickleball/`, own Zod schemas
-   `src/lib/schemas/pickleball/`.
-3. **Auth** — Google OAuth 2.0 + PKCE, hand-rolled against `fetch` and the
-   Web Crypto API (no `arctic` dependency — matches `adminAuth.js`'s own
-   hand-rolled-crypto convention; see the Phase 1 foundation plan for the
-   rationale). A stateless
-   HMAC-SHA256-signed session cookie (`devlab_pb_session`), independent of
-   the Admin CMS's password-based session. Memberships are invite-only: an
-   ADMIN creates a membership row for an email before that person ever
-   signs in.
-4. **Realtime & concurrency** — one Durable Object per pickleball session
-   (`SessionCoordinatorDO`), serializing every mutating command and
-   broadcasting WebSocket diffs to operators and public viewers. D1 is the
-   durable source of truth; the DO is a rehydratable coordinator, never the
-   only copy of anything. See `docs/architecture/decisions/0006-pickleball-durable-objects.md`
-   for why this pattern was introduced, and `realtime.md` for the wire
-   protocol.
-5. **Standings vs. OPI snapshots** — two deliberately different read models
-   over the same facts. `player_performance_snapshots` is the OPI store: a
-   row exists only once a player has finished an eligible game, which is the
-   right shape for an all-time leaderboard and the wrong one for a live
-   session board (it renders empty for the whole first game of every
-   session). The operator Standings page therefore reads
-   `listSessionStandings()`
-   (`src/worker/repositories/pickleball/sessionStandings.js`), which starts
-   from the attending roster and left-joins the snapshot, per-game W/L and
-   point totals, and an on-court flag; ranking is applied by the pure
-   `rankStandings()` (`src/lib/pickleball/standings.ts`). OPI itself is
-   unchanged: eligibility is still FINISHED games only, so an unplayed
-   player carries a null OPI and no rank rather than a misleading zero, and
-   an in-progress score never contributes. `leaderboard_min_games` still
-   decides who is *ranked* — it no longer decides who is *visible*.
-6. **Public pages** — `/pickleball` (landing) and `/pickleball/how-it-works`
-   (a nine-step operator walkthrough) are plain Astro on the shared dark
-   public shell, alongside `/pickleball/methodology`. Their artwork is
-   hand-authored SVG under `src/components/pickleball/art/`, imported into
-   `.astro` with **no** `client:*` directive, so the pages ship zero
-   JavaScript for illustration; the only hydrated island is the
-   request-access `ContactForm`, mounted `client:visible`. Two conventions
-   these pages must keep: they render inside `Layout.astro`'s own `<main>`
-   and must not open a second one, and **every factual claim in their copy
-   has to map to committed code.** Ten claims that did not were caught in
-   review before ship — the guard against a recurrence is
-   `tests/e2e/pickleball/pickleball-public-pages.spec.js`, which pins the
-   corrected phrasings verbatim, blocks copy about features that exist only
-   as API routes, and asserts the artwork never gains a hydration directive.
-7. **Fixed pairs** — a `FIXED_PAIRS` session changes the queue's unit of work
-   from *player* to *pair*. `session_pairs` (migration `0012`) is deliberately
-   a separate table from `teams`, not a variant of it: a team is per-game and
-   per-court and is released the moment its court is released, while a pair
-   persists across every game for the whole session. A queued pair inserts
-   two `queue_entries` rows sharing one `session_pair_id`, so the existing
-   "at most one open entry per session player" rule needs no change; the
-   queue engine groups the pair back into one entrant wherever it matters
-   (`listEligiblePairs`, `selectNextPairs`, and the queue page's single
-   `PairRow`). Eligibility and court assignment both require **both**
-   members to hold `AVAILABLE`, `CHECKED_IN` status — a pair with one member
-   out sits out entirely, never plays short-handed. `balanceTeams` is not
-   called for a fixed-pairs game: partners are fixed by definition, so
-   `SessionCoordinatorDO.assignCourt` seats the two selected pairs directly as
-   Team A and Team B. Swapping one member of an already-seated pair is
-   refused outright (`replaceAssignedPlayer`), and so is dissolving that
-   pair while it holds a court — there is no half-a-pair state this codebase
-   understands, and dissolving a seated pair used to delete the queue rows
-   recording its occupancy while leaving the court ASSIGNED, after which the
-   same player could be re-paired onto a second court. The operator releases
-   the court first, then dissolves and re-forms. `hasOpenAssignmentForPair`
-   is the single predicate every pair-mutating command consults. `teams.session_pair_id` (migration `0013`) exists
-   because a member's *current* pairing cannot answer "which pair actually
-   played this game" once anyone re-pairs mid-session; see `schema.md`'s
-   entry on that column for the failure mode this closes.
-8. **Tournaments (Phase C1)** — a round-robin bracket layered on top of
-   fixed pairs, not a new session concept: see "Schema constraint" below for
-   why a tournament is a `FIXED_PAIRS` session carrying
-   `pickleball_sessions.tournament_format` rather than a third
-   `session_type`. An operator enters `session_pairs` as
-   `tournament_entrants` (migration `0014`), then locks the bracket in one
-   `db.batch()` that assigns seeds, generates the full `ROUND_ROBIN` fixture
-   list (the pure `generateFixtures()`,
-   `src/lib/pickleball/tournament/generateFixtures.ts`) and sets
-   `bracket_locked_at` — a half-locked bracket (seeds without fixtures, or
-   fixtures without the lock) is exactly the inconsistent-state class Part B
-   kept having to fix, so this repeats that lesson rather than relearning it.
-   Court assignment for a tournament fixture reuses the ordinary court-and-
-   game machinery: the pure `nextPlayableFixture()`
-   (`src/lib/pickleball/tournament/nextPlayableFixture.ts`) picks the next
-   `READY` fixture whose entrants aren't already on another court, and
-   `SessionCoordinatorDO` seats its two entrants as Team A/B directly, the
-   same way it seats a fixed pair without calling `balanceTeams`. Finishing a
-   tournament fixture's game goes through the normal `FINISH_GAME` command,
-   with one deliberate difference: it writes that game's
-   `player_game_stats` rows with `eligible_for_opi = 0`, so a tournament game
-   is scored like any other game but never moves a player's `ALL_TIME` OPI —
-   spec §3.2's requirement that a tournament stay a self-contained,
-   OPI-neutral event. Standings are a second read model for the same reason
-   `sessionStandings.js` exists for Open Play: `listTournamentStandings()`
-   (`src/worker/repositories/pickleball/tournaments.js`) aggregates wins,
-   losses and points directly from `tournament_fixtures`/`games` —
-   deliberately not filtering on `eligible_for_opi`, since every tournament
-   game has that flag cleared and such a filter would report every entrant
-   0-0 — and the pure `rankTournamentStandings()`
-   (`src/lib/pickleball/tournament/rankTournamentStandings.ts`) applies spec
-   §3.7's ordering (wins, losses, point differential, then head-to-head) on
-   top. `source_a`/`source_b` on `tournament_fixtures` are unused by
-   `ROUND_ROBIN` — both entrants are known when fixtures are generated — but
-   exist now, ahead of any consumer, so that the elimination and pool formats
-   in C2–C4 (which fill a fixture from a previous fixture's winner/loser or a
-   pool rank) need no further migration against a table other fixtures
-   already reference. Operator-only today: the public/TV bracket view is C5,
-   and `pickleball-public-pages.spec.js` still blocks the word "tournament"
-   on both public pages until that phase ships it.
+- **Removed.** The operator SPA (`/pickleball/app`), invites
+  (`/pickleball/accept-invite/*`), the live and TV views (`/pickleball/live/*`),
+  the OPI methodology page, every `/api/pickleball/` route outside `open/`
+  except the Google callback, the operator session cookie and its middleware
+  gate, per-rally scoring, OPI, `SessionCoordinatorDO` (wrangler tag `v4`,
+  `deleted_classes`) and the 27 tables of migrations 0001–0015
+  (`0020_drop_legacy_pickleball.sql`, children first).
+- **Kept from it.** `oauth.js` (PKCE, now host sign-in only), `webCrypto.js`,
+  `RateLimiterDO`, and the five pure tournament modules in
+  `src/lib/pickleball/tournament/` that `reuse.test.ts` pins.
+- **The Google callback** (`/api/pickleball/auth/google/callback`, the
+  registered redirect URI) only calls `finishHostSignIn`.
+- **Old links** are rows in the CMS `redirects` table, which the middleware
+  reads only on a 404: `/pickleball/app` and `/pickleball/app/*` →
+  `/pickleball/new`, `/pickleball/methodology` → `/pickleball/rotation`,
+  `/pickleball/live/*` → `/pickleball`. A `from_path` ending in `/*` matches
+  everything below it (`findRedirect`, exact row first, then the longest
+  wildcard). The rows are written by hand per environment (`runbook.md`).
+- **Guards.** `src/worker/pickleball/retirement.test.ts` keeps the old routes,
+  pages, modules, Durable Object and secret from coming back;
+  `dropLegacy.test.ts` checks 0020 against the real foreign keys.
+
+## Shared foundations
+
+- **Data isolation.** A dedicated D1 database bound as `PICKLEBALL_DB`
+  (production `devlab-pickleball`, preview `devlab-pickleball-preview`), its own
+  migrations folder `migrations/pickleball/`, repositories in
+  `src/worker/repositories/pickleball/open/` and Zod schemas in
+  `src/lib/schemas/pickleball/open/`. Both databases live in the owner's
+  personal Cloudflare account.
+- **Durable Objects.** `OpenSessionDO` (one per session) and the shared
+  `RateLimiterDO`, exported from the custom entrypoint `src/worker.ts` (ADR 0006).
+- **Public pages** (`/pickleball`, `/pickleball/how-it-works`,
+  `/pickleball/rotation`) are plain Astro on the shared dark public shell. Their
+  artwork is hand-authored SVG in `src/components/pickleball/art/`, imported with
+  no `client:*` directive, so the pages ship no JavaScript for illustration; the
+  landing page's only hydrated island is the request-access `ContactForm`. Every
+  factual claim in their copy must map to shipped code, pinned by
+  `tests/e2e/pickleball/pickleball-public-pages.spec.js`.
 
 ### Schema constraint: CHECK clauses cannot be widened
 
@@ -341,54 +252,22 @@ through `ON DELETE CASCADE` when the old table is dropped, and
 a no-op inside a transaction and D1 wraps migration batches in one. The
 operation reports success while destroying data.
 
-`pickleball_sessions` alone is referenced by nine foreign keys across five
-migrations. So: model a new enum value as a **new nullable column** with its
-own CHECK (`ALTER TABLE ... ADD COLUMN` with a column-level CHECK does work,
-and is verified), or make the original CHECK wide enough up front. This is why
-a tournament is a `FIXED_PAIRS` session carrying a `tournament_format` rather
-than a third `session_type`.
-
-## Multi-tenancy & RBAC
-
-- **Organization** — a club/venue operator's tenant. All operational data is
-  scoped by `organization_id`.
-- **User** — an authenticated operator, identified by Google `sub`.
-- **OrganizationMembership** — join of User × Organization with a `role`
-  (`ADMIN` | `SESSION_FACILITATOR` | `SCOREKEEPER`) and `status` (`ACTIVE` |
-  `REVOKED`). A user can hold different roles in different organizations.
-- **Player** — a session participant, not an authenticated entity; belongs
-  to one organization, optionally links to a `user_id`.
-
-Every mutating and non-public-read endpoint validates the session cookie,
-resolves `(userId, activeOrgId)` → membership → role, and re-checks the
-resource's actual owning org against the request (never trusting a
-client-supplied `organization_id` blindly — an IDOR guard). The SPA hides
-controls the role can't use, but every command handler re-checks permissions
-independently server-side; see `src/lib/pickleball/permissions.ts` for the
-full role→permission matrix.
+`open_sessions` is referenced by every other free-session table, each with
+`ON DELETE CASCADE`, so rebuilding it would empty them all. Model a new enum
+value as a **new nullable column** with its own CHECK (`ALTER TABLE ... ADD
+COLUMN` with a column-level CHECK does work, and is verified), or write the
+original CHECK wide enough up front, as 0016 did for `kind`. Dropping a whole
+table is safe: 0020 dropped the retired app's 27 tables, children first.
 
 ## Phase history
 
 | Phase | Scope | Status |
 |---|---|---|
-| 1 | Foundation — migrations, OAuth, orgs/users/memberships/RBAC, CRUD, empty SPA shell | Complete |
-| 2 | Attendance — registration/check-in/availability | Complete |
-| 3 | Open Play core — queue engine, `SessionCoordinatorDO` scaffolding, court assignment | Complete |
-| 4 | Game engine — rulesets, side-out scoring, event log, undo, finalization, reopen/correction | Complete |
-| 5 | Performance — `player_game_stats`, OPI v1, snapshots, leaderboards, player profile | Complete |
-| 6 | Realtime & public — WebSocket broadcast, public live view, TV/kiosk display, QR sharing, methodology page | Complete |
-| 7 | Polish — audit log, operator management UI, dashboard consolidation, documentation | Complete |
-| A | Public pages — landing & guide rewrite, illustration system, request-access form, sign-in exit, services CTA | Complete |
-| B | Fixed pairs in Open Play — `session_pairs`, pair-aware queue/eligibility/assignment, pair statistics, guide gains a pairs section | Complete |
-| C1 | Tournaments, round robin — `tournament_format`/`bracket_locked_at`, `tournament_entrants`/`tournament_fixtures`, seeding, fixture generation and court assignment, OPI-neutral finishing, standings, operator UI | Complete |
-| C2 | Tournaments, single elimination — pure bracket generation and advancement (`94ac8d0`), persistence, play and correction (`81d6a70`), stranded-bracket fixes (`8568498`, `8a361e7`) | Complete |
-| C3 | Tournaments, pools to bracket — seeded qualification from pools into a bracket (`6d0a026`) | Complete |
-| C4 | Tournaments, double elimination — losers bracket (`73e7608`, `bbe4abc`) | Complete |
-| C5 | Public and TV bracket view, tournament documentation (`0c2ae5d`) | Complete |
-| Open play | Free, no-login open play — `open_*` tables, `OpenSessionDO`, live QR board, 7-day purge (migration `0016`); the operator app above is legacy until Phase 5 of that spec | Phase 4 built (preview), release pending |
+| Operator app (2026-08 to 2026-09) | Logged-in club platform: organizations and invites, Google sign-in, attendance, queue, per-rally scoring, OPI, live and TV views, fixed pairs, tournaments C1–C5 | Retired in Phase 5 |
+| Free sessions 1 | Anonymous create, roster, courts, paddle stack, final-score entry, live QR board, results CSV, 7-day purge, public pages rewritten (`0016`) | Built |
+| Free sessions 2 | Four stacking modes, keep together/apart, fairness panel, QR check-in, court captains, TV board (`0017`) | Built |
+| Free sessions 3 | Doubles tournaments (`0018`) | Built |
+| Free sessions 4 | Google host sign-in, claim, DUPR export email, My sessions, account deletion (`0019`) | Built |
+| Free sessions 5 | The operator app and its data retired (`0020`, wrangler `v4`) | Built (preview); production with the 2.0.0 release |
 
-**Deliberately not built** (disclosed, not overlooked): the public sanitized
-leaderboard extension to `toPublicSessionView` (spec §9 — deferred, requires
-a backend change out of scope for the UI-only plan that shipped the rest of
-Phase 6); a `/settings` page for "system defaults" (the spec reserves the
-route and a permission but never defines a single concrete setting).
+Which release shipped each phase is in `CHANGELOG.md`.
