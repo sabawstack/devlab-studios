@@ -66,8 +66,8 @@ export function applySecurityHeaders(response: Response, pathname: string, hostn
   // Even setting that aside, a plain `new Response(...)` would silently
   // drop the `webSocket` property, breaking the upgrade just as badly.
   // Security headers are meaningless on a 101 handshake response anyway, so
-  // it passes through completely untouched. See src/worker/pickleball/
-  // SessionCoordinatorDO.ts's fetch() for the response this guards.
+  // it passes through completely untouched. See src/worker/pickleball/open/
+  // OpenSessionDO.ts's fetch() for the response this guards.
   if (response.status === 101) {
     return response
   }

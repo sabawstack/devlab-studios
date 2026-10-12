@@ -70,8 +70,8 @@ export class NotFoundError extends Error {}
  * unexpected 5xx is the opposite: its message is whatever D1 or the runtime
  * happened to produce, which tells the admin nothing actionable while leaking
  * internal query text and table names. Those are logged server-side instead
- * (console.error being how logging reaches `wrangler tail` on Workers — see
- * worker/pickleball/SessionCoordinatorDO.ts) and answered generically.
+ * (console.error being how logging reaches `wrangler tail` on Workers) and
+ * answered generically.
  */
 export function adminErrorResponse(
   error: unknown,

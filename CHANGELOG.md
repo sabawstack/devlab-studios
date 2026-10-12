@@ -165,6 +165,7 @@ decided against that surface specifically:
 
 ### Removed
 - **Breaking — the next release is MAJOR (2.0.0).** Pickleball's logged-in operator app is retired (spec 2026-10-11 §12; it had no users). Removed: the operator SPA at `/pickleball/app`, `/pickleball/accept-invite/*`, the live and TV views at `/pickleball/live/*`, the OPI page `/pickleball/methodology`, the operator socket routes `/pickleball/rt/{sessionId}` and `/pickleball/rt/public/{code}`, and every `/api/pickleball/` route outside `open/` except the Google callback (organizations, memberships, platform, invites, venues, courts, players, rulesets, sessions, games and rally scoring, queue, pairs, tournaments, leaderboard, audit, public state, and the old auth routes). The operator session gate is gone from the middleware, and `/api/pickleball/auth/google/callback` now serves only host sign-in for the DUPR export.
+- `SessionCoordinatorDO`, the operator app's Durable Object: unbound in both environments and deleted with wrangler migration tag `v4` (`deleted_classes`), which also deletes every object it stored when each environment next deploys.
 
 ## [1.13.0] - 2026-09-23
 

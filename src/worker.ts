@@ -18,7 +18,6 @@
 // entrypoint could not export one; ADR 0006 already had to replace that
 // entrypoint for the Durable Objects, so the constraint no longer applies.
 import { handle } from '@astrojs/cloudflare/handler'
-import { SessionCoordinatorDO } from './worker/pickleball/SessionCoordinatorDO'
 import { RateLimiterDO } from './worker/RateLimiterDO'
 import { OpenSessionDO } from './worker/pickleball/open/OpenSessionDO'
 import { runDailyDigest } from './worker/digest/runDigest.js'
@@ -33,7 +32,7 @@ import {
   ReplyAnalysisWorkflow,
 } from './lead-engine/workflows/index'
 
-export { SessionCoordinatorDO, RateLimiterDO, OpenSessionDO }
+export { RateLimiterDO, OpenSessionDO }
 
 // Lead Intelligence Engine Workflows. Exported here because a Workflow class,
 // like a Durable Object, has to be exported from the Worker's entrypoint to be

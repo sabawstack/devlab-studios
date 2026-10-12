@@ -39,7 +39,6 @@ interface Env {
   PICKLEBALL_SESSION_SECRET?: string
   PICKLEBALL_OAUTH_REDIRECT_BASE_URL?: string
   PICKLEBALL_TEST_AUTH_ENABLED?: string
-  SESSION_COORDINATOR: DurableObjectNamespace<import('./worker/pickleball/SessionCoordinatorDO').SessionCoordinatorDO>
   RATE_LIMITER: DurableObjectNamespace<import('./worker/RateLimiterDO').RateLimiterDO>
   OPEN_SESSION: DurableObjectNamespace<import('./worker/pickleball/open/OpenSessionDO').OpenSessionDO>
 

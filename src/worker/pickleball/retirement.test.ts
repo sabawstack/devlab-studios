@@ -51,3 +51,24 @@ describe('the operator app is retired: routes and pages', () => {
     expect(source).not.toMatch(/requirePickleballSession|PICKLEBALL_API_PREFIX|authContext/)
   })
 })
+
+describe('the operator app is retired: SessionCoordinatorDO', () => {
+  const wrangler = read('wrangler.jsonc')
+
+  it('no environment binds it any more', () => {
+    expect(wrangler).not.toContain('SESSION_COORDINATOR')
+    expect(wrangler.match(/\{ "name": "OPEN_SESSION", "class_name": "OpenSessionDO" \}/g)).toHaveLength(2)
+    expect(wrangler.match(/\{ "name": "RATE_LIMITER", "class_name": "RateLimiterDO" \}/g)).toHaveLength(2)
+  })
+
+  it('production and preview each delete the class with tag v4, after its v1 tag', () => {
+    expect(wrangler.match(/\{ "tag": "v4", "deleted_classes": \["SessionCoordinatorDO"\] \}/g)).toHaveLength(2)
+    expect(wrangler.match(/\{ "tag": "v1", "new_sqlite_classes": \["SessionCoordinatorDO"\] \}/g)).toHaveLength(2)
+  })
+
+  it('the Worker no longer exports it and the env type no longer names it', () => {
+    expect(existsSync(join(ROOT, 'src/worker/pickleball/SessionCoordinatorDO.ts'))).toBe(false)
+    expect(read('src/worker.ts')).not.toContain('SessionCoordinatorDO')
+    expect(read('src/env.d.ts')).not.toContain('SESSION_COORDINATOR')
+  })
+})
