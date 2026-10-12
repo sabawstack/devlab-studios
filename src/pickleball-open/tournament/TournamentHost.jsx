@@ -54,6 +54,8 @@ export default function TournamentHost({ host, send, error, onClearError, tab, o
 
   // Stays open until the server accepts, so a refusal keeps its reason and the picks in the sheet.
   async function substitute(edit) {
+    // A retry must not leave the previous refusal on screen once it succeeds.
+    onClearError?.()
     const ok = await send({ type: 'SUBSTITUTE_PLAYER', ...edit })
     setSelected(null)
     if (ok) setSubbing(false)
