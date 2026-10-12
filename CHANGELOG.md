@@ -52,6 +52,7 @@ decided against that surface specifically:
 ## [Unreleased]
 
 ### Fixed
+- The navbar and footer logo fallback (used when the R2 logo cannot load) is an 88 px WebP of the bundled logo instead of the 839x1135 source PNG: 35.6 KB less per page in that case, which is what put `/profile` at 285.8 KB against its 280 KB image budget in e2e, where *.r2.dev does not resolve.
 - CMS Site Settings and the replace-all collection screens (e.g. Testimonials) stay locked until their stored content has loaded. Before, an edit made while loading was overwritten when the fetch landed, and Save in that window wrote the static fallback (or an empty list) over what was in D1.
 - CMS Site Settings stays locked when its load fails (except the no-database 503, where saving the fallback seeds D1) and says to press Refresh, instead of offering the static fallback for saving over settings it could not read. Replace-all collection screens remount when switching collection, offer Retry after a failed load, and lock their item controls while saving.
 - The request-body drain added for local dev is now narrow and off in production: only the inquiry, contact and lead-magnet 413 reads off the refused body, and only when `DRAIN_UNREAD_BODIES` is set (`.dev.vars`, the Playwright wrangler command). A deployed worker never waits on a large or slow body before refusing it. The earlier blanket drain in the middleware made the pickleball e2e suite drop 2-9 requests a run (0 without it) and is gone.

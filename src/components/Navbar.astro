@@ -2,7 +2,7 @@
 import PrimaryButton from './PrimaryButton.jsx'
 import AnimatedIcon from './icons/AnimatedIcon.jsx'
 import { Mail, Menu, X } from './icons/icons.js'
-import devlabStudiosLogo from '../assets/devlabstudios-logo-only.png'
+import { logoFallbackSrc } from '../lib/logoFallback'
 import { brandingAssets } from '../config/branding.js'
 import type { SiteSettingsData } from '../lib/content/siteSettings'
 
@@ -11,6 +11,7 @@ interface Props {
   currentPath: string
 }
 
+const fallbackLogoSrc = await logoFallbackSrc()
 const { siteSettings, currentPath } = Astro.props
 const navLinks = (siteSettings.navigation || []).map((item) => ({ label: item.label, href: item.href }))
 const desktopContactLabel = siteSettings.ctas?.navbarContactLabel || 'Discuss Your System'
@@ -25,7 +26,7 @@ const linkBase = 'site-navbar__link rounded-full px-3 py-2 text-sm font-semibold
         <img
           id="navbar-logo"
           src={brandingAssets.logoOnlyUrl}
-          data-fallback-src={devlabStudiosLogo.src}
+          data-fallback-src={fallbackLogoSrc}
           alt="DevLab Studios"
           class="h-11 w-11 rounded-md object-contain"
           loading="eager"
