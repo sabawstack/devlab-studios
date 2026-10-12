@@ -1993,7 +1993,9 @@ CLOUDFLARE_API_TOKEN=<pasted> CLOUDFLARE_ACCOUNT_ID=<personal account ID> npx wr
   --command "SELECT id, from_path, to_path, status_code FROM redirects WHERE from_path LIKE '/pickleball%' ORDER BY from_path"
 ```
 
-Expected: no rows, or only rows identical to the four planned ones. If a row has one of the four `from_path`s with a different `to_path`, stop and ask the owner (the guarded insert would leave it as is). Then:
+Also read by the fixed ids, since a row can hold one of them under a different path: `SELECT id, from_path, to_path FROM redirects WHERE id IN ('redirect-pickleball-app', 'redirect-pickleball-app-all', 'redirect-pickleball-methodology', 'redirect-pickleball-live-all')`. A fixed id on a different `from_path` also means stop. Note that `npm run cms:mirror-preview` copies production's redirects over preview's: run this step after any mirror.
+
+Expected for both reads: no rows, or only rows identical to the four planned ones. If a row has one of the four `from_path`s with a different `to_path`, stop and ask the owner (the guarded insert would leave it as is). Then:
 
 ```bash
 CLOUDFLARE_API_TOKEN=<pasted> CLOUDFLARE_ACCOUNT_ID=<personal account ID> npx wrangler d1 execute devlab-studios-cms-preview --remote --env preview --file "$B/pickleball-redirects.sql"
@@ -2037,14 +2039,14 @@ for path in /api/pickleball/auth/session /pickleball/new; do printf '%s %s\n' "$
 CLOUDFLARE_API_TOKEN=<pasted> CLOUDFLARE_ACCOUNT_ID=<personal account ID> npx wrangler d1 migrations list devlab-pickleball --remote
 ```
 
-Expected: `404 /api/pickleball/auth/session`, `200 /pickleball/new`, and `0020_drop_legacy_pickleball.sql` as the **only** pending migration. If `0016`–`0019` are pending as well (the Phase 1–4 releases never applied them), stop and ask the owner: `migrations apply` would run all of them together.
+Expected: `404 /api/pickleball/auth/session` and `200 /pickleball/new`. Production has the 27 legacy tables and no `open_*` or `hosts` tables, so `migrations list` shows `0016`-`0020` all pending: that is expected, and the single `migrations apply` below runs all five together as part of the 2.0.0 release. Stop if the pending list is anything other than exactly 0016-0020. CI never applies D1 migrations: apply right after Workers Builds finishes deploying `main` (the free routes return 500 until then) and check `/pickleball/new`; applying just before the deploy also works (the old 1.13.0 app loses its tables and has no users), but right after is the recommendation.
 
-Then the same sequence as preview, against `devlab-pickleball` with no `--env` flag:
+Then, against `devlab-pickleball` with no `--env` flag (personal account, `CLOUDFLARE_ACCOUNT_ID=<account ID>` inline per command):
 
-1. Read the tables and run `legacy-counts.sql` (Step 2's commands without `--env preview`, database `devlab-pickleball`). Expected, from the 2026-10-12 inventory: the 27 legacy tables and the trigger `trg_session_pairs_one_active_pair_per_player`, no `zz_*` objects, `users` 3, `organizations` 1, `audit_events` 6, `scoring_rulesets` 0 or 1 (the global default seeded by `0002`), every other legacy count 0. Any other count or object: stop and report; the owner authorized dropping test data only.
-2. `npx wrangler d1 time-travel info devlab-pickleball` (record the bookmark) and `npx wrangler d1 export devlab-pickleball --remote --output "$B/devlab-pickleball-before-0020.sql"` (check it as in Step 3).
-3. `npx wrangler d1 migrations apply devlab-pickleball --remote`, then Step 5's read-back. Expected: the same 13 tables plus D1's own, no trigger, `open_sessions` and `hosts` counts unchanged.
-4. Redirect rows in the production CMS database `devlab-studios-cms`. Its account may differ from the pickleball databases': run `npx wrangler d1 info devlab-studios-cms` with the personal account ID first; it must report id `6ff5e313-51a4-43d5-a649-678eeff1ff25` (the top-level `DB` binding in `wrangler.jsonc`). If it does not, ask the user which account holds it; do not guess. Then Step 6's read, the guarded insert file and the read-back, without `--env preview`, and the curl checks against `https://www.devlabstudios.com`.
+1. Read the legacy counts with a legacy-only query (Step 2's `legacy-counts.sql` minus its `open_sessions` and `hosts` lines, which do not exist before 0016), database `devlab-pickleball`, no `--env`, plus the table and trigger list. Expected: the 27 legacy tables and the trigger `trg_session_pairs_one_active_pair_per_player`, no `zz_*` objects, `users` 3, `organizations` 1, `audit_events` 6, every other legacy count 0. Stop on anything else; the owner authorized dropping test data only.
+2. `npx wrangler d1 time-travel info devlab-pickleball` (record the bookmark), then `npx wrangler d1 export devlab-pickleball --remote --output "$B/devlab-pickleball-before-0016-0020.sql"` with `$B` a directory outside the repo (check the file as in Step 3). Then `npx wrangler d1 migrations list devlab-pickleball --remote` must show exactly 0016-0020 pending; stop on anything else.
+3. `npx wrangler d1 migrations apply devlab-pickleball --remote` (runs 0016-0020 in one go), then read back: the 13 kept tables exist with 0 rows, no legacy tables, no trigger. Check `/pickleball/new` and create a test session.
+4. Redirect rows in the production CMS database `devlab-studios-cms`. Both live in the personal account: run `npx wrangler d1 info devlab-studios-cms` with `CLOUDFLARE_ACCOUNT_ID=<account ID>` (personal account) first; it must report id `6ff5e313-51a4-43d5-a649-678eeff1ff25` (the top-level `DB` binding in `wrangler.jsonc`). If it does not, ask the user which account holds it; do not guess. Then Step 6's read (by path and by the fixed ids), the guarded insert file and the read-back, without `--env preview`, and the curl checks against `https://www.devlabstudios.com`.
 5. `npx wrangler secret list` (no `--env`) and, if listed, `npx wrangler secret delete PICKLEBALL_SESSION_SECRET`.
 
 Report the same items as Step 8. Keep `$B` (the backups) until the owner says otherwise; Time Travel covers 30 days, the exports cover longer.

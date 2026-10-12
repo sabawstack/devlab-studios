@@ -58,6 +58,12 @@ describe('findRedirect', () => {
     expect((await findRedirect(db, '/pickleball/live/A'))?.toPath).toBe('/exact')
   })
 
+  it('an exact row beats a wildcard of equal length, even with a trailing slash on the request', async () => {
+    await upsertRedirect(db, { fromPath: '/pickleball/live/A', toPath: '/exact' })
+    expect((await findRedirect(db, '/pickleball/live/A/'))?.toPath).toBe('/exact')
+    expect((await findRedirect(db, '/pickleball/live/A'))?.toPath).toBe('/exact')
+  })
+
   it('a path no row covers finds nothing', async () => {
     expect(await findRedirect(db, '/pickleball/new')).toBeNull()
     expect(await findRedirect(db, '/elsewhere/live/x')).toBeNull()

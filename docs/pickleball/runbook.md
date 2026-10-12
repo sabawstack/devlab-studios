@@ -249,26 +249,49 @@ failures `pickleball_open.ws_error`; clients only ever see a generic 500.
 ### Retire the legacy tables (migration 0020)
 
 `0020_drop_legacy_pickleball.sql` drops the operator app's 27 tables and its
-trigger. It was applied to preview, then to production with the 2.0.0 release,
-in this order, each command with `CLOUDFLARE_ACCOUNT_ID=<personal account ID>`
-and a freshly pasted `CLOUDFLARE_API_TOKEN` inline (`--env preview` for preview):
+trigger. The procedure is: apply to preview, then to production with the 2.0.0
+release. Each command takes `CLOUDFLARE_ACCOUNT_ID=<account ID>` (the personal
+account, both environments) and a freshly pasted `CLOUDFLARE_API_TOKEN` inline
+(`--env preview` for preview).
 
-1. Deploy the code that no longer uses the tables first (preview: push
-   `development`; production: the release deploy of `main`).
+**Preview:**
+
+1. Deploy the code that no longer uses the tables first (push `development`).
 2. `npx wrangler d1 migrations list <db> --remote`: `0020` must be the only
-   pending file. `migrations apply` cannot stop at a file, so if `0016`–`0019`
-   are pending too, stop and ask the owner.
+   pending file. `migrations apply` cannot stop at a file, so anything else
+   pending means stop and ask the owner.
 3. List the tables and count the 27 legacy tables' rows (Task 8 of
    `docs/superpowers/plans/2026-10-12-pickleball-free-open-play-phase5.md` has
-   the exact SQL). Production held 3 `users`, 1 `organizations`, 6
-   `audit_events` (the owner's own accounts) and at most the 1 seeded
-   `scoring_rulesets` row; anything else means stop.
+   the exact SQL); anything unexpected means stop.
 4. Record a Time Travel bookmark: `npx wrangler d1 time-travel info <db>`.
 5. Back up outside the repo:
    `npx wrangler d1 export <db> --remote --output "$HOME/devlab-backups/pickleball-2.0/<db>-before-0020.sql"`.
 6. `npx wrangler d1 migrations apply <db> --remote`.
 7. Read the table list back: only `open_*`, `hosts`, `host_logins` and D1's own
    `d1_migrations` / `_cf_*` remain, with no trigger.
+
+**Production** (`devlab-pickleball`, no `--env`), part of the 2.0.0 release.
+Production never received 0016-0019 (no free-session tables exist there yet),
+so one `migrations apply` runs 0016, 0017, 0018, 0019 and 0020 together. That is
+expected, not a stop condition. CI never applies D1 migrations, so:
+
+1. Read the legacy counts (`users`, `organizations`, `audit_events`, and every
+   other legacy table; no `open_sessions` or `hosts` line, they do not exist
+   yet). Expect `users` 3, `organizations` 1, `audit_events` 6 and 0 for the
+   rest. Stop on anything else.
+2. Record a Time Travel bookmark: `npx wrangler d1 time-travel info devlab-pickleball`.
+3. Back up outside the repo:
+   `npx wrangler d1 export devlab-pickleball --remote --output "$HOME/devlab-backups/pickleball-2.0/devlab-pickleball-before-0016-0020.sql"`.
+4. `npx wrangler d1 migrations list devlab-pickleball --remote` must show
+   exactly 0016-0020 pending. Stop on anything else.
+5. `npx wrangler d1 migrations apply devlab-pickleball --remote`.
+6. Read back: the 13 kept tables exist with 0 rows, no legacy tables, no trigger.
+7. `npx wrangler secret delete PICKLEBALL_SESSION_SECRET` (same account), if listed.
+
+Timing: apply right after Workers Builds finishes deploying `main`, then check
+`/pickleball/new`. Between the deploy and the apply the free routes return 500
+(their tables do not exist yet). Applying just before the deploy also works: the
+old 1.13.0 app loses its tables, and it has no users.
 
 To restore, either `npx wrangler d1 time-travel restore <db> --bookmark=<bookmark>`
 (within 30 days; it rolls back **everything** after the bookmark, including free
@@ -297,6 +320,10 @@ INSERT INTO redirects (id, from_path, to_path, status_code, note, created_at, up
 SELECT 'redirect-pickleball-live-all', '/pickleball/live/*', '/pickleball', 301, 'Pickleball 2.0: old live and TV links (QR codes) of the retired app.', datetime('now'), datetime('now')
 WHERE NOT EXISTS (SELECT 1 FROM redirects WHERE from_path = '/pickleball/live/*');
 ```
+
+`npm run cms:mirror-preview` copies production's `redirects` table over
+preview's and would wipe preview-only rows. After any mirror, re-run Task 8's
+preview redirect inserts, or add the rows to production first.
 
 They can also be edited on the admin's Redirects screen. Deleting one turns
 those old links into 404s, nothing worse.

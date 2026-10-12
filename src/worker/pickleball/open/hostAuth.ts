@@ -105,6 +105,12 @@ export function hasHostSignInPending(request: Request): boolean {
   return cookieFrom(request, HOST_OAUTH_COOKIE) !== null
 }
 
+/** The last-resort answer when the callback itself throws: back to the default page, in-flight cookie cleared. */
+export function hostSignInFailedResponse(request: Request): Response {
+  const clear = clearCookieHeader(HOST_OAUTH_COOKIE, { path: HOST_OAUTH_COOKIE_PATH, secure: isSecure(request) })
+  return redirect(withSignInResult(DEFAULT_RETURN_PATH, 'failed'), [clear])
+}
+
 /**
  * Google's redirect back. Every outcome is a redirect to the page the host
  * started from with ?signin=…, never a raw error body. Only a verified Google

@@ -51,7 +51,7 @@ export function redirectCandidates(pathname) {
 /**
  * Used by middleware only when a response already 404'd (see src/middleware.ts).
  * One indexed lookup (from_path is UNIQUE) over the path and its parent
- * wildcards: an exact row wins, then the longest wildcard.
+ * wildcards: an exact row wins (even over a wildcard of equal length), then the longest wildcard.
  */
 export async function findRedirect(db, fromPath) {
   const candidates = redirectCandidates(fromPath)
@@ -61,7 +61,7 @@ export async function findRedirect(db, fromPath) {
     .prepare(
       `SELECT id, from_path, to_path, status_code, note, created_at, updated_at FROM redirects
        WHERE from_path IN (${placeholders})
-       ORDER BY (from_path = ?) DESC, length(from_path) DESC
+       ORDER BY (from_path = ?) DESC, (from_path NOT LIKE '%/*') DESC, length(from_path) DESC
        LIMIT 1`,
     )
     .bind(...candidates, candidates[0])

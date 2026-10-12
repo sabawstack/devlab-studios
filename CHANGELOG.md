@@ -52,6 +52,8 @@ decided against that surface specifically:
 ## [Unreleased]
 
 ### Fixed
+
+- Pickleball phase 5 final review fixes: redirect lookup now prefers an exact row over a wildcard of equal length (trailing-slash requests), a failed Google host sign-in callback clears the in-flight OAuth cookie, and the 0020 runbook/plan describe production applying 0016-0020 together with the 2.0.0 release.
 - The navbar and footer logo fallback (used when the R2 logo cannot load) is an 88 px WebP of the bundled logo instead of the 839x1135 source PNG: 35.6 KB less per page in that case, which is what put `/profile` at 285.8 KB against its 280 KB image budget in e2e, where *.r2.dev does not resolve.
 - CMS Site Settings and the replace-all collection screens (e.g. Testimonials) stay locked until their stored content has loaded. Before, an edit made while loading was overwritten when the fetch landed, and Save in that window wrote the static fallback (or an empty list) over what was in D1.
 - CMS Site Settings stays locked when its load fails (except the no-database 503, where saving the fallback seeds D1) and says to press Refresh, instead of offering the static fallback for saving over settings it could not read. Replace-all collection screens remount when switching collection, offer Retry after a failed load, and lock their item controls while saving.

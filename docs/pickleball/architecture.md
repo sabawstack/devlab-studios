@@ -208,7 +208,8 @@ diffs and the results CSV.
   except the Google callback, the operator session cookie and its middleware
   gate, per-rally scoring, OPI, `SessionCoordinatorDO` (wrangler tag `v4`,
   `deleted_classes`) and the 27 tables of migrations 0001–0015
-  (`0020_drop_legacy_pickleball.sql`, children first).
+  (`0020_drop_legacy_pickleball.sql`, children first; applied to preview, then
+  to production with the 2.0.0 release, see `runbook.md`).
 - **Kept from it.** `oauth.js` (PKCE, now host sign-in only), `webCrypto.js`,
   `RateLimiterDO`, and the five pure tournament modules in
   `src/lib/pickleball/tournament/` that `reuse.test.ts` pins.
@@ -257,7 +258,7 @@ operation reports success while destroying data.
 value as a **new nullable column** with its own CHECK (`ALTER TABLE ... ADD
 COLUMN` with a column-level CHECK does work, and is verified), or write the
 original CHECK wide enough up front, as 0016 did for `kind`. Dropping a whole
-table is safe: 0020 dropped the retired app's 27 tables, children first.
+table is safe: 0020 drops the retired app's 27 tables, children first.
 
 ## Phase history
 
@@ -268,6 +269,6 @@ table is safe: 0020 dropped the retired app's 27 tables, children first.
 | Free sessions 2 | Four stacking modes, keep together/apart, fairness panel, QR check-in, court captains, TV board (`0017`) | Built |
 | Free sessions 3 | Doubles tournaments (`0018`) | Built |
 | Free sessions 4 | Google host sign-in, claim, DUPR export email, My sessions, account deletion (`0019`) | Built |
-| Free sessions 5 | The operator app and its data retired (`0020`, wrangler `v4`) | Built (preview); production with the 2.0.0 release |
+| Free sessions 5 | The operator app and its data retired (`0020`, wrangler `v4`) | Built; preview/production apply pending |
 
 Which release shipped each phase is in `CHANGELOG.md`.

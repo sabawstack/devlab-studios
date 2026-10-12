@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro'
 import { getEnv } from '../../../../../lib/env'
-import { DEFAULT_RETURN_PATH, finishHostSignIn, withSignInResult } from '../../../../../worker/pickleball/open/hostAuth'
+import { finishHostSignIn, hostSignInFailedResponse } from '../../../../../worker/pickleball/open/hostAuth'
 
 // The redirect URI registered with Google (spec §9.1), so this path never
 // moves even though everything else under /api/pickleball/ outside open/ is
@@ -12,6 +12,6 @@ export const GET: APIRoute = async ({ request }) => {
     return await finishHostSignIn(getEnv(), request)
   } catch (error) {
     console.log(JSON.stringify({ event: 'pickleball_open.host_signin_failed', error: error instanceof Error ? error.message : 'unknown' }))
-    return new Response(null, { status: 302, headers: { Location: withSignInResult(DEFAULT_RETURN_PATH, 'failed'), 'Cache-Control': 'no-store' } })
+    return hostSignInFailedResponse(request)
   }
 }
