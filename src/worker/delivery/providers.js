@@ -28,13 +28,17 @@ async function fetchWithTimeout(url, init) {
   }
 }
 
-/** Transactional email via Resend — the studio's existing provider. */
-export function createResendProvider(env, { name = 'resend' } = {}) {
+/**
+ * Transactional email via Resend — the studio's existing provider.
+ * `fromName` labels the sender (Devlab Pickleball mail says so); `attachments`
+ * are Resend's `{ filename, content }` with base64 content.
+ */
+export function createResendProvider(env, { name = 'resend', fromName = 'DevLab Studios' } = {}) {
   return {
     name,
     isConfigured: Boolean(env.RESEND_API_KEY),
     configurationHint: 'RESEND_API_KEY is not configured.',
-    async send({ to, replyTo, subject, text, html }) {
+    async send({ to, replyTo, subject, text, html, attachments }) {
       const fromEmail = env.RESEND_FROM_EMAIL || DEFAULT_SENDER
       const { response, error } = await fetchWithTimeout('https://api.resend.com/emails', {
         method: 'POST',
@@ -43,12 +47,13 @@ export function createResendProvider(env, { name = 'resend' } = {}) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: `DevLab Studios <${fromEmail}>`,
+          from: `${fromName} <${fromEmail}>`,
           to: [to],
           ...(replyTo ? { reply_to: replyTo } : {}),
           subject,
           text,
           html,
+          ...(attachments?.length ? { attachments } : {}),
         }),
       })
 

@@ -3,8 +3,11 @@
 // env-gated test login (spec §13): POST /api/pickleball/open/host/test-login
 // answers only when PICKLEBALL_TEST_AUTH_ENABLED=true (.dev.vars), and with
 // that flag on the export is never emailed: the response carries the outbox.
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { test, expect } from '@playwright/test'
 
+const TEMPLATE = readFileSync(join(process.cwd(), 'tests/fixtures/dupr-import-template.csv'), 'utf8').split(/\r?\n/)[0]
 const ROSTER = [
   { name: 'Ana', duprId: 'AAA111' }, { name: 'Ben', duprId: 'BBB222' }, { name: 'Cy', duprId: 'CCC333' },
   { name: 'Di', duprId: 'DDD444' }, { name: 'Eve' },
@@ -64,6 +67,8 @@ const dupr = (request, code, hostKey, tz = 'UTC') =>
   request.get(`/api/pickleball/open/s/${code}/dupr?tz=${encodeURIComponent(tz)}`, { headers: { 'X-Host-Key': hostKey, 'cf-connecting-ip': ipFor(code) } })
 const claim = (request, baseURL, code, hostKey, headers = {}) =>
   request.post(`/api/pickleball/open/s/${code}/claim`, { headers: writeHeaders(baseURL, code, { 'X-Host-Key': hostKey, ...headers }) })
+const exportDupr = (request, baseURL, code, hostKey, timeZone = 'UTC') =>
+  request.post(`/api/pickleball/open/s/${code}/dupr-export`, { headers: writeHeaders(baseURL, code, { 'X-Host-Key': hostKey }), data: { timeZone } })
 const setClubId = (request, baseURL, key, duprClubId = '12345') =>
   request.patch('/api/pickleball/open/host/me', { headers: writeHeaders(baseURL, key), data: { duprClubId } })
 
@@ -153,5 +158,87 @@ test.describe('linking a session, and My sessions (API)', () => {
     const callback = await request.get('/api/pickleball/auth/google/callback?code=x&state=y', { maxRedirects: 0 })
     expect(callback.status()).toBe(302)
     expect(callback.headers()['location']).toBe('/pickleball/my-sessions?signin=failed')
+  })
+})
+
+test.describe('the DUPR export (API)', () => {
+  test('sign in, add a Club ID, link, then export: the CSV matches the DUPR template and the email lists what was left out', async ({ request, baseURL }) => {
+    const { code, hostKey } = await createSession(request)
+    const email = uniqueEmail('mo')
+    const before = await (await dupr(request, code, hostKey)).json()
+    expect(before).toMatchObject({ host: null, claim: 'UNCLAIMED', exported: 0, exportsLeft: 5, exportLimit: 5 })
+
+    const host = await signIn(request, baseURL, email, code)
+    expect(host).toEqual({ email, displayName: 'Coach Mo', duprClubId: null, marketingOptIn: false })
+    expect(JSON.stringify(host)).not.toMatch(/sub|test-/)
+
+    const noClub = await exportDupr(request, baseURL, code, hostKey)
+    expect(noClub.status()).toBe(409)
+    expect((await noClub.json()).error).toBe('Add your DUPR Club ID first.')
+    expect((await setClubId(request, baseURL, code, 'bad id!')).status()).toBe(400)
+    expect((await (await setClubId(request, baseURL, code, 'CLUB-42')).json()).host.duprClubId).toBe('CLUB-42')
+
+    const unclaimed = await exportDupr(request, baseURL, code, hostKey)
+    expect(unclaimed.status()).toBe(409)
+    expect((await unclaimed.json()).error).toBe('Link this session to your Google account first.')
+    expect((await (await claim(request, baseURL, code, hostKey)).json())).toEqual({ claim: 'MINE' })
+    expect((await claim(request, baseURL, code, hostKey)).status()).toBe(200)
+
+    const empty = await exportDupr(request, baseURL, code, hostKey)
+    expect(empty.status()).toBe(409)
+    expect((await empty.json()).error).toMatch(/^No game can go to DUPR yet/)
+
+    await play(request, code, hostKey, ['Ana', 'Ben'], ['Cy', 'Di'], 11, 7)
+    await play(request, code, hostKey, ['Ana', 'Eve'], ['Cy', 'Di'], 11, 4)
+    const status = await (await dupr(request, code, hostKey)).json()
+    expect(status).toMatchObject({ claim: 'MINE', exported: 1, missingIds: [{ name: 'Eve' }] })
+    expect(status.skipped).toEqual([{ game: 2, court: 'Court 1', summary: 'Ana & Eve 11–4 Cy & Di', reason: 'Eve has no DUPR ID.' }])
+
+    const sent = await exportDupr(request, baseURL, code, hostKey, 'Asia/Manila')
+    expect(sent.status(), await sent.text()).toBe(200)
+    const body = await sent.json()
+    expect(body).toMatchObject({ delivery: 'SUPPRESSED', to: email, exported: 1, skipped: 1, exportsLeft: 4 })
+    const [header, row, ...rest] = body.outbox.csv.split('\r\n')
+    expect(header).toBe(TEMPLATE)
+    expect(rest).toEqual([])
+    const cells = row.split(',')
+    expect(cells).toHaveLength(27)
+    expect(cells.slice(0, 2)).toEqual(['D', 'Saturday Social'])
+    expect(cells[2]).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect([cells[3], cells[4], cells[15], cells[16], cells[26]]).toEqual(['Ana', 'AAA111', '11', '7', 'SIDEOUT'])
+    expect(body.outbox.filename).toMatch(/^dupr-saturday-social-\d{4}-\d{2}-\d{2}\.csv$/)
+    expect(body.outbox.text).toContain('Game 2, Court 1: Ana & Eve 11–4 Cy & Di. Eve has no DUPR ID.')
+    expect(body.outbox.text).toContain('Club ID CLUB-42')
+    expect(body.outbox.text).toContain('Import Matches via CSV')
+    expect(body.outbox.text).toContain('Club Director or Organizer')
+
+    const eve = status.missingIds[0].id
+    await ok(request, code, hostKey, { type: 'SET_PLAYER_DUPR_ID', playerId: eve, duprId: 'eee555' })
+    expect(await (await dupr(request, code, hostKey)).json()).toMatchObject({ exported: 2, skipped: [], missingIds: [], exportsLeft: 4 })
+  })
+
+  test('five exports per session a day, then a refusal that says when', async ({ request, baseURL }) => {
+    const { code, hostKey } = await readyToExport(request, baseURL)
+    for (let n = 4; n >= 0; n -= 1) {
+      const sent = await exportDupr(request, baseURL, code, hostKey)
+      expect(sent.status()).toBe(200)
+      expect((await sent.json()).exportsLeft).toBe(n)
+    }
+    const sixth = await exportDupr(request, baseURL, code, hostKey)
+    expect(sixth.status()).toBe(429)
+    expect((await sixth.json()).error).toMatch(/^A session can be sent to DUPR 5 times a day\. Try again in about \d+ hours?\.$/)
+    expect((await (await dupr(request, code, hostKey)).json()).exportsLeft).toBe(0)
+  })
+
+  test('only the account the session is linked to can export it', async ({ request, playwright, baseURL }) => {
+    const { code, hostKey } = await readyToExport(request, baseURL)
+    const other = await playwright.request.newContext({ baseURL })
+    await signIn(other, baseURL, uniqueEmail('bo'), `${code}-bo`)
+    expect((await setClubId(other, baseURL, `${code}-bo`)).status()).toBe(200)
+    const refused = await exportDupr(other, baseURL, code, hostKey)
+    expect(refused.status()).toBe(403)
+    expect((await refused.json()).error).toBe('Only the Google account this session is linked to can export it.')
+    expect((await exportDupr(request, baseURL, code, hostKey)).status()).toBe(200)
+    await other.dispose()
   })
 })

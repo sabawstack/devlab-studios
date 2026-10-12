@@ -9,8 +9,9 @@ import { checkInSchema } from '../../../lib/schemas/pickleball/open/checkIn'
 import { commandEnvelopeSchema } from '../../../lib/schemas/pickleball/open/commands'
 import { captainLabel, captainRefusal, findCaptain } from '../../../lib/pickleball/open/captains'
 import { applyCheckIn } from '../../../lib/pickleball/open/checkIn'
-import { buildDuprExport, normalizeTimeZone, type DuprSkip } from '../../../lib/pickleball/open/dupr/export'
-import { claimStateFor, DUPR_EXPORT_LIMIT, exportsLeft, exportWindowStart, type ClaimState } from '../../../lib/pickleball/open/dupr/policy'
+import { buildDuprEmail, duprFilename, type DuprEmail } from '../../../lib/pickleball/open/dupr/email'
+import { buildDuprExport, localDate, normalizeTimeZone, type DuprSkip } from '../../../lib/pickleball/open/dupr/export'
+import { claimStateFor, DUPR_EXPORT_LIMIT, exportsLeft, exportWindowStart, limitMessage, type ClaimState } from '../../../lib/pickleball/open/dupr/policy'
 import { applyCommand, finalizeCommand, touch } from '../../../lib/pickleball/open/reducer'
 import { resultsCsv } from '../../../lib/pickleball/open/resultsCsv'
 import { constantTimeEqual } from '../../../lib/pickleball/open/secrets'
@@ -23,7 +24,9 @@ import {
   deleteOpenSession, findIdempotentResponse, insertCaptain, loadOpenSession, persistDiff, revokeCaptain as revokeCaptainRow,
   type LoadedSession,
 } from '../../repositories/pickleball/open/openSessions'
-import { claimSession, insertHostKey, loadHostAccess, recentDuprExports, reopenRefusal, type HostAccess } from '../../repositories/pickleball/open/hostAccess'
+import {
+  claimSession, deleteDuprExport, insertDuprExport, insertHostKey, loadHostAccess, recentDuprExports, reopenRefusal, type HostAccess,
+} from '../../repositories/pickleball/open/hostAccess'
 
 export type DoResult<T> = { status: number; body: T | { error: string }; retryAfterSeconds?: number }
 export interface Credentials { hostKey: string | null; captainKey: string | null }
@@ -38,6 +41,17 @@ export interface DuprStatusBody {
   missingIds: Array<{ id: string; name: string }>
   exportsLeft: number
   exportLimit: number
+}
+
+/** A reserved export, ready to send. The reservation counts toward the limit until released. */
+export interface DuprPrepared {
+  exportId: string
+  csv: string
+  filename: string
+  email: DuprEmail
+  exported: number
+  skipped: number
+  exportsLeft: number
 }
 
 /** The session plus who, beyond the original host key, may act as its host (spec §9.2, §9.5). */
@@ -318,6 +332,55 @@ export class OpenSessionDO extends DurableObject<Env> {
       await insertHostKey(this.env.PICKLEBALL_DB, { id: crypto.randomUUID(), sessionId: loaded.state.id, keyHash, createdAt: new Date().toISOString() })
       this.loaded = { ...loaded, access: { ...loaded.access, extraKeyHashes: [...loaded.access.extraKeyHashes, keyHash] } }
       return { status: 201, body: { hostKey } }
+    })
+  }
+
+  /**
+   * Builds the export and reserves one of the day's 5 (spec §9.6). Only the
+   * account the session is linked to may export it. The route sends the email
+   * and calls releaseDuprExport if sending failed, so a failure costs nothing.
+   */
+  async prepareDuprExport(
+    code: string, hostKey: string | null, host: { id: string; displayName: string; duprClubId: string }, timeZone: string,
+  ): Promise<DoResult<DuprPrepared>> {
+    return this.serial(async () => {
+      const auth = await this.authorized(code, hostKey)
+      if (!('state' in auth)) return auth
+      const claim = claimStateFor(auth.access.hostId, host.id)
+      if (claim === 'UNCLAIMED') return { status: 409, body: { error: 'Link this session to your Google account first.' } }
+      if (claim === 'OTHER') return { status: 403, body: { error: 'Only the Google account this session is linked to can export it.' } }
+      const zone = normalizeTimeZone(timeZone)
+      const preview = buildDuprExport(auth.state, { timeZone: zone })
+      if (!preview.exported) {
+        return { status: 409, body: { error: 'No game can go to DUPR yet: each needs a score and a DUPR ID for all four players.' } }
+      }
+      const now = new Date().toISOString()
+      const sent = await recentDuprExports(this.env.PICKLEBALL_DB, auth.state.id, exportWindowStart(now))
+      if (!exportsLeft(sent)) return { status: 429, body: { error: limitMessage(sent, now) } }
+      const exportId = crypto.randomUUID()
+      await insertDuprExport(this.env.PICKLEBALL_DB, {
+        id: exportId, sessionId: auth.state.id, sentAt: now, gameCount: preview.exported, skippedCount: preview.skipped.length,
+      })
+      const date = localDate(auth.state.createdAt, zone)
+      return {
+        status: 200,
+        body: {
+          exportId, csv: preview.csv, filename: duprFilename(auth.state.name, date),
+          email: buildDuprEmail({
+            hostName: host.displayName, sessionName: auth.state.name, date, clubId: host.duprClubId,
+            exported: preview.exported, skipped: preview.skipped,
+          }),
+          exported: preview.exported, skipped: preview.skipped.length, exportsLeft: exportsLeft(sent) - 1,
+        },
+      }
+    })
+  }
+
+  /** Gives back a reserved export whose email could not be sent. */
+  async releaseDuprExport(code: string, hostKey: string | null, exportId: string): Promise<void> {
+    return this.serial(async () => {
+      const auth = await this.authorized(code, hostKey)
+      if ('state' in auth) await deleteDuprExport(this.env.PICKLEBALL_DB, auth.state.id, exportId)
     })
   }
 
