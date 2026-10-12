@@ -52,6 +52,7 @@ decided against that surface specifically:
 ## [Unreleased]
 
 ### Fixed
+- Mailbox e2e suite no longer fails a different handful of tests each run. Every Playwright worker signed in separately, and a replaced worker signed in again, which used up the admin login limit (20 per address per 15 minutes; the local limiter keeps its count between `wrangler dev` restarts). A new `admin-auth` setup project now signs in once per run and the mailbox specs reuse that session. The tests also no longer depend on run order or shared data: the Retry test creates its own failed reply (the local worker gets a test-only `MAILBOX_OUTBOX_TOKEN`), folder-banner and empty-Inbox checks no longer depend on load timing, rail links match their count badge, and the Compose notice check matches the current wording.
 - Open play: while sign-in on the live connection keeps failing (`AUTH_ERROR`), the host and captain consoles keep refreshing by polling and reconnects back off 1, 2, 4, then every 8 seconds. A socket now counts as live only once it delivers the snapshot the page signed in for.
 - Open play captain links: labels are unique (ignoring case) among live links and never "Host"; a taken name gets the lowest free number ("Court 1 captain 2"), and a number freed by turning a link off is reused. "Make a link" makes one link however fast it is tapped.
 - Open play: a captain's snapshot no longer carries who saved each result (`recordedBy`), which only the host sees. Broadcasts build the public board and court list once per pass for the host and every captain.

@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test'
+import { MAILBOX_OUTBOX_TOKEN } from './tests/e2e/support/mailboxTransmitter.js'
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -42,7 +43,10 @@ export default defineConfig({
       // SQLite file — writing to it from a second process while miniflare has
       // it open can drop in-flight connections. See the script's header.
       command:
-        'npx wrangler d1 migrations apply devlab-pickleball --local && node scripts/pickleball/apply-e2e-fixtures.mjs && node scripts/mailbox/apply-e2e-fixtures.mjs && npx wrangler dev --port 8787 --local',
+        'npx wrangler d1 migrations apply devlab-pickleball --local && node scripts/pickleball/apply-e2e-fixtures.mjs && node scripts/mailbox/apply-e2e-fixtures.mjs && npx wrangler dev --port 8787 --local ' +
+        // Lets the mailbox suite act as the transmitter: see
+        // tests/e2e/support/mailboxTransmitter.js.
+        `--var MAILBOX_OUTBOX_TOKEN:${MAILBOX_OUTBOX_TOKEN}`,
       url: 'http://localhost:8787/api/health',
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
@@ -55,7 +59,16 @@ export default defineConfig({
       use: { baseURL: 'http://localhost:4173' },
     },
     {
+      // Signs the smoke-test admin in ONCE per run and saves the session for
+      // specs that opt in via test.use({ storageState }). See
+      // tests/e2e/admin.setup.js for why once per worker was not enough.
+      name: 'admin-auth',
+      testMatch: /admin\.setup\.js/,
+      use: { baseURL: 'http://localhost:8787' },
+    },
+    {
       name: 'worker',
+      dependencies: ['admin-auth'],
       // The Lead CRM suite belongs to the `worker` project, not `static`: it
       // signs in, calls `/api/admin/*`, and exercises `/r/:token` — all of
       // which need the wrangler dev worker with its D1 binding rather than the

@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test'
+import { ADMIN_STORAGE_STATE } from './support/adminSession.js'
+import { MAILBOX_OUTBOX_TOKEN } from './support/mailboxTransmitter.js'
 
 /**
  * Mailbox end-to-end checks.
@@ -23,9 +25,19 @@ import { test, expect } from '@playwright/test'
  * acceptance step, not something a test suite can perform.
  */
 
-const ADMIN_EMAIL = 'smoke-test@devlabstudios.com'
-const ADMIN_PASSWORD = 'smoke-test-password-123'
-const SESSION_COOKIE = 'devlab_admin_session'
+// A rail link's accessible name carries its unread/total badge ("Bounces 1")
+// once earlier tests have put mail in the shared local database, so match the
+// folder name with an optional count rather than the bare name.
+const folderName = (name) => new RegExp(`^${name}(?: \\d+)?$`)
+
+/**
+ * The always-visible line under a folder's list that says what the folder
+ * MEANS. Located by position rather than by its text because an EMPTY folder
+ * repeats the same sentence in its empty state, so a bare getByText matched
+ * once or twice depending on whether the list had finished loading -- and
+ * failed strict mode whenever it had, and the folder was empty.
+ */
+const folderBanner = (page, label) => page.getByRole('region', { name: `${label} list` }).locator('p').first()
 
 /** Every mailbox admin endpoint, as an unauthenticated caller would reach them. */
 const ADMIN_ENDPOINTS = [
@@ -42,27 +54,6 @@ const ADMIN_ENDPOINTS = [
   '/api/admin/mailbox/messages/any-message-id/raw',
   '/api/admin/mailbox/attachments/any-attachment-id',
 ]
-
-let cachedSessionCookie = null
-
-/** One sign-in per worker — /api/admin/login is rate limited, deliberately. */
-async function login(page) {
-  if (cachedSessionCookie) {
-    await page.context().addCookies([cachedSessionCookie])
-    await page.goto('/admin')
-    await expect(page.getByRole('button', { name: /log ?out/i })).toBeVisible({ timeout: 10_000 })
-    return
-  }
-
-  await page.goto('/admin')
-  await page.getByLabel('Email').fill(ADMIN_EMAIL)
-  await page.getByLabel('Password', { exact: true }).fill(ADMIN_PASSWORD)
-  await page.getByRole('button', { name: /sign in/i }).click()
-  await expect(page.getByRole('button', { name: /log ?out/i })).toBeVisible({ timeout: 10_000 })
-
-  const cookies = await page.context().cookies()
-  cachedSessionCookie = cookies.find((cookie) => cookie.name === SESSION_COOKIE) || null
-}
 
 async function openAdminNavGroup(page, name) {
   const group = page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name, exact: true })
@@ -147,9 +138,9 @@ test.describe('the transmitter API is not public', () => {
 })
 
 test.describe('mailbox screens', () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page)
-  })
+  // Signed in once for the whole run by the admin-auth setup project, not per
+  // worker: see tests/e2e/admin.setup.js.
+  test.use({ storageState: ADMIN_STORAGE_STATE })
 
   test('the mail client sits inside the existing admin shell', async ({ page }) => {
     await page.goto('/admin/mailbox')
@@ -166,10 +157,10 @@ test.describe('mailbox screens', () => {
     const rail = page.getByRole('navigation', { name: 'Mailbox folders' })
 
     for (const folder of ['Inbox', 'Drafts', 'Outbox', 'Sent', 'Failed', 'Archive']) {
-      await expect(rail.getByRole('link', { name: folder, exact: true })).toBeVisible()
+      await expect(rail.getByRole('link', { name: folderName(folder) })).toBeVisible()
     }
     for (const machine of ['Bounces', 'DMARC reports', 'Diagnostics']) {
-      await expect(rail.getByRole('link', { name: machine, exact: true })).toBeVisible()
+      await expect(rail.getByRole('link', { name: folderName(machine) })).toBeVisible()
     }
   })
 
@@ -185,10 +176,10 @@ test.describe('mailbox screens', () => {
     })
 
     const rail = page.getByRole('navigation', { name: 'Mailbox folders' })
-    await rail.getByRole('link', { name: 'Drafts', exact: true }).click()
+    await rail.getByRole('link', { name: folderName('Drafts') }).click()
     await expect(page).toHaveURL(/\/admin\/mailbox\/drafts$/)
 
-    await rail.getByRole('link', { name: 'Sent', exact: true }).click()
+    await rail.getByRole('link', { name: folderName('Sent') }).click()
     await expect(page).toHaveURL(/\/admin\/mailbox\/sent$/)
 
     expect(await page.evaluate(() => window.__mailboxNavProbe)).toBe('alive')
@@ -198,7 +189,7 @@ test.describe('mailbox screens', () => {
     await page.goto('/admin/mailbox/inbox')
     const rail = page.getByRole('navigation', { name: 'Mailbox folders' })
 
-    await rail.getByRole('link', { name: 'Outbox', exact: true }).click()
+    await rail.getByRole('link', { name: folderName('Outbox') }).click()
     await expect(page).toHaveURL(/\/admin\/mailbox\/outbox$/)
 
     await page.goBack()
@@ -227,16 +218,16 @@ test.describe('mailbox screens', () => {
     await page.goto('/admin/mailbox/bounces')
     const rail = page.getByRole('navigation', { name: 'Mailbox folders' })
 
-    await expect(rail.getByRole('link', { name: 'Bounces', exact: true })).toHaveAttribute('aria-current', 'page')
-    await expect(rail.getByRole('link', { name: 'Inbox', exact: true })).not.toHaveAttribute('aria-current', 'page')
+    await expect(rail.getByRole('link', { name: folderName('Bounces') })).toHaveAttribute('aria-current', 'page')
+    await expect(rail.getByRole('link', { name: folderName('Inbox') })).not.toHaveAttribute('aria-current', 'page')
   })
 
   test('DMARC highlights DMARC, not Inbox', async ({ page }) => {
     await page.goto('/admin/mailbox/dmarc')
     const rail = page.getByRole('navigation', { name: 'Mailbox folders' })
 
-    await expect(rail.getByRole('link', { name: 'DMARC reports', exact: true })).toHaveAttribute('aria-current', 'page')
-    await expect(rail.getByRole('link', { name: 'Inbox', exact: true })).not.toHaveAttribute('aria-current', 'page')
+    await expect(rail.getByRole('link', { name: folderName('DMARC reports') })).toHaveAttribute('aria-current', 'page')
+    await expect(rail.getByRole('link', { name: folderName('Inbox') })).not.toHaveAttribute('aria-current', 'page')
   })
 
   test('the old query URL still works and still lights only one entry', async ({ page }) => {
@@ -246,7 +237,7 @@ test.describe('mailbox screens', () => {
     const rail = page.getByRole('navigation', { name: 'Mailbox folders' })
 
     await expect(rail.locator('[aria-current="page"]')).toHaveCount(1)
-    await expect(rail.getByRole('link', { name: 'Bounces', exact: true })).toHaveAttribute('aria-current', 'page')
+    await expect(rail.getByRole('link', { name: folderName('Bounces') })).toHaveAttribute('aria-current', 'page')
   })
 
   test('Diagnostics stays inside the mail client shell', async ({ page }) => {
@@ -262,7 +253,7 @@ test.describe('mailbox screens', () => {
     })
     await page
       .getByRole('navigation', { name: 'Mailbox folders' })
-      .getByRole('link', { name: 'Inbox', exact: true })
+      .getByRole('link', { name: folderName('Inbox') })
       .click()
     await expect(page).toHaveURL(/\/admin\/mailbox\/inbox$/)
     expect(await page.evaluate(() => window.__diagProbe)).toBe('alive')
@@ -271,7 +262,7 @@ test.describe('mailbox screens', () => {
   test('a folder URL can be opened directly', async ({ page }) => {
     await page.goto('/admin/mailbox/sent')
     await expect(page.getByRole('navigation', { name: 'Mailbox folders' })).toBeVisible()
-    await expect(page.getByText(/Confirmed transmitted/i)).toBeVisible()
+    await expect(folderBanner(page, 'Sent')).toContainText(/Confirmed transmitted/i)
   })
 
   test('offers Compose', async ({ page }) => {
@@ -282,9 +273,10 @@ test.describe('mailbox screens', () => {
     await expect(dialog).toBeVisible()
     await expect(dialog.getByLabel('To')).toBeVisible()
     await expect(dialog.getByLabel('Subject')).toBeVisible()
-    // Cc/Bcc and outbound attachments are absent on purpose: mailbox_outbound
-    // has no columns for them, so offering them would drop content silently.
-    await expect(dialog.getByText(/are not supported on the way/i)).toBeVisible()
+    // Cc/Bcc are absent on purpose: mailbox_outbound has no columns for them,
+    // so offering them would drop content silently. (Attachments did ship, which
+    // is why the notice now reads "still not supported" and names only Cc/Bcc.)
+    await expect(dialog.getByText(/Cc and\s+Bcc are still not supported on the way out/i)).toBeVisible()
   })
 
   test('is usable at phone width: the rail is a drawer, not a squeezed column', async ({ page }) => {
@@ -303,20 +295,31 @@ test.describe('mailbox screens', () => {
     // these would tell the operator a prospect had been answered when nothing
     // had left the building.
     await page.goto('/admin/mailbox/outbox')
-    await expect(page.getByText(/Waiting for the external sender/i)).toBeVisible()
+    await expect(folderBanner(page, 'Outbox')).toContainText(/Waiting for the external sender/i)
 
     await page.goto('/admin/mailbox/sent')
-    await expect(page.getByText(/Confirmed transmitted/i)).toBeVisible()
+    await expect(folderBanner(page, 'Sent')).toContainText(/Confirmed transmitted/i)
   })
 
   test('a draft is described as not handed over', async ({ page }) => {
     await page.goto('/admin/mailbox/drafts')
-    await expect(page.getByText(/Nothing here has been handed to the sender/i)).toBeVisible()
+    await expect(folderBanner(page, 'Drafts')).toContainText(/Nothing here has been handed to the sender/i)
   })
 
   test('an empty mailbox explains itself rather than looking broken', async ({ page }) => {
+    // The Inbox is NOT empty here -- the fixtures put mail in it -- so this
+    // used to pass only when it caught the "Loading" placeholder before the
+    // threads arrived, and failed whenever the worker answered first. The real
+    // response with its thread list emptied gives the screen a genuinely empty
+    // Inbox, whatever the shared local database holds.
+    await page.route('**/api/admin/mailbox/folders/inbox*', async (route) => {
+      const response = await route.fetch()
+      await route.fulfill({ response, json: { ...(await response.json()), threads: [] } })
+    })
+
     await page.goto('/admin/mailbox')
-    await expect(page.getByText(/Nothing here yet|Loading/i).first()).toBeVisible()
+    await expect(page.getByText('Nothing here yet.')).toBeVisible()
+    await expect(page.getByText(/Mail arrives once an Email Routing rule points/i)).toBeVisible()
   })
 
   test('diagnostics reports whether storage and the sender are configured', async ({ page }) => {
@@ -363,32 +366,52 @@ test.describe('mailbox screens', () => {
  * before wrangler dev starts.
  */
 test.describe('the mail client, with mail in it', () => {
-  test.beforeEach(async ({ page }) => {
-    await login(page)
-  })
+  // Signed in once for the whole run by the admin-auth setup project, not per
+  // worker: see tests/e2e/admin.setup.js.
+  test.use({ storageState: ADMIN_STORAGE_STATE })
 
-  test('a failed reply offers Retry, and retrying returns it to the Outbox', async ({ page }) => {
+  test('a failed reply offers Retry, and retrying returns it to the Outbox', async ({ page, baseURL }, testInfo) => {
+    // A failed reply of this test's OWN, not the seed's. The seed has exactly
+    // one, and retrying it is the point of the test, so a second execution in
+    // the same server lifetime (--repeat-each, a CI retry) found the Failed
+    // folder without it. Composed through the admin API, then reported failed
+    // through the transmitter API -- the same two hops a real failure takes.
+    const subject = `Retry e2e ${testInfo.repeatEachIndex}-${testInfo.retry}-${Date.now()}`
+    const composed = await page.request.post(`${baseURL}/api/admin/mailbox/compose`, {
+      data: { toAddress: 'retry-e2e@example.org', subject, bodyText: 'Retry fixture.' },
+    })
+    expect(composed.ok(), `compose answered ${composed.status()}`).toBe(true)
+    const { outbound } = await composed.json()
+
+    // The real 451 that Postfix returned while OpenDKIM could not read its key.
+    const failed = await page.request.post(`${baseURL}/api/mailbox/outbox/${outbound.id}/failed`, {
+      headers: { Authorization: `Bearer ${MAILBOX_OUTBOX_TOKEN}` },
+      data: { error: '451 4.7.1 Service unavailable - try again later', retryable: false },
+    })
+    expect(failed.ok(), `the transmitter callback answered ${failed.status()} (is the worker missing --var MAILBOX_OUTBOX_TOKEN?)`).toBe(true)
+
     await page.goto('/admin/mailbox/failed')
+    const failedRow = page.getByRole('listitem').filter({ hasText: subject })
 
-    // The seed's failed reply carries the real 451 that Postfix returned while
-    // OpenDKIM could not read its signing key.
-    await expect(page.getByText(/451 4\.7\.1 Service unavailable/i)).toBeVisible()
+    await expect(failedRow.getByText(/451 4\.7\.1 Service unavailable/i)).toBeVisible()
     await expect(
-      page.getByText(/will not be retried on its own/i),
+      failedRow.getByText(/will not be retried on its own/i),
       'the refusal to auto-retry must be stated, not implied',
     ).toBeVisible()
 
     // Confirmed before it acts: if the failure happened after the message
     // reached an MTA, retrying sends a second copy to a real person.
     page.once('dialog', (dialog) => dialog.accept())
-    await page.getByRole('button', { name: /Retry this reply/i }).click()
+    await failedRow.getByRole('button', { name: /Retry this reply/i }).click()
 
-    await expect(page.getByRole('button', { name: /Retry this reply/i })).toHaveCount(0, { timeout: 10_000 })
+    await expect(failedRow).toHaveCount(0)
 
     await page.goto('/admin/mailbox/outbox')
     // The error survives the retry, so what went wrong last time is still
     // readable while the reply waits again.
-    await expect(page.getByText(/Queued again after/i)).toBeVisible()
+    const queuedRow = page.getByRole('listitem').filter({ hasText: subject })
+    await expect(queuedRow.getByText(/Queued again after: 451 4\.7\.1/i)).toBeVisible()
+    await expect(queuedRow.getByRole('button', { name: /Retry this reply/i })).toHaveCount(0)
   })
 
   test('a retried reply cannot be retried twice into two copies', async ({ page }) => {
