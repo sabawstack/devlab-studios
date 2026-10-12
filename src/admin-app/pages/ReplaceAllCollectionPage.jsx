@@ -13,6 +13,9 @@ function ReplaceAllCollectionPage() {
   const [message, setMessage] = useState(null)
   const [showHistory, setShowHistory] = useState(false)
 
+  // Bumped by Retry to run the load again.
+  const [loadAttempt, setLoadAttempt] = useState(0)
+
   useEffect(() => {
     if (!config) return
     let ignore = false
@@ -28,7 +31,7 @@ function ReplaceAllCollectionPage() {
     return () => {
       ignore = true
     }
-  }, [config])
+  }, [config, loadAttempt])
 
   if (!config) return <p className="text-rose-600">Unknown collection type: {type}</p>
 
@@ -100,9 +103,21 @@ function ReplaceAllCollectionPage() {
       ) : null}
 
       {status === 'loading' ? <p className="text-sm text-slate-500">Loading…</p> : null}
-      {status === 'error' ? <p className="text-sm text-rose-600">Could not load {config.label.toLowerCase()}.</p> : null}
+      {status === 'error' ? (
+        <div className="flex items-center gap-3 text-sm text-rose-600">
+          <p>Could not load {config.label.toLowerCase()}. Editing stays locked until it loads.</p>
+          <button type="button" onClick={() => {
+              setStatus('loading')
+              setLoadAttempt((n) => n + 1)
+            }} className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+            Retry
+          </button>
+        </div>
+      ) : null}
 
-      <div className="space-y-4">
+      {/* Item controls are locked while saving: an edit made then would be
+          replaced by the saved response without ever being sent. */}
+      <fieldset disabled={status === 'saving'} className="m-0 min-w-0 space-y-4 border-0 p-0">
         {items.map((item, index) => (
           <div key={item.id || index} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
@@ -117,7 +132,7 @@ function ReplaceAllCollectionPage() {
           </div>
         ))}
         {!items.length && status === 'ready' ? <p className="text-sm text-slate-500">Nothing here yet — add one above.</p> : null}
-      </div>
+      </fieldset>
     </div>
   )
 }

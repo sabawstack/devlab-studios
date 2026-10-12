@@ -123,12 +123,15 @@ export default function SiteSettingsManager() {
     try {
       const response = await fetch('/api/admin/content/site-settings')
       if (response.status === 401) {
+        setIsLoaded(false)
         setStatus('Admin API is protected. Sign in through Cloudflare Access before editing site settings.')
         return
       }
-      // Every other outcome below puts a value in the form that is safe to
-      // edit and save -- the static fallback is offered precisely so a save
-      // can seed D1.
+      // Unlocked only when the form holds something safe to save over D1: the
+      // stored settings, or the static fallback when there is no database to
+      // overwrite (503) or nothing stored yet. A failed load stays locked --
+      // saving the fallback then would overwrite settings we failed to read --
+      // and Refresh retries it.
       if (response.status === 503) {
         const payload = await response.json()
         setValue(clone(siteSettingsContent))
@@ -137,9 +140,8 @@ export default function SiteSettingsManager() {
         return
       }
       if (!response.ok) {
-        setValue(clone(siteSettingsContent))
-        setStatus(`Unable to load site settings (${response.status}). Loaded static fallback.`)
-        setIsLoaded(true)
+        setIsLoaded(false)
+        setStatus(`Unable to load site settings (${response.status}). Editing is locked so the static fallback cannot overwrite them; press Refresh to try again.`)
         return
       }
 
@@ -149,9 +151,8 @@ export default function SiteSettingsManager() {
       setStatus(data?.navigation?.length ? 'Loaded site settings from D1.' : 'No site settings stored in D1 yet. Loaded static fallback; save to persist it.')
       setIsLoaded(true)
     } catch {
-      setValue(clone(siteSettingsContent))
-      setStatus('Unable to reach the site settings API. Loaded static fallback.')
-      setIsLoaded(true)
+      setIsLoaded(false)
+      setStatus('Unable to reach the site settings API. Editing is locked so the static fallback cannot overwrite your settings; press Refresh to try again.')
     }
   }, [])
 
