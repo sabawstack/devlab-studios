@@ -159,6 +159,55 @@ diffs and the results CSV.
 - **Rate limit.** The host and captain routes share a per-IP limit of 600 per
   minute (`hostIpLimited`).
 
+### Phase 4 additions (host sign-in and the DUPR export)
+
+- **Accounts only for the export.** Nobody signs in to run or view a session.
+  A host who wants a DUPR export signs in with Google; that creates a `hosts`
+  row (verified email, name, DUPR Club ID, news opt-in, off by default), which
+  never expires and is removed only by "Delete my account".
+- **Tables** (`0019_hosts.sql`): `hosts`; `host_logins` (SHA-256 of each
+  browser's login token, 30 days, cascades from `hosts`);
+  `open_sessions.host_id` (the claim, `ON DELETE SET NULL`); `open_host_keys`
+  (extra host links, cascade from `open_sessions`); `open_dupr_exports` (one
+  row per email sent, no personal data, cascade from `open_sessions`).
+- **Login.** The `devlab_pb_host` cookie holds a random opaque token (only its
+  hash is stored), not the host id (`hostSession.ts`): HttpOnly, Secure,
+  SameSite=Lax, 30 days, `Path=/api/pickleball/open`. Every write that trusts
+  the cookie must come from this site (`sameOrigin.ts`).
+- **Google.** `hostAuth.ts` reuses `oauth.js` (PKCE) and the one registered
+  `/api/pickleball/auth/google/callback`. When the `devlab_pb_oauth` cookie
+  (the legacy operator flow) is present the callback takes the legacy branch;
+  otherwise it hands host sign-ins to `finishHostSignIn` (the legacy branch goes
+  in Phase 5). Only a verified Google email is accepted. Outcomes return to the
+  starting page as `?signin=...`.
+- **Claim and access.** `OpenSessionDO` keeps `HostAccess` (claim and extra key
+  hashes) beside the cached session and is its only writer: `claim` (write-once;
+  needs the host key and the login cookie), `reopen` (mints an extra host key
+  for the claiming account, at most 10 per session, delivered to the page in the
+  URL fragment `#host=`; the original key keeps working), `forgetHost` (after an
+  account is deleted). None of it is in any snapshot; the console reads it from
+  `GET .../s/{code}/dupr`.
+- **Export.** `src/lib/pickleball/open/dupr/` builds the CSV (pinned to
+  `tests/fixtures/dupr-import-template.csv`) and the email. A game is eligible
+  when it is finished, has a valid score (no tie, a team reached 6) and four
+  different valid DUPR IDs; the rest are listed as skipped with reasons. An
+  invalid time zone falls back to UTC. The email goes to the verified Google
+  email through Resend (`duprExport.ts`). Limit: 5 per session per rolling 24
+  hours, reserved inside the Durable Object's serial chain (so concurrent taps
+  cannot overshoot) and refunded on any failed or thrown send.
+- **Account deletion.** "Delete my account" unlinks the host's sessions, revokes
+  their extra host keys, logs out every device (logins cascade), and tells warm
+  Durable Objects to forget the host (best effort, at most 50 sessions).
+- **Purge.** The daily cron removes expired logins in a run independent of the
+  session purge, so one failing never skips the other. Host rows are never
+  purged.
+- **Test login.** `POST .../host/test-login` exists only when
+  `PICKLEBALL_TEST_AUTH_ENABLED === 'true'` (local `.dev.vars`, never a deployed
+  environment); with it on nothing is emailed and the response carries the
+  message.
+- **Phase 5.** `phase5Safety.test.ts` pins that none of this imports what
+  Phase 5 deletes.
+
 ## Foundational pieces
 
 1. **UI shell** — a React Router SPA island (`src/pickleball-app/`), mounted
@@ -336,7 +385,7 @@ full role→permission matrix.
 | C3 | Tournaments, pools to bracket — seeded qualification from pools into a bracket (`6d0a026`) | Complete |
 | C4 | Tournaments, double elimination — losers bracket (`73e7608`, `bbe4abc`) | Complete |
 | C5 | Public and TV bracket view, tournament documentation (`0c2ae5d`) | Complete |
-| Open play | Free, no-login open play — `open_*` tables, `OpenSessionDO`, live QR board, 7-day purge (migration `0016`); the operator app above is legacy until Phase 5 of that spec | Phase 3 built (preview), release pending |
+| Open play | Free, no-login open play — `open_*` tables, `OpenSessionDO`, live QR board, 7-day purge (migration `0016`); the operator app above is legacy until Phase 5 of that spec | Phase 4 built (preview), release pending |
 
 **Deliberately not built** (disclosed, not overlooked): the public sanitized
 leaderboard extension to `toPublicSessionView` (spec §9 — deferred, requires

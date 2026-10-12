@@ -217,6 +217,61 @@ Do not edit fixture rows by hand: a running DO keeps its cached copy, and the
 engine's validity rules are not re-checked on load. A stuck tournament is fixed
 from the console (undo or edit a result, substitute, swap opponents).
 
+### Apply migration 0019
+
+Same commands as 0018. Preview's D1 lives in the personal Cloudflare account, so
+it needs `CLOUDFLARE_ACCOUNT_ID` inline, and the preview deploy does not apply
+D1 migrations.
+
+```bash
+CLOUDFLARE_ACCOUNT_ID=<preview account ID> npx wrangler d1 migrations apply devlab-pickleball-preview --remote --env preview
+```
+
+Read back (expect four rows, then one):
+
+```sql
+SELECT name FROM sqlite_master WHERE name IN ('hosts', 'host_logins', 'open_host_keys', 'open_dupr_exports');
+SELECT COUNT(*) FROM pragma_table_info('open_sessions') WHERE name = 'host_id';
+```
+
+### Host sign-in and the DUPR export
+
+Needs `GOOGLE_OAUTH_CLIENT_ID` (var), `GOOGLE_OAUTH_CLIENT_SECRET` (secret),
+`PICKLEBALL_OAUTH_REDIRECT_BASE_URL` (var), `RESEND_API_KEY` (secret) and
+`RESEND_FROM_EMAIL` (var). Never set `PICKLEBALL_TEST_AUTH_ENABLED` in any
+deployed environment (preview or production): with it on, anyone can sign in as
+any email and no export is mailed. It belongs only in local `.dev.vars`.
+
+- `?signin=unavailable`: the client id is missing or the placeholder, or the
+  secret or redirect base is unset.
+- `?signin=failed`: the in-flight cookie expired (10 minutes) or Google refused
+  the code; `pickleball_open.host_signin_failed` in Workers Logs has the reason.
+- `?signin=unverified`: the Google account has no verified email; it is not stored.
+- Export 502: Resend refused or is unconfigured (`pickleball_open.dupr_email`,
+  outcome `failure` or `skipped`); the export was not counted.
+- A host says DUPR refused the file: compare the CSV header with
+  `tests/fixtures/dupr-import-template.csv` and DUPR's current template; if
+  DUPR changed it, update the fixture and `DUPR_COLUMNS` together.
+
+```sql
+-- Who claimed a session, and its exports in the last day
+SELECT s.public_code, h.email, h.dupr_club_id FROM open_sessions s LEFT JOIN hosts h ON h.id = s.host_id WHERE s.public_code = ?;
+SELECT sent_at, game_count, skipped_count FROM open_dupr_exports WHERE session_id = (SELECT id FROM open_sessions WHERE public_code = ?) ORDER BY sent_at;
+
+-- Look up a host by email (read first)
+SELECT id, email, display_name, dupr_club_id, created_at, last_seen_at FROM hosts WHERE email = ?;
+```
+
+Do not edit `host_id` or `open_host_keys` by hand: a running DO keeps its own
+copy. To remove an account on request, the host uses "Delete my account"; if
+they cannot, look the host up by email (above), confirm it is the right row,
+then `DELETE FROM hosts WHERE id = ?` (logins cascade, sessions unlink) and the
+link disappears from a warm DO when it is next evicted.
+
+For the owner: the privacy policy (CMS content) does not yet describe host
+accounts (verified Google email, name, DUPR Club ID, news opt-in, kept until
+the host deletes the account). Decide its wording and update it in the CMS.
+
 ### Check-in floods
 
 Self check-in is anonymous. A 429 reads "Too many check-ins from this network"
@@ -263,6 +318,8 @@ sessions whose `expires_at` has passed (7 days after last activity), up to
 {"event":"pickleball_open.purge","outcome":"ok","purged":3}
 ```
 
+The same run removes host logins older than 30 days, logged separately as `{"event":"pickleball_open.host_login_purge","outcome":"ok","logins":N}`.
+
 Because it runs once a day, an expired row can stay in D1 for up to about
 24 hours after `expires_at`. That is expected: every load already treats it as
 not found, so nobody can see or change it in the meantime.
@@ -282,8 +339,10 @@ failures `pickleball_open.ws_error`; clients only ever see a generic 500.
   requests with a wrong key never use up the host's allowance).
 - **Board is stale:** the client falls back to polling `/state` every 5 s when
   the socket drops. Look for `pickleball_open.ws_error` log lines.
-- **Host lost their link:** the host key cannot be recovered. The session
-  expires on its own 7 days after its last activity.
+- **Host lost their link:** the host key cannot be recovered. If the session
+  was linked to Google for a DUPR export, the host signs in at
+  `/pickleball/my-sessions` and reopens it (a new host link; at most 10 extra
+  per session). Otherwise it expires on its own 7 days after its last activity.
 
 ## Notes
 
