@@ -70,14 +70,15 @@ export default function ViewerBoard({ viewer, status, lastSnapshotAt = null, inv
       <header className="flex flex-wrap items-end gap-3">
         <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
           <p className="flex items-center gap-2 text-xs font-bold text-pickle-neon">
-            <span className={`h-2 w-2 rounded-full bg-pickle-neon ${viewer.status === 'ACTIVE' ? 'pb-pulse' : ''}`} aria-hidden="true" />
-            {viewer.status !== 'ACTIVE' ? 'ENDED' : fresh ? 'LIVE' : <span className="text-amber-200">Offline · showing data from {lastSnapshotAt ? clock(lastSnapshotAt) : 'earlier'}</span>}
+            <span className={`h-2 w-2 rounded-full bg-pickle-neon ${final ? '' : 'pb-pulse'}`} aria-hidden="true" />
+            {viewer.status !== 'ACTIVE' ? 'ENDED' : final ? 'FINISHED' : fresh ? 'LIVE' : <span className="text-amber-200">Offline · showing data from {lastSnapshotAt ? clock(lastSnapshotAt) : 'earlier'}</span>}
           </p>
           <h1 className="text-2xl font-bold sm:text-3xl [overflow-wrap:anywhere]">{viewer.name}</h1>
           {/* Once the results show, their "Thanks for playing" header takes over from the greeting and message. */}
           {!final && <Welcome announcement={viewer.announcement} className="mt-1" />}
           <p className="text-sm text-mist">Hosted by {viewer.hostDisplayName} · {courtCount} court{courtCount === 1 ? '' : 's'} · {tournament ? tournament.formatLabel : MODE_INFO[viewer.settings.mode]?.label ?? 'Paddle stack'}</p>
-          {viewer.settings.selfCheckIn && viewer.status === 'ACTIVE' && (
+          {/* Check-in closes once the final standings show. */}
+          {viewer.settings.selfCheckIn && !final && (
             <a href={`/pickleball/s/${viewer.code}/check-in`} className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-pickle-neon underline underline-offset-4">Not on the list? Check in</a>
           )}
         </div>

@@ -771,6 +771,20 @@ test.describe('TV board', () => {
     }
   }
 
+  test('with reduced motion the TV fits court cards as large as without it (12 courts at 1920×1080)', async ({ browser, request }) => {
+    const { code } = await createSession(request, { courtCount: 12, players: Array.from({ length: 54 }, (_, i) => ({ name: `Player ${i + 1}` })) })
+    const context = await browser.newContext({ viewport: { width: 1920, height: 1080 }, reducedMotion: 'reduce' })
+    const page = await context.newPage()
+    await page.goto(`/pickleball/s/${code}/tv`)
+    await expect(page.getByTestId('tv-court')).toHaveCount(12)
+    await page.evaluate(() => document.fonts.ready)
+    // Names at least 24 px on every card, and the label in proportion to them (not a huge label over tiny names).
+    await expect.poll(() => page.getByTestId('tv-court').evaluateAll((cards) => Math.min(...cards.map((el) => parseFloat(getComputedStyle(el.querySelector('p')).fontSize))))).toBeGreaterThanOrEqual(24)
+    const ratio = await page.getByTestId('tv-court').first().evaluate((el) => parseFloat(getComputedStyle(el.querySelector('h2')).fontSize) / parseFloat(getComputedStyle(el.querySelector('p')).fontSize))
+    expect(ratio).toBeCloseTo(1.1, 1)
+    await context.close()
+  })
+
   test('an ended session shows the final results instead of courts', async ({ page, request }) => {
     const { code, hostKey } = await createSession(request)
     expect((await command(request, code, hostKey, { type: 'END_SESSION' })).status()).toBe(200)
@@ -860,7 +874,7 @@ test.describe('welcome message', () => {
     await expect(page.getByRole('button', { name: 'Next: add players' })).toBeDisabled()
   })
 
-  test('the host edits the message and the board, TV and check-in page update live; clearing leaves only the greeting', async ({ page, browser, request }) => {
+  test('the host edits the message: the board and TV update live, the check-in page on its next read; clearing leaves only the greeting', async ({ page, browser, request }) => {
     const { code, hostKey } = await createSession(request)
     const boardContext = await browser.newContext()
     const board = await boardContext.newPage()
@@ -890,6 +904,8 @@ test.describe('welcome message', () => {
     await expect(preview).toContainText('Courts close at 9 tonight')
     await expect(board.getByTestId('welcome-message')).toHaveText('Courts close at 9 tonight')
     await expect(tv.getByTestId('tv-announcement')).toContainText('Courts close at 9 tonight')
+    // The check-in page reads the board once a minute rather than holding a live connection.
+    await checkIn.reload()
     await expect(checkIn.getByTestId('welcome-message')).toHaveText('Courts close at 9 tonight')
 
     await preview.getByRole('button', { name: 'Edit' }).click()
@@ -1024,7 +1040,7 @@ test.describe('final results', () => {
     await expect(page.getByRole('status').filter({ hasText: `Hi ${benched[0]}! Thanks for coming 👋` })).toBeVisible()
   })
 
-  test('Share results hands the exact text and link to the share sheet', async ({ page, request, baseURL }) => {
+  test('Share results hands the exact text, ending with the link, to the share sheet (no separate url, so it is not shown twice)', async ({ page, request, baseURL }) => {
     const { code, gold, bronze } = await playedAndEnded(request)
     await page.addInitScript(() => {
       window.__shared = []
@@ -1034,7 +1050,7 @@ test.describe('final results', () => {
     await page.getByRole('button', { name: 'Share results' }).click()
     await expect.poll(() => page.evaluate(() => window.__shared.length)).toBe(1)
     const url = `${baseURL}/pickleball/s/${code}`
-    expect(await page.evaluate(() => window.__shared[0])).toEqual({ title: 'Final standings · Sunday Open Play', text: expectedText(gold, bronze, url), url })
+    expect(await page.evaluate(() => window.__shared[0])).toEqual({ title: 'Final standings · Sunday Open Play', text: expectedText(gold, bronze, url) })
   })
 
   test('without a share sheet the text is copied and says "Copied"; a refused copy shows the text to select', async ({ page, context, request, baseURL }) => {
@@ -1180,6 +1196,17 @@ test.describe('final results', () => {
       const hidden = await page.getByTestId('tv-results-rest').locator('li.invisible').count()
       if (hidden > 0) await expect(page.getByTestId('tv-results-more')).toContainText('scan the QR')
       else await expect(page.getByTestId('tv-results-more')).toHaveCount(0)
+      // Rows are hidden only for want of room: with the note showing, the card has less than a row to spare.
+      if (hidden > 0) {
+        const rowHeight = await rows.first().evaluate((el) => el.offsetHeight)
+        const free = await page.getByTestId('final-results').evaluate((card) => {
+          const style = getComputedStyle(card)
+          const shown = [...card.children].filter((el) => getComputedStyle(el).position !== 'absolute')
+          const used = shown.at(-1).getBoundingClientRect().bottom - shown[0].getBoundingClientRect().top
+          return card.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom) - used
+        })
+        expect(free).toBeLessThan(rowHeight)
+      }
     })
   }
 

@@ -3,7 +3,7 @@
 // clipboard. The text already ends with the board link, so the copy is the text.
 
 /**
- * @param {{ title: string, text: string, url: string }} data
+ * @param {{ title: string, text: string, url?: string }} data  Results pass no `url`: their text already ends with the link.
  * @param {{ share?: (data: object) => Promise<void>, clipboard?: { writeText: (text: string) => Promise<void> } } | undefined} nav
  * @returns {Promise<{ kind: 'shared' | 'cancelled' | 'copied' | 'failed' }>}
  */

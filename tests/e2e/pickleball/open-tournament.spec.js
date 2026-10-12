@@ -550,8 +550,41 @@ test.describe('tournament final results (screens)', () => {
         `🥇 ${table[0].name} (${wl(table[0])})  🥈 ${table[1].name} (${wl(table[1])})  🥉 ${table[2].name} (${wl(table[2])})`,
         `Full results: ${baseURL}/pickleball/s/${code}`,
       ].join('\n'),
-      url: `${baseURL}/pickleball/s/${code}`,
     })
+    // Finished but not yet ended by the host: over all the same, so no "LIVE" and no check-in.
+    await expect(page.getByText('FINISHED', { exact: true })).toBeVisible()
+    await expect(page.getByText('LIVE', { exact: true })).toHaveCount(0)
+    await expect(page.getByRole('link', { name: 'Not on the list? Check in' })).toHaveCount(0)
+  })
+
+  test('a round robin played to the end but not ended: the TV QR points at the final standings, not check-in', async ({ page, request, baseURL }) => {
+    const { code, hostKey } = await readyTournament(request, { format: 'ROUND_ROBIN' })
+    const host = await playToChampion(request, code, hostKey)
+    expect(host.viewer.status).toBe('ACTIVE')
+    expect(host.settings.selfCheckIn).toBe(true)
+    await page.setViewportSize({ width: 1920, height: 1080 })
+    await page.goto(`/pickleball/s/${code}/tv`)
+    await expect(page.getByTestId('final-results')).toBeVisible()
+    const panel = page.getByRole('complementary')
+    await expect(panel.getByRole('img', { name: 'QR code for the player board' })).toBeVisible()
+    await expect(panel.getByRole('img', { name: 'QR code for self check-in' })).toHaveCount(0)
+    await expect(panel.getByText('Scan for the final standings')).toBeVisible()
+    await expect(panel.getByText('FINISHED', { exact: true })).toBeVisible()
+    await expect(page.getByTestId('tv-qr')).toHaveAttribute('data-url', `${baseURL}/pickleball/s/${code}`)
+  })
+
+  test('a finished round robin of 8 pairs shows every place below the podium on a 1280×720 TV', async ({ page, request }) => {
+    const { code, hostKey } = await readyTournament(request, { format: 'ROUND_ROBIN', players: 16, courtCount: 4 })
+    await playToChampion(request, code, hostKey)
+    await page.setViewportSize({ width: 1280, height: 720 })
+    await page.goto(`/pickleball/s/${code}/tv`)
+    await expect(page.getByTestId('final-results')).toBeVisible()
+    await page.evaluate(() => document.fonts.ready)
+    const rows = page.getByTestId('tv-results-rest').locator('li')
+    await expect(rows).toHaveCount(5)
+    // Room for all five: none hidden, and no "+N more" note taking their place.
+    await expect.poll(() => rows.evaluateAll((els) => els.filter((el) => el.classList.contains('invisible')).length)).toBe(0)
+    await expect(page.getByTestId('tv-results-more')).toHaveCount(0)
   })
 
   test('a knockout: the two losing semi-finalists share 3rd on the host console, which keeps the CSV download', async ({ page, request }) => {

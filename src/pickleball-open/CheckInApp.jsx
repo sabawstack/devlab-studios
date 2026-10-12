@@ -1,9 +1,8 @@
 // QR self check-in (spec §4.2). Anonymous: a player types their own name and,
 // if they like, a skill from 1 to 5 and a DUPR ID. Nothing but the name is required.
-import { useState } from 'react'
-import { checkIn } from './lib/api'
+import { useEffect, useState } from 'react'
+import { checkIn, fetchViewer } from './lib/api'
 import { writeMe } from './lib/me'
-import { useOpenSession } from './lib/useOpenSession'
 import ExpiredNotice from './components/ExpiredNotice.jsx'
 import { Button, Panel } from './components/ui.jsx'
 import Welcome from './components/Welcome.jsx'
@@ -14,14 +13,35 @@ const MESSAGES = {
   404: 'This session has ended or the link is wrong.',
   429: 'Lots of people are checking in right now. Try again in a minute.',
 }
+// The page only needs the session name and the welcome message: one read, refreshed now and then.
+const REFRESH_MS = 60_000
+
+/** The public board, read once and every minute after, for the name and the host's message. */
+function usePublicBoard(code) {
+  const [viewer, setViewer] = useState(null)
+  useEffect(() => {
+    if (!code) return undefined
+    let cancelled = false
+    const load = () => fetchViewer(code)
+      .then((next) => { if (!cancelled) setViewer(next) })
+      // Only decoration: the form works without it, so a failed read keeps what is shown.
+      .catch(() => {})
+    load()
+    const timer = setInterval(load, REFRESH_MS)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
+  }, [code])
+  return viewer
+}
 
 export default function CheckInApp({ code }) {
   const [form, setForm] = useState({ name: '', skill: '', duprId: '' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
   const [done, setDone] = useState(null)
-  // The public board, live, for the session name and the host's welcome message.
-  const { viewer } = useOpenSession(code, null)
+  const viewer = usePublicBoard(code)
   const update = (patch) => setForm((current) => ({ ...current, ...patch }))
 
   async function submit(event) {
@@ -59,8 +79,9 @@ export default function CheckInApp({ code }) {
   return (
     <main className="mx-auto grid max-w-md gap-5 px-4 py-10">
       <div>
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-pickle-neon">Check in</p>
-        <h1 className="mt-2 text-3xl font-bold [overflow-wrap:anywhere]">{viewer ? viewer.name : 'Check in'}</h1>
+        {/* Until the session name arrives the heading says "Check in" by itself, so the eyebrow waits. */}
+        {viewer && <p className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-pickle-neon">Check in</p>}
+        <h1 className="text-3xl font-bold [overflow-wrap:anywhere]">{viewer ? viewer.name : 'Check in'}</h1>
         {viewer && <Welcome announcement={viewer.announcement} className="mt-2" />}
         <p className="mt-3 text-mist">Type the name you want on the board. First names or nicknames are fine: the board is public.</p>
       </div>

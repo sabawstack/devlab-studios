@@ -12,7 +12,8 @@ export default function ShareResultsButton({ results, url }) {
 
   async function share() {
     setOutcome(null)
-    const result = await shareResults({ title: `Final standings · ${results.name}`, text, url })
+    // No separate `url`: the text already ends with the link, and WhatsApp and Messages would show it twice.
+    const result = await shareResults({ title: `Final standings · ${results.name}`, text })
     setOutcome(result.kind)
   }
 

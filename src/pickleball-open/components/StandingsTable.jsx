@@ -9,7 +9,8 @@ export default function StandingsTable({ rows, highlightId = null }) {
         <tbody>
           {rows.map((row) => (
             <tr key={row.playerId} className={`border-t border-navy-800 ${row.playerId === highlightId ? 'font-bold text-pickle-neon' : ''}`}>
-              <td className="py-2 pr-2 font-bold text-pickle-neon">{row.rank ?? '–'}</td>
+              {/* The shared place (1, 2, 2, 4), as on the podium: players level on every tiebreak are not split by name. */}
+              <td className="py-2 pr-2 font-bold text-pickle-neon">{row.place ?? '–'}</td>
               <td className="py-2">{row.name}{row.played === 0 && <span className="text-mist"> · no games yet</span>}</td>
               <td className="py-2 text-right">{row.wins}–{row.losses}</td>
               <td className="py-2 text-right">{row.winRate === null ? '–' : Math.round(row.winRate * 100)}</td>

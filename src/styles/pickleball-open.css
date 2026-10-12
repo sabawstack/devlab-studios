@@ -44,4 +44,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pb-anim *, .pb-flip, .pb-pulse, .pb-marquee, .pb-rise, .pb-fade-in { animation: none !important; }
+  /* The site-wide reduced-motion rule gives every element a 0.01ms transition of every
+   * property, font-size included. Screens that fit their type by setting a size and
+   * measuring at once (the TV) would then read the old size mid-transition and shrink
+   * to the floor; with no transitions the new size applies immediately. */
+  .pb-fit, .pb-fit * { transition: none !important; }
 }

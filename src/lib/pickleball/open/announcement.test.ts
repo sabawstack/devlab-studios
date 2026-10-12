@@ -41,6 +41,18 @@ describe('cleanAnnouncement', () => {
     expect(cleanAnnouncement('Hi\u0000 \u202Ethere\u200B')).toBe('Hi there')
   })
 
+  it('keeps the zero-width non-joiner that some scripts need', () => {
+    // Persian "mi-khaham" is spelled with a ZWNJ between its first two letters.
+    const persian = '\u0645\u06CC\u200C\u062E\u0648\u0627\u0647\u0645'
+    expect(cleanAnnouncement(`Salam ${persian}`)).toBe(`Salam ${persian}`)
+  })
+
+  it('keeps the tag characters of subdivision flags (Scotland, Wales)', () => {
+    const scotland = '\u{1F3F4}\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}'
+    const wales = '\u{1F3F4}\u{E0067}\u{E0062}\u{E0077}\u{E006C}\u{E0073}\u{E007F}'
+    expect(cleanAnnouncement(`Go ${scotland} and ${wales}!`)).toBe(`Go ${scotland} and ${wales}!`)
+  })
+
   it('an empty or blank message means no message', () => {
     expect(cleanAnnouncement('')).toBe('')
     expect(cleanAnnouncement('   \n ')).toBe('')

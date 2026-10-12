@@ -60,6 +60,7 @@ function TvNotice({ title, body }) {
 
 function LiveState({ viewer, live, lastAt }) {
   if (viewer.status !== 'ACTIVE') return <span className="text-mist">ENDED</span>
+  if (showsFinalResults(viewer)) return <span className="text-mist">FINISHED</span>
   if (live) return <span className="inline-flex items-center gap-2"><span className="pb-pulse h-3 w-3 rounded-full bg-pickle-neon" aria-hidden="true" />LIVE</span>
   return <span className="text-amber-200">Offline · showing data from {clock(lastAt)}</span>
 }
@@ -136,13 +137,14 @@ export default function TvBoard({ code }) {
   }
 
   const live = status === 'open' || (lastSnapshotAt !== null && now - lastSnapshotAt < STALE_MS)
-  const ended = viewer.status !== 'ACTIVE'
+  // A finished tournament shows its final standings before the host ends it: treat it as over.
+  const final = showsFinalResults(viewer)
   const courts = viewer.courts.filter((c) => c.state !== 'OFF')
   const cols = tvColumns(courts.length)
   const rows = tvRows(courts.length)
   const origin = window.location.origin
-  // Check-in is refused once a session ends, so the QR then points at the board.
-  const checkIn = viewer.settings.selfCheckIn && !ended
+  // Once the final standings show, check-in is over, so the QR points at the board.
+  const checkIn = viewer.settings.selfCheckIn && !final
   const qrUrl = checkIn ? checkInLink(origin, code) : viewerLink(origin, code)
   const qrLabel = checkIn ? 'QR code for self check-in' : 'QR code for the player board'
   const qrSize = Math.round(Math.min(220, Math.max(120, width * 0.08)))
@@ -151,7 +153,7 @@ export default function TvBoard({ code }) {
   // Before the start there is nothing on court yet: say so instead of showing empty courts.
   const preStart = tournament?.phase === 'SETUP' || tournament?.phase === 'DRAFT'
   // One overlay fills the courts area at a time: the final results, or the coming draw.
-  const overlay = showsFinalResults(viewer) ? 'results' : preStart ? 'draw' : null
+  const overlay = final ? 'results' : preStart ? 'draw' : null
   const grid = { '--tv-cols': cols, '--tv-rows': rows }
   // The results' "Thanks for playing" header replaces the greeting and the welcome line.
   const results = overlay === 'results'
@@ -159,7 +161,7 @@ export default function TvBoard({ code }) {
   const announcement = results ? '' : viewer.announcement
 
   return (
-    <main className={`grid grid-cols-1 gap-4 p-4 lg:h-screen lg:grid-cols-[minmax(0,1fr)_minmax(18rem,26vw)] lg:gap-[1.2vw] lg:overflow-hidden lg:p-[1.2vw] ${announcement ? 'lg:grid-rows-[minmax(0,1fr)_auto]' : ''}`}>
+    <main className={`pb-fit grid grid-cols-1 gap-4 p-4 lg:h-screen lg:grid-cols-[minmax(0,1fr)_minmax(18rem,26vw)] lg:gap-[1.2vw] lg:overflow-hidden lg:p-[1.2vw] ${announcement ? 'lg:grid-rows-[minmax(0,1fr)_auto]' : ''}`}>
       {/* Below lg there is no side panel, so the essentials sit in a compact header. */}
       <header className="lg:hidden">
         <p className="text-sm font-bold text-pickle-neon"><LiveState viewer={viewer} live={live} lastAt={lastSnapshotAt} /> · {modeLabel}</p>
@@ -189,9 +191,9 @@ export default function TvBoard({ code }) {
           {greeting && <p className="text-[clamp(0.9rem,1.1vw,1.5rem)] font-semibold text-pickle-neon">{greeting}</p>}
         </header>
         <div className="flex items-center gap-[1vw]">
-          <QrCode url={qrUrl} size={qrSize} label={qrLabel} />
+          <div data-testid="tv-qr" data-url={qrUrl} className="shrink-0"><QrCode url={qrUrl} size={qrSize} label={qrLabel} /></div>
           <div className="min-w-0">
-            <p className="text-[clamp(0.9rem,1.1vw,1.5rem)] text-mist">{checkIn ? 'Scan to check in' : ended ? 'Scan for the final standings' : 'Scan to follow on your phone'}</p>
+            <p className="text-[clamp(0.9rem,1.1vw,1.5rem)] text-mist">{checkIn ? 'Scan to check in' : final ? 'Scan for the final standings' : 'Scan to follow on your phone'}</p>
             <p className="whitespace-nowrap text-[clamp(1rem,1.5vw,2.25rem)] font-bold tracking-[0.04em] text-pickle-neon">{formatPublicCode(code)}</p>
           </div>
         </div>

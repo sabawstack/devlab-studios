@@ -8,26 +8,54 @@ import { tvRestColumns, winLoss } from '../../../lib/pickleball/open/results'
 const pct = (value) => (value === null ? '–' : `${Math.round(value * 100)}%`)
 const WRAP = '[overflow-wrap:anywhere]'
 
+/** The rows of `list` that end within `room` px of its top, counted from the first. */
+function rowsWithin(list, room) {
+  let fit = 0
+  for (const row of list.children) {
+    if (row.offsetTop + row.offsetHeight > room + 0.5) break
+    fit += 1
+  }
+  return fit
+}
+
 function FittedRest({ rest, didntPlay }) {
   const outer = useRef(null)
   const inner = useRef(null)
+  const note = useRef(null)
   const [limit, setLimit] = useState(Number.POSITIVE_INFINITY)
+  // Measured from scratch every time: every row stays laid out (the hidden ones are only
+  // invisible), and the "+N more" note gives its room back to the list while measuring, so
+  // a list that once overflowed grows back as soon as it fits again.
   useEffect(() => {
+    let frame = 0
+    let cancelled = false
     const measure = () => {
-      if (!outer.current || !inner.current) return
-      const room = outer.current.clientHeight
-      let fit = 0
-      for (const row of inner.current.children) {
-        if (row.offsetTop + row.offsetHeight > room + 0.5) break
-        fit += 1
-      }
-      setLimit(fit)
+      const box = outer.current
+      const list = inner.current
+      const more = note.current
+      if (!box || !list || !more) return
+      const gap = parseFloat(getComputedStyle(box.parentElement).rowGap) || 0
+      const noteRoom = more.offsetHeight + gap
+      // The list's share of the card, with the note's room added back when it is showing.
+      const room = box.clientHeight + (more.dataset.shown === 'true' ? noteRoom : 0)
+      setLimit(list.offsetHeight <= room + 0.5 ? Number.POSITIVE_INFINITY : rowsWithin(list, room - noteRoom))
     }
-    const observer = new ResizeObserver(measure)
+    const schedule = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(measure)
+    }
+    const observer = new ResizeObserver(schedule)
     observer.observe(outer.current)
     observer.observe(inner.current)
-    return () => observer.disconnect()
-  }, [])
+    schedule()
+    // The site fonts change every row's height once they arrive.
+    document.fonts?.ready.then(() => { if (!cancelled) schedule() })
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+    }
+  }, [rest, didntPlay])
 
   const items = [
     ...rest.map((entry) => ({
@@ -45,6 +73,7 @@ function FittedRest({ rest, didntPlay }) {
   ]
   const shown = Number.isFinite(limit) ? limit : items.length
   const hiddenRanked = Math.max(0, rest.length - shown)
+  const overflowing = shown < items.length
   const columns = tvRestColumns(rest.length)
 
   return (
@@ -58,11 +87,12 @@ function FittedRest({ rest, didntPlay }) {
           ))}
         </ol>
       </div>
-      {shown < items.length && (
-        <p className="shrink-0 text-[clamp(1.05rem,1.3vw,1.9rem)] font-semibold text-pickle-neon" data-testid="tv-results-more">
-          {hiddenRanked > 0 ? `+${hiddenRanked} more: scan the QR for the full list` : 'Scan the QR for the full list'}
-        </p>
-      )}
+      {/* Always rendered so its height can be measured; it takes room only when rows are hidden. */}
+      <p ref={note} data-shown={overflowing} aria-hidden={!overflowing}
+        className={`text-center text-[clamp(1.05rem,1.3vw,1.9rem)] font-semibold text-pickle-neon ${overflowing ? 'shrink-0' : 'pointer-events-none invisible absolute inset-x-0'}`}
+        {...(overflowing ? { 'data-testid': 'tv-results-more' } : {})}>
+        {hiddenRanked > 0 ? `+${hiddenRanked} more: scan the QR for the full list` : 'Scan the QR for the full list'}
+      </p>
     </>
   )
 }

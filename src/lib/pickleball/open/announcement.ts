@@ -5,9 +5,11 @@
 import { LIMITS, type OpenSessionState } from './types'
 
 const CONTROL = /[\u0000-\u001F\u007F-\u009F]/g
-// Invisible format characters (bidi overrides, zero-width space…), except the
-// zero-width joiner that holds multi-person and flag emoji together.
-const FORMAT = /(?!\u200D)\p{Cf}/gu
+// Invisible format characters (bidi overrides, zero-width space…), except the ones
+// text needs: the zero-width joiner (multi-person emoji), the zero-width non-joiner
+// (Persian, Hindi and other scripts) and the tag characters that spell subdivision
+// flags such as Scotland's and Wales's.
+const FORMAT = /(?![\u200C\u200D\u{E0020}-\u{E007F}])\p{Cf}/gu
 const HIGH_SURROGATE = /[\uD800-\uDBFF]$/
 
 const SUFFIX: Record<OpenSessionState['kind'], string> = {

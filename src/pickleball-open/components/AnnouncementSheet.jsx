@@ -21,10 +21,23 @@ export function WelcomePreview({ announcement, onEdit }) {
   )
 }
 
-export default function AnnouncementSheet({ initial, onSave, onClose }) {
+/**
+ * Stays open until the server takes the change: `onSave` resolves true on success,
+ * false when it was refused, and `error` (the refusal) is shown here, in the sheet.
+ */
+export default function AnnouncementSheet({ initial, onSave, onClose, error = null }) {
   const [text, setText] = useState(initial)
+  const [busy, setBusy] = useState(false)
   const length = text.trim().length
   const over = length > MAX
+
+  async function save(next) {
+    setBusy(true)
+    const ok = await onSave(next)
+    // On success the console closes the sheet; on a refusal it stays for another try.
+    if (!ok) setBusy(false)
+  }
+
   return (
     <Sheet title="Edit welcome message" onClose={onClose}>
       <label className="grid gap-1.5 text-sm text-mist">Shown under the session name on every phone, the check-in page and the TV
@@ -32,9 +45,10 @@ export default function AnnouncementSheet({ initial, onSave, onClose }) {
       </label>
       <p className={`mt-1 text-right text-xs ${over ? 'font-bold text-rose-200' : 'text-mist'}`} aria-live="polite" data-testid="announcement-count">{length}/{MAX}</p>
       {over && <p role="alert" className="mt-1 text-sm text-rose-200">Keep it to {MAX} characters.</p>}
+      {error && !busy && <p role="alert" className="mt-2 rounded-xl bg-rose-500/15 px-4 py-3 text-sm text-rose-100" data-testid="announcement-error">{error}</p>}
       <div className="mt-4 flex flex-wrap gap-3">
-        <Button variant="neon" className="flex-1" disabled={over} onClick={() => onSave(text)}>Save</Button>
-        <Button variant="ghost" onClick={() => onSave('')}>Clear message</Button>
+        <Button variant="neon" className="flex-1" disabled={over || busy} onClick={() => save(text)}>{busy ? 'Saving…' : 'Save'}</Button>
+        <Button variant="ghost" disabled={busy} onClick={() => save('')}>Clear message</Button>
       </div>
     </Sheet>
   )

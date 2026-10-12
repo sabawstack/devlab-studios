@@ -252,8 +252,14 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
           onToggleCheckIn={() => send({ type: 'SET_SELF_CHECK_IN', enabled: !host.settings.selfCheckIn })} />
       )}
       {dialog?.type === 'announcement' && (
-        <AnnouncementSheet initial={viewer.announcement} onClose={() => setDialog(null)}
-          onSave={(text) => { setDialog(null); send({ type: 'SET_ANNOUNCEMENT', text: text.trim() }) }} />
+        <AnnouncementSheet initial={viewer.announcement} error={error ? friendlyError(error) : null}
+          onClose={() => { clearError(); setDialog(null) }}
+          onSave={async (text) => {
+            clearError()
+            const ok = await send({ type: 'SET_ANNOUNCEMENT', text: text.trim() })
+            if (ok) setDialog(null)
+            return ok
+          }} />
       )}
       {dialog?.type === 'captains' && (
         <CaptainsSheet code={code} hostKey={hostKey} courts={host.courts} captains={host.captains} onHost={onHost} onClose={() => setDialog(null)} />

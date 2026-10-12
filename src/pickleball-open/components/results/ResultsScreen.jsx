@@ -10,6 +10,9 @@ import SavePosterButton from './SavePosterButton.jsx'
 import ShareResultsButton from './ShareResultsButton.jsx'
 import TvRest from './TvRest.jsx'
 
+/** Who stands where: a change remounts the TV podium so its fit starts again from full size. */
+const podiumKey = (podium) => podium.map((step) => `${step.place}:${step.entries.map((e) => e.id).join(',')}`).join('|')
+
 const untilDate = (iso) => new Date(iso).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
 
 function Heading({ name, tv }) {
@@ -22,10 +25,21 @@ function Heading({ name, tv }) {
   )
 }
 
-/** The TV podium, shrunk in small steps while a big tie would overflow its share of the screen. */
+const FULL_SIZE = { scale: 1, capped: true }
+
+/**
+ * The TV podium, shrunk in small steps while a big tie would overflow its share of the screen.
+ * The shrinking only goes one way, so it starts again from full size when the site fonts
+ * arrive (the fallback font may have needed more room); a new podium remounts it (keyed).
+ */
 function TvPodium({ podium, limited }) {
   const box = useRef(null)
-  const [fit, setFit] = useState({ scale: 1, capped: true })
+  const [fit, setFit] = useState(FULL_SIZE)
+  useEffect(() => {
+    let cancelled = false
+    document.fonts?.ready.then(() => { if (!cancelled) setFit(FULL_SIZE) })
+    return () => { cancelled = true }
+  }, [])
   useEffect(() => {
     const el = box.current
     const observer = new ResizeObserver(() => {
@@ -60,12 +74,12 @@ export default function ResultsScreen({ viewer, boardUrl = '', actions = null, h
   if (tv) {
     return (
       <section aria-label="Final results" data-testid="final-results"
-        className="flex min-h-0 flex-col gap-[1.6vh] rounded-2xl bg-navy-900 p-4 lg:col-span-full lg:row-span-full lg:justify-center lg:overflow-hidden lg:p-[1.4vw]">
+        className="relative flex min-h-0 flex-col gap-[1.6vh] rounded-2xl bg-navy-900 p-4 lg:col-span-full lg:row-span-full lg:justify-[safe_center] lg:overflow-hidden lg:p-[1.4vw]">
         <Heading name={results.name} tv />
         {/* The podium takes what it needs (up to 45% when a list follows; a big tie shrinks it to fit), the list the rest. */}
         {noGames
           ? <p className="text-center text-[clamp(1.25rem,2vw,3rem)] text-mist">No games were saved in this session.</p>
-          : <TvPodium podium={results.podium} limited={hasList} />}
+          : <TvPodium key={podiumKey(results.podium)} podium={results.podium} limited={hasList} />}
         {hasList && <TvRest rest={results.rest} didntPlay={results.didntPlay} />}
         <p className="shrink-0 text-center text-[clamp(1.05rem,1.3vw,1.9rem)] text-mist">{summary} · Results stay available until {untilDate(results.expiresAt)}</p>
       </section>
