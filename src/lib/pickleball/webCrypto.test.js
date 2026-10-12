@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { bytesToBase64Url, base64UrlToBytes, randomBase64Url, sha256Base64Url, hmacSign, hmacVerify } from './webCrypto.js'
+import { bytesToBase64Url, base64UrlToBytes, randomBase64Url, randomInt, sha256Base64Url, hmacSign, hmacVerify } from './webCrypto.js'
 
 describe('base64url roundtrip', () => {
   it('encodes and decodes bytes without padding or unsafe characters', () => {
@@ -44,5 +44,22 @@ describe('hmacSign / hmacVerify', () => {
   it('rejects a tampered payload', async () => {
     const signature = await hmacSign('payload', 'secret-value')
     expect(await hmacVerify('tampered', signature, 'secret-value')).toBe(false)
+  })
+})
+
+describe('randomInt', () => {
+  it('stays in range and reaches every value', () => {
+    const seen = new Set()
+    for (let i = 0; i < 2000; i += 1) {
+      const value = randomInt(6)
+      expect(Number.isInteger(value) && value >= 0 && value < 6).toBe(true)
+      seen.add(value)
+    }
+    expect(seen.size).toBe(6)
+  })
+
+  it('refuses a range it cannot draw from', () => {
+    expect(() => randomInt(0)).toThrow(RangeError)
+    expect(() => randomInt(2.5)).toThrow(RangeError)
   })
 })

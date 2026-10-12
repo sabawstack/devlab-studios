@@ -52,3 +52,20 @@ export async function hmacVerify(payload, signature, secret) {
     return false
   }
 }
+
+/**
+ * A uniform integer in [0, maxExclusive) from crypto.getRandomValues. Rejection
+ * sampling, not a bare modulo, so no value is favoured (random pairing and
+ * seeding in tournaments depend on it being fair).
+ */
+export function randomInt(maxExclusive) {
+  if (!Number.isInteger(maxExclusive) || maxExclusive < 1 || maxExclusive > 2 ** 32) {
+    throw new RangeError('maxExclusive must be an integer from 1 to 2^32')
+  }
+  const limit = Math.floor(2 ** 32 / maxExclusive) * maxExclusive
+  const buffer = new Uint32Array(1)
+  for (;;) {
+    crypto.getRandomValues(buffer)
+    if (buffer[0] < limit) return buffer[0] % maxExclusive
+  }
+}
