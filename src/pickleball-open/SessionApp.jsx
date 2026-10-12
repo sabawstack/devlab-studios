@@ -34,7 +34,7 @@ export default function SessionApp({ code }) {
   const onCaptainRevoked = useCallback((key) => {
     if (key === keys.captainFragment && keys.captainSaved && keys.captainSaved !== keys.captainFragment) setCaptainFellBack(true)
   }, [keys])
-  const { status, viewer, host, captain, captainRevoked, authFailed, setHost, setCaptain } = useOpenSession(code, hostKey, { onRejected, onCaptainRevoked, captainKey })
+  const { status, viewer, host, captain, captainRevoked, authFailed, setHost, setCaptain, lastSnapshotAt } = useOpenSession(code, hostKey, { onRejected, onCaptainRevoked, captainKey })
 
   // Keys are removed from the address bar so they are never left on screen or
   // in a screenshot of the URL (spec §3.3), and saved straight away so closing
@@ -79,6 +79,6 @@ export default function SessionApp({ code }) {
   if (host && hostKey && !authFailed) return <HostConsole code={code} hostKey={hostKey} host={host} status={status} onHost={setHost} />
   if (captain && captainKey) return <CaptainConsole code={code} captainKey={captainKey} snapshot={captain} status={status} onSnapshot={setCaptain} signInNotice={signInNotice} />
   if (!viewer) return <p className="p-8 text-center text-mist" role="status">Loading the board…</p>
-  return <ViewerBoard viewer={viewer} status={status} invalidHostLink={authFailed && !canFallBack} revokedCaptainLink={captainRevoked}
+  return <ViewerBoard viewer={viewer} status={status} lastSnapshotAt={lastSnapshotAt} invalidHostLink={authFailed && !canFallBack} revokedCaptainLink={captainRevoked}
     signInNotice={signInNotice} />
 }

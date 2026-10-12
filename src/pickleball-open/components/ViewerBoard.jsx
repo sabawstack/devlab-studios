@@ -3,10 +3,15 @@ import { useState } from 'react'
 import { MODE_INFO } from '../../lib/pickleball/open/modes/info'
 import { readMe, writeMe } from '../lib/me'
 import { myStatus } from '../lib/myStatus'
+import { useNow } from '../lib/useNow'
 import { BOARD_TABS } from '../tournament/tabs'
 import TournamentPanels from '../tournament/TournamentPanels.jsx'
 import StandingsTable from './StandingsTable.jsx'
 import { Panel, TeamNames } from './ui.jsx'
+
+// Polling keeps the board current when the socket can't open, so "live" means fresh data, not an open socket.
+const STALE_MS = 15_000
+const clock = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
 const COURT_STATE = { PLAYING: 'Playing', UP_NEXT: 'Walk on now', WAITING_FOR_PLAYERS: 'Waiting for players', OFF: 'Off' }
 
@@ -25,7 +30,9 @@ function MeBanner({ status }) {
   return <p className="rounded-2xl bg-pickle-neon px-4 py-3 text-lg font-bold text-ink" role="status">{text}</p>
 }
 
-export default function ViewerBoard({ viewer, status, invalidHostLink, revokedCaptainLink = false, signInNotice = null }) {
+export default function ViewerBoard({ viewer, status, lastSnapshotAt = null, invalidHostLink, revokedCaptainLink = false, signInNotice = null }) {
+  const now = useNow(5000)
+  const fresh = status === 'open' || (lastSnapshotAt !== null && now - lastSnapshotAt < STALE_MS)
   const [me, setMe] = useState(() => readMe(viewer.code))
   const [tab, setTab] = useState('courts')
   const mine = myStatus(viewer, me)
@@ -64,7 +71,7 @@ export default function ViewerBoard({ viewer, status, invalidHostLink, revokedCa
         <div className="flex-1">
           <p className="flex items-center gap-2 text-xs font-bold text-pickle-neon">
             <span className={`h-2 w-2 rounded-full bg-pickle-neon ${viewer.status === 'ACTIVE' ? 'pb-pulse' : ''}`} aria-hidden="true" />
-            {viewer.status === 'ACTIVE' ? 'LIVE' : 'ENDED'}{status !== 'open' && <span className="text-amber-200"> · reconnecting</span>}
+            {viewer.status !== 'ACTIVE' ? 'ENDED' : fresh ? 'LIVE' : <span className="text-amber-200">Offline · showing data from {lastSnapshotAt ? clock(lastSnapshotAt) : 'earlier'}</span>}
           </p>
           <h1 className="text-2xl font-bold sm:text-3xl">{viewer.name}</h1>
           <p className="text-sm text-mist">Hosted by {viewer.hostDisplayName} · {courtCount} court{courtCount === 1 ? '' : 's'} · {tournament ? tournament.formatLabel : MODE_INFO[viewer.settings.mode]?.label ?? 'Paddle stack'}</p>
