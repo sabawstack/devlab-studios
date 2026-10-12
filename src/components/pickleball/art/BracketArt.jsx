@@ -1,5 +1,5 @@
 // Original, hand-authored SVG. Decorative. Four first-round games feed two
-// semi-finals and a final; the winning path lights up and the ball rises to
+// semi-finals and a final; the winning path lights up and the ball bobs at
 // the top. CSS-only motion (pb-fade-cycle, pb-bob), stopped for reduced motion.
 const FIRST = [24, 64, 112, 152]
 const SEMI = [44, 132]

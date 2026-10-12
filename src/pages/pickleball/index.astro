@@ -40,7 +40,7 @@ const features = [
   { title: 'One person, every court', body: 'Up to 16 courts on one screen. Any proposed game can be edited before it starts, and a wrong score can be undone or fixed.' },
   { title: 'Court captains', body: 'Send a helper a link that runs one court from their own phone: start its games, save and fix its results. Turn it off and it stops working at once.' },
   { title: 'A TV board for the venue', body: 'Every court, who is up next, standings and fairness numbers on one screen, readable from across the hall.' },
-  { title: 'Casual tournaments', body: 'Round robin, pools then a bracket, or single or double elimination. Random, balanced or hand-picked pairs, a draft draw you can edit, and the live bracket on every phone.' },
+  { title: 'Casual tournaments', body: 'Round robin, pools then a bracket, or single or double elimination. Random, balanced or list-order pairs, a draft draw you can edit, and the live bracket on every phone.' },
   { title: 'Free, with no sign-up', body: 'No accounts for the host or the players. Your host link is your key; the board link is view-only.' },
   { title: 'Private by default', body: 'Sessions are deleted from the live service 7 days after the last change to them. Download the results as a spreadsheet any time before then.' },
 ]
@@ -50,7 +50,7 @@ const faqs = [
   { q: 'Do players need an app or an account?', a: 'No. They scan the QR code or open the link in any browser. Nobody signs up.' },
   { q: 'What if I close the tab?', a: 'Nothing is lost: every tap is saved on our servers. Open the site on the same phone and choose “Resume as host”, or open your host link on another device.' },
   { q: 'How long are results kept?', a: 'Until 7 days after the last change to the session, then they are deleted. You can download a CSV of every game and the standings before that.' },
-  { q: 'Can I run a tournament?', a: 'Yes, for doubles: round robin, pools then a bracket, single elimination or double elimination. Generate the draw, edit it as much as you like, then start; courts get the next game by themselves.' },
+  { q: 'Can I run a tournament?', a: 'Yes, for doubles: round robin, pools then a bracket, single elimination or double elimination. Generate the draw, edit it freely, then start; each free court is offered the next game.' },
   { q: 'Can I use it on a tablet, laptop or big screen?', a: 'Yes. The courts reflow to fit any screen, from a phone to a wide monitor, and the TV board shows every court in large type on a venue screen.' },
 ]
 ---
@@ -85,7 +85,7 @@ const faqs = [
       </ol>
     </section>
 
-    <section class="mt-20 grid gap-4 md:grid-cols-2" aria-label="Features">
+    <section class="mt-20 grid gap-4 md:grid-cols-2 md:[&>*:last-child:nth-child(odd)]:col-span-2" aria-label="Features">
       {features.map(({ title, body }) => (
         <div class="rounded-2xl border border-[#193480] p-6">
           <h3 class="text-xl font-bold text-white">{title}</h3>
