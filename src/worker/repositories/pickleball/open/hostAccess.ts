@@ -12,6 +12,15 @@ export interface HostAccess {
 
 export const MAX_EXTRA_HOST_KEYS = 10
 
+/** Why this host may not mint another host link for the session, or null when they may (spec §9.5). */
+export function reopenRefusal(access: HostAccess, hostId: string): { status: number; error: string } | null {
+  if (access.hostId !== hostId) return { status: 403, error: 'This session is not linked to your account.' }
+  if (access.extraKeyHashes.length >= MAX_EXTRA_HOST_KEYS) {
+    return { status: 409, error: `This session already has ${MAX_EXTRA_HOST_KEYS} extra host links. Open it on a device you used before.` }
+  }
+  return null
+}
+
 export async function loadHostAccess(db: D1Database, sessionId: string): Promise<HostAccess> {
   const [session, keys] = await Promise.all([
     db.prepare('SELECT host_id FROM open_sessions WHERE id = ?').bind(sessionId).first<{ host_id: string | null }>(),

@@ -9,6 +9,8 @@ import { checkInSchema } from '../../../lib/schemas/pickleball/open/checkIn'
 import { commandEnvelopeSchema } from '../../../lib/schemas/pickleball/open/commands'
 import { captainLabel, captainRefusal, findCaptain } from '../../../lib/pickleball/open/captains'
 import { applyCheckIn } from '../../../lib/pickleball/open/checkIn'
+import { buildDuprExport, normalizeTimeZone, type DuprSkip } from '../../../lib/pickleball/open/dupr/export'
+import { claimStateFor, DUPR_EXPORT_LIMIT, exportsLeft, exportWindowStart, type ClaimState } from '../../../lib/pickleball/open/dupr/policy'
 import { applyCommand, finalizeCommand, touch } from '../../../lib/pickleball/open/reducer'
 import { resultsCsv } from '../../../lib/pickleball/open/resultsCsv'
 import { constantTimeEqual } from '../../../lib/pickleball/open/secrets'
@@ -21,12 +23,25 @@ import {
   deleteOpenSession, findIdempotentResponse, insertCaptain, loadOpenSession, persistDiff, revokeCaptain as revokeCaptainRow,
   type LoadedSession,
 } from '../../repositories/pickleball/open/openSessions'
+import { claimSession, insertHostKey, loadHostAccess, recentDuprExports, reopenRefusal, type HostAccess } from '../../repositories/pickleball/open/hostAccess'
 
 export type DoResult<T> = { status: number; body: T | { error: string }; retryAfterSeconds?: number }
 export interface Credentials { hostKey: string | null; captainKey: string | null }
 export type CommandBody = { version: number; host?: HostSnapshot; captain?: CaptainSnapshot }
 export interface CheckInBody { playerId: string; name: string; alreadyCheckedIn: boolean }
 export interface CaptainLinkBody { captainId: string; label: string; captainKey: string; host: HostSnapshot }
+/** The host's DUPR panel (spec §9): never part of any snapshot, so viewers and captains never get it. */
+export interface DuprStatusBody {
+  claim: ClaimState
+  exported: number
+  skipped: DuprSkip[]
+  missingIds: Array<{ id: string; name: string }>
+  exportsLeft: number
+  exportLimit: number
+}
+
+/** The session plus who, beyond the original host key, may act as its host (spec §9.2, §9.5). */
+type Cached = LoadedSession & { access: HostAccess }
 
 type Actor = { role: 'host' } | { role: 'captain'; captain: CaptainRecord }
 type Attachment = { code: string; role: 'viewer' | 'host' | 'captain'; captainId?: string }
@@ -54,7 +69,7 @@ function windowRetryAfter(times: readonly number[], limit: number, windowMs: num
 }
 
 export class OpenSessionDO extends DurableObject<Env> {
-  private loaded: LoadedSession | null = null
+  private loaded: Cached | null = null
   private chain: Promise<unknown> = Promise.resolve()
   private commandTimes: number[] = []
   private checkInTimes: number[] = []
@@ -66,29 +81,32 @@ export class OpenSessionDO extends DurableObject<Env> {
     return run
   }
 
-  private async load(code: string): Promise<LoadedSession | null> {
+  private async load(code: string): Promise<Cached | null> {
     // A request routed to the wrong coordinator must never load (or cache) another session's state.
     if (!this.ctx.id.equals(this.env.OPEN_SESSION.idFromName(code))) return null
     const now = new Date().toISOString()
     if (this.loaded && this.loaded.state.publicCode === code && this.loaded.state.expiresAt > now) return this.loaded
-    this.loaded = await loadOpenSession(this.env.PICKLEBALL_DB, code, now)
+    const loaded = await loadOpenSession(this.env.PICKLEBALL_DB, code, now)
+    this.loaded = loaded ? { ...loaded, access: await loadHostAccess(this.env.PICKLEBALL_DB, loaded.state.id) } : null
     return this.loaded
   }
 
-  private async isHost(loaded: LoadedSession, hostKey: string | null): Promise<boolean> {
+  /** The original host key, or an extra host link minted by reopen(). Every hash is compared, so timing says nothing. */
+  private async isHost(loaded: Cached, hostKey: string | null): Promise<boolean> {
     if (!hostKey) return false
-    return constantTimeEqual(await sha256Base64Url(hostKey), loaded.hostKeyHash)
+    const hash = await sha256Base64Url(hostKey)
+    return [loaded.hostKeyHash, ...loaded.access.extraKeyHashes].reduce((match, known) => constantTimeEqual(hash, known) || match, false)
   }
 
   /** Host first; otherwise a live (unrevoked) captain link. Revocation is immediate: captains are checked from memory on every call. */
-  private async actorFor(loaded: LoadedSession, credentials: Credentials): Promise<Actor | null> {
+  private async actorFor(loaded: Cached, credentials: Credentials): Promise<Actor | null> {
     if (await this.isHost(loaded, credentials.hostKey)) return { role: 'host' }
     if (!credentials.captainKey) return null
     const captain = findCaptain(loaded.captains, await sha256Base64Url(credentials.captainKey))
     return captain ? { role: 'captain', captain } : null
   }
 
-  private async authorized(code: string, hostKey: string | null): Promise<LoadedSession | DoResult<never>> {
+  private async authorized(code: string, hostKey: string | null): Promise<Cached | DoResult<never>> {
     const loaded = await this.load(code)
     if (!loaded) return { status: 404, body: { error: 'Session not found.' } }
     if (!(await this.isHost(loaded, hostKey))) return { status: 403, body: { error: 'Only the host can do that.' } }
@@ -252,6 +270,54 @@ export class OpenSessionDO extends DurableObject<Env> {
       await deleteOpenSession(this.env.PICKLEBALL_DB, auth.state.id)
       this.closeAll()
       return { status: 200, body: { deleted: true } }
+    })
+  }
+
+  /** The host's DUPR panel: claim, what would be exported and why games are left out, exports left today. */
+  async duprStatus(code: string, hostKey: string | null, hostId: string | null, timeZone: string): Promise<DoResult<DuprStatusBody>> {
+    return this.serial(async () => {
+      const auth = await this.authorized(code, hostKey)
+      if (!('state' in auth)) return auth
+      const preview = buildDuprExport(auth.state, { timeZone: normalizeTimeZone(timeZone) })
+      const sent = await recentDuprExports(this.env.PICKLEBALL_DB, auth.state.id, exportWindowStart(new Date().toISOString()))
+      return {
+        status: 200,
+        body: {
+          claim: claimStateFor(auth.access.hostId, hostId), exported: preview.exported, skipped: preview.skipped,
+          missingIds: preview.missingIds, exportsLeft: exportsLeft(sent), exportLimit: DUPR_EXPORT_LIMIT,
+        },
+      }
+    })
+  }
+
+  /** Links the session to a signed-in host: once, and only for whoever holds the host key (spec §9.2). */
+  async claim(code: string, hostKey: string | null, hostId: string): Promise<DoResult<{ claim: ClaimState }>> {
+    return this.serial(async () => {
+      const auth = await this.authorized(code, hostKey)
+      if (!('state' in auth)) return auth
+      const current = claimStateFor(auth.access.hostId, hostId)
+      if (current === 'MINE') return { status: 200, body: { claim: current } }
+      if (current === 'OTHER') return { status: 409, body: { error: 'This session is already linked to another Google account.' } }
+      if (!(await claimSession(this.env.PICKLEBALL_DB, auth.state.id, hostId))) {
+        return { status: 409, body: { error: 'Your sign-in has ended. Sign in again and retry.' } }
+      }
+      this.loaded = { ...auth, access: { ...auth.access, hostId } }
+      return { status: 200, body: { claim: 'MINE' } }
+    })
+  }
+
+  /** A fresh host link for the account that claimed this session: the lost-link recovery path (spec §9.5). */
+  async reopen(code: string, hostId: string): Promise<DoResult<{ hostKey: string }>> {
+    return this.serial(async () => {
+      const loaded = await this.load(code)
+      if (!loaded) return { status: 404, body: { error: 'Session not found.' } }
+      const refusal = reopenRefusal(loaded.access, hostId)
+      if (refusal) return { status: refusal.status, body: { error: refusal.error } }
+      const hostKey = randomBase64Url(16)
+      const keyHash = await sha256Base64Url(hostKey)
+      await insertHostKey(this.env.PICKLEBALL_DB, { id: crypto.randomUUID(), sessionId: loaded.state.id, keyHash, createdAt: new Date().toISOString() })
+      this.loaded = { ...loaded, access: { ...loaded.access, extraKeyHashes: [...loaded.access.extraKeyHashes, keyHash] } }
+      return { status: 201, body: { hostKey } }
     })
   }
 

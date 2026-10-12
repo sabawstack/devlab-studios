@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { createSqliteD1 } from './testing/sqliteD1'
-import { createOpenSession, purgeExpiredOpenSessions } from './openSessions'
+import { createOpenSession, loadOpenSession, persistDiff, purgeExpiredOpenSessions } from './openSessions'
 import {
   createHostLogin, deleteHost, deleteHostLogin, findHostByLogin, listHostSessions, LOGIN_TTL_MS, purgeExpiredHostLogins,
   toHostProfile, updateHostProfile, upsertHost,
 } from './hosts'
-import { claimSession, deleteDuprExport, insertDuprExport, insertHostKey, loadHostAccess, recentDuprExports } from './hostAccess'
+import {
+  claimSession, deleteDuprExport, insertDuprExport, insertHostKey, loadHostAccess, MAX_EXTRA_HOST_KEYS, recentDuprExports, reopenRefusal,
+} from './hostAccess'
 import { buildInitialState } from '../../../../lib/pickleball/open/create'
+import { touch } from '../../../../lib/pickleball/open/reducer'
 import { DEFAULT_SETTINGS } from '../../../../lib/pickleball/open/types'
 
 const MIGRATIONS = [
@@ -138,6 +141,29 @@ describe('host access', () => {
     expect(await claimSession(d1, s.id, bo.id)).toBe(false)
     expect(await claimSession(d1, s.id, ana.id)).toBe(false)
     expect((await loadHostAccess(d1, s.id)).hostId).toBe(ana.id)
+  })
+
+  it('a normal session save after a claim keeps the claim', async () => {
+    const { d1, newId } = setup()
+    const ana = await upsertHost(d1, ANA, { now: NOW, newId })
+    const s = await session(d1, 'AAAAA22222')
+    expect(await claimSession(d1, s.id, ana.id)).toBe(true)
+    const next = { ...touch(s, LATER), name: 'Renamed', version: s.version + 1 }
+    await persistDiff(d1, s, next, null)
+    const reloaded = await loadOpenSession(d1, 'AAAAA22222', LATER)
+    expect(reloaded?.state).toMatchObject({ name: 'Renamed', lastActivityAt: LATER })
+    expect((await loadHostAccess(d1, s.id)).hostId).toBe(ana.id)
+  })
+
+  it('reopen is only for the claiming account, and stops at the extra host link cap', () => {
+    const keys = (n: number) => Array.from({ length: n }, (_, i) => `h${i}`)
+    expect(MAX_EXTRA_HOST_KEYS).toBe(10)
+    expect(reopenRefusal({ hostId: 'ana', extraKeyHashes: keys(9) }, 'ana')).toBeNull()
+    expect(reopenRefusal({ hostId: null, extraKeyHashes: [] }, 'ana')).toEqual({ status: 403, error: 'This session is not linked to your account.' })
+    expect(reopenRefusal({ hostId: 'bo', extraKeyHashes: [] }, 'ana')?.status).toBe(403)
+    expect(reopenRefusal({ hostId: 'ana', extraKeyHashes: keys(10) }, 'ana')).toEqual({
+      status: 409, error: 'This session already has 10 extra host links. Open it on a device you used before.',
+    })
   })
 
   it('extra host keys load oldest first and cascade with the purge', async () => {
