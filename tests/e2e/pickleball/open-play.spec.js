@@ -58,12 +58,16 @@ test.describe('open play API', () => {
   test('a wrong-key flood from one address does not lock the host out', async ({ request }) => {
     const { code, hostKey } = await createSession(request)
     const attacker = freshIp()
-    const flood = await Promise.all(Array.from({ length: 125 }, () =>
-      request.post(`/api/pickleball/open/s/${code}/commands`, {
-        headers: { 'X-Host-Key': 'wrong-key-wrong-key', 'cf-connecting-ip': attacker },
-        data: { idempotencyKey: crypto.randomUUID(), command: { type: 'END_SESSION' } },
-      })))
-    const statuses = flood.map((r) => r.status())
+    // hostIpLimited allows 600 per minute per address (a club's captains and host share one Wi-Fi).
+    const statuses = []
+    for (let batch = 0; batch < 5; batch += 1) {
+      const flood = await Promise.all(Array.from({ length: 121 }, () =>
+        request.post(`/api/pickleball/open/s/${code}/commands`, {
+          headers: { 'X-Host-Key': 'wrong-key-wrong-key', 'cf-connecting-ip': attacker },
+          data: { idempotencyKey: crypto.randomUUID(), command: { type: 'END_SESSION' } },
+        })))
+      statuses.push(...flood.map((r) => r.status()))
+    }
     expect(statuses.every((s) => s === 403 || s === 429)).toBe(true)
     expect(statuses).toContain(429)
 
@@ -550,8 +554,9 @@ test.describe('court captains (screens)', () => {
 test.describe('court captains: keys survive server hiccups', () => {
   /** Answers every socket AUTH with `type` instead of passing it to the server; everything else goes through. */
   async function answerAuthWith(page, type) {
-    const seen = { auth: 0 }
+    const seen = { auth: 0, connectedAt: [] }
     await page.routeWebSocket(/\/pickleball\/rt\/open\//, (ws) => {
+      seen.connectedAt.push(Date.now())
       const server = ws.connectToServer()
       ws.onMessage((message) => {
         if (JSON.parse(String(message)).type === 'AUTH') {
@@ -599,6 +604,34 @@ test.describe('court captains: keys survive server hiccups', () => {
     const again = await context.newPage()
     await again.goto(`/pickleball/s/${code}`)
     await expect(again.getByText('Court 1 captain')).toBeVisible()
+  })
+
+  test('while sign-in keeps failing, the host console still refreshes by polling and reconnects back off', async ({ page, request }) => {
+    test.setTimeout(60_000)
+    const { code, hostKey } = await createSession(request)
+    const seen = await answerAuthWith(page, 'AUTH_ERROR')
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await expect(page.getByTestId('court-1').getByRole('button', { name: 'Start' })).toBeVisible()
+    // Someone else starts court 1. This socket never signs in, so only the HTTP poll can show it.
+    const host = await hostSnapshot(request, code, hostKey)
+    expect((await command(request, code, hostKey, { type: 'START_MATCH', matchId: host.courts[0].match.id })).status()).toBe(200)
+    await expect(page.getByTestId('court-1').getByRole('button', { name: 'Game over' })).toBeVisible({ timeout: 15_000 })
+    // Reconnects wait 1, 2, 4 s… instead of hammering the server every second.
+    await expect.poll(() => seen.connectedAt.length, { timeout: 20_000 }).toBeGreaterThanOrEqual(4)
+    const gaps = seen.connectedAt.slice(1).map((t, i) => t - seen.connectedAt[i])
+    expect(gaps[2]).toBeGreaterThan(gaps[0] + 1500)
+  })
+
+  test('while sign-in keeps failing, the captain console still refreshes by polling', async ({ page, request }) => {
+    test.setTimeout(60_000)
+    const { code, hostKey } = await createSession(request)
+    const host = await hostSnapshot(request, code, hostKey)
+    const { captainKey } = await makeCaptain(request, code, hostKey, host.courts[0].id)
+    await answerAuthWith(page, 'AUTH_ERROR')
+    await page.goto(`/pickleball/s/${code}#cap=${captainKey}`)
+    await expect(page.getByTestId('court-1').getByRole('button', { name: 'Start' })).toBeVisible()
+    expect((await command(request, code, hostKey, { type: 'START_MATCH', matchId: host.courts[0].match.id })).status()).toBe(200)
+    await expect(page.getByTestId('court-1').getByRole('button', { name: 'Game over' })).toBeVisible({ timeout: 15_000 })
   })
 
   test('a captain key the socket refuses (AUTH_FAILED) still drops to the board and is forgotten', async ({ page, context, request }) => {

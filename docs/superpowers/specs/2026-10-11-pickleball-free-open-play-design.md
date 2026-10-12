@@ -155,7 +155,7 @@ Zod-validated discriminated union, so there's a single place enforcing
 authorization, idempotency, caps and expiry. `version` is persisted in
 `open_sessions.version` (fixing the current in-memory `seq` reset after hibernation).
 
-**Concurrent and flaky writes**: a result command carries the match id. If that match is already finished, the second writer gets 409 with who saved it ("Already saved by Court captain 2"). While the socket is down, the host console shows "Reconnecting…" and keeps unsent commands in memory, retrying them with the same `idempotencyKey`, so a retry is never applied twice. Viewers fall back to polling `state` every 5 s.
+**Concurrent and flaky writes**: a result command carries the match id. If that match is already finished, the second writer gets 409 with who saved it ("This game was already saved by Court 2 captain."). While the socket is down, the host console shows "Reconnecting…" and keeps unsent commands in memory, retrying them with the same `idempotencyKey`, so a retry is never applied twice. Viewers fall back to polling `state` every 5 s.
 
 ### 3.5 Module layout
 

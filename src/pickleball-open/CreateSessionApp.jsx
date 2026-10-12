@@ -105,7 +105,7 @@ export default function CreateSessionApp({ siteKey }) {
           <Panel className="md:col-span-2">
             <p className="mb-3 font-semibold">Who plays next</p>
             <ModePicker value={details.mode} onChange={(mode) => update({ mode })} />
-            <p className="mt-3 text-sm text-mist">You can switch any time during the session. Anyone who has sat out 2 rounds in a row goes on next, whichever you pick, and every proposed game can be edited before it starts.</p>
+            <p className="mt-3 text-sm text-mist">You can switch any time during the session. Anyone who has sat out 2 rounds in a row goes on next, whichever you pick (a keep-together or keep-apart rule can hold them back), and every proposed game can be edited before it starts.</p>
           </Panel>
           <label className="flex min-h-11 items-center gap-3 md:col-span-2">
             <input type="checkbox" className="h-5 w-5 accent-[#c6ff2e]" checked={details.selfCheckIn} onChange={(e) => update({ selfCheckIn: e.target.checked })} />

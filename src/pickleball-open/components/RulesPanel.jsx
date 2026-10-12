@@ -12,6 +12,12 @@ export default function RulesPanel({ rules, players, send }) {
   const present = players.filter((p) => p.status !== 'LEFT')
   const nameOf = (id) => players.find((p) => p.id === id)?.name ?? 'Someone who left'
 
+  // Second hides whoever is First, so picking that same player as First clears Second.
+  function pickFirst(id) {
+    setFirst(id)
+    if (id === second) setSecond('')
+  }
+
   async function add(event) {
     event.preventDefault()
     if (!first || !second || first === second) return
@@ -32,7 +38,7 @@ export default function RulesPanel({ rules, players, send }) {
         </div>
         <div className="grid grid-cols-2 gap-2">
           <label className="grid gap-1 text-xs text-mist">First player
-            <select value={first} onChange={(e) => setFirst(e.target.value)} className={SELECT}>
+            <select value={first} onChange={(e) => pickFirst(e.target.value)} className={SELECT}>
               <option value="">Pick…</option>
               {present.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>

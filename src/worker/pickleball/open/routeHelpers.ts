@@ -7,10 +7,12 @@ import type { Credentials, DoResult } from './OpenSessionDO'
  * Per-IP limit on the host routes, checked before the host key is. The
  * per-session command limit is counted inside the DO only once the key is
  * valid, so this is what stops one address hammering a code it found on a QR
- * board. Returns the 429 to send, or null. The caller drains any body first.
+ * board. 600 per minute, because a club's host and every court captain poll
+ * and send from one Wi-Fi address. Returns the 429 to send, or null. The
+ * caller drains any body first.
  */
 export async function hostIpLimited(env: Env, request: Request): Promise<Response | null> {
-  const rate = await checkRateLimit(env, 'open-host-ip', clientIp(request), { limit: 120, windowMs: 60_000 })
+  const rate = await checkRateLimit(env, 'open-host-ip', clientIp(request), { limit: 600, windowMs: 60_000 })
   return rate.limited ? rateLimitedResponse('Too many requests. Try again shortly.', rate.retryAfterSeconds) : null
 }
 

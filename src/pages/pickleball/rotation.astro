@@ -23,7 +23,7 @@ const DETAIL = {
 const modes = MODE_ORDER.map((mode) => ({ mode, ...MODE_INFO[mode], detail: DETAIL[mode], Art: ART[mode], rounds: rotationExample(2, mode) }))
 
 const rules = [
-  'Anyone who has sat out 2 rounds in a row goes on next, in every mode.',
+  'Anyone who has sat out 2 rounds in a row goes on next, in every mode, unless a keep-together or keep-apart rule holds them back.',
   'Then each mode picks the rest of the four its own way (below).',
   'Keep-together and keep-apart rules are never broken: a court waits, and says why, rather than break one.',
   'A late arrival starts level with whoever has played least.',
@@ -86,7 +86,7 @@ const rules = [
           </div>
         </section>
       ))}
-      <p class="mt-6 text-sm text-[#b5c4e1]">With up to 12 players per court, nobody sits out more than 2 rounds in a row, whichever way you pick. With more, the wait is shared evenly.</p>
+      <p class="mt-6 text-sm text-[#b5c4e1]">With up to 12 players per court, nobody sits out more than 2 rounds in a row, whichever way you pick, unless a keep-together or keep-apart rule holds them back. With more, the wait is shared evenly.</p>
     </section>
 
     <div class="mt-12">

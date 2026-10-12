@@ -94,6 +94,7 @@ export function useOpenSession(code, hostKey, { onRejected, onCaptainRevoked, ca
       ended = true
       clearTimeout(retryTimer)
       clearInterval(pollTimer)
+      pollTimer = null
       setStatus('not-found')
     }
 
@@ -126,6 +127,13 @@ export function useOpenSession(code, hostKey, { onRejected, onCaptainRevoked, ca
       }
     }
 
+    /** The message that proves the socket serves this page's role, not just the public board. */
+    const liveType = () => {
+      if (hostKey && !hostDenied) return 'HOST'
+      if (!hostKey && captainKey && !captainDenied) return 'CAPTAIN'
+      return 'VIEWER'
+    }
+
     const poll = () => {
       if (hostKey && !hostDenied) return pollKeyed(() => fetchHost(code, hostKey), applyHost, reject)
       if (!hostKey && captainKey && !captainDenied) return pollKeyed(() => fetchCaptain(code, captainKey), applyCaptain, revokeCaptain)
@@ -136,9 +144,11 @@ export function useOpenSession(code, hostKey, { onRejected, onCaptainRevoked, ca
       if (cancelled || ended) return
       const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
       socket = new WebSocket(`${protocol}://${window.location.host}/pickleball/rt/open/${code}`)
+      // The socket only counts as live once it delivers the snapshot this page signed in
+      // for. An open socket whose sign-in keeps failing (AUTH_ERROR) must neither reset the
+      // backoff nor stop the poll, or the console would never refresh.
+      let live = false
       socket.onopen = () => {
-        attempt = 0
-        clearInterval(pollTimer)
         setStatus('open')
         if (hostKey) socket.send(JSON.stringify({ type: 'AUTH', hostKey }))
         else if (captainKey && !captainDenied) socket.send(JSON.stringify({ type: 'AUTH', captainKey }))
@@ -149,6 +159,12 @@ export function useOpenSession(code, hostKey, { onRejected, onCaptainRevoked, ca
           message = JSON.parse(event.data)
         } catch {
           return
+        }
+        if (!live && message.type === liveType()) {
+          live = true
+          attempt = 0
+          clearInterval(pollTimer)
+          pollTimer = null
         }
         if (message.type === 'VIEWER') applyViewer(message.payload)
         if (message.type === 'HOST') applyHost(message.payload)
@@ -169,8 +185,10 @@ export function useOpenSession(code, hostKey, { onRejected, onCaptainRevoked, ca
           return
         }
         setStatus('reconnecting')
-        clearInterval(pollTimer)
-        pollTimer = setInterval(poll, POLL_MS)
+        // Keep a poll that is already running: restarting it on every quick reconnect
+        // would push its first tick out forever.
+        if (pollTimer === null) pollTimer = setInterval(poll, POLL_MS)
+        // 1, 2, 4, then every 8 seconds until a socket goes live.
         retryTimer = setTimeout(connect, Math.min(1000 * 2 ** attempt, 8000))
         attempt += 1
       }

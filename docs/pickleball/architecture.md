@@ -59,7 +59,7 @@ recovered. Viewers need only the public code.
 | `GET /api/pickleball/open/s/:code/host` | Host snapshot |
 | `POST /api/pickleball/open/s/:code/check-in` | Anonymous self check-in (30 per 10 min per IP, 60 per 5 min per session) |
 | `GET /api/pickleball/open/s/:code/captain` | Captain snapshot (`X-Captain-Key`) |
-| `POST/GET /api/pickleball/open/s/:code/captains`, `DELETE .../captains/:id` | Host makes, lists and turns off captain links |
+| `POST /api/pickleball/open/s/:code/captains`, `DELETE .../captains/:id` | Host makes and turns off captain links (the host snapshot lists them) |
 | `POST /api/pickleball/open/s/:code/commands` | Host commands (120/min/session) |
 | `GET /api/pickleball/open/s/:code/results.csv` | Results CSV |
 | `DELETE /api/pickleball/open/s/:code/session` | Host deletes the session |
@@ -109,8 +109,9 @@ diffs and the results CSV.
 - **WebSocket auth.** `AUTH_FAILED` means the key was refused: the client
   forgets it. `AUTH_ERROR` means a server error: the client keeps the key and
   reconnects, falling back to polling `/state`.
-- **Per-IP limits.** Live connects 300 per minute and `/state` reads 1200 per
-  minute, because a club shares one Wi-Fi address.
+- **Per-IP limits.** Live connects 300 per minute, `/state` reads 1200 per
+  minute, and the host and captain routes (`hostIpLimited`) 600 per minute,
+  because a club's host, captains and players share one Wi-Fi address.
 - **TV.** `/pickleball/s/{code}/tv` renders the viewer snapshot. A LIVE or
   Offline indicator comes from the time of the last snapshot (stale after 15 s),
   and an ended session closes check-in on the screen.

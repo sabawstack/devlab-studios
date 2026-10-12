@@ -36,23 +36,24 @@ export default function PlayersPanel({ players, waiting, playing, mode, send }) 
           const waitingNow = p.status === 'ACTIVE' && !p.busy
           return (
             <li key={p.id} className="grid gap-1 rounded-xl bg-navy-900 px-3 py-2 text-[15px]">
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 flex-1 basis-28 break-words">{order.has(p.id) ? `${order.get(p.id)} · ` : ''}{p.name}</span>
-              {mode === 'BALANCED' && (
-                <select aria-label={`Skill for ${p.name}`} value={p.skill === null ? '' : String(p.skill)} onChange={(e) => setSkill(p, e.target.value)}
-                  className="min-h-11 rounded-lg border border-navy-700 bg-navy-950 px-2 text-sm text-white">
-                  <option value="">Skill –</option>
-                  {p.skill !== null && !SKILLS.includes(p.skill) && <option value={String(p.skill)}>{p.skill}</option>}
-                  {SKILLS.map((s) => <option key={s} value={String(s)}>Skill {s}</option>)}
-                </select>
-              )}
-              {p.status === 'ACTIVE' && !onCourt && <Button variant="quiet" className="!min-h-11 !px-2 text-sm" onClick={() => send({ type: 'SET_PLAYER_STATUS', playerId: p.id, status: 'BREAK' })}>Break</Button>}
-              {p.status === 'BREAK' && <Button variant="quiet" className="!min-h-11 !px-2 text-sm" onClick={() => send({ type: 'SET_PLAYER_STATUS', playerId: p.id, status: 'ACTIVE' })}>Back in</Button>}
-              {!onCourt && <Button variant="quiet" className="!min-h-11 !px-2 text-sm text-mist" aria-label={`${p.name} left`} onClick={() => send({ type: 'SET_PLAYER_STATUS', playerId: p.id, status: 'LEFT' })}>Left</Button>}
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="min-w-0 flex-1 basis-28 break-words">{order.has(p.id) ? `${order.get(p.id)} · ` : ''}{p.name}</span>
+                {mode === 'BALANCED' && (
+                  <select aria-label={`Skill for ${p.name}`} value={p.skill === null ? '' : String(p.skill)} onChange={(e) => setSkill(p, e.target.value)}
+                    className="min-h-11 rounded-lg border border-navy-700 bg-navy-950 px-2 text-sm text-white">
+                    <option value="">Skill –</option>
+                    {p.skill !== null && !SKILLS.includes(p.skill) && <option value={String(p.skill)}>{p.skill}</option>}
+                    {SKILLS.map((s) => <option key={s} value={String(s)}>Skill {s}</option>)}
+                  </select>
+                )}
+                {p.status === 'ACTIVE' && !onCourt && <Button variant="quiet" className="!min-h-11 !px-2 text-sm" onClick={() => send({ type: 'SET_PLAYER_STATUS', playerId: p.id, status: 'BREAK' })}>Break</Button>}
+                {p.status === 'BREAK' && <Button variant="quiet" className="!min-h-11 !px-2 text-sm" onClick={() => send({ type: 'SET_PLAYER_STATUS', playerId: p.id, status: 'ACTIVE' })}>Back in</Button>}
+                {!onCourt && <Button variant="quiet" className="!min-h-11 !px-2 text-sm text-mist" aria-label={`${p.name} left`} onClick={() => send({ type: 'SET_PLAYER_STATUS', playerId: p.id, status: 'LEFT' })}>Left</Button>}
               </div>
               <span className="text-xs text-mist">
-              {onCourt ? 'on court' : p.busy ? 'up next' : STATUS_LABEL[p.status]} · {p.games} games · sat out {p.satOut}
-              {waitingNow ? ` · ${minutesSince(p.waitingSince, now)} min` : ''}
-            </span>
+                {onCourt ? 'on court' : p.busy ? 'up next' : STATUS_LABEL[p.status]} · {p.games} games · sat out {p.satOut}
+                {waitingNow ? ` · ${minutesSince(p.waitingSince, now)} min` : ''}
+              </span>
             </li>
           )
         })}

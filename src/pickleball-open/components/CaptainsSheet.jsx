@@ -14,11 +14,14 @@ export default function CaptainsSheet({ code, hostKey, courts, captains, onHost,
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
   const [turningOff, setTurningOff] = useState(null)
-  // A ref, not just state: two taps in the same frame must not send two DELETEs.
+  // Refs, not just state: two taps in the same frame must not send two DELETEs or make two links.
   const turningOffRef = useRef(false)
+  const makingRef = useRef(false)
   const [copyNote, setCopyNote] = useState(null)
 
   async function make(court) {
+    if (makingRef.current) return
+    makingRef.current = true
     setError(null)
     setBusy(true)
     try {
@@ -29,6 +32,7 @@ export default function CaptainsSheet({ code, hostKey, courts, captains, onHost,
     } catch (failure) {
       setError(errorText(failure, 'Could not make the link. Try again.'))
     } finally {
+      makingRef.current = false
       setBusy(false)
     }
   }

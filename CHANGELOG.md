@@ -52,6 +52,11 @@ decided against that surface specifically:
 ## [Unreleased]
 
 ### Fixed
+- Open play: while sign-in on the live connection keeps failing (`AUTH_ERROR`), the host and captain consoles keep refreshing by polling and reconnects back off 1, 2, 4, then every 8 seconds. A socket now counts as live only once it delivers the snapshot the page signed in for.
+- Open play captain links: labels are unique (ignoring case) among live links and never "Host"; a taken name gets the lowest free number ("Court 1 captain 2"), and a number freed by turning a link off is reused. "Make a link" makes one link however fast it is tapped.
+- Open play: a captain's snapshot no longer carries who saved each result (`recordedBy`), which only the host sees. Broadcasts build the public board and court list once per pass for the host and every captain.
+- Open play host console: picking the same player as First in a keep-together/apart rule clears Second, and an unknown mode no longer breaks the Mode button. Migration `0017` indexes `open_captains.court_id`.
+- Open play copy: the pages and create screen now say a keep-together or keep-apart rule can hold back the "sat out 2 rounds in a row goes on next" guarantee.
 - Open play: a server error while a host or court captain signs in on the live connection no longer costs them their key. The server now answers `AUTH_ERROR` (not `AUTH_FAILED`), and the page keeps the key and reconnects. Only a refusal (HTTP 403 or `AUTH_FAILED`) forgets a key.
 - Open play: a captain link that was turned off falls back to a live captain key this phone already saved for the session. A host opening a captain link no longer stores the captain key.
 - Open play court captains sheet: "Turn off" sends one request however fast it is tapped, and "Send link" says "Copied" or "Couldn't copy — copy the link below". The consoles say "Connecting…" on first load instead of "Reconnecting…".
@@ -73,7 +78,7 @@ decided against that surface specifically:
 - Open play: a rejected Turnstile check on session creation now logs its reason (`pickleball_open.turnstile_rejected`), so a "Verification failed" on a deployed environment can be traced to a hostname, action or token problem.
 
 ### Security
-- **Open play: anyone holding the public QR code could lock the host out.** Host commands were limited to 120 per minute per session, counted before the host key was checked, so a stranger sending junk could use up the host's allowance. The session limit now counts only commands with a valid host key, and every host route also has its own per-address limit (120 per minute) checked first.
+- **Open play: anyone holding the public QR code could lock the host out.** Host commands were limited to 120 per minute per session, counted before the host key was checked, so a stranger sending junk could use up the host's allowance. The session limit now counts only commands with a valid host key, and every host route also has its own per-address limit (600 per minute) checked first.
 
 ### Added
 - Open play: a TV board (`/pickleball/s/{code}/tv`) for a venue screen: every court (1–16) on one screen in large type with no scrolling, who is up next, the fairness numbers and the check-in QR, with standings and recent results taking turns. Opened from Share. Each court shows one player per line in type fitted to its card, and nothing on the screen is truncated, even 40-character names. It says when it is offline or the session has ended.
@@ -109,7 +114,7 @@ decided against that surface specifically:
 
 ### Changed
 - Docs: architecture and runbook cover Phase 2 open play (stacking modes, pair rules, captain links, self check-in, TV board, migration 0017).
-- Open play rate limits are sized for a whole club on one Wi-Fi address: live connections 300 per minute per IP (was 30) and public board reads 1,200 per minute per IP (was 60), so the 5-second polling fallback no longer locks a club out.
+- Open play rate limits are sized for a whole club on one Wi-Fi address: live connections 300 per minute per IP (was 30) and public board reads 1,200 per minute per IP (was 60), so the 5-second polling fallback no longer locks a club out. Host and captain routes allow 600 per minute per IP (was 120), so a host and several court captains polling from one club Wi-Fi are not refused.
 - The Playwright worker server now applies the pickleball D1 migrations locally (`wrangler d1 migrations apply devlab-pickleball --local`) before starting, so the open-play e2e tests run against the current schema.
 - Pickleball runbook: a SQL force-delete leaves the session's Durable Object serving its cached copy until it hibernates or is evicted, expired rows can sit in D1 for up to about a day until the purge (already hidden), and what a 429 on host commands means.
 - Open play retention wording now says what the code does: a session is deleted from the live service 7 days after the last change to it (any change resets the clock), not 7 days after the last game. The privacy policy gains a short open-play section: no accounts, names shown on a public board, deletion after 7 days with backups kept up to 30, and delete any time.

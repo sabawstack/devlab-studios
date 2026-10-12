@@ -74,12 +74,17 @@ export interface HostSnapshot {
 
 export type CaptainPlayer = Omit<HostPlayer, 'skill' | 'duprId'>
 
+/** A match as a captain sees it: who saved a result (recordedBy) stays with the host. */
+export type CaptainMatch = Omit<OpenMatch, 'recordedBy'>
+
+export type CaptainCourt = Omit<HostCourt, 'match'> & { match: CaptainMatch | null }
+
 export interface CaptainSnapshot {
   viewer: ViewerSnapshot
   captain: { id: string; label: string; courtId: string }
-  court: HostCourt
+  court: CaptainCourt
   players: CaptainPlayer[]
-  finished: OpenMatch[]
+  finished: CaptainMatch[]
   settings: { mode: StackingMode; target: number; scoringStyle: OpenSessionState['settings']['scoringStyle'] }
 }
 
@@ -129,7 +134,16 @@ export function toViewerSnapshot(state: OpenSessionState): ViewerSnapshot {
   }
 }
 
-function hostCourts(state: OpenSessionState): HostCourt[] {
+/**
+ * Parts of a snapshot that are the same for every role in one broadcast pass.
+ * Passing them in skips rebuilding them; the result is identical either way.
+ */
+export interface SnapshotParts {
+  viewer?: ViewerSnapshot
+  courts?: readonly HostCourt[]
+}
+
+export function hostCourts(state: OpenSessionState): HostCourt[] {
   const blocker = proposalBlocker(state)
   return [...state.courts].sort((a, b) => a.position - b.position).map((c) => {
     const match = c.enabled ? liveMatch(state, c.id) : null
@@ -145,12 +159,21 @@ function captainPlayers(state: OpenSessionState): CaptainPlayer[] {
   }))
 }
 
-export function toHostSnapshot(state: OpenSessionState, captains: readonly CaptainRecord[] = []): HostSnapshot {
-  const viewer = toViewerSnapshot(state)
+/** Built field by field, so a new OpenMatch field never reaches a captain by accident. */
+function captainMatch(m: OpenMatch): CaptainMatch {
+  return {
+    id: m.id, courtId: m.courtId, seq: m.seq, status: m.status, teamA: m.teamA, teamB: m.teamB,
+    scoreA: m.scoreA, scoreB: m.scoreB, winner: m.winner,
+    proposedAt: m.proposedAt, startedAt: m.startedAt, finishedAt: m.finishedAt,
+  }
+}
+
+export function toHostSnapshot(state: OpenSessionState, captains: readonly CaptainRecord[] = [], parts: SnapshotParts = {}): HostSnapshot {
+  const viewer = parts.viewer ?? toViewerSnapshot(state)
   return {
     viewer,
     players: captainPlayers(state).map((p, i) => ({ ...p, skill: state.players[i].skill, duprId: state.players[i].duprId })),
-    courts: hostCourts(state),
+    courts: parts.courts ? [...parts.courts] : hostCourts(state),
     finished: state.matches.filter((m) => m.status === 'FINISHED').sort((a, b) => b.seq - a.seq),
     settings: state.settings,
     fairness: viewer.fairness,
@@ -161,15 +184,19 @@ export function toHostSnapshot(state: OpenSessionState, captains: readonly Capta
   }
 }
 
-export function toCaptainSnapshot(state: OpenSessionState, captain: CaptainRecord): CaptainSnapshot {
-  const court = hostCourts(state).find((c) => c.id === captain.courtId)
-    ?? { id: captain.courtId, label: '', position: 0, enabled: false, match: null, blocked: null }
+export function toCaptainSnapshot(state: OpenSessionState, captain: CaptainRecord, parts: SnapshotParts = {}): CaptainSnapshot {
+  const court = (parts.courts ?? hostCourts(state)).find((c) => c.id === captain.courtId)
   return {
-    viewer: toViewerSnapshot(state),
+    viewer: parts.viewer ?? toViewerSnapshot(state),
     captain: { id: captain.id, label: captain.label, courtId: captain.courtId },
-    court,
+    court: court
+      ? { id: court.id, label: court.label, position: court.position, enabled: court.enabled, match: court.match ? captainMatch(court.match) : null, blocked: court.blocked }
+      : { id: captain.courtId, label: '', position: 0, enabled: false, match: null, blocked: null },
     players: captainPlayers(state),
-    finished: state.matches.filter((m) => m.status === 'FINISHED' && m.courtId === captain.courtId).sort((a, b) => b.seq - a.seq),
+    finished: state.matches
+      .filter((m) => m.status === 'FINISHED' && m.courtId === captain.courtId)
+      .sort((a, b) => b.seq - a.seq)
+      .map(captainMatch),
     settings: { mode: state.settings.mode, target: state.settings.target, scoringStyle: state.settings.scoringStyle },
   }
 }

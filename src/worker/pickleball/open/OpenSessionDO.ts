@@ -13,7 +13,7 @@ import { applyCommand, finalizeCommand, touch } from '../../../lib/pickleball/op
 import { resultsCsv } from '../../../lib/pickleball/open/resultsCsv'
 import { constantTimeEqual } from '../../../lib/pickleball/open/secrets'
 import {
-  toCaptainSnapshot, toHostSnapshot, toViewerSnapshot, type CaptainSnapshot, type HostSnapshot, type ViewerSnapshot,
+  hostCourts, toCaptainSnapshot, toHostSnapshot, toViewerSnapshot, type CaptainSnapshot, type HostSnapshot, type ViewerSnapshot,
 } from '../../../lib/pickleball/open/snapshot'
 import { LIMITS, type CaptainRecord, type OpenSessionState } from '../../../lib/pickleball/open/types'
 import { randomBase64Url, sha256Base64Url } from '../../../lib/pickleball/webCrypto.js'
@@ -280,8 +280,10 @@ export class OpenSessionDO extends DurableObject<Env> {
   private broadcast(): void {
     if (!this.loaded) return
     const { state, captains } = this.loaded
-    const viewer = JSON.stringify({ type: 'VIEWER', payload: toViewerSnapshot(state) })
-    const host = JSON.stringify({ type: 'HOST', payload: toHostSnapshot(state, captains) })
+    // Built once and shared by the host and every captain snapshot in this pass.
+    const parts = { viewer: toViewerSnapshot(state), courts: hostCourts(state) }
+    const viewer = JSON.stringify({ type: 'VIEWER', payload: parts.viewer })
+    const host = JSON.stringify({ type: 'HOST', payload: toHostSnapshot(state, captains, parts) })
     const perCaptain = new Map<string, string>()
     for (const ws of this.ctx.getWebSockets()) {
       const attachment = ws.deserializeAttachment() as Attachment | null
@@ -293,7 +295,7 @@ export class OpenSessionDO extends DurableObject<Env> {
         if (attachment?.role === 'captain' && attachment.captainId) {
           const captain = captains.find((c) => c.id === attachment.captainId)
           if (captain) {
-            const message = perCaptain.get(captain.id) ?? JSON.stringify({ type: 'CAPTAIN', payload: toCaptainSnapshot(state, captain) })
+            const message = perCaptain.get(captain.id) ?? JSON.stringify({ type: 'CAPTAIN', payload: toCaptainSnapshot(state, captain, parts) })
             perCaptain.set(captain.id, message)
             ws.send(message)
             continue

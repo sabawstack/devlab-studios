@@ -50,6 +50,30 @@ describe('captainLabel / findCaptain', () => {
     expect(captainLabel(state, 'c1', [], '  Maria\u0007 ')).toBe('Maria')
   })
 
+  it('never reuses a live label or the reserved Host, case-insensitively', () => {
+    const named = (id: string, label: string, courtId = 'c1'): CaptainRecord => ({ ...captain, id, label, courtId })
+    expect(captainLabel(state, 'c1', [], 'Host')).toBe('Host 2')
+    expect(captainLabel(state, 'c1', [], 'host')).toBe('host 2')
+    expect(captainLabel(state, 'c2', [named('x', 'Maria')], 'maria')).toBe('maria 2')
+    expect(captainLabel(state, 'c2', [named('x', 'Maria'), named('y', 'Maria 2')], 'Maria')).toBe('Maria 3')
+    expect(captainLabel(state, 'c1', [named('x', 'court 1 CAPTAIN', 'c2')])).toBe('Court 1 captain 2')
+  })
+
+  it('takes the lowest free number after a link is turned off', () => {
+    const second: CaptainRecord = { ...captain, id: 'cap2', label: 'Court 1 captain 2' }
+    // the first link was revoked, so only the second is live: the plain name is free again
+    expect(captainLabel(state, 'c1', [second])).toBe('Court 1 captain')
+    const third: CaptainRecord = { ...captain, id: 'cap3', label: 'Court 1 captain 3' }
+    expect(captainLabel(state, 'c1', [captain, third])).toBe('Court 1 captain 2')
+  })
+
+  it('keeps a numbered label within the name length limit', () => {
+    const long = 'x'.repeat(40)
+    const label = captainLabel(state, 'c1', [{ ...captain, label: long }], long)
+    expect(label).toHaveLength(40)
+    expect(label.endsWith(' 2')).toBe(true)
+  })
+
   it('finds a captain by key hash only', () => {
     expect(findCaptain([captain], 'hash-1')).toBe(captain)
     expect(findCaptain([captain], 'hash-2')).toBeNull()

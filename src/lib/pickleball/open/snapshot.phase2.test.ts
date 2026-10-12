@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { fairnessSummary } from './fairness'
 import { fillProposals } from './propose'
-import { toCaptainSnapshot, toHostSnapshot, toViewerSnapshot } from './snapshot'
+import { hostCourts, toCaptainSnapshot, toHostSnapshot, toViewerSnapshot } from './snapshot'
 import { at, court, finished, player, sessionState } from './testing/fixtures'
 import { DEFAULT_SETTINGS, type CaptainRecord } from './types'
 
@@ -69,5 +69,29 @@ describe('Phase 2 snapshots', () => {
     expect(snap.finished.every((m) => m.courtId === 'c1')).toBe(true)
     const json = JSON.stringify(snap)
     for (const banned of ['AB12C3', 'skill', 'duprId', 'secret-hash-value', 'rules']) expect(json).not.toContain(banned)
+  })
+
+  it('a captain snapshot carries exactly the allowlisted match keys: no recordedBy on the court or in results', () => {
+    const base = state()
+    const s = { ...base, matches: base.matches.map((m) => (m.status === 'FINISHED' ? { ...m, recordedBy: 'Host' } : m)) }
+    const snap = toCaptainSnapshot(s, captain)
+    const matchKeys = ['courtId', 'finishedAt', 'id', 'proposedAt', 'scoreA', 'scoreB', 'seq', 'startedAt', 'status', 'teamA', 'teamB', 'winner']
+    expect(snap.court.match).not.toBeNull()
+    expect(Object.keys(snap.court.match ?? {}).sort()).toEqual(matchKeys)
+    expect(Object.keys(snap.court).sort()).toEqual(['blocked', 'enabled', 'id', 'label', 'match', 'position'])
+    expect(snap.finished.length).toBeGreaterThan(0)
+    for (const m of snap.finished) expect(Object.keys(m).sort()).toEqual(matchKeys)
+    expect(JSON.stringify(snap)).not.toContain('recordedBy')
+    // the host still sees who saved it
+    expect(toHostSnapshot(s).finished[0].recordedBy).toBe('Host')
+  })
+
+  it('precomputed viewer and courts yield the same host and captain snapshots', () => {
+    const s = state()
+    const parts = { viewer: toViewerSnapshot(s), courts: hostCourts(s) }
+    expect(toHostSnapshot(s, [captain], parts)).toEqual(toHostSnapshot(s, [captain]))
+    expect(toCaptainSnapshot(s, captain, parts)).toEqual(toCaptainSnapshot(s, captain))
+    const elsewhere = { ...captain, courtId: 'gone' }
+    expect(toCaptainSnapshot(s, elsewhere, parts)).toEqual(toCaptainSnapshot(s, elsewhere))
   })
 })

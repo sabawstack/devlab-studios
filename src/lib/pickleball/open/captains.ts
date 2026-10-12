@@ -5,7 +5,7 @@
 import type { OpenCommand } from '../../schemas/pickleball/open/commands'
 import { cleanName } from './roster'
 import { constantTimeEqual } from './secrets'
-import type { CaptainRecord, OpenSessionState } from './types'
+import { LIMITS, type CaptainRecord, type OpenSessionState } from './types'
 
 export const CAPTAIN_COMMANDS: ReadonlySet<OpenCommand['type']> = new Set<OpenCommand['type']>([
   'START_MATCH', 'RECORD_RESULT', 'UNDO_RESULT', 'EDIT_RESULT', 'EDIT_PROPOSAL', 'SKIP_PROPOSAL',
@@ -21,13 +21,23 @@ export function captainRefusal(command: OpenCommand, captain: CaptainRecord, sta
   return `This captain link only runs ${label}.`
 }
 
-/** "Court 2 captain", then "Court 2 captain 2" for a second link to the same court. */
+/** The label a host's saved results carry, so no captain may be called it. */
+const RESERVED_LABEL = 'Host'
+
+/**
+ * A label no live captain (or the host) already has, ignoring case: the requested
+ * one or "Court 2 captain", then the lowest free " 2", " 3"… when that is taken.
+ */
 export function captainLabel(state: OpenSessionState, courtId: string, existing: readonly CaptainRecord[], requested?: string): string {
+  const taken = new Set([RESERVED_LABEL, ...existing.map((c) => c.label)].map((label) => label.toLowerCase()))
   const cleaned = requested ? cleanName(requested) : ''
-  if (cleaned) return cleaned
-  const base = `${state.courts.find((c) => c.id === courtId)?.label ?? 'Court'} captain`
-  const sameCourt = existing.filter((c) => c.courtId === courtId).length
-  return sameCourt ? `${base} ${sameCourt + 1}` : base
+  const base = cleaned || `${state.courts.find((c) => c.id === courtId)?.label ?? 'Court'} captain`
+  if (!taken.has(base.toLowerCase())) return base
+  for (let n = 2; ; n += 1) {
+    const suffix = ` ${n}`
+    const candidate = `${base.slice(0, LIMITS.maxNameLength - suffix.length).trimEnd()}${suffix}`
+    if (!taken.has(candidate.toLowerCase())) return candidate
+  }
 }
 
 /** The live captain whose key hashes to keyHash. Compares every record in constant time. */

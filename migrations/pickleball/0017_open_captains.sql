@@ -7,7 +7,8 @@
 -- the 7-day purge still removes it.
 --
 -- open_matches.recorded_by: who saved a result ('Host' or a captain's label),
--- so a second save can say "Already saved by Court 2 captain" (spec §3.4).
+-- so a second save can say "This game was already saved by Court 2 captain."
+-- (spec §3.4).
 -- ADD COLUMN is safe on D1; only table rebuilds are not. No CHECK here: the
 -- value is free text by design, so there is nothing to widen later.
 
@@ -21,5 +22,7 @@ CREATE TABLE open_captains (
   revoked_at TEXT
 );
 CREATE INDEX idx_open_captains_session ON open_captains(session_id);
+-- court_id is a cascading foreign key too, so it gets an index like session_id.
+CREATE INDEX IF NOT EXISTS idx_open_captains_court ON open_captains(court_id);
 
 ALTER TABLE open_matches ADD COLUMN recorded_by TEXT;

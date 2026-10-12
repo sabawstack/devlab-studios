@@ -26,7 +26,7 @@
 - **The viewer snapshot is an allowlist** (`snapshot.ts`). It never carries skill, DUPR IDs, captain labels or hashes, rules, or any secret. Neither does the captain snapshot.
 - **Rate limits** (spec §10, plus Phase 2):
   - commands: 120 per minute per session (authorized host or captain);
-  - host and captain routes: 120 per minute per IP (`hostIpLimited`);
+  - host and captain routes: 600 per minute per IP (`hostIpLimited`; raised from 120 in the final review for club Wi-Fi);
   - self check-in: 30 per 10 minutes per IP (`open-checkin-ip`), and 60 per 5 minutes per session in the DO.
 - **Caps per session:** 16 courts, 128 players, 2,000 matches, 32 rules, 32 captain links. Names ≤ 40 characters, cleaned by `cleanName`.
 - **CHECK constraints cannot be widened on D1** (`docs/pickleball/architecture.md`, "Schema constraint"). `0017` adds no enum CHECK. `recorded_by` is free text by design. `ALTER TABLE … ADD COLUMN` is safe; never rebuild a table.
