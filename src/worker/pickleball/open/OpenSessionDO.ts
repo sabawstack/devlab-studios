@@ -11,7 +11,7 @@ import { captainLabel, captainRefusal, findCaptain } from '../../../lib/pickleba
 import { applyCheckIn } from '../../../lib/pickleball/open/checkIn'
 import { buildDuprEmail, duprFilename, type DuprEmail } from '../../../lib/pickleball/open/dupr/email'
 import { buildDuprExport, localDate, normalizeTimeZone, type DuprSkip } from '../../../lib/pickleball/open/dupr/export'
-import { claimStateFor, DUPR_EXPORT_LIMIT, exportsLeft, exportWindowStart, limitMessage, secondsUntilNextExport, type ClaimState } from '../../../lib/pickleball/open/dupr/policy'
+import { claimStateFor, DUPR_EXPORT_LIMIT, exportsLeft, exportWindowStart, limitMessage, nextExportAt, secondsUntilNextExport, type ClaimState } from '../../../lib/pickleball/open/dupr/policy'
 import { applyCommand, finalizeCommand, touch } from '../../../lib/pickleball/open/reducer'
 import { resultsCsv } from '../../../lib/pickleball/open/resultsCsv'
 import { constantTimeEqual } from '../../../lib/pickleball/open/secrets'
@@ -41,6 +41,8 @@ export interface DuprStatusBody {
   missingIds: Array<{ id: string; name: string }>
   exportsLeft: number
   exportLimit: number
+  /** When an export frees up again, once none are left today; otherwise null. */
+  nextExportAt: string | null
 }
 
 /** A reserved export, ready to send. The reservation counts toward the limit until released. */
@@ -298,7 +300,7 @@ export class OpenSessionDO extends DurableObject<Env> {
         status: 200,
         body: {
           claim: claimStateFor(auth.access.hostId, hostId), exported: preview.exported, skipped: preview.skipped,
-          missingIds: preview.missingIds, exportsLeft: exportsLeft(sent), exportLimit: DUPR_EXPORT_LIMIT,
+          missingIds: preview.missingIds, exportsLeft: exportsLeft(sent), exportLimit: DUPR_EXPORT_LIMIT, nextExportAt: nextExportAt(sent),
         },
       }
     })

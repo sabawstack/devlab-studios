@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { captainKeyFor, captainKeyFromHash, forgetCaptainKey, rememberCaptainKey } from './lib/captainKeys'
 import { forgetHostedSession, hostedSessions, hostKeyFor, hostKeyFromHash, rememberHostedSession } from './lib/hostKeys'
 import { useOpenSession } from './lib/useOpenSession'
+import { boardSignInNotice, readSignInResult } from './host/duprSteps'
 import CaptainConsole from './components/CaptainConsole.jsx'
 import ExpiredNotice from './components/ExpiredNotice.jsx'
 import HostConsole from './components/HostConsole.jsx'
@@ -18,6 +19,8 @@ export default function SessionApp({ code }) {
     captainFragment: captainKeyFromHash(window.location.hash),
     captainSaved: captainKeyFor(code),
   }))
+  // Back from Google (?signin=…): HostConsole handles it when this browser holds the host key.
+  const [signInResult] = useState(() => readSignInResult(window.location.search))
   const [fellBack, setFellBack] = useState(false)
   const [captainFellBack, setCaptainFellBack] = useState(false)
   const hostKey = keys.fragment && !fellBack ? keys.fragment : keys.saved
@@ -47,6 +50,11 @@ export default function SessionApp({ code }) {
     if (keys.captainFragment && !keys.fragment && !keys.saved) rememberCaptainKey(code, keys.captainFragment)
   }, [keys, code])
 
+  // No host key here (storage blocked or cleared): the board explains, and ?signin= leaves the address bar.
+  useEffect(() => {
+    if (signInResult && !hostKey) window.history.replaceState(null, '', window.location.pathname)
+  }, [signInResult, hostKey])
+
   useEffect(() => {
     if (host && hostKey) rememberHostedSession({ code, hostKey, name: host.viewer.name })
   }, [host, hostKey, code])
@@ -68,5 +76,6 @@ export default function SessionApp({ code }) {
   if (host && hostKey && !authFailed) return <HostConsole code={code} hostKey={hostKey} host={host} status={status} onHost={setHost} />
   if (captain && captainKey) return <CaptainConsole code={code} captainKey={captainKey} snapshot={captain} status={status} onSnapshot={setCaptain} />
   if (!viewer) return <p className="p-8 text-center text-mist" role="status">Loading the board…</p>
-  return <ViewerBoard viewer={viewer} status={status} invalidHostLink={authFailed && !canFallBack} revokedCaptainLink={captainRevoked} />
+  return <ViewerBoard viewer={viewer} status={status} invalidHostLink={authFailed && !canFallBack} revokedCaptainLink={captainRevoked}
+    signInNotice={hostKey ? null : boardSignInNotice(signInResult)} />
 }

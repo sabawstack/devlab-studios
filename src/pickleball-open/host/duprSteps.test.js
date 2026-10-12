@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { duprStep, exportSummary, readSignInResult, sentMessage, signInHref, SIGN_IN_MESSAGES } from './duprSteps'
+import { boardSignInNotice, duprStep, exportSummary, nextExportLine, readSignInResult, sentMessage, signInHref, SIGN_IN_MESSAGES } from './duprSteps'
 
 const host = { email: 'mo@example.com', displayName: 'Mo', duprClubId: null, marketingOptIn: false }
 
@@ -39,5 +39,23 @@ describe('messages', () => {
     expect(exportSummary({ exported: 3, skipped: [{}, {}] })).toBe('3 games can go to DUPR; 2 games left out.')
     expect(sentMessage({ delivery: 'SENT', to: 'mo@example.com', exported: 3 })).toBe('Sent to mo@example.com: 3 games. Upload the file in DUPR.')
     expect(sentMessage({ delivery: 'SUPPRESSED', to: 'mo@example.com', exported: 1 })).toBe('Test environment: nothing was emailed. 1 game would have gone to mo@example.com.')
+  })
+})
+
+describe('nextExportLine', () => {
+  it('names the time the next export frees up, in the device’s zone, only when none are left', () => {
+    expect(nextExportLine({ exportsLeft: 1, nextExportAt: null }, 'UTC')).toBeNull()
+    expect(nextExportLine({ exportsLeft: 0, nextExportAt: null }, 'UTC')).toBeNull()
+    expect(nextExportLine({ exportsLeft: 0, nextExportAt: '2026-10-12T14:30:00.000Z' }, 'UTC')).toBe('Next export available at 14:30.')
+    expect(nextExportLine({ exportsLeft: 0, nextExportAt: '2026-10-12T14:30:00.000Z' }, 'Asia/Manila')).toBe('Next export available at 22:30.')
+    expect(nextExportLine({ exportsLeft: 0, nextExportAt: 'not a date' }, 'UTC')).toBeNull()
+  })
+})
+
+describe('boardSignInNotice', () => {
+  it('tells a browser without the host key to open the host link', () => {
+    expect(boardSignInNotice(null)).toBeNull()
+    expect(boardSignInNotice('ok')).toBe('Signed in. Open your host link to continue.')
+    expect(boardSignInNotice('cancelled')).toBe(SIGN_IN_MESSAGES.cancelled)
   })
 })

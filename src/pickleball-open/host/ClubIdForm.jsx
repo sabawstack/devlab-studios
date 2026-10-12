@@ -1,12 +1,13 @@
 // The host's DUPR Club ID (spec §9.3): entered once, saved on their account.
 import { useState } from 'react'
-import { updateMe } from '../lib/api'
+import { ApiError, updateMe } from '../lib/api'
 import { Button } from '../components/ui.jsx'
 import { CLUB_ID_INPUT } from './duprSteps'
 
 const errorText = (failure, fallback) => (failure instanceof Error && failure.message ? failure.message : fallback)
 
-export default function ClubIdForm({ current, onSaved }) {
+/** `onSignInEnded` runs when the server says the sign-in is gone (401), so the parent can show sign-in again. */
+export default function ClubIdForm({ current, onSaved, onSignInEnded = null }) {
   const [value, setValue] = useState(current ?? '')
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -25,6 +26,7 @@ export default function ClubIdForm({ current, onSaved }) {
       onSaved(host)
     } catch (failure) {
       setError(errorText(failure, 'Could not save the Club ID. Try again.'))
+      if (failure instanceof ApiError && failure.status === 401) onSignInEnded?.()
     } finally {
       setBusy(false)
     }

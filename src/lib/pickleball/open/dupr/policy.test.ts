@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { claimStateFor, DUPR_EXPORT_LIMIT, exportsLeft, exportWindowStart, hoursUntilNextExport, limitMessage, secondsUntilNextExport } from './policy'
+import { claimStateFor, DUPR_EXPORT_LIMIT, exportsLeft, exportWindowStart, hoursUntilNextExport, limitMessage, nextExportAt, secondsUntilNextExport } from './policy'
 
 describe('claimStateFor', () => {
   it('is unclaimed, mine, or someone else’s (including when signed out)', () => {
@@ -32,5 +32,11 @@ describe('the 5-a-day limit', () => {
     expect(secondsUntilNextExport(['2026-10-11T14:30:00.000Z', '2026-10-12T09:00:00.000Z'], now)).toBe(9000)
     expect(secondsUntilNextExport(['2026-10-11T12:00:00.500Z'], now)).toBe(1)
     expect(secondsUntilNextExport(['2026-10-11T11:00:00.000Z'], now)).toBe(1)
+  })
+
+  it('says when the next export is possible only once none are left', () => {
+    const four = ['2026-10-12T08:00:00.000Z', '2026-10-12T09:00:00.000Z', '2026-10-12T10:00:00.000Z', '2026-10-11T14:30:00.000Z']
+    expect(nextExportAt(four)).toBeNull()
+    expect(nextExportAt([...four, '2026-10-12T11:00:00.000Z'])).toBe('2026-10-12T14:30:00.000Z')
   })
 })

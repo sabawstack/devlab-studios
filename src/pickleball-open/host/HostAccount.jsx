@@ -2,7 +2,7 @@
 // sessions: news opt-in (never ticked for them), sign out, and "Delete my
 // account" (spec §3.2).
 import { useState } from 'react'
-import { deleteAccount, signOut, updateMe } from '../lib/api'
+import { ApiError, deleteAccount, signOut, updateMe } from '../lib/api'
 import { Button } from '../components/ui.jsx'
 
 const errorText = (failure, fallback) => (failure instanceof Error && failure.message ? failure.message : fallback)
@@ -18,6 +18,8 @@ export default function HostAccount({ host, onChanged, showMySessions = true }) 
       await action()
     } catch (failure) {
       setError(errorText(failure, fallback))
+      // The sign-in is already gone: let the parent reload and show sign-in again.
+      if (failure instanceof ApiError && failure.status === 401) onChanged(null)
     } finally {
       setBusy(false)
     }

@@ -131,7 +131,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
             <div className="absolute right-0 z-40 mt-2 grid w-56 gap-1 rounded-2xl bg-navy-950 p-2 shadow-elevated">
               <Button variant="ghost" onClick={() => { setMenuOpen(false); setDialog({ type: 'captains' }) }}>Court captains</Button>
               <Button variant="ghost" onClick={() => { setMenuOpen(false); download() }}>Download results (CSV)</Button>
-              <Button variant="ghost" onClick={() => { setMenuOpen(false); setDialog({ type: 'dupr' }) }}>Email me the DUPR export</Button>
+              <Button variant="ghost" onClick={() => { setMenuOpen(false); clearError(); setDialog({ type: 'dupr' }) }}>Email me the DUPR export</Button>
               {viewer.status === 'ACTIVE' && <Button variant="ghost" onClick={() => { setMenuOpen(false); endSession() }}>End session</Button>}
               <Button variant="danger" onClick={() => { setMenuOpen(false); remove() }}>Delete now</Button>
             </div>

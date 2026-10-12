@@ -166,7 +166,7 @@ test.describe('the DUPR export (API)', () => {
     const { code, hostKey } = await createSession(request)
     const email = uniqueEmail('mo')
     const before = await (await dupr(request, code, hostKey)).json()
-    expect(before).toMatchObject({ host: null, claim: 'UNCLAIMED', exported: 0, exportsLeft: 5, exportLimit: 5 })
+    expect(before).toMatchObject({ host: null, claim: 'UNCLAIMED', exported: 0, exportsLeft: 5, exportLimit: 5, nextExportAt: null })
 
     const host = await signIn(request, baseURL, email, code)
     expect(host).toEqual({ email, displayName: 'Coach Mo', duprClubId: null, marketingOptIn: false })
@@ -230,7 +230,11 @@ test.describe('the DUPR export (API)', () => {
     const retryAfter = Number(sixth.headers()['retry-after'])
     expect(retryAfter).toBeGreaterThan(23 * 3600)
     expect(retryAfter).toBeLessThanOrEqual(24 * 3600)
-    expect((await (await dupr(request, code, hostKey)).json()).exportsLeft).toBe(0)
+    const status = await (await dupr(request, code, hostKey)).json()
+    expect(status.exportsLeft).toBe(0)
+    const freesUpIn = Date.parse(status.nextExportAt) - Date.now()
+    expect(freesUpIn).toBeGreaterThan(23 * 3600 * 1000)
+    expect(freesUpIn).toBeLessThanOrEqual(24 * 3600 * 1000)
   })
 
   test('only the account the session is linked to can export it', async ({ request, playwright, baseURL }) => {
@@ -340,6 +344,23 @@ test.describe('the DUPR sheet (screens)', () => {
     expect(new URL(page.url()).search).toBe('')
     await page.goto(`/pickleball/s/${code}?signin=unverified`)
     await expect(page.getByRole('dialog', { name: 'Email me the DUPR export' }).getByRole('alert')).toContainText('no verified email')
+  })
+
+  test('a browser that cannot keep the host key is told so instead of being sent to Google, and the board explains the return', async ({ page, request, baseURL }) => {
+    // Site storage blocked: every write throws, so the host key is never saved.
+    await page.addInitScript(() => { Storage.prototype.setItem = () => { throw new Error('blocked') } })
+    const { code, hostKey } = await createSession(request)
+    await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+    await page.getByRole('button', { name: 'More' }).click()
+    await page.getByRole('button', { name: 'Email me the DUPR export' }).click()
+    const sheet = page.getByRole('dialog', { name: 'Email me the DUPR export' })
+    await expect(sheet.getByRole('alert')).toContainText('This browser can’t remember your host link')
+    await expect(sheet.getByRole('link', { name: 'Sign in with Google' })).toHaveCount(0)
+
+    await signIn(page.request, baseURL, uniqueEmail('mo'), code)
+    await page.goto(`/pickleball/s/${code}?signin=ok`)
+    await expect(page.getByRole('status').filter({ hasText: 'Signed in. Open your host link to continue.' })).toBeVisible()
+    expect(new URL(page.url()).search).toBe('')
   })
 
   test('the public board and a captain never see the DUPR export or the link', async ({ browser, request, baseURL }) => {

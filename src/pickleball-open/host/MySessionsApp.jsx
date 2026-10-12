@@ -95,7 +95,7 @@ export default function MySessionsApp() {
             ))}
           </section>
           <Panel>
-            <ClubIdForm key={host.duprClubId ?? ''} current={host.duprClubId} onSaved={setHost} />
+            <ClubIdForm key={host.duprClubId ?? ''} current={host.duprClubId} onSaved={setHost} onSignInEnded={() => setReload((n) => n + 1)} />
             <HostAccount host={host} showMySessions={false} onChanged={(next) => (next ? setHost(next) : setReload((n) => n + 1))} />
           </Panel>
         </>

@@ -38,6 +38,13 @@ export function secondsUntilNextExport(sentAt: readonly string[], now: string): 
   return Math.max(1, Math.ceil((Date.parse(oldest) + DUPR_EXPORT_WINDOW_MS - Date.parse(now)) / 1000))
 }
 
+/** When the oldest counted export leaves the window, once none are left; otherwise null. */
+export function nextExportAt(sentAt: readonly string[]): string | null {
+  if (exportsLeft(sentAt) > 0) return null
+  const oldest = sentAt.reduce((min, at) => (at < min ? at : min), sentAt[0])
+  return new Date(Date.parse(oldest) + DUPR_EXPORT_WINDOW_MS).toISOString()
+}
+
 export function limitMessage(sentAt: readonly string[], now: string): string {
   const hours = hoursUntilNextExport(sentAt, now)
   return `A session can be sent to DUPR ${DUPR_EXPORT_LIMIT} times a day. Try again in about ${hours} hour${hours === 1 ? '' : 's'}.`

@@ -54,3 +54,24 @@ export function sentMessage(result) {
   if (result.delivery === 'SUPPRESSED') return `Test environment: nothing was emailed. ${games(result.exported)} would have gone to ${result.to}.`
   return `Sent to ${result.to}: ${games(result.exported)}. Upload the file in DUPR.`
 }
+
+/**
+ * "Next export available at HH:MM." in the device's zone, once no export is
+ * left today; otherwise null. `timeZone` is for tests; the device's by default.
+ */
+export function nextExportLine(status, timeZone = undefined) {
+  if (status.exportsLeft > 0 || !status.nextExportAt) return null
+  const at = new Date(status.nextExportAt)
+  if (Number.isNaN(at.getTime())) return null
+  const time = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone }).format(at)
+  return `Next export available at ${time}.`
+}
+
+/**
+ * What the public board says to a browser that came back from Google but holds
+ * no host key (site storage blocked or cleared), so the DUPR sheet cannot open.
+ */
+export function boardSignInNotice(result) {
+  if (!result) return null
+  return result === 'ok' ? 'Signed in. Open your host link to continue.' : SIGN_IN_MESSAGES[result]
+}
