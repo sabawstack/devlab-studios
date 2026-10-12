@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro'
+import BracketArt from '../../components/pickleball/art/BracketArt.jsx'
 import ScoreTapArt from '../../components/pickleball/art/ScoreTapArt.jsx'
 import { loadPageSeo } from '../../lib/content/seo'
 import '../../styles/pickleball-open.css'
@@ -20,6 +21,9 @@ const steps = [
   { title: 'Hand a court to a captain', body: 'From More, make a captain link for a court and send it to a helper. On their own phone they can start that court’s games and save, undo or fix its results, nothing else. Turn the link off and it stops working at once.' },
   { title: 'Late arrivals and breaks', body: 'Add players any time; they start level with whoever has played least. Put someone on a break and they are skipped until you bring them back.' },
   { title: 'Keep friends together, or apart', body: 'On the Players tab, set two players to always partner, or never share a court. Every way of matching keeps it; if no game fits, the court waits and says why. The fairness panel shows the games spread, the longest wait and repeat partners as you go.' },
+  { title: 'Or run a tournament', body: 'Pick Tournament when you start. Choose round robin, pools then a bracket (the top 2 of each pool go through), single elimination or double elimination. Pairs are made at random, balanced by skill (strongest with weakest) or in list order, and seeded at random, by skill or in your own order.' },
+  { title: 'Edit the draw, then start', body: 'Generate the draw and change anything: swap players between pairs, swap two pairs, move a pair to another pool, or change who plays whom. A change that would break the draw is refused with the reason. Start locks it; after that you can substitute a player in a pair that is off court, or swap opponents between games in the same round that have not started.' },
+  { title: 'Courts fill from the draw', body: 'Whichever court frees next gets the next game the draw allows. The board and the TV show the pools, the bracket and the pair standings, later rounds fill in as results are saved, and the winners get a moment in the spotlight.' },
   { title: 'Fix a mistake', body: 'Undo a save for 2 minutes, or edit any result later. Standings update straight away.' },
   { title: 'Finish up', body: 'End the session and download the results as a CSV. Everything is deleted 7 days after the last change, or delete it yourself any time.' },
 ]
@@ -46,6 +50,14 @@ const steps = [
         </li>
       ))}
     </ol>
+
+    <section class="mt-12 grid items-center gap-6 rounded-2xl border border-[#193480] p-6 md:grid-cols-[1fr_1.2fr]" aria-labelledby="tournament-heading">
+      <div>
+        <h2 id="tournament-heading" class="text-2xl font-bold text-white">Tournaments, the same way</h2>
+        <p class="mt-2 text-[#b5c4e1]">The same free session, with a draw instead of a rotation. Captain links, the TV board, the results CSV and the 7-day deletion all work the same.</p>
+      </div>
+      <div class="pb-anim mx-auto w-full max-w-[20rem]" data-testid="pb-artwork"><BracketArt className="w-full" /></div>
+    </section>
 
     <div class="mt-12 flex flex-wrap items-center gap-4">
       <a href="/pickleball/new" class="inline-flex min-h-12 items-center rounded-xl bg-[#4500ff] px-6 text-lg font-bold text-white hover:bg-[#3a00d6]">Start a free session</a>

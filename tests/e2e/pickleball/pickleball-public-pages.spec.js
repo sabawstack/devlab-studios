@@ -129,7 +129,7 @@ test.describe('Pickleball public pages', () => {
       await page.goto(path)
       const copy = (await mainCopy(page)).toLowerCase()
       // Whole words only: a bare substring check would flag "opi" inside "copied".
-      for (const unshipped of ['tournament', 'bracket', 'dupr', 'sign in', 'opi', 'performance index', 'rally-by-rally', 'mexicano']) {
+      for (const unshipped of ['dupr', 'sign in', 'opi', 'performance index', 'rally-by-rally', 'mexicano']) {
         expect(copy, `"${unshipped}" on ${path}`).not.toMatch(new RegExp(`\\b${unshipped.replace(/[-]/g, '\\-')}`))
       }
     })
@@ -173,6 +173,15 @@ test.describe('Pickleball public pages', () => {
     await page.goto('/pickleball')
     const landing = await mainCopy(page)
     for (const claim of ['winners play winners', 'Fairness you can see', 'Keep friends together', 'Court captains', 'TV board']) expect(landing).toContain(claim)
+  })
+
+  test('the guide and landing page describe tournaments as built', async ({ page }) => {
+    await page.goto('/pickleball/how-it-works')
+    const guide = await mainCopy(page)
+    for (const claim of ['Or run a tournament', 'pools then a bracket', 'double elimination', 'Edit the draw, then start', 'substitute a player', 'Tournaments, the same way']) expect(guide).toContain(claim)
+    await page.goto('/pickleball')
+    const landing = await mainCopy(page)
+    for (const claim of ['Casual tournaments', 'Can I run a tournament?']) expect(landing).toContain(claim)
   })
 
   // Spec §1.3: no competitor is named and no comparative claim is made.
