@@ -14,7 +14,7 @@ const steps = [
   { title: 'Start a session', body: 'Open "Start a free session", name it, choose how many courts, what games go to (11, 15 or 21) and how players are matched. No account needed.' },
   { title: 'Choose who plays whom', body: 'Paddle stack puts whoever has played least on next. Winners play winners sends winners against winners and losers against losers, with last game’s partners split up. By standing matches players close in today’s standings. Balanced teams evens out skill. Switch any time from the console; the switch applies to the next game. Whichever you pick, anyone who has sat out 2 rounds in a row goes on next, unless a keep-together or keep-apart rule holds them back.' },
   { title: 'Add players', body: 'Paste your list or upload a CSV. Numbering, emoji and duplicates are removed. Or show the check-in QR from Share: players type their own name, and a skill if they like, and join level with whoever has played least. Turn check-in off any time.' },
-  { title: 'Save your host link, share the board', body: 'Your host link controls the session; keep it. Show players the QR code for the view-only board.' },
+  { title: 'Save your host link, share the board', body: 'Your host link controls the session; keep it. Show players the QR code for the view-only board. If you link the session to Google for a DUPR export, My sessions reopens it as host on any device.' },
   { title: 'Put the board on a TV', body: 'Open the TV board from Share on a venue screen. Every court, who is up next, the standings and the fairness numbers, in type big enough to read across the hall, with the check-in code in the corner.' },
   { title: 'Start the proposed game', body: 'Each free court shows the next four players. Tap Start, or tap Edit to swap anyone first. Players never belong to a court: whichever court frees first gets the next match.' },
   { title: 'Tap the result', body: 'When a game ends, tap Game over, pick the winner and the losing score. The winning score fills in, and the court gets its next match.' },
@@ -25,6 +25,7 @@ const steps = [
   { title: 'Edit the draw, then start', body: 'Generate the draw and change anything: swap players between pairs, swap two pairs, move a pair to another pool, or change who plays whom. A change that would break the draw is refused with the reason. Start locks it; after that you can substitute a player in a pair that is off court, or swap opponents between games in the same round that have not started, where the draw placed both pairs, such as first-round games. A pair that got there by a result moves only when you change that result.' },
   { title: 'Courts fill from the draw', body: 'Whichever court frees next is offered the next game the draw allows, and you tap Start. The board on every phone shows the pools, the bracket and the pair standings; the TV shows the standings, recent results and the next games. Later rounds fill in as results are saved, and the winners get a moment in the spotlight.' },
   { title: 'Fix a mistake', body: 'Undo a save for 2 minutes, or edit a result later. Standings update straight away. In a tournament, a result cannot change once the game it feeds has started; change that game first.' },
+  { title: 'Send games to DUPR', body: 'From More, choose Email me the DUPR export. This is the only step that asks anyone to sign in with Google, and only you, the host, can take it. Link the session to your Google account (once per session), enter your DUPR Club ID (once, for every session) and add any missing DUPR IDs. Every game with a score and a DUPR ID for all four players goes into a CSV emailed to your Google address, with each game left out and why. Upload it in DUPR under Matches → Add Matches → Import Matches via CSV; your DUPR account must be a Club Director or Organizer of the club. Up to 5 exports per session a day. Delete your account any time from the same screen.' },
   { title: 'Finish up', body: 'End the session and download the results as a CSV. Everything is deleted 7 days after the last change, or delete it yourself any time.' },
 ]
 ---
@@ -34,7 +35,7 @@ const steps = [
       <div>
         <p class="text-xs font-bold uppercase tracking-[0.14em] text-[#c6ff2e]">Host guide</p>
         <h1 class="mt-3 text-4xl font-bold leading-[1.1] text-white md:text-5xl">How to run open play with Devlab Pickleball</h1>
-        <p class="mt-4 text-lg text-[#b5c4e1]">{steps.length} steps, from an empty session to downloaded results. Free, with no sign-up for you or your players.</p>
+        <p class="mt-4 text-lg text-[#b5c4e1]">{steps.length} steps, from an empty session to downloaded results. Free, with no sign-up for you or your players. Google sign-in is only for emailing yourself a DUPR export.</p>
       </div>
       <div class="pb-anim mx-auto w-full max-w-[16rem]" data-testid="pb-artwork"><ScoreTapArt className="w-full" /></div>
     </section>

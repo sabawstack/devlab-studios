@@ -129,7 +129,8 @@ test.describe('Pickleball public pages', () => {
       await page.goto(path)
       const copy = (await mainCopy(page)).toLowerCase()
       // Whole words only: a bare substring check would flag "opi" inside "copied".
-      for (const unshipped of ['dupr', 'sign in', 'opi', 'performance index', 'rally-by-rally', 'mexicano']) {
+      // DUPR and sign-in are shipped (Phase 4): the host's DUPR export, with Google sign-in for it alone.
+      for (const unshipped of ['opi', 'performance index', 'rally-by-rally', 'mexicano']) {
         expect(copy, `"${unshipped}" on ${path}`).not.toMatch(new RegExp(`\\b${unshipped.replace(/[-]/g, '\\-')}`))
       }
     })
@@ -247,7 +248,8 @@ test.describe('Pickleball public pages', () => {
 
   // Bracket-format features that are not built anywhere. Documenting any of
   // them would be describing a feature that does not exist.
-  const UNBUILT_CLAIMS = ['third-place', 'consolation', 'bracket reset', 'singles tournament', 'reseed']
+  // The DUPR export is a CSV the host uploads: nothing is ever sent to DUPR by us, and no rating is shown.
+  const UNBUILT_CLAIMS = ['third-place', 'consolation', 'bracket reset', 'singles tournament', 'reseed', 'dupr api', 'synced to dupr', 'sent to dupr automatically', 'dupr rating']
 
   for (const path of ['/pickleball', '/pickleball/how-it-works']) {
     test(`documents no unbuilt feature (${path})`, async ({ page }) => {
@@ -257,6 +259,21 @@ test.describe('Pickleball public pages', () => {
       }
     })
   }
+
+  // Every phrase maps to shipped code: the console's More menu item, DUPR_CLICK_PATH
+  // (src/lib/pickleball/open/dupr/email.ts), the email's upload rule, DUPR_EXPORT_LIMIT
+  // (dupr/policy.ts) and the My sessions page.
+  test('the guide and FAQ describe the DUPR export exactly as shipped', async ({ page }) => {
+    await page.goto('/pickleball/how-it-works')
+    const guide = await mainCopy(page)
+    for (const phrase of ['Email me the DUPR export', 'Matches → Add Matches → Import Matches via CSV', 'Club Director or Organizer', 'Up to 5 exports per session a day', 'My sessions']) {
+      expect(guide).toContain(phrase)
+    }
+    await page.goto('/pickleball')
+    const landing = await mainCopy(page)
+    expect(landing).toContain('Can I send results to DUPR?')
+    expect(landing).toContain('open My sessions on any device')
+  })
 
   // These pages are the product's public front door and are linked from
   // /solutions, so they need share metadata rather than a bare <title>. All

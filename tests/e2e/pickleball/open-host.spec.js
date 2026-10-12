@@ -360,3 +360,35 @@ test.describe('the DUPR sheet (screens)', () => {
     await context.close()
   })
 })
+
+test.describe('My sessions (screens)', () => {
+  test('My sessions reopens a linked session as host on a new device', async ({ browser, request, baseURL }) => {
+    const { code, email } = await readyToExport(request, baseURL)
+    const context = await browser.newContext()
+    const page = await context.newPage()
+    await page.goto('/pickleball/my-sessions')
+    await expect(page.getByRole('link', { name: 'Sign in with Google' })).toHaveAttribute('href', '/api/pickleball/open/host/sign-in?return=%2Fpickleball%2Fmy-sessions')
+    await signIn(page.request, baseURL, email, `${code}-device`)
+    await page.reload()
+    await page.getByRole('button', { name: 'Open Saturday Social as host' }).click()
+    await expect(page).toHaveURL(new RegExp(`/pickleball/s/${code}(#.*)?$`))
+    await expect(page.getByRole('button', { name: 'More' })).toBeVisible()
+    await context.close()
+  })
+
+  for (const width of [390, 768, 1280, 1920]) {
+    test(`the DUPR sheet and My sessions fit a ${width}px screen without sideways scrolling`, async ({ page, request, baseURL }) => {
+      const { code, hostKey, email } = await readyToExport(request, baseURL)
+      await page.setViewportSize({ width, height: 900 })
+      await signIn(page.request, baseURL, email, `${code}-${width}`)
+      await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
+      await page.getByRole('button', { name: 'More' }).click()
+      await page.getByRole('button', { name: 'Email me the DUPR export' }).click()
+      await expect(page.getByText('1 game can go to DUPR.')).toBeVisible()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+      await page.goto('/pickleball/my-sessions')
+      await expect(page.getByRole('button', { name: 'Open Saturday Social as host' })).toBeVisible()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    })
+  }
+})

@@ -1,0 +1,9 @@
+---
+// src/pages/pickleball/my-sessions.astro
+// A signed-in host's linked sessions (spec §9.5). Not indexed: it is a private screen.
+import PickleballAppShell from '../../layouts/PickleballAppShell.astro'
+import MySessionsApp from '../../pickleball-open/host/MySessionsApp.jsx'
+---
+<PickleballAppShell title="My sessions — Devlab Pickleball">
+  <MySessionsApp client:only="react" />
+</PickleballAppShell>
