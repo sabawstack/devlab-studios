@@ -37,4 +37,10 @@ describe('the tournament court loop', () => {
     expect(state.matches.some((m) => m.courtId === 'c2')).toBe(false)
     expect(tournamentCourtNote(state)).toBe('Semi-final 2 waits for Cy, who is on a break.')
   })
+
+  it('a free court says when the session has reached its game limit', () => {
+    const { state } = started(8, 2)
+    const filler = Array.from({ length: 2000 - state.matches.length }, (_, i) => ({ ...state.matches[0], id: `old${i}`, fixtureId: null, status: 'FINISHED' as const }))
+    expect(tournamentCourtNote({ ...state, matches: [...state.matches, ...filler] })).toBe('This session has reached its 2,000-game limit.')
+  })
 })

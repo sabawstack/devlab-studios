@@ -39,6 +39,9 @@ function needRandom(random: RandomInt | undefined): RandomInt {
   return random
 }
 
+/** Plain code-unit order: the same on every runtime, unlike localeCompare. */
+const byText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
+
 /**
  * RANDOM: a shuffle, then neighbours pair up.
  * BALANCED: snake by skill, strongest with weakest; the middle player is left over when the count is odd.
@@ -48,7 +51,7 @@ export function formPairs(players: readonly OpenPlayer[], method: PairingMethod,
   const ordered = [...players].sort((a, b) => a.position - b.position)
   if (method === 'RANDOM') return consecutive(shuffle(ordered, needRandom(random)).map((p) => p.id))
   if (method === 'MANUAL') return consecutive(ordered.map((p) => p.id))
-  const bySkill = [...ordered].sort((a, b) => skillOf(b) - skillOf(a) || a.name.localeCompare(b.name))
+  const bySkill = [...ordered].sort((a, b) => skillOf(b) - skillOf(a) || byText(a.name, b.name) || byText(a.id, b.id))
   const half = Math.floor(bySkill.length / 2)
   const pairs: PairIds[] = []
   for (let i = 0; i < half; i += 1) pairs.push([bySkill[i].id, bySkill[bySkill.length - 1 - i].id])

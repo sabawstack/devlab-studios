@@ -5,7 +5,7 @@ import { diffState } from '../../../../lib/pickleball/open/diff'
 import { normalizeSettings } from '../../../../lib/pickleball/open/settings'
 import { FIXTURE_ORDER_SQL } from '../../../../lib/pickleball/open/tournament/order'
 import {
-  normalizePairing, normalizePhase, normalizeSeeding,
+  emptyTournament, normalizePairing, normalizePhase, normalizeSeeding,
   type TournamentEntrant, type TournamentFixture, type TournamentState,
 } from '../../../../lib/pickleball/open/tournament/types'
 import type { CaptainRecord, OpenCourt, OpenMatch, OpenPlayer, OpenSessionState, Team } from '../../../../lib/pickleball/open/types'
@@ -123,7 +123,7 @@ async function loadTournament(db: D1Database, sessionId: string): Promise<Tourna
   const meta = await db.prepare('SELECT * FROM open_tournaments WHERE session_id = ?').bind(sessionId).first<TournamentRow>()
   if (!meta) return null
   const [entrants, fixtures] = await Promise.all([
-    db.prepare('SELECT * FROM open_tournament_entrants WHERE session_id = ? ORDER BY seed').bind(sessionId).all<EntrantRow>(),
+    db.prepare('SELECT * FROM open_tournament_entrants WHERE session_id = ? ORDER BY seed, id').bind(sessionId).all<EntrantRow>(),
     db.prepare(`SELECT * FROM open_tournament_fixtures WHERE session_id = ? ORDER BY ${FIXTURE_ORDER_SQL}`).bind(sessionId).all<FixtureRow>(),
   ])
   return {
@@ -168,8 +168,9 @@ export async function loadOpenSession(db: D1Database, code: string, nowIso: stri
         scoreA: m.score_a, scoreB: m.score_b, winner: m.winner, proposedAt: m.proposed_at,
         startedAt: m.started_at, finishedAt: m.finished_at, recordedBy: m.recorded_by, fixtureId: m.fixture_id,
       })),
-      // A tournament session always has its row (created with it); open play has none.
-      tournament: tournament ?? null,
+      // A tournament session is created with its row; one missing it (a failed
+      // or partial write) loads as a fresh setup rather than as open play.
+      tournament: session.kind === 'TOURNAMENT' ? (tournament ?? emptyTournament()) : null,
     },
   }
 }

@@ -4,7 +4,7 @@
 // nextPlayableFixture). A pair with a player on a break is skipped until they
 // are back.
 import { nextPlayableFixture } from '../../tournament/nextPlayableFixture'
-import type { OpenSessionState, Team } from '../types'
+import { LIMITS, type OpenSessionState, type Team } from '../types'
 import { fixtureLabel } from './labels'
 
 export interface FixtureProposal {
@@ -72,5 +72,7 @@ export function tournamentCourtNote(state: OpenSessionState): string | null {
   if (t.phase === 'SETUP') return 'Courts fill once you generate the draw and start the tournament.'
   if (t.phase === 'DRAFT') return 'Courts fill once you start the tournament.'
   if (t.phase === 'FINISHED') return 'The tournament is over.'
+  // No new game can be proposed past the cap, whatever the draw says.
+  if (state.matches.length >= LIMITS.maxMatches) return `This session has reached its ${LIMITS.maxMatches.toLocaleString('en-US')}-game limit.`
   return heldByBreak(state) ?? 'Waiting for a result that decides the next game.'
 }

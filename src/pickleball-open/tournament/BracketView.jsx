@@ -1,7 +1,9 @@
 // src/pickleball-open/tournament/BracketView.jsx
 // The draw: pools side by side on wide screens and stacked on phones, then the
 // bracket round by round (spec §6.7, §11). Read-only unless onSlot is given:
-// then each placed pair is a button for the tap-to-select editor.
+// then each pair the draw placed is a button for the tap-to-select editor. A
+// pair a result put there (a winner, a loser, a pool finisher) is not: only
+// changing that result can move it.
 import { drawSections } from './bracketLayout'
 import { isSelected } from './drawTaps'
 import PairStandings from './PairStandings.jsx'
@@ -11,6 +13,7 @@ function Side({ fixture, side, onSlot, selected, highlight }) {
   const name = side === 'A' ? fixture.nameA : fixture.nameB
   const waiting = side === 'A' ? fixture.waitingA : fixture.waitingB
   const score = side === 'A' ? fixture.scoreA : fixture.scoreB
+  const placed = side === 'A' ? fixture.placedA : fixture.placedB
   const won = fixture.winner === side
   const item = { kind: 'slot', fixtureId: fixture.id, side, entrantId }
   const text = (
@@ -21,7 +24,7 @@ function Side({ fixture, side, onSlot, selected, highlight }) {
       {score !== null && <span className={`shrink-0 tabular-nums ${won ? 'font-bold text-pickle-neon' : 'text-mist'}`}>{score}</span>}
     </>
   )
-  if (onSlot && entrantId) {
+  if (onSlot && entrantId && placed) {
     const chosen = isSelected(selected, item)
     return (
       <button type="button" aria-pressed={chosen} onClick={() => onSlot(item)}

@@ -47,6 +47,9 @@ export interface FixtureView {
   /** What an empty side waits for: "Winner of Semi-final 1", "Pool B runner-up". */
   waitingA: string | null
   waitingB: string | null
+  /** True when the draw placed this side; false when a result fills it (only placed sides can be swapped). */
+  placedA: boolean
+  placedB: boolean
   scoreA: number | null
   scoreB: number | null
   winner: Side | null
@@ -102,6 +105,7 @@ export function toTournamentView(state: OpenSessionState): TournamentView | null
         label: fixtureLabel(t, f), round: roundLabel(t.format, t.fixtures, f), status: f.status,
         entrantAId: f.entrantAId, entrantBId: f.entrantBId, nameA: name(f.entrantAId), nameB: name(f.entrantBId),
         waitingA: f.entrantAId ? null : sourceLabel(t, f.sourceA), waitingB: f.entrantBId ? null : sourceLabel(t, f.sourceB),
+        placedA: f.sourceA === null, placedB: f.sourceB === null,
         scoreA: saved?.scoreA ?? null, scoreB: saved?.scoreB ?? null,
         winner: f.winnerEntrantId === null ? null : f.winnerEntrantId === f.entrantAId ? 'A' : 'B',
         court: live ? { label: courtLabel(live.courtId), live: live.status === 'IN_PROGRESS' } : null,

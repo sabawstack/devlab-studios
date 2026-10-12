@@ -21,7 +21,8 @@ describe('tournament snapshots', () => {
     expect(t).toMatchObject({ format: 'SINGLE_ELIMINATION', formatLabel: 'Single elimination', phase: 'DRAFT', champion: null })
     expect(t.pairs.map((p) => p.name)).toEqual(['Ana & Ben', 'Cy & Di', 'Eva & Fin', 'Gus & Hal'])
     expect(t.fixtures.map((f) => f.label)).toEqual(['Semi-final 1', 'Semi-final 2', 'Final'])
-    expect(t.fixtures[2]).toMatchObject({ nameA: null, waitingA: 'Winner of Semi-final 1', waitingB: 'Winner of Semi-final 2' })
+    expect(t.fixtures[2]).toMatchObject({ nameA: null, waitingA: 'Winner of Semi-final 1', waitingB: 'Winner of Semi-final 2', placedA: false, placedB: false })
+    expect(t.fixtures[0]).toMatchObject({ placedA: true, placedB: true })
     const json = JSON.stringify(viewer)
     for (const banned of ['AB12C3', 'skill', 'duprId', 'hash']) expect(json).not.toContain(banned)
   })
@@ -50,5 +51,24 @@ describe('tournament snapshots', () => {
     expect(csv[3]).toMatch(/^3,Final,Court \d,/)
     expect(csv).toContain('Rank,Pool,Pair,Played,Won,Lost,Points for,Points against,Point difference')
     expect(csv.find((line) => line.startsWith('1,All,'))).toMatch(/^1,All,Ana & Ben,2,2,0,/)
+  })
+
+  it('a free court names the game that waits for a player on a break', () => {
+    const { state, ctx } = cup()
+    let running = run(state, { type: 'START_TOURNAMENT' }, ctx(2))
+    const second = running.matches.find((m) => m.courtId === 'c2')!
+    running = run(running, { type: 'SET_PLAYER_STATUS', playerId: second.teamA[0], status: 'BREAK' }, ctx(3))
+    expect(toHostSnapshot(running).courts.find((c) => c.id === 'c2')?.blocked).toBe('Semi-final 2 waits for Cy, who is on a break.')
+  })
+
+  it('the tournament CSV neutralises a formula-like pair name and escapes its quotes and comma', () => {
+    const { state: drafted, ctx } = cup()
+    const named = { ...drafted, players: drafted.players.map((p) => (p.id === 'p1' ? { ...p, name: '=HYPERLINK("x","y"),z' } : p)) }
+    const done = playOut(run(named, { type: 'START_TOURNAMENT' }, ctx(2)), ctx)
+    const csv = resultsCsv(done)
+    expect(csv).toContain(`"'=HYPERLINK(""x"",""y""),z & Ben"`)
+    expect(csv).not.toMatch(/(^|,)=HYPERLINK/m)
+    const tabbed = { ...done, players: done.players.map((p) => (p.id === 'p1' ? { ...p, name: '	=1+1' } : p)) }
+    expect(resultsCsv(tabbed)).toContain(`"'	=1+1 & Ben"`)
   })
 })

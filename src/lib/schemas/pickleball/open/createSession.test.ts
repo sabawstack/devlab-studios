@@ -35,6 +35,13 @@ describe('tournament schemas (Phase 3)', () => {
     expect(createSessionSchema.safeParse({ ...base, settings, kind: 'TOURNAMENT', tournament: { format: 'SWISS' } }).success).toBe(false)
   })
 
+  it('a tournament must send its format, and open play must not send one', () => {
+    expect(createSessionSchema.safeParse({ ...base, settings, kind: 'TOURNAMENT' }).success).toBe(false)
+    expect(createSessionSchema.safeParse({ ...base, settings, kind: 'OPEN_PLAY', tournament: { format: 'ROUND_ROBIN' } }).success).toBe(false)
+    expect(createSessionSchema.safeParse({ ...base, settings, tournament: { format: 'ROUND_ROBIN' } }).success).toBe(false)
+    expect(createSessionSchema.safeParse({ ...base, settings, kind: 'OPEN_PLAY' }).success).toBe(true)
+  })
+
   it('parses the tournament commands and rejects bad shapes', () => {
     expect(commandSchema.safeParse({ type: 'GENERATE_DRAW', format: 'DOUBLE_ELIMINATION', pairing: 'BALANCED', seeding: 'BY_SKILL' }).success).toBe(true)
     expect(commandSchema.safeParse({ type: 'GENERATE_DRAW', format: 'ROUND_ROBIN', pairing: 'SNAKE', seeding: 'RANDOM' }).success).toBe(false)

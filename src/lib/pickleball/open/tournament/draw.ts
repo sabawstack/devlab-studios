@@ -51,6 +51,8 @@ export function drawablePlayers(players: readonly OpenPlayer[]): OpenPlayer[] {
 }
 
 export function generateDraw(players: readonly OpenPlayer[], options: DrawOptions, ctx: DrawContext, maxFixtures: number): DrawResult {
+  const needsRandom = options.pairing === 'RANDOM' || options.seeding === 'RANDOM'
+  if (needsRandom && !ctx.random) return { ok: false, reason: 'Random pairing or seeding is not available right now. Try again, or pick another method.' }
   const { pairs } = formPairs(drawablePlayers(players), options.pairing, ctx.random)
   if (pairs.length < minimumEntrants(options.format)) return { ok: false, reason: minimumMessage(options.format) }
   const seeded = seedPairs(pairs, options.seeding, players, ctx.random)

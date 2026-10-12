@@ -59,9 +59,11 @@ test.describe('open play API', () => {
     const { code, hostKey } = await createSession(request)
     const attacker = freshIp()
     // hostIpLimited allows 600 per minute per address (a club's captains and host share one Wi-Fi).
+    // 620 requests, more than the limit, sent 20 at a time so a slow local
+    // worker isn't swamped with hundreds of open requests at once.
     const statuses = []
-    for (let batch = 0; batch < 5; batch += 1) {
-      const flood = await Promise.all(Array.from({ length: 121 }, () =>
+    for (let batch = 0; batch < 31; batch += 1) {
+      const flood = await Promise.all(Array.from({ length: 20 }, () =>
         request.post(`/api/pickleball/open/s/${code}/commands`, {
           headers: { 'X-Host-Key': 'wrong-key-wrong-key', 'cf-connecting-ip': attacker },
           data: { idempotencyKey: crypto.randomUUID(), command: { type: 'END_SESSION' } },

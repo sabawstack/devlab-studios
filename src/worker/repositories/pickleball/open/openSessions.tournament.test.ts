@@ -3,7 +3,7 @@ import { createSqliteD1 } from './testing/sqliteD1'
 import { createOpenSession, loadOpenSession, persistDiff, purgeExpiredOpenSessions } from './openSessions'
 import { buildInitialState } from '../../../../lib/pickleball/open/create'
 import { diffState } from '../../../../lib/pickleball/open/diff'
-import type { TournamentState } from '../../../../lib/pickleball/open/tournament/types'
+import { emptyTournament, type TournamentState } from '../../../../lib/pickleball/open/tournament/types'
 import { DEFAULT_SETTINGS, type OpenMatch, type OpenSessionState } from '../../../../lib/pickleball/open/types'
 
 const MIGRATIONS = [
@@ -50,6 +50,15 @@ describe('tournament rows in D1 (0018)', () => {
     expect((await loadOpenSession(d1, 'CUPCU23456', NOW))?.state).toEqual(state)
     await createOpenSession(d1, cup('OPENO23456', 'OPEN_PLAY'), 'hash')
     expect((await loadOpenSession(d1, 'OPENO23456', NOW))?.state.tournament).toBeNull()
+  })
+
+  it('a tournament session whose tournament row is missing loads as a fresh setup, not as open play', async () => {
+    const { d1, raw } = createSqliteD1(MIGRATIONS)
+    await createOpenSession(d1, cup(), 'hash')
+    raw.prepare('DELETE FROM open_tournaments').run()
+    const loaded = (await loadOpenSession(d1, 'CUPCU23456', NOW))?.state
+    expect(loaded?.kind).toBe('TOURNAMENT')
+    expect(loaded?.tournament).toEqual(emptyTournament())
   })
 
   it('a draft persists as a diff, loads with the same key order, and a new draft replaces it completely', async () => {

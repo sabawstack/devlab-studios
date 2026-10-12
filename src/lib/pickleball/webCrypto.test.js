@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { afterEach, describe, it, expect, vi } from 'vitest'
 import { bytesToBase64Url, base64UrlToBytes, randomBase64Url, randomInt, sha256Base64Url, hmacSign, hmacVerify } from './webCrypto.js'
 
 describe('base64url roundtrip', () => {
@@ -61,5 +61,27 @@ describe('randomInt', () => {
   it('refuses a range it cannot draw from', () => {
     expect(() => randomInt(0)).toThrow(RangeError)
     expect(() => randomInt(2.5)).toThrow(RangeError)
+    expect(() => randomInt(2 ** 32 + 1)).toThrow(RangeError)
+  })
+
+  it('accepts both ends of its range', () => {
+    expect(randomInt(1)).toBe(0)
+    const value = randomInt(2 ** 32)
+    expect(Number.isInteger(value) && value >= 0 && value < 2 ** 32).toBe(true)
+  })
+
+  describe('with a stubbed random source', () => {
+    afterEach(() => vi.restoreAllMocks())
+
+    it('draws again when a value falls in the biased tail, instead of folding it back', () => {
+      // For 3, the last accepted value is 2^32 - 2: 2^32 - 1 would favour 0.
+      const draws = [2 ** 32 - 1, 7]
+      const spy = vi.spyOn(crypto, 'getRandomValues').mockImplementation((buffer) => {
+        buffer[0] = draws.shift()
+        return buffer
+      })
+      expect(randomInt(3)).toBe(1)
+      expect(spy).toHaveBeenCalledTimes(2)
+    })
   })
 })

@@ -22,6 +22,11 @@ export const createSessionSchema = z.object({
   kind: z.enum(['OPEN_PLAY', 'TOURNAMENT']).optional(),
   tournament: z.object({ format: tournamentFormatSchema }).optional(),
   turnstileToken: z.string().max(2048).optional(),
+}).superRefine((body, ctx) => {
+  // A tournament needs its format; open play must not carry one.
+  const isTournament = body.kind === 'TOURNAMENT'
+  if (isTournament && !body.tournament) ctx.addIssue({ code: 'custom', path: ['tournament'], message: 'A tournament needs a format.' })
+  if (!isTournament && body.tournament) ctx.addIssue({ code: 'custom', path: ['tournament'], message: 'Only a tournament takes a format.' })
 })
 
 export type CreateSessionBody = z.infer<typeof createSessionSchema>

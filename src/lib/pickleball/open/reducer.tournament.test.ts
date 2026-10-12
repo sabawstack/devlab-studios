@@ -96,6 +96,34 @@ describe('a tournament session', () => {
     expect(game.teamB).toEqual(newOpponent.playerIds)
   })
 
+  it('a pair that got to a later round by a result cannot be swapped, and undo still clears the right slot', () => {
+    const { ctx, state: first } = started(16, 4, 'SINGLE_ELIMINATION') // 8 pairs: four quarter-finals
+    let state = first
+    for (const [i, m] of proposed(state).entries()) {
+      state = run(state, { type: 'START_MATCH', matchId: m.id }, ctx(3 + i))
+      state = run(state, { type: 'RECORD_RESULT', matchId: m.id, winner: 'A', scoreA: 11, scoreB: 6 }, ctx(7))
+    }
+    const [semi1, semi2] = state.tournament!.fixtures.filter((f) => f.bracket === 'MAIN' && f.roundNumber === 2)
+    expect(semi1.entrantAId && semi2.entrantAId).toBeTruthy()
+    expect(refusal(state, { type: 'SWAP_OPPONENTS', fixtureId: semi1.id, side: 'A', otherFixtureId: semi2.id, otherSide: 'A' }, ctx(8)))
+      .toBe('That pair got there by a result. Change the result instead.')
+    // The quarter-final behind semi-final 1 A can still be taken back, clearing exactly that slot.
+    const quarter = state.matches.find((m) => m.fixtureId === semi1.sourceA!.slice('WINNER_OF:'.length))!
+    state = run(state, { type: 'UNDO_RESULT', matchId: quarter.id }, ctx(8))
+    const after = state.tournament!.fixtures
+    expect(after.find((f) => f.id === semi1.id)?.entrantAId).toBeNull()
+    expect(after.find((f) => f.id === semi2.id)?.entrantAId).toBe(semi2.entrantAId)
+  })
+
+  it('first-round pairs, placed by the draw, can still swap opponents', () => {
+    const { ctx, state: first } = started(16, 4, 'SINGLE_ELIMINATION')
+    const [f1, f2] = first.tournament!.fixtures.filter((f) => f.bracket === 'MAIN' && f.roundNumber === 1)
+    const state = run(first, { type: 'SWAP_OPPONENTS', fixtureId: f1.id, side: 'A', otherFixtureId: f2.id, otherSide: 'A' }, ctx(3))
+    const swapped = state.tournament!.fixtures
+    expect(swapped.find((f) => f.id === f1.id)?.entrantAId).toBe(f2.entrantAId)
+    expect(swapped.find((f) => f.id === f2.id)?.entrantAId).toBe(f1.entrantAId)
+  })
+
   it('undo is refused once the next round has started; edit changes who moved on', () => {
     const { ctx, state: first } = started(8, 2, 'SINGLE_ELIMINATION')
     let state = first

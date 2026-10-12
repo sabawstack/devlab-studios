@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { at, player } from '../testing/fixtures'
 import type { OpenMatch, OpenPlayer, Side } from '../types'
 import { generateDraw } from './draw'
-import { champion, editFixtureResult, fixtureFinished, fixtureStarted, reopenFixture } from './progress'
+import { champion, editFixtureResult, fixtureAbandoned, fixtureFinished, fixtureStarted, reopenFixture } from './progress'
 import { overallStandings, poolStandings } from './standings'
 import type { TournamentFormat, TournamentState } from './types'
 
@@ -90,7 +90,8 @@ describe('taking a result back', () => {
   it('a pool result can be taken back until the pool’s top two start the bracket', () => {
     const { t, players } = running('POOL_TO_BRACKET', 8)
     const poolA = t.fixtures.find((f) => f.poolLabel === 'A')!
-    const s = play({ t, matches: [] }, players, poolA.id, 'A', 11, 5)
+    const poolB = t.fixtures.find((f) => f.poolLabel === 'B')!
+    const s = play(play({ t, matches: [] }, players, poolA.id, 'A', 11, 5), players, poolB.id, 'A', 11, 5)
     const semi1 = fixture(s.t, 'MAIN', 1, 0)
     expect(semi1.entrantAId).toBe(poolA.entrantAId)
     const reopened = reopenFixture(s.t, poolA.id)
@@ -100,7 +101,78 @@ describe('taking a result back', () => {
   })
 })
 
+describe('starting and abandoning a game', () => {
+  it('only a ready game starts, and only a game on court goes back to ready', () => {
+    const { t } = running('SINGLE_ELIMINATION', 8)
+    const [semi1, final] = [fixture(t, 'MAIN', 1, 0), fixture(t, 'MAIN', 2)]
+    expect(fixtureStarted(t, final.id)).toBe(t) // PENDING: both sides not known yet
+    expect(fixtureAbandoned(t, semi1.id)).toBe(t) // READY: not on court
+    const live = fixtureStarted(t, semi1.id)
+    expect(live.fixtures.find((f) => f.id === semi1.id)?.status).toBe('IN_PROGRESS')
+    expect(fixtureStarted(live, semi1.id)).toBe(live)
+    expect(fixtureAbandoned(live, semi1.id).fixtures.find((f) => f.id === semi1.id)?.status).toBe('READY')
+  })
+})
+
+describe('a moved pair', () => {
+  it('a result is not taken back when the slot it filled now holds a different pair', () => {
+    const { t, players } = running('SINGLE_ELIMINATION', 8)
+    const [semi1, semi2] = [fixture(t, 'MAIN', 1, 0), fixture(t, 'MAIN', 1, 1)]
+    const s = play({ t, matches: [] }, players, semi1.id, 'A', 11, 4)
+    const final = fixture(s.t, 'MAIN', 2)
+    const tampered = { ...s.t, fixtures: s.t.fixtures.map((f) => (f.id === final.id ? { ...f, entrantAId: semi2.entrantAId } : f)) }
+    expect(reopenFixture(tampered, semi1.id)).toEqual({ ok: false, reason: 'Final no longer has the pair this result sent there, so it cannot be taken back.' })
+  })
+})
+
 describe('editing a saved result', () => {
+  it('only a saved result can be edited', () => {
+    const { t, players } = running('SINGLE_ELIMINATION', 8)
+    expect(editFixtureResult(t, fixture(t, 'MAIN', 1, 0).id, 'B', [], players)).toEqual({ ok: false, reason: 'Only a saved result can be edited.' })
+  })
+
+  it('a different winner is refused once the next game has started', () => {
+    const { t, players } = running('SINGLE_ELIMINATION', 8)
+    const [semi1, semi2] = [fixture(t, 'MAIN', 1, 0), fixture(t, 'MAIN', 1, 1)]
+    const s = play(play({ t, matches: [] }, players, semi1.id, 'A', 11, 4), players, semi2.id, 'A', 11, 4)
+    const live = fixtureStarted(s.t, fixture(s.t, 'MAIN', 2).id)
+    expect(editFixtureResult(live, semi1.id, 'B', s.matches, players)).toEqual({ ok: false, reason: 'Final has already started with this result. Change that game first.' })
+  })
+
+  it('double elimination: undoing the grand final reopens the tournament, and the other winner is crowned', () => {
+    const { t, players } = running('DOUBLE_ELIMINATION', 8)
+    let s: Played = { t, matches: [] }
+    for (let guard = 0; guard < 20 && s.t.phase !== 'FINISHED'; guard += 1) {
+      const next = s.t.fixtures.find((f) => f.status === 'READY')!
+      s = play(s, players, next.id, 'A', 11, 6)
+    }
+    expect(s.t.phase).toBe('FINISHED')
+    const fedOnward = (id: string) => s.t.fixtures.some((f) => f.sourceA === `WINNER_OF:${id}` || f.sourceB === `WINNER_OF:${id}`)
+    const grandFinal = s.t.fixtures.find((f) => f.bracket === 'MAIN' && !fedOnward(f.id))!
+    expect(champion(s.t, s.matches, players)?.id).toBe(grandFinal.entrantAId)
+    const reopened = reopenFixture(s.t, grandFinal.id)
+    if (!reopened.ok) throw new Error(reopened.reason)
+    expect(reopened.tournament.phase).toBe('RUNNING')
+    expect(champion(reopened.tournament, s.matches, players)).toBeNull()
+    const replayed = play({ t: reopened.tournament, matches: s.matches }, players, grandFinal.id, 'B', 8, 11)
+    expect(replayed.t.phase).toBe('FINISHED')
+    expect(champion(replayed.t, replayed.matches, players)?.id).toBe(grandFinal.entrantBId)
+  })
+
+  it('a pool edit that changes the top two re-seats the bracket while it has not started', () => {
+    const { t, players } = running('POOL_TO_BRACKET', 8)
+    const poolA = t.fixtures.find((f) => f.poolLabel === 'A')!
+    const s = play({ t, matches: [] }, players, poolA.id, 'A', 11, 5)
+    const [semi1, semi2] = [fixture(s.t, 'MAIN', 1, 0), fixture(s.t, 'MAIN', 1, 1)]
+    expect([semi1.entrantAId, semi2.entrantBId]).toEqual([poolA.entrantAId, poolA.entrantBId])
+    const otherWinner = s.matches.map((m) => (m.fixtureId === poolA.id ? { ...m, winner: 'B' as const, scoreA: 5, scoreB: 11 } : m))
+    const edited = editFixtureResult(s.t, poolA.id, 'B', otherWinner, players)
+    if (!edited.ok) throw new Error(edited.reason)
+    expect(edited.tournament.fixtures.find((f) => f.id === semi1.id)?.entrantAId).toBe(poolA.entrantBId)
+    expect(edited.tournament.fixtures.find((f) => f.id === semi2.id)?.entrantBId).toBe(poolA.entrantAId)
+  })
+
+
   it('a score change keeps the winner and moves nobody', () => {
     const { t, players } = running('SINGLE_ELIMINATION', 8)
     const semi1 = fixture(t, 'MAIN', 1, 0)
@@ -119,7 +191,8 @@ describe('editing a saved result', () => {
   it('a pool score edit that keeps the same top two is allowed even after the bracket starts', () => {
     const { t, players } = running('POOL_TO_BRACKET', 8)
     const poolA = t.fixtures.find((f) => f.poolLabel === 'A')!
-    const s = play({ t, matches: [] }, players, poolA.id, 'A', 11, 5)
+    const poolB = t.fixtures.find((f) => f.poolLabel === 'B')!
+    const s = play(play({ t, matches: [] }, players, poolA.id, 'A', 11, 5), players, poolB.id, 'A', 11, 5)
     const live = fixtureStarted(s.t, fixture(s.t, 'MAIN', 1, 0).id)
     const sameWinner = s.matches.map((m) => (m.fixtureId === poolA.id ? { ...m, scoreB: 9 } : m))
     expect(editFixtureResult(live, poolA.id, 'A', sameWinner, players).ok).toBe(true)

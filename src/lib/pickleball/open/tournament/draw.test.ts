@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { player } from '../testing/fixtures'
 import { generateDraw, unpairedPlayers } from './draw'
 import { fixtureLabel, sourceLabel } from './labels'
-import { compareFixtures } from './order'
+import { compareFixtures, sortEntrants } from './order'
 import type { TournamentFormat } from './types'
 
 const players = (n: number) => Array.from({ length: n }, (_, i) => player(`p${i + 1}`, { name: `P${i + 1}`, position: i + 1, skill: 5 - (i % 5) }))
@@ -14,6 +14,20 @@ const draw = (format: TournamentFormat, n: number, max = 2000) =>
   generateDraw(players(n), { format, pairing: 'MANUAL', seeding: 'MANUAL' }, { newId: ids() }, max)
 
 describe('generateDraw', () => {
+  it('refuses random pairing or seeding, with a reason, when no random source was passed in', () => {
+    const reason = 'Random pairing or seeding is not available right now. Try again, or pick another method.'
+    expect(generateDraw(players(8), { format: 'ROUND_ROBIN', pairing: 'RANDOM', seeding: 'MANUAL' }, { newId: ids() }, 2000)).toEqual({ ok: false, reason })
+    expect(generateDraw(players(8), { format: 'ROUND_ROBIN', pairing: 'MANUAL', seeding: 'RANDOM' }, { newId: ids() }, 2000)).toEqual({ ok: false, reason })
+  })
+
+  it('breaks a balanced-pairing skill tie by name in plain code-unit order, then by id', () => {
+    const tied = [player('p1', { name: 'bea', position: 1, skill: 3 }), player('p2', { name: 'Zed', position: 2, skill: 3 }), player('p3', { name: 'Al', position: 3, skill: 3 }), player('p4', { name: 'Al', position: 4, skill: 3 })]
+    const result = generateDraw(tied, { format: 'ROUND_ROBIN', pairing: 'BALANCED', seeding: 'MANUAL' }, { newId: ids() }, 2000)
+    if (!result.ok) throw new Error(result.reason)
+    // Order Al(p3), Al(p4), Zed, bea: uppercase sorts before lowercase; strongest pairs with weakest.
+    expect(result.tournament.entrants.map((e) => e.playerIds)).toEqual([['p3', 'p1'], ['p4', 'p2']])
+  })
+
   it('makes a draft with pairs in seed order and the generator fixtures, ids for keys', () => {
     const result = draw('SINGLE_ELIMINATION', 10)
     if (!result.ok) throw new Error(result.reason)
@@ -92,5 +106,15 @@ describe('labels', () => {
     if (!rr.ok) throw new Error(rr.reason)
     const rrGame = rr.tournament.fixtures.find((f) => f.roundNumber === 1 && f.position === 1)!
     expect(fixtureLabel(rr.tournament, rrGame)).toBe('Round 1 · Game 2')
+  })
+})
+
+describe('canonical order', () => {
+  it('breaks every remaining tie by id, and orders pool labels by plain code-unit order', () => {
+    const base = { bracket: 'POOL' as const, roundNumber: 1, position: 0, entrantAId: null, entrantBId: null, sourceA: null, sourceB: null, winnerEntrantId: null, status: 'PENDING' as const }
+    const fixtures = [{ ...base, id: 'b', poolLabel: 'a' }, { ...base, id: 'z', poolLabel: 'B' }, { ...base, id: 'a', poolLabel: 'B' }]
+    expect([...fixtures].sort(compareFixtures).map((f) => f.id)).toEqual(['a', 'z', 'b'])
+    const entrants = [{ id: 'y', playerIds: ['p1', 'p2'] as const, seed: 1, poolLabel: null }, { id: 'x', playerIds: ['p3', 'p4'] as const, seed: 1, poolLabel: null }]
+    expect(sortEntrants(entrants).map((e) => e.id)).toEqual(['x', 'y'])
   })
 })

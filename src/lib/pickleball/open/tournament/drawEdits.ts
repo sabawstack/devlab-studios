@@ -166,6 +166,12 @@ function swapOpponents(t: TournamentState, edit: Extract<RunningEdit, { kind: 'S
   const a = sideOf(f, edit.side)
   const b = sideOf(g, edit.otherSide)
   if (!a || !b) return refuse('That slot is still waiting for an earlier result.')
+  // Only pairs the draw placed can trade places. A pair that got here by
+  // winning (or losing, or finishing a pool) must stay where that result put
+  // it, or undoing the result would clear the wrong pair.
+  if (sourceOf(f, edit.side) !== null || sourceOf(g, edit.otherSide) !== null) {
+    return refuse('That pair got there by a result. Change the result instead.')
+  }
   const fixtures = t.fixtures.map((x) => {
     if (x.id === f.id) return restatus(setSide(x, edit.side, b))
     if (x.id === g.id) return restatus(setSide(x, edit.otherSide, a))

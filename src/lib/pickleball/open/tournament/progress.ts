@@ -30,12 +30,16 @@ function settled(fixtures: readonly TournamentFixture[]): boolean {
   return fixtures.every((f) => f.status === 'FINISHED' || f.status === 'BYE')
 }
 
+const statusOf = (t: TournamentState, fixtureId: string) => t.fixtures.find((f) => f.id === fixtureId)?.status
+
+/** Only a READY game can start; anything else is left as it is. */
 export function fixtureStarted(t: TournamentState, fixtureId: string): TournamentState {
-  return update(t, fixtureId, { status: 'IN_PROGRESS' })
+  return statusOf(t, fixtureId) === 'READY' ? update(t, fixtureId, { status: 'IN_PROGRESS' }) : t
 }
 
+/** Only a game on court can be abandoned back to READY; anything else is left as it is. */
 export function fixtureAbandoned(t: TournamentState, fixtureId: string): TournamentState {
-  return update(t, fixtureId, { status: 'READY' })
+  return statusOf(t, fixtureId) === 'IN_PROGRESS' ? update(t, fixtureId, { status: 'READY' }) : t
 }
 
 function poolOps(t: TournamentState, fixtures: TournamentFixture[], matches: readonly OpenMatch[], players: readonly OpenPlayer[]): BracketOp[] {
@@ -67,6 +71,24 @@ function poolConsumers(t: TournamentState, label: string): Array<{ fixture: Tour
 const started = (f: TournamentFixture) => f.status === 'IN_PROGRESS' || f.status === 'FINISHED'
 
 /**
+ * The slot (if any) a result sent a pair into that no longer holds that pair.
+ * Clearing it would take the wrong pair out of the bracket, so reopening is
+ * refused instead. An empty slot is harmless and is not reported.
+ */
+function movedSlot(t: TournamentState, fixture: TournamentFixture, updates: ReadonlyArray<{ fixtureId: string; side: 'A' | 'B' }>): TournamentFixture | null {
+  const loserId = fixture.winnerEntrantId === fixture.entrantAId ? fixture.entrantBId : fixture.entrantAId
+  for (const u of updates) {
+    const consumer = t.fixtures.find((f) => f.id === u.fixtureId)
+    if (!consumer) continue
+    const source = u.side === 'A' ? consumer.sourceA : consumer.sourceB
+    const holder = u.side === 'A' ? consumer.entrantAId : consumer.entrantBId
+    const expected = source?.startsWith('LOSER_OF:') ? loserId : fixture.winnerEntrantId
+    if (holder !== null && holder !== expected) return consumer
+  }
+  return null
+}
+
+/**
  * Takes a saved result back out of the draw (undo, or the first half of an
  * edit that changes who won). Refused, with the reason, when a later game
  * that depends on it has already started.
@@ -94,6 +116,8 @@ export function reopenFixture(t: TournamentState, fixtureId: string): EditResult
       const blocking = t.fixtures.find((f) => f.id === undone.blockingFixtureId)
       return { ok: false, reason: `${blocking ? fixtureLabel(t, blocking) : 'The next game'} has already started with this result. Change that game first.` }
     }
+    const moved = movedSlot(t, fixture, undone.updates)
+    if (moved) return { ok: false, reason: `${fixtureLabel(t, moved)} no longer has the pair this result sent there, so it cannot be taken back.` }
     fixtures = t.fixtures.map((f) => {
       const changes = undone.updates.filter((u) => u.fixtureId === f.id)
       return changes.reduce((acc, u) => (u.side === 'A' ? { ...acc, entrantAId: null, status: u.status } : { ...acc, entrantBId: null, status: u.status }), f)
@@ -125,6 +149,7 @@ export function editFixtureResult(
 ): EditResult {
   const fixture = t.fixtures.find((f) => f.id === fixtureId)
   if (!fixture || !fixture.entrantAId || !fixture.entrantBId) return { ok: false, reason: 'Game not found in the draw.' }
+  if (fixture.status !== 'FINISHED') return { ok: false, reason: 'Only a saved result can be edited.' }
   const winnerId = winner === 'A' ? fixture.entrantAId : fixture.entrantBId
   if (fixture.bracket !== 'POOL' && winnerId === fixture.winnerEntrantId) return { ok: true, tournament: t }
   const relabelled = t.fixtures.map((f) => (f.id === fixtureId ? { ...f, winnerEntrantId: winnerId } : f))

@@ -22,7 +22,8 @@ function stillSwappable(tournament, item) {
   if (!item || item.kind !== 'slot') return Boolean(item)
   const fixture = tournament.fixtures.find((f) => f.id === item.fixtureId)
   const entrantId = fixture && (item.side === 'A' ? fixture.entrantAId : fixture.entrantBId)
-  return Boolean(fixture) && (fixture.status === 'PENDING' || fixture.status === 'READY') && !fixture.court?.live && entrantId === item.entrantId
+  const placed = fixture && (item.side === 'A' ? fixture.placedA : fixture.placedB)
+  return Boolean(fixture) && placed && (fixture.status === 'PENDING' || fixture.status === 'READY') && !fixture.court?.live && entrantId === item.entrantId
 }
 
 export default function TournamentHost({ host, send, error, onClearError, tab, onTab, nameOf, courtLabel, onStart, onGameOver, onEditResult }) {
@@ -82,7 +83,7 @@ export default function TournamentHost({ host, send, error, onClearError, tab, o
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-bold">{t.formatLabel}</h2>
-                  {t.phase === 'RUNNING' && <p className="text-sm text-mist">To swap opponents, tap a pair in a game that has not started, then a pair in another game of the same round.</p>}
+                  {t.phase === 'RUNNING' && <p className="text-sm text-mist">To swap opponents, tap a pair the draw placed in a game that has not started, then one in another game of the same round. Pairs that got there by a result move only when that result changes.</p>}
                 </div>
                 {t.phase === 'RUNNING' && <Button variant="ghost" onClick={openSubstitute}>Substitute a player</Button>}
               </div>
