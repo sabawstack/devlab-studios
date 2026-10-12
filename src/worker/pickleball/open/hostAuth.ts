@@ -16,7 +16,7 @@ export type SignInResult = 'ok' | 'cancelled' | 'unverified' | 'failed' | 'busy'
 export const CALLBACK_PATH = '/api/pickleball/auth/google/callback'
 export const DEFAULT_RETURN_PATH = '/pickleball/my-sessions'
 const STASH_MAX_AGE_SECONDS = 600
-// wrangler.jsonc once shipped this literal until real credentials existed (see auth/google/start.ts).
+// wrangler.jsonc once shipped this literal until real credentials existed.
 const CLIENT_ID_PLACEHOLDER = 'REPLACE_ME'
 
 /**

@@ -71,8 +71,6 @@ test.describe('Pickleball public pages', () => {
     { path: '/pickleball', htmlMarker: 'Run every court from one phone.', viewBox: '0 0 480 300' },
     { path: '/pickleball/how-it-works', htmlMarker: 'How to run open play with Devlab Pickleball', viewBox: '0 0 220 200' },
     { path: '/pickleball/rotation', htmlMarker: 'How fair rotation works', viewBox: '0 0 360 200' },
-    // RankOrderArt's viewBox, unique to the methodology page.
-    { path: '/pickleball/methodology', htmlMarker: 'How OPI works', viewBox: '0 0 320 160' },
   ]
 
   for (const { path, htmlMarker, viewBox } of artPages) {
@@ -227,7 +225,7 @@ test.describe('Pickleball public pages', () => {
   // Spec §1.8: heading hierarchy has no skipped level. Fails if either page
   // ever opens with something other than an <h1>, or jumps a level (an <h2>
   // followed by an <h4>, say) — the shape a screen-reader user navigates by.
-  for (const path of ['/pickleball', '/pickleball/how-it-works', '/pickleball/methodology']) {
+  for (const path of ['/pickleball', '/pickleball/how-it-works', '/pickleball/rotation']) {
     test(`skips no heading level (${path})`, async ({ page }) => {
       await page.goto(path)
 
@@ -287,7 +285,6 @@ test.describe('Pickleball public pages', () => {
     ['/pickleball', 'Free Pickleball Open Play Manager: Devlab Pickleball'],
     ['/pickleball/how-it-works', 'How to Run Pickleball Open Play: Devlab Pickleball Guide'],
     ['/pickleball/rotation', 'How Fair Rotation Works: Devlab Pickleball'],
-    ['/pickleball/methodology', 'How OPI Works'],
   ]) {
     test(`serves share metadata (${path})`, async ({ page }) => {
       const html = await (await page.request.get(path)).text()
@@ -299,14 +296,40 @@ test.describe('Pickleball public pages', () => {
     })
   }
 
-  test('a blocked sign-in offers a way to request access', async ({ page }) => {
-    await page.goto('/pickleball/app?error=no_access')
+  // Phase 5 (spec §12) retired the logged-in app. Its pages answer only
+  // through the CMS redirects table (rows added by hand per environment, see
+  // docs/pickleball/runbook.md), so a local database without the rows 404s
+  // and an environment with them 301s to the new page. Nothing else is allowed.
+  for (const [path, target] of [
+    ['/pickleball/app', '/pickleball/new'],
+    ['/pickleball/app/sessions/abc', '/pickleball/new'],
+    ['/pickleball/methodology', '/pickleball/rotation'],
+    ['/pickleball/live/ABCDE23456', '/pickleball'],
+    ['/pickleball/live/ABCDE23456/display', '/pickleball'],
+  ]) {
+    test(`the retired page is gone (${path})`, async ({ page }) => {
+      const response = await page.request.get(path, { maxRedirects: 0 })
+      expect([301, 404], `${path} answered ${response.status()}`).toContain(response.status())
+      if (response.status() === 301) expect(new URL(response.headers().location).pathname).toBe(target)
+    })
+  }
 
-    await expect(page.getByRole('alert')).toContainText('no active Pickleball membership')
-    await expect(page.getByRole('link', { name: 'Request access' })).toHaveAttribute(
-      'href',
-      '/pickleball#request-access',
-    )
+  for (const path of ['/pickleball/accept-invite/some-token', '/api/pickleball/sessions', '/api/pickleball/auth/session', '/api/pickleball/public/ABCDE23456/state']) {
+    test(`the retired route is gone (${path})`, async ({ page }) => {
+      expect((await page.request.get(path, { maxRedirects: 0 })).status()).toBe(404)
+    })
+  }
+
+  // A browser can still hold the retired app's in-flight sign-in cookie when
+  // Google sends it back. The shared callback treats every visit as a host
+  // sign-in, so this is a plain failed host sign-in, never a JSON error.
+  test('the Google callback answers a stale operator sign-in with a host sign-in failure', async ({ page }) => {
+    const response = await page.request.get('/api/pickleball/auth/google/callback?code=x&state=y', {
+      headers: { Cookie: 'devlab_pb_oauth=%7B%22state%22%3A%22y%22%7D' },
+      maxRedirects: 0,
+    })
+    expect(response.status()).toBe(302)
+    expect(response.headers().location).toBe('/pickleball/my-sessions?signin=failed')
   })
 
   test('the landing page offers a way to request access', async ({ page }) => {

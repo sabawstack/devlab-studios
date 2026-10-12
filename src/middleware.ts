@@ -6,54 +6,9 @@ import { getSiteSetting } from './worker/repositories/content.js'
 import { findRedirect } from './worker/repositories/redirects.js'
 import { applySecurityHeaders } from './lib/securityHeaders'
 import { drainRequestBody } from './lib/http'
-import { requirePickleballSession } from './worker/pickleball/authContext.js'
 
 const ADMIN_API_PREFIX = '/api/admin/'
 const ADMIN_PUBLIC_ROUTES = new Set(['/api/admin/login', '/api/admin/logout'])
-const PICKLEBALL_API_PREFIX = '/api/pickleball/'
-const PICKLEBALL_PUBLIC_ROUTES = new Set([
-  '/api/pickleball/auth/google/start',
-  '/api/pickleball/auth/google/callback',
-  '/api/pickleball/auth/session',
-  '/api/pickleball/auth/logout',
-  '/api/pickleball/auth/test-login',
-  // Not actually unauthenticated -- switch-org.ts calls requirePickleballSession
-  // itself, with the platform-admin-suspended-org allowance the blanket check
-  // below doesn't know about (see authContext.js's allowSuspendedOrgForPlatformAdmin).
-  // Excluded here the same way /auth/session already is, for the same reason:
-  // the blanket check's plain 403 would otherwise re-lock out a platform admin
-  // whose activeOrgId is the SUSPENDED org they're trying to switch away from.
-  '/api/pickleball/auth/switch-org',
-])
-// The public polling fallback (Task 8) is, by definition, for an
-// unauthenticated spectator whose socket is down -- it must be reachable
-// without a session cookie, same as the public WebSocket channel already is
-// by living outside this prefix entirely (/pickleball/rt/public/[code]).
-// Dynamic [code] segments don't fit PICKLEBALL_PUBLIC_ROUTES' exact-match
-// Set, so this is a prefix check instead; the route's own handler still
-// does the real authorization (public_view_enabled + revoked-code 404).
-const PICKLEBALL_PUBLIC_STATE_PREFIX = '/api/pickleball/public/'
-// Free open play (spec 2026-10-11) has no login at all: its routes authorize
-// with the session's host key inside the Durable Object, so the operator
-// session gate below must never run for them.
-const PICKLEBALL_OPEN_PREFIX = '/api/pickleball/open/'
-// The org-invite accept route requires only a valid Google-authenticated
-// session (via requireGoogleIdentity), never org membership -- by
-// definition, the caller has no membership anywhere yet. It cannot go
-// through the blanket requirePickleballSession gate below, so it's
-// excluded the same way the public state-polling prefix is.
-const PICKLEBALL_ORG_INVITE_ACCEPT_PREFIX = '/api/pickleball/auth/org-invites/'
-// All 5 routes under this prefix authenticate exclusively via
-// requirePlatformAdmin (Google identity + is_platform_admin), which -- unlike
-// requirePickleballSession -- never looks at activeOrgId or organization
-// status at all. Routing them through the blanket requirePickleballSession
-// gate below first would 403 a platform admin whose own activeOrgId happens
-// to point at a SUSPENDED org before their request ever reaches the route's
-// own (correct, org-status-agnostic) check -- including on the
-// .../reactivate call that's supposed to be how they recover from exactly
-// that state. Excluded the same way the org-invite-accept prefix is, for the
-// same reason: it cannot go through the blanket gate.
-const PICKLEBALL_PLATFORM_ADMIN_PREFIX = '/api/pickleball/platform/'
 const MAINTENANCE_PAGE = '/maintenance'
 const MAINTENANCE_GATED_PATHS = new Set(['/', '/about', '/solutions', '/profile', '/insights'])
 
@@ -110,28 +65,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
       // The rejection never read the body — drain it before responding.
       await drainRequestBody(context.request)
       return applySecurityHeaders(result, url.pathname, url.hostname)
-    }
-  }
-
-  if (
-    url.pathname.startsWith(PICKLEBALL_API_PREFIX) &&
-    !PICKLEBALL_PUBLIC_ROUTES.has(url.pathname) &&
-    !url.pathname.startsWith(PICKLEBALL_PUBLIC_STATE_PREFIX) &&
-    !url.pathname.startsWith(PICKLEBALL_OPEN_PREFIX) &&
-    !url.pathname.startsWith(PICKLEBALL_ORG_INVITE_ACCEPT_PREFIX) &&
-    !url.pathname.startsWith(PICKLEBALL_PLATFORM_ADMIN_PREFIX)
-  ) {
-    try {
-      await requirePickleballSession(context.request, getEnv())
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unexpected error.'
-      const rawStatus = error instanceof Error ? (error as Error & { status?: unknown }).status : undefined
-      const status = typeof rawStatus === 'number' ? rawStatus : 500
-      return applySecurityHeaders(
-        new Response(JSON.stringify({ error: message }), { status }),
-        url.pathname,
-        url.hostname,
-      )
     }
   }
 

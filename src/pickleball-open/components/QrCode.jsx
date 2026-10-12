@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 
 // Client-side SVG from a URL this app built itself (never raw user input), so
-// injecting the library's markup is safe. Same approach as the operator app's
-// PublicLinkQRCode, copied here because that app is retired in Phase 5.
+// injecting the library's markup is safe. Copied from the operator app's
+// PublicLinkQRCode, which Phase 5 deleted with the rest of that app.
 export default function QrCode({ url, size = 176, label = 'QR code for the player board' }) {
   const [markup, setMarkup] = useState(null)
   useEffect(() => {

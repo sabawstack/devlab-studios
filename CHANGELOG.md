@@ -163,6 +163,9 @@ decided against that surface specifically:
 - Open play retention wording now says what the code does: a session is deleted from the live service 7 days after the last change to it (any change resets the clock), not 7 days after the last game. The privacy policy gains a short open-play section: no accounts, names shown on a public board, deletion after 7 days with backups kept up to 30, and delete any time.
 - The pickleball pages are rewritten around free, no-sign-up open play: a new landing page with animated art and FAQ, a step-by-step host guide, and a new "How fair rotation works" page whose example is computed by the app's own rotation engine. The old operator sign-in link is gone from the landing page.
 
+### Removed
+- **Breaking — the next release is MAJOR (2.0.0).** Pickleball's logged-in operator app is retired (spec 2026-10-11 §12; it had no users). Removed: the operator SPA at `/pickleball/app`, `/pickleball/accept-invite/*`, the live and TV views at `/pickleball/live/*`, the OPI page `/pickleball/methodology`, the operator socket routes `/pickleball/rt/{sessionId}` and `/pickleball/rt/public/{code}`, and every `/api/pickleball/` route outside `open/` except the Google callback (organizations, memberships, platform, invites, venues, courts, players, rulesets, sessions, games and rally scoring, queue, pairs, tournaments, leaderboard, audit, public state, and the old auth routes). The operator session gate is gone from the middleware, and `/api/pickleball/auth/google/callback` now serves only host sign-in for the DUPR export.
+
 ## [1.13.0] - 2026-09-23
 
 ### Added

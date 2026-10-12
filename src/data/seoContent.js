@@ -198,24 +198,6 @@ export const seoContent = {
       twitterImage: 'https://www.devlabstudios.com/og-pickleball.png',
     },
     {
-      id: 'seo-pickleball-methodology',
-      pageSlug: 'pickleball-methodology',
-      metaTitle: 'How OPI Works — Devlab Pickleball',
-      metaDescription:
-        'OPI, the Open Play Performance Index, measures how a player performs relative to the points scored in their games. Read the formula, the confidence tiers, and what OPI deliberately is not.',
-      metaKeywords:
-        'OPI, open play performance index, pickleball performance metric, pickleball rating explained, pickleball statistics',
-      canonicalUrl: 'https://www.devlabstudios.com/pickleball/methodology',
-      ogTitle: 'How OPI Works — Devlab Pickleball',
-      ogDescription:
-        'The formula behind the Open Play Performance Index, its confidence tiers, and what it deliberately is not.',
-      ogImage: 'https://www.devlabstudios.com/og-pickleball.png',
-      twitterTitle: 'How OPI Works — Devlab Pickleball',
-      twitterDescription:
-        'The formula behind the Open Play Performance Index, and what it deliberately is not.',
-      twitterImage: 'https://www.devlabstudios.com/og-pickleball.png',
-    },
-    {
       id: 'seo-process',
       pageSlug: 'process',
       metaTitle: 'Delivery Process - How a Build Runs | DevLab Studios',

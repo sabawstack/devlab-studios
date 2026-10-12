@@ -11,7 +11,6 @@ Allow: /
 Disallow: /404
 Disallow: /admin
 Disallow: /api/
-Disallow: /pickleball/app
 Disallow: /pickleball/rt/
 
 # Sitemap is generated at request time (src/pages/sitemap.xml.ts) so published
