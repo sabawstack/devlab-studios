@@ -23,9 +23,20 @@ export const hostProfilePatchSchema = z.object({
   marketingOptIn: z.boolean().optional(),
 }).refine((patch) => patch.duprClubId !== undefined || patch.marketingOptIn !== undefined)
 
-/** POST /api/pickleball/open/s/{code}/dupr-export. The zone is the host's device's, for game dates. */
+/**
+ * POST /api/pickleball/open/s/{code}/dupr-export. The zone is the host's
+ * device's, for game dates. Like GET …/dupr?tz=, a missing or unknown zone
+ * dates games in UTC (plan decision 8) rather than refusing the export.
+ */
 export const duprExportRequestSchema = z.object({
-  timeZone: z.string().max(64).refine((zone) => normalizeTimeZone(zone) === zone).optional(),
+  timeZone: z.string().optional().transform((zone) => normalizeTimeZone(zone)),
 })
+
+/** Per-field messages for PATCH …/host/me, keyed by the Zod issue path. */
+export const HOST_PROFILE_PATCH_MESSAGES = {
+  duprClubId: 'A DUPR Club ID is 3 to 20 letters, digits or dashes.',
+  marketingOptIn: 'The news choice must be true or false.',
+} as const
+export const HOST_PROFILE_PATCH_FALLBACK = 'Send a DUPR Club ID, a news choice, or both.'
 
 export type HostProfilePatch = z.infer<typeof hostProfilePatchSchema>

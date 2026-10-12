@@ -266,12 +266,15 @@ test.describe('Pickleball public pages', () => {
   test('the guide and FAQ describe the DUPR export exactly as shipped', async ({ page }) => {
     await page.goto('/pickleball/how-it-works')
     const guide = await mainCopy(page)
-    for (const phrase of ['Email me the DUPR export', 'Matches → Add Matches → Import Matches via CSV', 'Club Director or Organizer', 'Up to 5 exports per session a day', 'My sessions']) {
+    // The eligibility rule of src/lib/pickleball/open/dupr/export.ts (no tie, MIN_WINNING_POINTS, distinct valid IDs).
+    const eligible = 'with a valid score (no tie, a team reached 6) and four different DUPR IDs'
+    for (const phrase of ['Email me the DUPR export', 'Matches → Add Matches → Import Matches via CSV', 'Club Director or Organizer', 'Up to 5 exports per session a day', 'My sessions', eligible]) {
       expect(guide).toContain(phrase)
     }
     await page.goto('/pickleball')
     const landing = await mainCopy(page)
     expect(landing).toContain('Can I send results to DUPR?')
+    expect(landing).toContain(eligible)
     expect(landing).toContain('open My sessions on any device')
   })
 

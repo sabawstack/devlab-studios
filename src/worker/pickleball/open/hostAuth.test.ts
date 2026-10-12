@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createSqliteD1 } from '../../repositories/pickleball/open/testing/sqliteD1'
-import { finishHostSignIn, hasHostSignInPending, safeReturnPath, startHostSignIn, type GoogleDeps } from './hostAuth'
+import { finishHostSignIn, hasHostSignInPending, hostOwnsCallback, safeReturnPath, startHostSignIn, type GoogleDeps } from './hostAuth'
 import { currentHost } from './hostSession'
 
 const MIGRATIONS = ['0016_open_sessions', '0017_open_captains', '0018_open_tournaments', '0019_hosts'].map((m) => `migrations/pickleball/${m}.sql`)
@@ -18,8 +18,8 @@ function makeEnv(overrides: Partial<Env> = {}) {
 const setCookies = (response: Response) => response.headers.getSetCookie()
 const cookieValue = (header: string) => header.split(';')[0]
 
-async function started(env: Env, query = '?return=/pickleball/s/ABCDE23456&optIn=1') {
-  const response = await startHostSignIn(env, new Request(`${BASE}/api/pickleball/open/host/sign-in${query}`))
+async function started(env: Env, query = '?return=/pickleball/s/ABCDE23456&optIn=1', cookie: string | null = null) {
+  const response = await startHostSignIn(env, new Request(`${BASE}/api/pickleball/open/host/sign-in${query}`, { headers: cookie ? { Cookie: cookie } : {} }))
   const google = new URL(response.headers.get('Location') ?? '')
   return { response, google, stash: cookieValue(setCookies(response)[0]), state: google.searchParams.get('state') ?? '' }
 }
@@ -104,7 +104,11 @@ describe('finishHostSignIn', () => {
     const { stash, state } = await started(env)
     expect((await finishHostSignIn(env, callback(stash, '?code=abc&state=forged'), google())).headers.get('Location')).toBe('/pickleball/s/ABCDE23456?signin=failed')
     expect((await finishHostSignIn(env, callback(null, `?code=abc&state=${state}`), google())).headers.get('Location')).toBe('/pickleball/my-sessions?signin=failed')
-    expect((await finishHostSignIn(env, callback(stash, '?error=access_denied'), google())).headers.get('Location')).toBe('/pickleball/s/ABCDE23456?signin=cancelled')
+    expect((await finishHostSignIn(env, callback(stash, `?error=access_denied&state=${state}`), google())).headers.get('Location')).toBe('/pickleball/s/ABCDE23456?signin=cancelled')
+    // An error is only "cancelled" for the sign-in this browser started.
+    expect((await finishHostSignIn(env, callback(stash, '?error=access_denied'), google())).headers.get('Location')).toBe('/pickleball/s/ABCDE23456?signin=failed')
+    expect((await finishHostSignIn(env, callback(stash, '?error=access_denied&state=forged'), google())).headers.get('Location')).toBe('/pickleball/s/ABCDE23456?signin=failed')
+    expect((await finishHostSignIn(env, callback(null, `?error=access_denied&state=${state}`), google())).headers.get('Location')).toBe('/pickleball/my-sessions?signin=failed')
     const broken: GoogleDeps = { exchange: vi.fn().mockRejectedValue(new Error('Google OAuth code exchange failed.')), profile: vi.fn() }
     expect((await finishHostSignIn(env, callback(stash, `?code=abc&state=${state}`), broken)).headers.get('Location')).toBe('/pickleball/s/ABCDE23456?signin=failed')
   })
@@ -114,5 +118,58 @@ describe('finishHostSignIn', () => {
     const { stash } = await started(env)
     expect(hasHostSignInPending(callback(stash, ''))).toBe(true)
     expect(hasHostSignInPending(callback('devlab_pb_oauth=x', ''))).toBe(false)
+  })
+
+  it('keeps at most 80 characters of the Google name', async () => {
+    const { env } = makeEnv()
+    const { stash, state } = await started(env)
+    const response = await finishHostSignIn(env, callback(stash, `?code=abc&state=${state}`), google({ name: `  ${'N'.repeat(100)}  ` }))
+    const host = await currentHost(env, new Request(`${BASE}/x`, { headers: { Cookie: cookieValue(setCookies(response)[1]) } }))
+    expect(host?.displayName).toBe('N'.repeat(80))
+  })
+
+  it('signing in again never changes the news choice the host already made', async () => {
+    const { env } = makeEnv()
+    const first = await started(env, '?return=/pickleball/my-sessions')
+    await finishHostSignIn(env, callback(first.stash, `?code=abc&state=${first.state}`), google())
+    const again = await started(env, '?return=/pickleball/my-sessions&optIn=1')
+    const response = await finishHostSignIn(env, callback(again.stash, `?code=abc&state=${again.state}`), google())
+    const host = await currentHost(env, new Request(`${BASE}/x`, { headers: { Cookie: cookieValue(setCookies(response)[1]) } }))
+    expect(host?.marketingOptIn).toBe(false)
+  })
+
+  it('a new sign-in deletes the login this browser had before, whoever it belonged to', async () => {
+    const { env, raw } = makeEnv()
+    const first = await started(env)
+    const firstLogin = cookieValue(setCookies(await finishHostSignIn(env, callback(first.stash, `?code=abc&state=${first.state}`), google()))[1])
+    const again = await started(env, '?return=/pickleball/my-sessions', firstLogin)
+    const response = await finishHostSignIn(env, callback(again.stash, `?code=abc&state=${again.state}`), google({ sub: 'g-other', email: 'bo@example.com' }))
+    expect(await currentHost(env, new Request(`${BASE}/x`, { headers: { Cookie: firstLogin } }))).toBeNull()
+    const host = await currentHost(env, new Request(`${BASE}/x`, { headers: { Cookie: cookieValue(setCookies(response)[1]) } }))
+    expect(host?.email).toBe('bo@example.com')
+    expect((raw.prepare('SELECT COUNT(*) AS n FROM host_logins').get() as { n: number }).n).toBe(1)
+  })
+
+  it('counts the per-IP sign-in limit only when a sign-in starts', async () => {
+    const check = vi.fn().mockResolvedValue({ limited: true, retryAfterSeconds: 60 })
+    const { env } = makeEnv({ RATE_LIMITER: { idFromName: (name: string) => name, get: () => ({ check }) } as unknown as Env['RATE_LIMITER'] })
+    const { env: open } = makeEnv()
+    const { stash, state } = await started(open)
+    const busy = await startHostSignIn(env, new Request(`${BASE}/api/pickleball/open/host/sign-in?return=/pickleball/my-sessions`))
+    expect(busy.headers.get('Location')).toBe('/pickleball/my-sessions?signin=busy')
+    expect(check).toHaveBeenCalledTimes(1)
+    const response = await finishHostSignIn({ ...env, PICKLEBALL_DB: open.PICKLEBALL_DB }, callback(stash, `?code=abc&state=${state}`), google())
+    expect(response.headers.get('Location')).toBe('/pickleball/s/ABCDE23456?signin=ok')
+    expect(check).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('hostOwnsCallback', () => {
+  it('gives Google’s callback to a host sign-in unless only the old app’s sign-in is in flight', () => {
+    const request = (cookie: string | null) => callback(cookie, '?code=abc&state=s')
+    expect(hostOwnsCallback(request('devlab_pb_host_oauth=x'))).toBe(true)
+    expect(hostOwnsCallback(request('devlab_pb_oauth=x'))).toBe(false)
+    expect(hostOwnsCallback(request(null))).toBe(true)
+    expect(hostOwnsCallback(request('devlab_pb_oauth=x; devlab_pb_host_oauth=y'))).toBe(true)
   })
 })

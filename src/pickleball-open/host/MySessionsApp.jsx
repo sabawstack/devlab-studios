@@ -16,6 +16,7 @@ export default function MySessionsApp() {
   const [host, setHost] = useState(undefined)
   const [sessions, setSessions] = useState([])
   const [error, setError] = useState(signInResult ? SIGN_IN_MESSAGES[signInResult] : null)
+  const [loadError, setLoadError] = useState(null)
   const [optIn, setOptIn] = useState(false)
   const [opening, setOpening] = useState(null)
   const [reload, setReload] = useState(0)
@@ -33,7 +34,8 @@ export default function MySessionsApp() {
         setHost(me)
         setSessions(list)
       })
-      .catch((failure) => { if (live) setError(errorText(failure, 'Could not load your sessions. Try again.')) })
+      .then(() => { if (live) setLoadError(null) })
+      .catch((failure) => { if (live) setLoadError(errorText(failure, 'Could not load your sessions. Try again.')) })
     return () => { live = false }
   }, [reload])
 
@@ -65,7 +67,13 @@ export default function MySessionsApp() {
         <p className="mt-1 text-mist">Sessions you linked to your Google account for the DUPR export. Open one as host from any device.</p>
       </header>
       {error && <p role="alert" className="rounded-xl bg-rose-500/15 px-4 py-3 text-rose-100">{error}</p>}
-      {host === undefined && !error && <p role="status" className="text-mist">Loading…</p>}
+      {loadError && (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-rose-500/15 px-4 py-3 text-rose-100">
+          <span className="min-w-0 break-words">{loadError}</span>
+          <Button variant="ghost" onClick={() => { setLoadError(null); setReload((n) => n + 1) }}>Retry</Button>
+        </div>
+      )}
+      {host === undefined && !loadError && <p role="status" className="text-mist">Loading…</p>}
 
       {host === null && (
         <Panel className="grid gap-3">
@@ -90,7 +98,7 @@ export default function MySessionsApp() {
                     {session.kind === 'TOURNAMENT' ? 'Tournament' : 'Open play'}{session.status === 'ENDED' ? ' · Ended' : ''} · Results deleted on {dateOf(session.expiresAt)}
                   </p>
                 </div>
-                <Button disabled={opening !== null} onClick={() => open(session)}>{opening === session.code ? 'Opening…' : `Open ${session.name} as host`}</Button>
+                <Button className="max-w-full whitespace-normal break-words text-left" disabled={opening !== null} onClick={() => open(session)}>{opening === session.code ? 'Opening…' : `Open ${session.name} as host`}</Button>
               </Panel>
             ))}
           </section>

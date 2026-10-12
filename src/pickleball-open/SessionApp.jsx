@@ -50,10 +50,13 @@ export default function SessionApp({ code }) {
     if (keys.captainFragment && !keys.fragment && !keys.saved) rememberCaptainKey(code, keys.captainFragment)
   }, [keys, code])
 
-  // No host key here (storage blocked or cleared): the board explains, and ?signin= leaves the address bar.
+  // HostConsole will not mount (no host key here, or it was refused and there is no saved key to fall back
+  // to): the board or captain screen explains the sign-in instead, and ?signin= leaves the address bar.
+  const hostConsoleOff = !hostKey || (authFailed && !canFallBack)
   useEffect(() => {
-    if (signInResult && !hostKey) window.history.replaceState(null, '', window.location.pathname)
-  }, [signInResult, hostKey])
+    if (signInResult && hostConsoleOff) window.history.replaceState(null, '', window.location.pathname)
+  }, [signInResult, hostConsoleOff])
+  const signInNotice = hostConsoleOff ? boardSignInNotice(signInResult) : null
 
   useEffect(() => {
     if (host && hostKey) rememberHostedSession({ code, hostKey, name: host.viewer.name })
@@ -74,8 +77,8 @@ export default function SessionApp({ code }) {
 
   if (!code || status === 'not-found') return <ExpiredNotice />
   if (host && hostKey && !authFailed) return <HostConsole code={code} hostKey={hostKey} host={host} status={status} onHost={setHost} />
-  if (captain && captainKey) return <CaptainConsole code={code} captainKey={captainKey} snapshot={captain} status={status} onSnapshot={setCaptain} />
+  if (captain && captainKey) return <CaptainConsole code={code} captainKey={captainKey} snapshot={captain} status={status} onSnapshot={setCaptain} signInNotice={signInNotice} />
   if (!viewer) return <p className="p-8 text-center text-mist" role="status">Loading the board…</p>
   return <ViewerBoard viewer={viewer} status={status} invalidHostLink={authFailed && !canFallBack} revokedCaptainLink={captainRevoked}
-    signInNotice={hostKey ? null : boardSignInNotice(signInResult)} />
+    signInNotice={signInNotice} />
 }

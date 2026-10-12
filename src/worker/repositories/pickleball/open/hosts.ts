@@ -107,13 +107,17 @@ export async function updateHostProfile(
 
 /**
  * Deletes the account (spec §3.2 "Delete my account"): its sessions are
- * unlinked, not deleted, and every login goes with it (cascade). Returns the
- * public codes of the sessions that were linked, so their coordinators can
- * drop the link from memory.
+ * unlinked, not deleted, and every login goes with it (cascade). The extra
+ * host links minted from My sessions for those sessions are revoked too: they
+ * were only ever handed to this account. Each session's original host key
+ * keeps working. Returns the public codes of the sessions that were linked,
+ * so their coordinators can drop the link and the revoked keys from memory.
  */
 export async function deleteHost(db: D1Database, hostId: string): Promise<string[]> {
+  // One batch (one transaction), keys first while the sessions still point at this host.
   // RETURNING inside the same batch: a claim landing just before the delete is still reported.
-  const [unlinked] = await db.batch<{ public_code: string }>([
+  const [, unlinked] = await db.batch<{ public_code: string }>([
+    db.prepare('DELETE FROM open_host_keys WHERE session_id IN (SELECT id FROM open_sessions WHERE host_id = ?)').bind(hostId),
     db.prepare('UPDATE open_sessions SET host_id = NULL WHERE host_id = ? RETURNING public_code').bind(hostId),
     db.prepare('DELETE FROM hosts WHERE id = ?').bind(hostId),
   ])

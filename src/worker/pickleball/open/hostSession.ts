@@ -32,11 +32,22 @@ export async function beginHostLogin(env: HostEnv, request: Request, hostId: str
   return setCookieHeader(HOST_COOKIE, token, { path: HOST_COOKIE_PATH, maxAgeSeconds: Math.floor(LOGIN_TTL_MS / 1000), secure: isSecure(request) })
 }
 
+/** The Set-Cookie header that removes this browser's login cookie. */
+export function clearHostCookieHeader(request: Request): string {
+  return clearCookieHeader(HOST_COOKIE, { path: HOST_COOKIE_PATH, secure: isSecure(request) })
+}
+
+/** The SHA-256 of this browser's login token, or null when it holds none (a sign-in replaces that login). */
+export async function currentLoginHash(request: Request): Promise<string | null> {
+  const token = loginToken(request)
+  return token ? sha256Base64Url(token) : null
+}
+
 /** Ends this browser's login, if any. Returns the Set-Cookie header that clears it. */
 export async function endHostLogin(env: HostEnv, request: Request): Promise<string> {
-  const token = loginToken(request)
-  if (token) await deleteHostLogin(env.PICKLEBALL_DB, await sha256Base64Url(token))
-  return clearCookieHeader(HOST_COOKIE, { path: HOST_COOKIE_PATH, secure: isSecure(request) })
+  const hash = await currentLoginHash(request)
+  if (hash) await deleteHostLogin(env.PICKLEBALL_DB, hash)
+  return clearHostCookieHeader(request)
 }
 
 export const signInFirst = (): Response => jsonResponse({ error: 'Sign in with Google first.' }, 401)
@@ -51,7 +62,7 @@ export async function hostAccountIpLimited(env: HostEnv, request: Request): Prom
   return rate.limited ? rateLimitedResponse('Too many requests. Try again shortly.', rate.retryAfterSeconds) : null
 }
 
-/** Per-IP limit on starting and finishing a sign-in: 20 per 10 minutes. */
+/** Per-IP limit on starting a sign-in (and the test login): 20 per 10 minutes. Google's callback is not counted again. */
 export async function signInIpLimited(env: HostEnv, request: Request): Promise<Response | null> {
   const rate = await checkRateLimit(env, 'open-host-signin', clientIp(request), { limit: 20, windowMs: 10 * 60_000 })
   return rate.limited ? rateLimitedResponse('Too many sign-in attempts. Try again in a few minutes.', rate.retryAfterSeconds) : null

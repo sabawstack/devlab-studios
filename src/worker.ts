@@ -99,12 +99,22 @@ export default {
     // block nor be blocked by the digest or the lead engine.
     ctx.waitUntil(
       runOpenSessionPurge(env, { now: new Date(event.scheduledTime) })
-        .then(async (purged) => {
-          const logins = await runHostLoginPurge(env, { now: new Date(event.scheduledTime) })
-          console.log(JSON.stringify({ event: 'pickleball_open.purge', outcome: 'ok', purged, logins }))
+        .then((purged) => {
+          console.log(JSON.stringify({ event: 'pickleball_open.purge', outcome: 'ok', purged }))
         })
         .catch((error) => {
           console.log(JSON.stringify({ event: 'pickleball_open.purge', outcome: 'crashed', error: error instanceof Error ? error.message : 'unknown' }))
+        }),
+    )
+    // Expired host logins (spec §9.1): separate again, so a failed session
+    // purge never leaves expired logins behind, nor the other way round.
+    ctx.waitUntil(
+      runHostLoginPurge(env, { now: new Date(event.scheduledTime) })
+        .then((logins) => {
+          console.log(JSON.stringify({ event: 'pickleball_open.host_login_purge', outcome: 'ok', logins }))
+        })
+        .catch((error) => {
+          console.log(JSON.stringify({ event: 'pickleball_open.host_login_purge', outcome: 'crashed', error: error instanceof Error ? error.message : 'unknown' }))
         }),
     )
   },

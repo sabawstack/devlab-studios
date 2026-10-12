@@ -16,11 +16,11 @@ describe('buildDuprEmail', () => {
   })
 
   it('lists every skipped game with its reason, in text and HTML', () => {
-    const email = buildDuprEmail({ ...base, exported: 1, skipped: [{ game: 2, court: 'Court 1', summary: 'Ana & Eve 11–4 Cy & Di', reason: 'Eve has no DUPR ID.' }] })
+    const email = buildDuprEmail({ ...base, exported: 1, skipped: [{ game: 2, court: 'Court 1', summary: 'Ana & Eve 11–4 Cy & Di', reason: 'Eve has no valid DUPR ID.' }] })
     expect(email.text).toContain('is attached: 1 game.')
     expect(email.text).toContain('Left out (1 game):')
-    expect(email.text).toContain('- Game 2, Court 1: Ana & Eve 11–4 Cy & Di. Eve has no DUPR ID.')
-    expect(email.html).toContain('Game 2, Court 1: Ana &amp; Eve 11–4 Cy &amp; Di. Eve has no DUPR ID.')
+    expect(email.text).toContain('- Game 2, Court 1: Ana & Eve 11–4 Cy & Di. Eve has no valid DUPR ID.')
+    expect(email.html).toContain('Game 2, Court 1: Ana &amp; Eve 11–4 Cy &amp; Di. Eve has no valid DUPR ID.')
   })
 
   it('escapes everything the host typed in the HTML', () => {

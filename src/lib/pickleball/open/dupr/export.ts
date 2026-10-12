@@ -33,6 +33,8 @@ export interface DuprExport {
   skipped: DuprSkip[]
   /** Players who would unblock a game by adding a DUPR ID, in roster order. */
   missingIds: Array<{ id: string; name: string }>
+  /** Players in a game left out because two of its players share a DUPR ID, in roster order: one of them has the wrong ID. */
+  sharedIds: Array<{ id: string; name: string }>
 }
 
 /** A valid IANA zone, or UTC. The zone comes from the host's own device. */
@@ -88,15 +90,14 @@ export function skipReason(match: OpenMatch, find: Lookup): string | null {
   const players = [...match.teamA, ...match.teamB].map(find)
   if (match.teamA.length !== 2 || match.teamB.length !== 2 || players.some((p) => !p)) return 'DUPR needs four players in a doubles game.'
   const missing = players.filter((p) => !validId(p)).map((p) => (p as OpenPlayer).name)
-  if (missing.length) return `${listNames(missing)} ${missing.length === 1 ? 'has' : 'have'} no DUPR ID.`
-  const seen = new Map<string, string>()
-  for (const p of players as OpenPlayer[]) {
-    const id = validId(p) as string
-    const first = seen.get(id)
-    if (first) return `${first} and ${p.name} have the same DUPR ID.`
-    seen.set(id, p.name)
-  }
-  return null
+  if (missing.length) return `${listNames(missing)} ${missing.length === 1 ? 'has' : 'have'} no valid DUPR ID.`
+  const clash = sharedIdPlayers(players as OpenPlayer[])
+  return clash.length ? `${clash[0].name} and ${clash[1].name} have the same DUPR ID.` : null
+}
+
+/** The players of a game whose (valid) DUPR ID another player of that game also has, in team order. */
+function sharedIdPlayers(players: readonly OpenPlayer[]): OpenPlayer[] {
+  return players.filter((p) => players.some((q) => q !== p && validId(q) !== null && validId(q) === validId(p)))
 }
 
 function row(state: OpenSessionState, match: OpenMatch, find: Lookup, timeZone: string): string {
@@ -126,6 +127,7 @@ export function buildDuprExport(state: OpenSessionState, { timeZone }: { timeZon
   const rows: string[] = []
   const skipped: DuprSkip[] = []
   const missing = new Set<string>()
+  const shared = new Set<string>()
   games.forEach((match, index) => {
     const reason = skipReason(match, find)
     if (!reason) {
@@ -135,12 +137,18 @@ export function buildDuprExport(state: OpenSessionState, { timeZone }: { timeZon
     skipped.push({
       game: index + 1, court: state.courts.find((c) => c.id === match.courtId)?.label ?? '', summary: summary(match, find), reason,
     })
-    if (!scoreProblem(match)) for (const id of [...match.teamA, ...match.teamB]) if (!validId(find(id))) missing.add(id)
+    if (scoreProblem(match)) return
+    const ids = [...match.teamA, ...match.teamB]
+    for (const id of ids) if (!validId(find(id))) missing.add(id)
+    const present = ids.map(find).filter((p): p is OpenPlayer => Boolean(p))
+    if (present.length === ids.length && present.every((p) => validId(p))) for (const p of sharedIdPlayers(present)) shared.add(p.id)
   })
+  const named = (ids: ReadonlySet<string>) => state.players.filter((p) => ids.has(p.id)).map((p) => ({ id: p.id, name: p.name }))
   return {
     csv: [DUPR_COLUMNS.join(','), ...rows].join('\r\n'),
     exported: rows.length,
     skipped,
-    missingIds: state.players.filter((p) => missing.has(p.id)).map((p) => ({ id: p.id, name: p.name })),
+    missingIds: named(missing),
+    sharedIds: named(shared),
   }
 }

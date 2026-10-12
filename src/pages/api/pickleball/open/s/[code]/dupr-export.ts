@@ -4,6 +4,7 @@ import { drainRequestBody } from '../../../../../../lib/http'
 import { duprExportRequestSchema } from '../../../../../../lib/schemas/pickleball/open/host'
 import { sendOrRelease } from '../../../../../../worker/pickleball/open/duprExport'
 import { currentHost, signInFirst } from '../../../../../../worker/pickleball/open/hostSession'
+import { fieldMessage, readSmallJson } from '../../../../../../worker/pickleball/open/requestBody'
 import { codeFrom, hostIpLimited, hostKeyFrom, notFound, openErrorResponse, openSessionStub } from '../../../../../../worker/pickleball/open/routeHelpers'
 import { crossSiteRefusal } from '../../../../../../worker/pickleball/open/sameOrigin'
 import { rateLimitedResponse } from '../../../../../../worker/rateLimit.js'
@@ -21,13 +22,17 @@ export const POST: APIRoute = async ({ request, params }) => {
   try {
     const refused = crossSiteRefusal(request) ?? (await hostIpLimited(env, request))
     const code = codeFrom(params)
-    if (refused || !code || Number(request.headers.get('content-length') ?? 0) > MAX_BODY_BYTES) {
+    if (refused || !code) {
       await drainRequestBody(request)
-      return refused ?? (code ? jsonResponse({ error: 'That request is too large.' }, 413) : notFound())
+      return refused ?? notFound()
     }
-    // No body (or not JSON) means no zone: UTC. A zone that is sent must be a real one.
-    const parsed = duprExportRequestSchema.safeParse(await request.json().catch(() => ({})))
-    if (!parsed.success) return jsonResponse({ error: 'That time zone is not one we know. Send an IANA zone such as "Asia/Manila".' }, 400)
+    // No body (or not JSON) means no zone; no zone, or one we do not know, dates games in UTC (like GET …/dupr).
+    const body = await readSmallJson(request, MAX_BODY_BYTES, {})
+    if (!body.ok) return body.response
+    const parsed = duprExportRequestSchema.safeParse(body.value)
+    if (!parsed.success) {
+      return jsonResponse({ error: fieldMessage(parsed.error, { timeZone: 'Send the time zone as text, such as "Asia/Manila".' }, 'Send the request as a JSON object.') }, 400)
+    }
     const host = await currentHost(env, request)
     if (!host) return signInFirst()
     if (!host.duprClubId) return jsonResponse({ error: 'Add your DUPR Club ID first.' }, 409)
@@ -35,7 +40,7 @@ export const POST: APIRoute = async ({ request, params }) => {
     const stub = openSessionStub(env, code)
     const hostKey = hostKeyFrom(request)
     const prepared = await stub.prepareDuprExport(code, hostKey, { id: host.id, displayName: host.displayName, duprClubId: host.duprClubId },
-      parsed.data.timeZone ?? 'UTC')
+      parsed.data.timeZone)
     if (prepared.status === 429 && 'error' in prepared.body) return rateLimitedResponse(prepared.body.error, prepared.retryAfterSeconds ?? 0)
     if (prepared.status !== 200 || !('exportId' in prepared.body)) return jsonResponse(prepared.body, prepared.status)
 

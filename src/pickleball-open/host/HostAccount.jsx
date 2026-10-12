@@ -31,7 +31,7 @@ export default function HostAccount({ host, onChanged, showMySessions = true }) 
     onChanged(null)
   }, 'Could not sign out. Try again.')
   const remove = () => {
-    if (!window.confirm('Delete your account? Your sessions keep running but are no longer linked to you, and their DUPR export needs a new sign-in.')) return
+    if (!window.confirm('Delete your account? Your sessions keep running on your original host links but are no longer linked to you, and their DUPR export needs a new sign-in. Any other phone you opened a session on from My sessions loses host access.')) return
     run(async () => {
       await deleteAccount()
       onChanged(null)
@@ -40,7 +40,7 @@ export default function HostAccount({ host, onChanged, showMySessions = true }) 
 
   return (
     <section aria-label="Your account" className="mt-5 grid gap-3 border-t border-navy-800 pt-4 text-sm">
-      <p className="text-mist">Signed in as <span className="break-all font-semibold text-white">{host.email}</span>. We keep your Google name and email, your DUPR Club ID and your news choice until you delete your account.</p>
+      <p className="text-mist">Signed in as <span className="break-all font-semibold text-white">{host.email}</span>. We keep your Google account ID, name and email, your DUPR Club ID and your news choice until you delete your account.</p>
       <label className="flex min-h-11 items-center gap-3">
         <input type="checkbox" checked={host.marketingOptIn} disabled={busy} onChange={toggleNews} className="h-5 w-5" />
         Email me occasional Devlab Pickleball news

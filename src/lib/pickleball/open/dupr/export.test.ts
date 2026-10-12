@@ -76,11 +76,51 @@ describe('buildDuprExport', () => {
     const out = buildDuprExport(stateWith(matches), { timeZone: 'UTC' })
     expect(out.exported).toBe(1)
     expect(out.skipped).toEqual([
-      { game: 2, court: 'Court 2', summary: 'Ana & Eve 11–4 Cy & Di', reason: 'Eve has no DUPR ID.' },
+      { game: 2, court: 'Court 2', summary: 'Ana & Eve 11–4 Cy & Di', reason: 'Eve has no valid DUPR ID.' },
       { game: 3, court: 'Court 1', summary: 'Ana & Ben against Cy & Di', reason: 'No score was saved.' },
       { game: 4, court: 'Court 1', summary: 'Ana & Ben 5–3 Cy & Di', reason: 'DUPR needs one team to reach 6 points.' },
     ])
     expect(out.missingIds).toEqual([{ id: 'e', name: 'Eve' }])
+    expect(out.sharedIds).toEqual([])
+  })
+
+  it('asks for a DUPR ID only where the score is valid: a tie or a sub-6 game never lists its players', () => {
+    const matches: OpenMatch[] = [
+      finished('m1', ['a', 'e'], ['c', 'd'], 'A', 10, 10, 1),
+      finished('m2', ['a', 'e'], ['c', 'd'], 'A', 5, 3, 2),
+    ]
+    const out = buildDuprExport(stateWith(matches), { timeZone: 'UTC' })
+    expect(out.skipped.map((s) => s.reason)).toEqual(['DUPR does not accept a tie.', 'DUPR needs one team to reach 6 points.'])
+    expect(out.missingIds).toEqual([])
+  })
+
+  it('treats a malformed stored DUPR ID as missing', () => {
+    const odd = players.map((p) => (p.id === 'b' ? { ...p, duprId: 'bb22' } : p))
+    const out = buildDuprExport(stateWith([finished('m1', ['a', 'b'], ['c', 'd'], 'A', 11, 7)], { players: odd }), { timeZone: 'UTC' })
+    expect(out.exported).toBe(0)
+    expect(out.skipped[0].reason).toBe('Ben has no valid DUPR ID.')
+    expect(out.missingIds).toEqual([{ id: 'b', name: 'Ben' }])
+  })
+
+  it('lists both players who share a DUPR ID so the host can fix the wrong one', () => {
+    const twin = players.map((p) => (p.id === 'c' ? { ...p, duprId: 'AAA111' } : p))
+    const out = buildDuprExport(stateWith([finished('m1', ['a', 'b'], ['c', 'd'], 'A', 11, 7)], { players: twin }), { timeZone: 'UTC' })
+    expect(out.skipped[0].reason).toBe('Ana and Cy have the same DUPR ID.')
+    expect(out.sharedIds).toEqual([{ id: 'a', name: 'Ana' }, { id: 'c', name: 'Cy' }])
+    expect(out.missingIds).toEqual([])
+  })
+
+  it('defuses a formula-looking session name and venue', () => {
+    const state = stateWith([finished('m1', ['a', 'b'], ['c', 'd'], 'A', 11, 7)], { name: '=HYPERLINK("x")', location: '+Court' })
+    const cells = cellsOf(buildDuprExport(state, { timeZone: 'UTC' }).csv.split('\r\n')[1])
+    expect(cells[1]).toBe(`"'=HYPERLINK(""x"")"`)
+    expect(cells[25]).toBe(`"'+Court"`)
+  })
+
+  it('dates a game by when it started when no finish time was saved', () => {
+    const game = { ...finished('m1', ['a', 'b'], ['c', 'd'], 'A', 11, 7), finishedAt: null, startedAt: '2026-10-11T23:30:00.000Z' }
+    const cells = cellsOf(buildDuprExport(stateWith([game]), { timeZone: 'Asia/Manila' }).csv.split('\r\n')[1])
+    expect(cells[2]).toBe('2026-10-12')
   })
 
   it('refuses two players with the same DUPR ID and defuses a formula-looking name', () => {
@@ -92,7 +132,7 @@ describe('buildDuprExport', () => {
   })
 
   it('an empty session is a header and nothing else', () => {
-    expect(buildDuprExport(stateWith([]), { timeZone: 'UTC' })).toEqual({ csv: TEMPLATE, exported: 0, skipped: [], missingIds: [] })
+    expect(buildDuprExport(stateWith([]), { timeZone: 'UTC' })).toEqual({ csv: TEMPLATE, exported: 0, skipped: [], missingIds: [], sharedIds: [] })
   })
 })
 
@@ -101,7 +141,7 @@ describe('skipReason', () => {
   it('names a tie, more than one missing player, and a player who is not in the session', () => {
     expect(skipReason(finished('m', ['a', 'b'], ['c', 'd'], 'A', 10, 10), find)).toBe('DUPR does not accept a tie.')
     const noIds = (id: string) => (id === 'a' ? players[0] : { ...players[1], id, name: id.toUpperCase(), duprId: null })
-    expect(skipReason(finished('m', ['a', 'x'], ['y', 'z'], 'A', 11, 3), noIds)).toBe('X, Y and Z have no DUPR ID.')
+    expect(skipReason(finished('m', ['a', 'x'], ['y', 'z'], 'A', 11, 3), noIds)).toBe('X, Y and Z have no valid DUPR ID.')
     expect(skipReason(finished('m', ['a', 'b'], ['c', 'ghost'], 'A', 11, 3), find)).toBe('DUPR needs four players in a doubles game.')
   })
 })

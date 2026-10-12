@@ -95,6 +95,19 @@ describe('hosts', () => {
     expect(count(raw, 'SELECT COUNT(*) AS n FROM open_sessions WHERE host_id IS NOT NULL')).toBe(0)
   })
 
+  it('deleting an account revokes the extra host links of its sessions only', async () => {
+    const { d1, newId } = setup()
+    const host = await upsertHost(d1, ANA, { now: NOW, newId })
+    const mine = await session(d1, 'AAAAA22222')
+    const other = await session(d1, 'BBBBB33333')
+    await claimSession(d1, mine.id, host.id)
+    await insertHostKey(d1, { id: 'k1', sessionId: mine.id, keyHash: 'h1', createdAt: NOW })
+    await insertHostKey(d1, { id: 'k2', sessionId: other.id, keyHash: 'h2', createdAt: NOW })
+    expect(await deleteHost(d1, host.id)).toEqual(['AAAAA22222'])
+    expect(await loadHostAccess(d1, mine.id)).toEqual({ hostId: null, extraKeyHashes: [] })
+    expect(await loadHostAccess(d1, other.id)).toEqual({ hostId: null, extraKeyHashes: ['h2'] })
+  })
+
   it('a deleted host row also unlinks sessions through the foreign key', async () => {
     const { d1, raw, newId } = setup()
     const host = await upsertHost(d1, ANA, { now: NOW, newId })

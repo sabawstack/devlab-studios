@@ -34,7 +34,7 @@ describe('duprStep', () => {
 
 describe('messages', () => {
   it('summarises the export and the send', () => {
-    expect(exportSummary({ exported: 0, skipped: [] })).toMatch(/^No game can go to DUPR yet/)
+    expect(exportSummary({ exported: 0, skipped: [] })).toBe('No game can go to DUPR yet. Every game with a valid score (no tie, a team reached 6) and four different DUPR IDs goes in.')
     expect(exportSummary({ exported: 1, skipped: [] })).toBe('1 game can go to DUPR.')
     expect(exportSummary({ exported: 3, skipped: [{}, {}] })).toBe('3 games can go to DUPR; 2 games left out.')
     expect(sentMessage({ delivery: 'SENT', to: 'mo@example.com', exported: 3 })).toBe('Sent to mo@example.com: 3 games. Upload the file in DUPR.')
@@ -46,9 +46,19 @@ describe('nextExportLine', () => {
   it('names the time the next export frees up, in the device’s zone, only when none are left', () => {
     expect(nextExportLine({ exportsLeft: 1, nextExportAt: null }, 'UTC')).toBeNull()
     expect(nextExportLine({ exportsLeft: 0, nextExportAt: null }, 'UTC')).toBeNull()
-    expect(nextExportLine({ exportsLeft: 0, nextExportAt: '2026-10-12T14:30:00.000Z' }, 'UTC')).toBe('Next export available at 14:30.')
-    expect(nextExportLine({ exportsLeft: 0, nextExportAt: '2026-10-12T14:30:00.000Z' }, 'Asia/Manila')).toBe('Next export available at 22:30.')
-    expect(nextExportLine({ exportsLeft: 0, nextExportAt: 'not a date' }, 'UTC')).toBeNull()
+    const now = new Date('2026-10-12T09:00:00.000Z')
+    expect(nextExportLine({ exportsLeft: 0, nextExportAt: '2026-10-12T14:30:00.000Z' }, 'UTC', now)).toBe('Next export available at 14:30.')
+    expect(nextExportLine({ exportsLeft: 0, nextExportAt: '2026-10-12T14:30:00.000Z' }, 'Asia/Manila', now)).toBe('Next export available at 22:30.')
+    expect(nextExportLine({ exportsLeft: 0, nextExportAt: 'not a date' }, 'UTC', now)).toBeNull()
+  })
+
+  it('says tomorrow when the next export falls on a later date where the device is', () => {
+    const now = new Date('2026-10-12T20:00:00.000Z')
+    expect(nextExportLine({ exportsLeft: 0, nextExportAt: '2026-10-13T08:15:00.000Z' }, 'UTC', now)).toBe('Next export available tomorrow at 08:15.')
+    // 04:00 in Manila is already the 13th; 16:15 the same day there is not tomorrow.
+    expect(nextExportLine({ exportsLeft: 0, nextExportAt: '2026-10-13T08:15:00.000Z' }, 'Asia/Manila', now)).toBe('Next export available at 16:15.')
+    // In Los Angeles it is still the 12th at 13:00; 01:15 on the 13th is tomorrow.
+    expect(nextExportLine({ exportsLeft: 0, nextExportAt: '2026-10-13T08:15:00.000Z' }, 'America/Los_Angeles', now)).toBe('Next export available tomorrow at 01:15.')
   })
 })
 

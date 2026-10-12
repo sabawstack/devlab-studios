@@ -141,7 +141,8 @@ test.describe('linking a session, and My sessions (API)', () => {
 
   test('sign-in never leaves the site except for Google, and the registered callback belongs to host sign-in', async ({ request }) => {
     const { code } = await createSession(request)
-    const start = await request.get(`/api/pickleball/open/host/sign-in?return=/pickleball/s/${code}`, { maxRedirects: 0 })
+    const ip = { 'cf-connecting-ip': ipFor(code) }
+    const start = await request.get(`/api/pickleball/open/host/sign-in?return=/pickleball/s/${code}`, { maxRedirects: 0, headers: ip })
     expect(start.status()).toBe(302)
     const location = start.headers()['location']
     if (location.startsWith('/')) {
@@ -152,10 +153,10 @@ test.describe('linking a session, and My sessions (API)', () => {
       expect(google.origin + google.pathname).toBe('https://accounts.google.com/o/oauth2/v2/auth')
       expect(google.searchParams.get('redirect_uri')).toMatch(/\/api\/pickleball\/auth\/google\/callback$/)
     }
-    const offsite = await request.get('/api/pickleball/open/host/sign-in?return=https://evil.example/', { maxRedirects: 0 })
+    const offsite = await request.get('/api/pickleball/open/host/sign-in?return=https://evil.example/', { maxRedirects: 0, headers: ip })
     expect(offsite.headers()['location']).not.toContain('evil.example')
 
-    const callback = await request.get('/api/pickleball/auth/google/callback?code=x&state=y', { maxRedirects: 0 })
+    const callback = await request.get('/api/pickleball/auth/google/callback?code=x&state=y', { maxRedirects: 0, headers: ip })
     expect(callback.status()).toBe(302)
     expect(callback.headers()['location']).toBe('/pickleball/my-sessions?signin=failed')
   })
@@ -182,7 +183,9 @@ test.describe('the DUPR export (API)', () => {
     expect(unclaimed.status()).toBe(409)
     expect((await unclaimed.json()).error).toBe('Link this session to your Google account first.')
     expect((await (await claim(request, baseURL, code, hostKey)).json())).toEqual({ claim: 'MINE' })
-    expect((await claim(request, baseURL, code, hostKey)).status()).toBe(200)
+    const reclaimed = await claim(request, baseURL, code, hostKey)
+    expect(reclaimed.status()).toBe(200)
+    expect(await reclaimed.json()).toEqual({ claim: 'MINE' })
 
     const empty = await exportDupr(request, baseURL, code, hostKey)
     expect(empty.status()).toBe(409)
@@ -192,7 +195,7 @@ test.describe('the DUPR export (API)', () => {
     await play(request, code, hostKey, ['Ana', 'Eve'], ['Cy', 'Di'], 11, 4)
     const status = await (await dupr(request, code, hostKey)).json()
     expect(status).toMatchObject({ claim: 'MINE', exported: 1, missingIds: [{ name: 'Eve' }] })
-    expect(status.skipped).toEqual([{ game: 2, court: 'Court 1', summary: 'Ana & Eve 11–4 Cy & Di', reason: 'Eve has no DUPR ID.' }])
+    expect(status.skipped).toEqual([{ game: 2, court: 'Court 1', summary: 'Ana & Eve 11–4 Cy & Di', reason: 'Eve has no valid DUPR ID.' }])
 
     const sent = await exportDupr(request, baseURL, code, hostKey, 'Asia/Manila')
     expect(sent.status(), await sent.text()).toBe(200)
@@ -207,7 +210,7 @@ test.describe('the DUPR export (API)', () => {
     expect(cells[2]).toMatch(/^\d{4}-\d{2}-\d{2}$/)
     expect([cells[3], cells[4], cells[15], cells[16], cells[26]]).toEqual(['Ana', 'AAA111', '11', '7', 'SIDEOUT'])
     expect(body.outbox.filename).toMatch(/^dupr-saturday-social-\d{4}-\d{2}-\d{2}\.csv$/)
-    expect(body.outbox.text).toContain('Game 2, Court 1: Ana & Eve 11–4 Cy & Di. Eve has no DUPR ID.')
+    expect(body.outbox.text).toContain('Game 2, Court 1: Ana & Eve 11–4 Cy & Di. Eve has no valid DUPR ID.')
     expect(body.outbox.text).toContain('Club ID CLUB-42')
     expect(body.outbox.text).toContain('Import Matches via CSV')
     expect(body.outbox.text).toContain('Club Director or Organizer')
@@ -248,7 +251,7 @@ test.describe('the DUPR export (API)', () => {
     expect((await exportDupr(request, baseURL, code, hostKey)).status()).toBe(200)
     await other.dispose()
   })
-  test('no sign-in, a wrong host key or a made-up time zone is refused, and none of them uses up an export', async ({ request, playwright, baseURL }) => {
+  test('no sign-in or a wrong host key is refused without using up an export; a made-up time zone dates games in UTC', async ({ request, playwright, baseURL }) => {
     const { code, hostKey } = await readyToExport(request, baseURL)
     const stranger = await playwright.request.newContext({ baseURL })
     const signedOut = await exportDupr(stranger, baseURL, code, hostKey)
@@ -260,11 +263,12 @@ test.describe('the DUPR export (API)', () => {
     expect(wrongKey.status()).toBe(403)
     expect((await wrongKey.json()).error).toBe('Only the host can do that.')
 
-    const badZone = await exportDupr(request, baseURL, code, hostKey, 'Mars/Olympus')
-    expect(badZone.status()).toBe(400)
-    expect((await badZone.json()).error).toMatch(/time zone/)
-
     expect((await (await dupr(request, code, hostKey)).json()).exportsLeft).toBe(5)
+
+    // Like GET …/dupr?tz=, an unknown zone is not refused: games are dated in UTC.
+    const badZone = await exportDupr(request, baseURL, code, hostKey, 'Mars/Olympus')
+    expect(badZone.status()).toBe(200)
+    expect((await (await dupr(request, code, hostKey)).json()).exportsLeft).toBe(4)
   })
 })
 
@@ -273,6 +277,9 @@ test.describe('account deletion and cross-site requests (API)', () => {
     const { code, hostKey, email } = await readyToExport(request, baseURL)
     const laptop = await playwright.request.newContext({ baseURL })
     await signIn(laptop, baseURL, email, `${code}-laptop`)
+    // A host link opened from My sessions on another phone: deleting the account revokes it.
+    const { hostKey: extraKey } = await (await request.post(`/api/pickleball/open/host/sessions/${code}/reopen`, { headers: writeHeaders(baseURL, code) })).json()
+    expect((await request.get(`/api/pickleball/open/s/${code}/host`, { headers: { 'X-Host-Key': extraKey, 'cf-connecting-ip': ipFor(code) } })).status()).toBe(200)
 
     const deleted = await request.delete('/api/pickleball/open/host/me', { headers: writeHeaders(baseURL, code) })
     expect(deleted.status()).toBe(200)
@@ -280,8 +287,9 @@ test.describe('account deletion and cross-site requests (API)', () => {
     expect(deleted.headers()['set-cookie']).toContain('devlab_pb_host=;')
     expect((await (await laptop.get('/api/pickleball/open/host/me', { headers: { 'cf-connecting-ip': ipFor(`${code}-laptop`) } })).json()).host).toBeNull()
 
-    // The session is untouched apart from the link, and can be linked again by a new sign-in.
+    // The session is untouched apart from the link and the extra host link, and can be linked again by a new sign-in.
     expect((await request.get(`/api/pickleball/open/s/${code}/host`, { headers: { 'X-Host-Key': hostKey, 'cf-connecting-ip': ipFor(code) } })).status()).toBe(200)
+    expect((await request.get(`/api/pickleball/open/s/${code}/host`, { headers: { 'X-Host-Key': extraKey, 'cf-connecting-ip': ipFor(code) } })).status()).toBe(403)
     expect((await (await dupr(request, code, hostKey)).json())).toMatchObject({ host: null, claim: 'UNCLAIMED', exported: 1 })
     const again = await signIn(request, baseURL, email, `${code}-again`)
     expect(again).toMatchObject({ email, duprClubId: null, marketingOptIn: false })
@@ -316,7 +324,7 @@ test.describe('the DUPR sheet (screens)', () => {
     await sheet.getByLabel('Your DUPR Club ID').fill('12345')
     await sheet.getByRole('button', { name: 'Save Club ID' }).click()
     await expect(sheet.getByText('1 game can go to DUPR; 1 game left out.')).toBeVisible()
-    await expect(sheet.getByRole('list', { name: 'Left out' })).toContainText('Eve has no DUPR ID.')
+    await expect(sheet.getByRole('list', { name: 'Left out' })).toContainText('Eve has no valid DUPR ID.')
     await sheet.getByLabel('DUPR ID for Eve').fill('eee555')
     await sheet.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(sheet.getByText('2 games can go to DUPR.')).toBeVisible()

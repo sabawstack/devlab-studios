@@ -39,6 +39,8 @@ export interface DuprStatusBody {
   exported: number
   skipped: DuprSkip[]
   missingIds: Array<{ id: string; name: string }>
+  /** Players in a game left out because two of them share a DUPR ID. */
+  sharedIds: Array<{ id: string; name: string }>
   exportsLeft: number
   exportLimit: number
   /** When an export frees up again, once none are left today; otherwise null. */
@@ -60,10 +62,12 @@ export interface DuprPrepared {
 type Cached = LoadedSession & { access: HostAccess }
 
 type Actor = { role: 'host' } | { role: 'captain'; captain: CaptainRecord }
-type Attachment = { code: string; role: 'viewer' | 'host' | 'captain'; captainId?: string }
-type Identified = { role: 'host'; payload: HostSnapshot } | { role: 'captain'; captainId: string; payload: CaptainSnapshot }
+/** extraKey: a host socket signed in with an extra host link, which deleting the account revokes. */
+type Attachment = { code: string; role: 'viewer' | 'host' | 'captain'; captainId?: string; extraKey?: boolean }
+type Identified = { role: 'host'; extraKey: boolean; payload: HostSnapshot } | { role: 'captain'; captainId: string; payload: CaptainSnapshot }
 
 const IDEMPOTENCY_TTL_MS = 10 * 60_000
+const NOTHING_TO_EXPORT = 'No game can go to DUPR yet. Every game with a valid score (no tie, a team reached 6) and four different DUPR IDs goes in.'
 const GONE = 4404
 // Spec §10: 120 commands per minute per session. Counted here, after the host
 // or captain key is checked, so strangers holding only the public code cannot
@@ -107,11 +111,17 @@ export class OpenSessionDO extends DurableObject<Env> {
     return this.loaded
   }
 
-  /** The original host key, or an extra host link minted by reopen(). Every hash is compared, so timing says nothing. */
-  private async isHost(loaded: Cached, hostKey: string | null): Promise<boolean> {
-    if (!hostKey) return false
+  /** Which host key this is: the original, an extra host link minted by reopen(), or none. Every hash is compared, so timing says nothing. */
+  private async hostKeyKind(loaded: Cached, hostKey: string | null): Promise<'original' | 'extra' | null> {
+    if (!hostKey) return null
     const hash = await sha256Base64Url(hostKey)
-    return [loaded.hostKeyHash, ...loaded.access.extraKeyHashes].reduce((match, known) => constantTimeEqual(hash, known) || match, false)
+    const original = constantTimeEqual(hash, loaded.hostKeyHash)
+    const extra = loaded.access.extraKeyHashes.reduce((match, known) => constantTimeEqual(hash, known) || match, false)
+    return original ? 'original' : extra ? 'extra' : null
+  }
+
+  private async isHost(loaded: Cached, hostKey: string | null): Promise<boolean> {
+    return (await this.hostKeyKind(loaded, hostKey)) !== null
   }
 
   /** Host first; otherwise a live (unrevoked) captain link. Revocation is immediate: captains are checked from memory on every call. */
@@ -300,7 +310,7 @@ export class OpenSessionDO extends DurableObject<Env> {
         status: 200,
         body: {
           claim: claimStateFor(auth.access.hostId, hostId), exported: preview.exported, skipped: preview.skipped,
-          missingIds: preview.missingIds, exportsLeft: exportsLeft(sent), exportLimit: DUPR_EXPORT_LIMIT, nextExportAt: nextExportAt(sent),
+          missingIds: preview.missingIds, sharedIds: preview.sharedIds, exportsLeft: exportsLeft(sent), exportLimit: DUPR_EXPORT_LIMIT, nextExportAt: nextExportAt(sent),
         },
       }
     })
@@ -353,9 +363,7 @@ export class OpenSessionDO extends DurableObject<Env> {
       if (claim === 'OTHER') return { status: 403, body: { error: 'Only the Google account this session is linked to can export it.' } }
       const zone = normalizeTimeZone(timeZone)
       const preview = buildDuprExport(auth.state, { timeZone: zone })
-      if (!preview.exported) {
-        return { status: 409, body: { error: 'No game can go to DUPR yet: each needs a score and a DUPR ID for all four players.' } }
-      }
+      if (!preview.exported) return { status: 409, body: { error: NOTHING_TO_EXPORT } }
       const now = new Date().toISOString()
       const sent = await recentDuprExports(this.env.PICKLEBALL_DB, auth.state.id, exportWindowStart(now))
       if (!exportsLeft(sent)) return { status: 429, body: { error: limitMessage(sent, now) }, retryAfterSeconds: secondsUntilNextExport(sent, now) }
@@ -384,10 +392,27 @@ export class OpenSessionDO extends DurableObject<Env> {
     })
   }
 
-  /** After an account is deleted (D1 already unlinked it): drop the link from memory too. */
+  /**
+   * After an account is deleted (D1 already unlinked the session and deleted
+   * its extra host links): drop both from memory too, and turn every socket
+   * signed in with an extra host link back into a viewer. The original host
+   * key keeps working.
+   */
   async forgetHost(hostId: string): Promise<void> {
     return this.serial(async () => {
-      if (this.loaded?.access.hostId === hostId) this.loaded = { ...this.loaded, access: { ...this.loaded.access, hostId: null } }
+      if (this.loaded?.access.hostId === hostId) this.loaded = { ...this.loaded, access: { hostId: null, extraKeyHashes: [] } }
+      const viewer = this.loaded ? JSON.stringify({ type: 'VIEWER', payload: toViewerSnapshot(this.loaded.state) }) : null
+      for (const ws of this.ctx.getWebSockets()) {
+        const attachment = ws.deserializeAttachment() as Attachment | null
+        if (attachment?.role !== 'host' || !attachment.extraKey) continue
+        try {
+          ws.serializeAttachment({ code: attachment.code, role: 'viewer' } satisfies Attachment)
+          ws.send(JSON.stringify({ type: 'AUTH_FAILED' }))
+          if (viewer) ws.send(viewer)
+        } catch {
+          // a socket mid-close; it is dropped by the runtime
+        }
+      }
     })
   }
 
@@ -454,7 +479,7 @@ export class OpenSessionDO extends DurableObject<Env> {
       const actor = await this.actorFor(loaded, credentials)
       if (!actor) return null
       return actor.role === 'host'
-        ? { role: 'host', payload: toHostSnapshot(loaded.state, loaded.captains) }
+        ? { role: 'host', extraKey: (await this.hostKeyKind(loaded, credentials.hostKey)) === 'extra', payload: toHostSnapshot(loaded.state, loaded.captains) }
         : { role: 'captain', captainId: actor.captain.id, payload: toCaptainSnapshot(loaded.state, actor.captain) }
     })
   }
@@ -491,7 +516,7 @@ export class OpenSessionDO extends DurableObject<Env> {
       try {
         const who = await this.identify(attachment.code, credentials)
         if (who?.role === 'host') {
-          ws.serializeAttachment({ code: attachment.code, role: 'host' } satisfies Attachment)
+          ws.serializeAttachment({ code: attachment.code, role: 'host', ...(who.extraKey ? { extraKey: true } : {}) } satisfies Attachment)
           ws.send(JSON.stringify({ type: 'HOST', payload: who.payload }))
         } else if (who?.role === 'captain') {
           ws.serializeAttachment({ code: attachment.code, role: 'captain', captainId: who.captainId } satisfies Attachment)

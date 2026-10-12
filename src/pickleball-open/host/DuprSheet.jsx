@@ -78,6 +78,17 @@ export default function DuprSheet({ code, hostKey, version, send, commandError =
     }
   }
 
+  const idForm = (player) => (
+    <form key={player.id} className="flex items-end gap-2" onSubmit={(event) => { event.preventDefault(); saveId(player) }}>
+      <label className="grid min-w-0 flex-1 gap-1 break-words text-xs text-mist">DUPR ID for {player.name}
+        <input value={ids[player.id] ?? ''} maxLength={6} autoComplete="off"
+          onChange={(event) => setIds((prev) => ({ ...prev, [player.id]: event.target.value }))}
+          className="min-h-11 w-full min-w-0 rounded-lg bg-ink px-3 py-2 font-mono uppercase text-white" />
+      </label>
+      <Button type="submit" variant="ghost">Save</Button>
+    </form>
+  )
+
   return (
     <Sheet title="Email me the DUPR export" onClose={onClose}>
       {error && <p role="alert" className={alertClass}>{error}</p>}
@@ -130,16 +141,13 @@ export default function DuprSheet({ code, hostKey, version, send, commandError =
           {status.missingIds.length > 0 && (
             <div className="grid gap-2">
               <p className="text-sm">Add a DUPR ID to bring their games in:</p>
-              {status.missingIds.map((player) => (
-                <form key={player.id} className="flex items-end gap-2" onSubmit={(event) => { event.preventDefault(); saveId(player) }}>
-                  <label className="grid min-w-0 flex-1 gap-1 break-words text-xs text-mist">DUPR ID for {player.name}
-                    <input value={ids[player.id] ?? ''} maxLength={6} autoComplete="off"
-                      onChange={(event) => setIds((prev) => ({ ...prev, [player.id]: event.target.value }))}
-                      className="min-h-11 w-full min-w-0 rounded-lg bg-ink px-3 py-2 font-mono uppercase text-white" />
-                  </label>
-                  <Button type="submit" variant="ghost">Save</Button>
-                </form>
-              ))}
+              {status.missingIds.map(idForm)}
+            </div>
+          )}
+          {(status.sharedIds ?? []).length > 0 && (
+            <div className="grid gap-2">
+              <p className="text-sm">These players share a DUPR ID with someone in the same game. Correct the wrong one:</p>
+              {status.sharedIds.map(idForm)}
             </div>
           )}
           <p className="text-sm text-mist">Club ID {status.host.duprClubId}. In DUPR, go to {DUPR_CLICK_PATH} and choose the file. Your DUPR account must be a Club Director or Organizer of the club.</p>

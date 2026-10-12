@@ -15,10 +15,9 @@ import { SESSION_COOKIE_NAME } from '../../../../../worker/pickleball/session.js
 import { getEnv } from '../../../../../lib/env'
 import { parseCookies } from '../../../../../worker/pickleball/session.js'
 import { jsonResponse } from '../../../../../worker/utils/responses.js'
-import { finishHostSignIn, hasHostSignInPending } from '../../../../../worker/pickleball/open/hostAuth'
-import { cookieFrom } from '../../../../../worker/pickleball/open/hostCookies'
+import { finishHostSignIn, hostOwnsCallback, LEGACY_OAUTH_COOKIE } from '../../../../../worker/pickleball/open/hostAuth'
 
-const OAUTH_COOKIE_NAME = 'devlab_pb_oauth'
+const OAUTH_COOKIE_NAME = LEGACY_OAUTH_COOKIE
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 8
 
 // The SPA is mounted at /pickleball/app and renders LoginPage for an
@@ -30,13 +29,13 @@ const LOGIN_PATH = '/pickleball/app'
 // The callback Google redirects to is registered once and cannot move (spec
 // §9.1), so this one route serves both sign-ins. A free-session host sign-in
 // (open/host/sign-in) owns it whenever its own in-flight cookie is present, or
-// when neither flow's cookie is (an expired attempt then lands on My sessions
-// with "sign-in failed" rather than a raw JSON error). Phase 5 deletes the old
+// when neither flow's cookie is (hostOwnsCallback, unit-tested in
+// hostAuth.test.ts). Phase 5 deletes the old
 // operator app: it then deletes legacyOperatorCallback and every import only
 // it uses, and GET becomes a one-line call to finishHostSignIn.
 export const GET: APIRoute = async (context) => {
   const { request } = context
-  if (hasHostSignInPending(request) || cookieFrom(request, OAUTH_COOKIE_NAME) === null) {
+  if (hostOwnsCallback(request)) {
     return finishHostSignIn(getEnv(), request)
   }
   return legacyOperatorCallback(context)

@@ -45,7 +45,7 @@ const games = (n) => `${n} game${n === 1 ? '' : 's'}`
 
 /** One line for the READY step. */
 export function exportSummary(status) {
-  if (!status.exported) return 'No game can go to DUPR yet: each needs a score and a DUPR ID for all four players.'
+  if (!status.exported) return 'No game can go to DUPR yet. Every game with a valid score (no tie, a team reached 6) and four different DUPR IDs goes in.'
   return `${games(status.exported)} can go to DUPR${status.skipped.length ? `; ${games(status.skipped.length)} left out` : ''}.`
 }
 
@@ -55,16 +55,20 @@ export function sentMessage(result) {
   return `Sent to ${result.to}: ${games(result.exported)}. Upload the file in DUPR.`
 }
 
+const dayIn = (date, timeZone) => new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone }).format(date)
+
 /**
- * "Next export available at HH:MM." in the device's zone, once no export is
- * left today; otherwise null. `timeZone` is for tests; the device's by default.
+ * "Next export available at HH:MM." in the device's zone, or "… tomorrow at
+ * HH:MM." when that falls on a later local date, once no export is left
+ * today; otherwise null. `timeZone` and `now` are for tests; the device's by default.
  */
-export function nextExportLine(status, timeZone = undefined) {
+export function nextExportLine(status, timeZone = undefined, now = new Date()) {
   if (status.exportsLeft > 0 || !status.nextExportAt) return null
   const at = new Date(status.nextExportAt)
   if (Number.isNaN(at.getTime())) return null
   const time = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone }).format(at)
-  return `Next export available at ${time}.`
+  // The window is 24 hours, so a later local date is always tomorrow.
+  return dayIn(at, timeZone) > dayIn(now, timeZone) ? `Next export available tomorrow at ${time}.` : `Next export available at ${time}.`
 }
 
 /**

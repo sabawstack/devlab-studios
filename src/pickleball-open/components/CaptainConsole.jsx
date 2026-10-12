@@ -11,7 +11,7 @@ import StandingsTable from './StandingsTable.jsx'
 import UndoToast from './UndoToast.jsx'
 import { Panel } from './ui.jsx'
 
-export default function CaptainConsole({ code, captainKey, snapshot, status, onSnapshot }) {
+export default function CaptainConsole({ code, captainKey, snapshot, status, onSnapshot, signInNotice = null }) {
   const credentials = useMemo(() => ({ captainKey }), [captainKey])
   const { send, pending, error, clearError } = useCommandQueue(code, credentials, onSnapshot)
   const [dialog, setDialog] = useState(null)
@@ -41,6 +41,8 @@ export default function CaptainConsole({ code, captainKey, snapshot, status, onS
           {ended && <span className="ml-2 text-pickle-neon">· Ended</span>}
         </p>
       </header>
+
+      {signInNotice && <p role="status" className="rounded-xl bg-amber-400/15 px-4 py-3 text-amber-100 lg:col-span-2">{signInNotice}</p>}
 
       {error && (
         <p role="alert" className="flex items-center justify-between rounded-xl bg-rose-500/15 px-4 py-3 text-rose-100 lg:col-span-2">
