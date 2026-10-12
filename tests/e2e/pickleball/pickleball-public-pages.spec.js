@@ -349,10 +349,29 @@ test.describe('Pickleball public pages', () => {
     await expect(section.getByLabel('Subject')).toHaveAttribute('placeholder', 'Pickleball early access request')
   })
 
-  test('the services page links to the pickleball product', async ({ page }) => {
+  test('the solutions page promotes the free pickleball app', async ({ page }) => {
     await page.goto('/solutions')
 
-    await expect(page.getByRole('button', { name: 'Be a beta-tester' })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'See how it works' })).toHaveAttribute('href', '/pickleball')
+    const promo = page.getByTestId('pickleball-promo')
+    await expect(promo.getByRole('heading', { name: 'Devlab Pickleball: free open play and tournaments' })).toBeVisible()
+    await expect(promo.getByRole('link', { name: 'Start a free session' })).toHaveAttribute('href', '/pickleball/new?ref=solutions')
+    await expect(promo.getByRole('link', { name: 'See how it works' })).toHaveAttribute('href', '/pickleball/how-it-works?ref=solutions')
+    await expect(promo.getByRole('link', { name: /Run a club or league/ })).toHaveAttribute('href', '/contact')
+    await expect(promo.getByTestId('pb-artwork')).toHaveCount(4)
+    // The retired early-access copy and its form are gone.
+    await expect(page.getByRole('button', { name: 'Be a beta-tester' })).toHaveCount(0)
+    await expect(promo).not.toContainText(/beta|pilot/i)
+  })
+
+  test('the home page and footer link to the pickleball app', async ({ page }) => {
+    await page.goto('/')
+
+    const band = page.getByTestId('home-pickleball')
+    await expect(band.getByRole('heading', { name: 'Devlab Pickleball' })).toBeVisible()
+    await expect(band.getByRole('link', { name: 'Start a free session' })).toHaveAttribute('href', '/pickleball/new?ref=home')
+    await expect(band.getByRole('link', { name: 'See how it works' })).toHaveAttribute('href', '/pickleball?ref=home')
+    await expect(
+      page.getByRole('contentinfo').getByRole('link', { name: 'Devlab Pickleball (free)' }),
+    ).toHaveAttribute('href', '/pickleball?ref=footer')
   })
 })

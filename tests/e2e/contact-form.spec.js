@@ -283,25 +283,26 @@ test('the lead magnet form captures an email against a known offer', async ({ pa
   expect(posted.consent.granted).toBe(true)
 })
 
-test('the legacy contact endpoint still backs the Pickleball beta form', async ({ page }) => {
+test('the legacy contact endpoint still backs the Pickleball club form', async ({ page }) => {
   let posted = null
   await page.route('**/api/contact', async (route) => {
     posted = JSON.parse(route.request().postData() || '{}')
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) })
   })
 
-  await page.goto('/solutions')
-  await page.getByRole('button', { name: 'Be a beta-tester' }).click()
-  await expect(page.getByText(/secure verification complete/i)).toBeVisible({ timeout: 30_000 })
+  await page.goto('/pickleball')
+  const section = page.locator('#request-access')
+  await section.scrollIntoViewIfNeeded()
+  await expect(section.getByText(/secure verification complete/i)).toBeVisible({ timeout: 30_000 })
 
   await expect(async () => {
-    await page.getByLabel(/full name/i).fill('Club Owner')
-    await page.getByRole('textbox', { name: 'Email' }).fill('club@example.com')
-    await page.getByLabel(/what would you like to test/i).fill('Pickleball beta tester request')
-    await page.getByLabel(/tell us about your club/i).fill('We run open play twice a week for about 30 players.')
-    await page.getByRole('button', { name: /send/i }).click()
-    await expect(page.getByRole('status')).toContainText(/sent successfully/i, { timeout: 1_500 })
+    await section.getByLabel('Your name').fill('Club Owner')
+    await section.getByRole('textbox', { name: 'Email' }).fill('club@example.com')
+    await section.getByLabel('Subject').fill('Pickleball early access request')
+    await section.getByLabel(/tell us about your club/i).fill('We run open play twice a week for about 30 players.')
+    await section.getByRole('button', { name: /send/i }).click()
+    await expect(section.getByRole('status')).toContainText(/sent successfully/i, { timeout: 1_500 })
   }).toPass({ timeout: 25_000 })
 
-  expect(posted.subject).toBe('Pickleball beta tester request')
+  expect(posted.subject).toBe('Pickleball early access request')
 })

@@ -3,7 +3,9 @@ import Layout from '../layouts/Layout.astro'
 import SectionHeader from '../components/SectionHeader.jsx'
 import PrimaryButton from '../components/PrimaryButton.jsx'
 import VectorField from '../components/VectorField.astro'
-import ContactForm from '../components/islands/ContactForm.jsx'
+import {
+  PaddleQueueIcon, BracketIcon, TvBoardIcon, UploadFileIcon,
+} from '../components/pickleball/art/FeatureIcons.jsx'
 import * as Icons from '../components/icons/icons.js'
 import { ArrowRight, CheckCircle2 } from '../components/icons/icons.js'
 import { getBreadcrumbSchema, getFaqSchema, getServiceSchema } from '../config/schema.js'
@@ -11,9 +13,11 @@ import { loadPageSeo } from '../lib/content/seo'
 import { loadServicesContent } from '../lib/content/services'
 import { loadProjects } from '../lib/content/projects'
 import { loadPage } from '../lib/content/pages'
-import { resolveTurnstileSiteKey } from '../lib/turnstileSiteKey'
 import { solutionCategories } from '../data/solutionsContent.js'
 import { ENTRY_OFFERS } from '../config/offers.js'
+// Animation keyframes for the pickleball icons below; animation-only rules,
+// scoped to .pb-anim, so nothing else on this page is restyled.
+import '../styles/pickleball-open.css'
 
 function resolveIcon(name: string) {
   return (Icons as Record<string, typeof Icons.Lightbulb>)[name] || Icons.Lightbulb
@@ -23,7 +27,6 @@ const seo = await loadPageSeo('solutions')
 const servicesPage = await loadPage('solutions')
 const { solutionGroups, faqs } = await loadServicesContent()
 const projectItems = await loadProjects()
-const turnstileSiteKey = resolveTurnstileSiteKey(Astro.request.url)
 
 const pageHero = servicesPage?.blocks.find((block) => block.type === 'hero')?.props || {}
 const sectionCopy = servicesPage?.blocks.filter((block) => block.type === 'richText') || []
@@ -55,6 +58,14 @@ function categoryDetail(category: (typeof solutionCategories)[number]) {
 }
 
 const auditOffer = ENTRY_OFFERS['workflow-systems-audit']
+
+// Copy claims only shipped behaviour of /pickleball (see its landing page).
+const pickleballFeatures = [
+  { Icon: PaddleQueueIcon, title: 'Fair rotation', body: 'Paddle stack, winners play winners, by standing or balanced teams. Keep pairs together or apart.' },
+  { Icon: BracketIcon, title: 'Tournaments', body: 'Round robin, pools then a bracket, or single or double elimination.' },
+  { Icon: TvBoardIcon, title: 'QR board and TV mode', body: 'Players follow every court by QR and check themselves in; a TV board shows the hall.' },
+  { Icon: UploadFileIcon, title: 'DUPR export', body: 'Email yourself a CSV of the games to upload to DUPR. Google sign-in is asked for this alone.' },
+]
 
 const jsonLd = [
   getBreadcrumbSchema([
@@ -338,45 +349,43 @@ const jsonLd = [
       </div>
     </section>
 
-    <section class="space-y-5">
+    <section class="space-y-5" aria-labelledby="solutions-pickleball" data-testid="pickleball-promo">
       <SectionHeader
-        title="Devlab Pickleball"
-        subtitle="A live open-play session manager currently in a small pilot — check-in, queueing, court assignment, live scoring, and a real-time public scoreboard from one app."
+        title="Devlab Pickleball: free open play and tournaments"
+        subtitle="Run open play or a casual tournament from one phone. Fair rotation, a live board by QR and a TV mode. Free, no sign-up."
       />
-      <div class="light-artifact rounded-2xl bg-white/[0.92] p-6 shadow-[0_12px_28px_rgba(60,28,120,0.08)] ring-1 ring-slate-200">
-        <p class="text-sm leading-relaxed text-slate-600">
-          The pilot is deliberately small while the operator workflow is validated. If you run open-play sessions for your
-          own club and want early access, the request below is reviewed personally.
+      <h2 id="solutions-pickleball" class="sr-only">Devlab Pickleball</h2>
+      <div class="light-artifact rounded-[28px] bg-gradient-to-br from-[#fff9ff]/95 via-[#f8f6ff]/90 to-[#f2f0ff]/90 p-6 shadow-[0_18px_45px_rgba(60,28,120,0.14)] sm:p-8">
+        <p class="max-w-3xl text-slate-700">
+          Built and run by DevLab Studios. Neither the host nor the players need an account, and a session is deleted 7 days
+          after its last change.
         </p>
-        <div class="mt-4 flex flex-wrap gap-3">
-          <button
-            id="beta-tester-cta"
-            type="button"
-            class="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal focus-visible:ring-offset-2"
-            aria-expanded="false"
-            aria-controls="beta-tester-form"
-          >
-            Be a beta-tester
-          </button>
-          <a
-            href="/pickleball"
-            class="inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-brand-ink ring-1 ring-slate-300 transition hover:ring-brand/40"
-          >
+        <ul class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {pickleballFeatures.map(({ Icon, title, body }) => (
+            <li class="flex gap-4 rounded-2xl bg-white/90 p-4 ring-1 ring-slate-200 sm:flex-col">
+              <div class="pb-anim flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#0f1d47]" data-testid="pb-artwork">
+                <Icon className="h-8 w-8" />
+              </div>
+              <div>
+                <h3 class="font-semibold text-brand-ink">{title}</h3>
+                <p class="mt-1 text-sm leading-relaxed text-slate-600">{body}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div class="mt-6 flex flex-wrap items-center gap-3">
+          <PrimaryButton to="/pickleball/new?ref=solutions" data-cta-id="solutions-pickleball-primary" data-cta-variant="primary" showIcon>
+            Start a free session
+          </PrimaryButton>
+          <PrimaryButton to="/pickleball/how-it-works?ref=solutions" variant="secondary" data-cta-id="solutions-pickleball-secondary" data-cta-variant="secondary">
             See how it works
+          </PrimaryButton>
+        </div>
+        <p class="mt-5 text-sm text-slate-600">
+          <a href="/contact" class="font-semibold text-brand-teal underline-offset-4 transition hover:text-brand-orange hover:underline" data-cta-id="solutions-pickleball-club">
+            Run a club or league? Talk to us about a custom setup
           </a>
-        </div>
-        <div id="beta-tester-form" hidden class="mt-6">
-          <ContactForm
-            client:visible
-            siteKey={turnstileSiteKey}
-            copy={{
-              subjectLabel: 'What would you like to test?',
-              subjectPlaceholder: 'Pickleball beta tester request',
-              messageLabel: 'Tell us about your club',
-              messagePlaceholder: 'How many players, how often you run open play, and what you would want out of the app.',
-            }}
-          />
-        </div>
+        </p>
       </div>
     </section>
 
@@ -399,18 +408,4 @@ const jsonLd = [
     </section>
   </div>
 
-  <script>
-    const trigger = document.getElementById('beta-tester-cta')
-    const panel = document.getElementById('beta-tester-form')
-
-    trigger?.addEventListener('click', () => {
-      if (!panel) return
-      panel.hidden = false
-      trigger.setAttribute('aria-expanded', 'true')
-      panel.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      // Focus moves into the revealed panel, or a keyboard user is left where
-      // they were with no indication that anything appeared.
-      panel.querySelector<HTMLInputElement>('input, textarea')?.focus({ preventScroll: true })
-    })
-  </script>
 </Layout>

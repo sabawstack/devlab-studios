@@ -54,6 +54,7 @@ decided against that surface specifically:
 ### Changed
 
 - The `/pickleball` landing page's ten feature cards are grouped into three bands (Run the courts, Share the game, Tournaments and records), each card with a small hand-drawn animated SVG icon (`FeatureIcons.jsx`, new `pb-lift`/`pb-grow`/`pb-spot`/`pb-sweep` keyframes that stop for reduced motion) and one short line of copy; phrases pinned by the public-pages spec are kept.
+- The free Devlab Pickleball app is promoted on the main site: `/solutions` replaces the retired "Be a beta-tester" block (its form and toggle script) with a light card of four animated feature icons and "Start a free session" / "See how it works" CTAs plus a "Run a club or league?" link to `/contact`; the home page gains a "Built by DevLab" spotlight band after the proof section; the footer gains a hard-coded Products link. Pickleball links carry a harmless `?ref=solutions|home|footer`. The legacy `/api/contact` e2e now drives the `/pickleball` club form.
 
 ### Fixed
 

@@ -18,6 +18,17 @@ import {
   solutionCategories,
 } from '../data/solutionsContent.js'
 import { getLeadMagnet } from '../config/offers.js'
+import HeroRallyArt from '../components/pickleball/art/HeroRallyArt.jsx'
+// Animation keyframes for the pickleball art; animation-only rules scoped to
+// .pb-anim, so nothing else on the home page is restyled.
+import '../styles/pickleball-open.css'
+
+// Copy claims only shipped behaviour of /pickleball (see its landing page).
+const pickleballProof = [
+  'Fair rotation on up to 16 courts: paddle stack, winners play winners, by standing or balanced teams.',
+  'Players follow every court by QR, and a TV board shows the hall. Nobody needs an account.',
+  'Tournaments too: round robin, pools then a bracket, or single or double elimination.',
+]
 
 function resolveIcon(name: string) {
   return (Icons as Record<string, typeof Icons.Lightbulb>)[name] || Icons.Lightbulb
@@ -291,6 +302,38 @@ const jsonLd = [getOrganizationSchema(), getWebsiteSchema(), getFaqSchema(faqs)]
         </div>
       </section>
     ) : null}
+
+    <!-- 4b. Product built and run by the studio -->
+    <section class="chapter-dark p-6 sm:p-8 lg:p-10" aria-labelledby="home-product" data-testid="home-pickleball">
+      <div class="grid gap-2 lg:grid-cols-[1fr_1fr] lg:items-center lg:gap-12">
+        <div class="space-y-5">
+          <p class="tech-kicker">Built by DevLab</p>
+          <h2 id="home-product" class="text-3xl font-semibold leading-tight text-white sm:text-4xl">Devlab Pickleball</h2>
+          <p class="max-w-xl text-white/75 sm:text-lg">
+            A free web app this studio builds and runs: host open play or a casual tournament for your group from one phone.
+          </p>
+          <ul class="space-y-2.5 text-sm text-white/80 sm:text-base">
+            {pickleballProof.map((point) => (
+              <li class="flex gap-2.5 leading-relaxed">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#c6ff2e] sm:mt-1" aria-hidden="true" />
+                <span>{point}</span>
+              </li>
+            ))}
+          </ul>
+          <div class="flex flex-wrap gap-3 pt-1">
+            <PrimaryButton to="/pickleball/new?ref=home" data-cta-id="home-pickleball-primary" data-cta-variant="primary" showIcon>
+              Start a free session
+            </PrimaryButton>
+            <PrimaryButton to="/pickleball?ref=home" variant="secondary" data-cta-id="home-pickleball-secondary" data-cta-variant="secondary">
+              See how it works
+            </PrimaryButton>
+          </div>
+        </div>
+        <div class="pb-anim mx-auto -mt-8 w-full max-w-xl lg:mt-0" data-testid="pb-artwork">
+          <HeroRallyArt className="h-auto w-full" />
+        </div>
+      </div>
+    </section>
 
     <!-- 5. Delivery approach -->
     <section class="chapter space-y-6" aria-labelledby="home-approach">

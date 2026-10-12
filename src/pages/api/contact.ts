@@ -13,8 +13,8 @@ export const prerender = false
 /**
  * The legacy four-field contact endpoint.
  *
- * Kept as a stable public contract — the Pickleball beta-tester form on
- * /solutions still posts this shape, and so may anything external — but it no
+ * Kept as a stable public contract — the Pickleball club form on
+ * /pickleball still posts this shape, and so may anything external — but it no
  * longer has its own pipeline. It normalizes into the inquiry shape and hands
  * off to the same persist-then-deliver service as /api/inquiries, so both
  * paths share one set of guarantees rather than drifting apart.
