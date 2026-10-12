@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { claimStateFor, DUPR_EXPORT_LIMIT, exportsLeft, exportWindowStart, hoursUntilNextExport, limitMessage } from './policy'
+import { claimStateFor, DUPR_EXPORT_LIMIT, exportsLeft, exportWindowStart, hoursUntilNextExport, limitMessage, secondsUntilNextExport } from './policy'
 
 describe('claimStateFor', () => {
   it('is unclaimed, mine, or someone else’s (including when signed out)', () => {
@@ -26,5 +26,11 @@ describe('the 5-a-day limit', () => {
     expect(hoursUntilNextExport(['2026-10-11T12:30:00.000Z'], now)).toBe(1)
     expect(limitMessage(sent, now)).toBe('A session can be sent to DUPR 5 times a day. Try again in about 3 hours.')
     expect(limitMessage(['2026-10-11T12:30:00.000Z'], now)).toBe('A session can be sent to DUPR 5 times a day. Try again in about 1 hour.')
+  })
+
+  it('gives the exact seconds until the oldest export leaves the window, for Retry-After', () => {
+    expect(secondsUntilNextExport(['2026-10-11T14:30:00.000Z', '2026-10-12T09:00:00.000Z'], now)).toBe(9000)
+    expect(secondsUntilNextExport(['2026-10-11T12:00:00.500Z'], now)).toBe(1)
+    expect(secondsUntilNextExport(['2026-10-11T11:00:00.000Z'], now)).toBe(1)
   })
 })

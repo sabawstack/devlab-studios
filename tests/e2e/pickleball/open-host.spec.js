@@ -227,6 +227,9 @@ test.describe('the DUPR export (API)', () => {
     const sixth = await exportDupr(request, baseURL, code, hostKey)
     expect(sixth.status()).toBe(429)
     expect((await sixth.json()).error).toMatch(/^A session can be sent to DUPR 5 times a day\. Try again in about \d+ hours?\.$/)
+    const retryAfter = Number(sixth.headers()['retry-after'])
+    expect(retryAfter).toBeGreaterThan(23 * 3600)
+    expect(retryAfter).toBeLessThanOrEqual(24 * 3600)
     expect((await (await dupr(request, code, hostKey)).json()).exportsLeft).toBe(0)
   })
 
@@ -240,6 +243,24 @@ test.describe('the DUPR export (API)', () => {
     expect((await refused.json()).error).toBe('Only the Google account this session is linked to can export it.')
     expect((await exportDupr(request, baseURL, code, hostKey)).status()).toBe(200)
     await other.dispose()
+  })
+  test('no sign-in, a wrong host key or a made-up time zone is refused, and none of them uses up an export', async ({ request, playwright, baseURL }) => {
+    const { code, hostKey } = await readyToExport(request, baseURL)
+    const stranger = await playwright.request.newContext({ baseURL })
+    const signedOut = await exportDupr(stranger, baseURL, code, hostKey)
+    expect(signedOut.status()).toBe(401)
+    expect((await signedOut.json()).error).toBe('Sign in with Google first.')
+    await stranger.dispose()
+
+    const wrongKey = await exportDupr(request, baseURL, code, 'not-the-host-key-at-all')
+    expect(wrongKey.status()).toBe(403)
+    expect((await wrongKey.json()).error).toBe('Only the host can do that.')
+
+    const badZone = await exportDupr(request, baseURL, code, hostKey, 'Mars/Olympus')
+    expect(badZone.status()).toBe(400)
+    expect((await badZone.json()).error).toMatch(/time zone/)
+
+    expect((await (await dupr(request, code, hostKey)).json()).exportsLeft).toBe(5)
   })
 })
 

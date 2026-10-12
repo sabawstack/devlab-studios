@@ -11,7 +11,7 @@ import { captainLabel, captainRefusal, findCaptain } from '../../../lib/pickleba
 import { applyCheckIn } from '../../../lib/pickleball/open/checkIn'
 import { buildDuprEmail, duprFilename, type DuprEmail } from '../../../lib/pickleball/open/dupr/email'
 import { buildDuprExport, localDate, normalizeTimeZone, type DuprSkip } from '../../../lib/pickleball/open/dupr/export'
-import { claimStateFor, DUPR_EXPORT_LIMIT, exportsLeft, exportWindowStart, limitMessage, type ClaimState } from '../../../lib/pickleball/open/dupr/policy'
+import { claimStateFor, DUPR_EXPORT_LIMIT, exportsLeft, exportWindowStart, limitMessage, secondsUntilNextExport, type ClaimState } from '../../../lib/pickleball/open/dupr/policy'
 import { applyCommand, finalizeCommand, touch } from '../../../lib/pickleball/open/reducer'
 import { resultsCsv } from '../../../lib/pickleball/open/resultsCsv'
 import { constantTimeEqual } from '../../../lib/pickleball/open/secrets'
@@ -356,23 +356,21 @@ export class OpenSessionDO extends DurableObject<Env> {
       }
       const now = new Date().toISOString()
       const sent = await recentDuprExports(this.env.PICKLEBALL_DB, auth.state.id, exportWindowStart(now))
-      if (!exportsLeft(sent)) return { status: 429, body: { error: limitMessage(sent, now) } }
-      const exportId = crypto.randomUUID()
-      await insertDuprExport(this.env.PICKLEBALL_DB, {
-        id: exportId, sessionId: auth.state.id, sentAt: now, gameCount: preview.exported, skippedCount: preview.skipped.length,
-      })
+      if (!exportsLeft(sent)) return { status: 429, body: { error: limitMessage(sent, now) }, retryAfterSeconds: secondsUntilNextExport(sent, now) }
       const date = localDate(auth.state.createdAt, zone)
-      return {
-        status: 200,
-        body: {
-          exportId, csv: preview.csv, filename: duprFilename(auth.state.name, date),
-          email: buildDuprEmail({
-            hostName: host.displayName, sessionName: auth.state.name, date, clubId: host.duprClubId,
-            exported: preview.exported, skipped: preview.skipped,
-          }),
-          exported: preview.exported, skipped: preview.skipped.length, exportsLeft: exportsLeft(sent) - 1,
-        },
+      const body: DuprPrepared = {
+        exportId: crypto.randomUUID(), csv: preview.csv, filename: duprFilename(auth.state.name, date),
+        email: buildDuprEmail({
+          hostName: host.displayName, sessionName: auth.state.name, date, clubId: host.duprClubId,
+          exported: preview.exported, skipped: preview.skipped,
+        }),
+        exported: preview.exported, skipped: preview.skipped.length, exportsLeft: exportsLeft(sent) - 1,
       }
+      // Reserved last, once everything that could throw has run: nothing is held for an export that never left here.
+      await insertDuprExport(this.env.PICKLEBALL_DB, {
+        id: body.exportId, sessionId: auth.state.id, sentAt: now, gameCount: preview.exported, skippedCount: preview.skipped.length,
+      })
+      return { status: 200, body }
     })
   }
 

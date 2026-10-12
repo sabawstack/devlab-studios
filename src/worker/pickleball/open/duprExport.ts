@@ -53,7 +53,34 @@ export async function sendDuprExport(
     html: message.email.html,
     attachments: [{ filename: message.filename, content: base64Utf8(message.csv) }],
   })
-  // The recipient is deliberately absent from the log: it is personal data, and the outcome is diagnosable without it.
-  console.log(JSON.stringify({ event: 'pickleball_open.dupr_email', outcome: result.ok ? 'success' : 'failure', statusCode: result.statusCode, reason: result.errorMessage }))
-  return result.ok ? { delivery: 'SENT' } : { delivery: 'FAILED', reason: result.errorMessage || 'send failed' }
+  // Only the status code and a fixed reason are logged: Resend's own message
+  // can quote the recipient, which is personal data, and the code is enough to diagnose.
+  const reason = result.ok ? undefined : result.networkError ? 'network_error' : 'upstream_refused'
+  console.log(JSON.stringify({ event: 'pickleball_open.dupr_email', outcome: result.ok ? 'success' : 'failure', statusCode: result.statusCode, reason }))
+  return reason ? { delivery: 'FAILED', reason } : { delivery: 'SENT' }
+}
+
+/**
+ * Sends, and gives the reserved export back on anything but success, a thrown
+ * send included: a failed email must never cost the host one of the day's 5.
+ * Never throws; a failed release is logged and the failure still reported.
+ */
+export async function sendOrRelease(
+  env: MailEnv,
+  message: { to: string; email: DuprEmail; filename: string; csv: string },
+  release: () => Promise<void>,
+  send: typeof sendDuprExport = sendDuprExport,
+): Promise<DuprDelivery> {
+  let sent: DuprDelivery
+  try {
+    sent = await send(env, message)
+  } catch {
+    // The error text is not logged: it may carry the recipient.
+    console.log(JSON.stringify({ event: 'pickleball_open.dupr_email', outcome: 'failure', reason: 'send_threw' }))
+    sent = { delivery: 'FAILED', reason: 'send_threw' }
+  }
+  if (sent.delivery === 'FAILED') {
+    await release().catch(() => console.log(JSON.stringify({ event: 'pickleball_open.dupr_email', outcome: 'release_failed' })))
+  }
+  return sent
 }

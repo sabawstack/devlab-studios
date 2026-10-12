@@ -32,6 +32,12 @@ export function hoursUntilNextExport(sentAt: readonly string[], now: string): nu
   return Math.max(1, Math.ceil((Date.parse(oldest) + DUPR_EXPORT_WINDOW_MS - Date.parse(now)) / 3_600_000))
 }
 
+/** Whole seconds until the oldest counted export leaves the window (at least 1): the 429's Retry-After. */
+export function secondsUntilNextExport(sentAt: readonly string[], now: string): number {
+  const oldest = sentAt.reduce((min, at) => (at < min ? at : min), sentAt[0] ?? now)
+  return Math.max(1, Math.ceil((Date.parse(oldest) + DUPR_EXPORT_WINDOW_MS - Date.parse(now)) / 1000))
+}
+
 export function limitMessage(sentAt: readonly string[], now: string): string {
   const hours = hoursUntilNextExport(sentAt, now)
   return `A session can be sent to DUPR ${DUPR_EXPORT_LIMIT} times a day. Try again in about ${hours} hour${hours === 1 ? '' : 's'}.`

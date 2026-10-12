@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { normalizeTimeZone } from '../../../pickleball/open/dupr/export'
 
 const email = z.string().trim().toLowerCase().max(254).regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
 
@@ -24,7 +25,7 @@ export const hostProfilePatchSchema = z.object({
 
 /** POST /api/pickleball/open/s/{code}/dupr-export. The zone is the host's device's, for game dates. */
 export const duprExportRequestSchema = z.object({
-  timeZone: z.string().max(64).optional(),
+  timeZone: z.string().max(64).refine((zone) => normalizeTimeZone(zone) === zone).optional(),
 })
 
 export type HostProfilePatch = z.infer<typeof hostProfilePatchSchema>
