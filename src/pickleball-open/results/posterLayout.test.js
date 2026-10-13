@@ -130,7 +130,8 @@ describe('posterModel', () => {
     expect(model.subtitle).toBe('Final standings · Oct 13, 2026')
     expect(model.host).toBe('Hosted by Coach Mike')
     expect(model.steps.map((s) => s.place)).toEqual([2, 1, 3])
-    expect(model.steps[1].entries[0]).toEqual({ name: 'Ana', stat: '2–1 · 67%' })
+    expect(model.steps[1].entries[0]).toEqual({ name: 'Ana', stat: '2–1 · 50% pts' })
+    expect(model.rest[0].stat).toBe('1–1 · 50% pts')
     expect(model.rest.map((r) => r.place)).toEqual(['4', '5', '6', '7', '8', '9', '10'])
     expect(model.more).toBe('+2 more players')
     expect(model.summary).toBe('9 players · 12 games · 1 h 30 min')
@@ -219,7 +220,7 @@ describe('posterLayout', () => {
   it('posterText gathers every string drawn, so the font subsets for any name load', () => {
     const model = posterModel(results({ podium: [step(1, ['Łukasz Wiśniewski'])], rest: [entry('ВасилийПетровичСидоров', 4)] }), { hostName: 'Nguyễn Văn An', dateText: 'Oct 13, 2026' })
     const text = posterText(model)
-    for (const part of ['Sunday Open Play', 'Łukasz Wiśniewski', 'ВасилийПетровичСидоров', 'Hosted by Nguyễn Văn An', ...BAND_LINES, '2–1 · 67%']) expect(text).toContain(part)
+    for (const part of ['Sunday Open Play', 'Łukasz Wiśniewski', 'ВасилийПетровичСидоров', 'Hosted by Nguyễn Văn An', ...BAND_LINES, '2–1 · 50% pts']) expect(text).toContain(part)
   })
   it('with no games it says so instead of drawing a podium', () => {
     const layout = posterLayout(posterModel(results({ podium: [] }), { hostName: 'M', dateText: 'd' }), measure)

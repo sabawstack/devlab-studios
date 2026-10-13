@@ -51,6 +51,10 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+### Changed
+
+- Pickleball final results (podium, TV podium and rest list, results poster): each record now shows the share of points won, e.g. "4–2 · 53% pts", instead of win %, so players with the same record are told apart by the visible tiebreak. Records with no scored games show just the W–L. Ranking is unchanged.
+
 ## [2.1.1] - 2026-10-13
 
 ### Fixed

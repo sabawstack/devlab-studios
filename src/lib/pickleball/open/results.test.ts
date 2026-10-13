@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  durationText, finalResults, finishLine, ordinal, nextTvPodiumFit, podiumDisplayOrder, podiumStepColumns, previewMeta, shareText, showsFinalResults, summaryText,
+  durationText, finalResults, finishLine, ordinal, nextTvPodiumFit, podiumDisplayOrder, podiumStepColumns, previewMeta, recordWithPoints, shareText, showsFinalResults, summaryText,
   TV_PODIUM_FIT, tvRestColumns,
 } from './results'
 import { toViewerSnapshot } from './snapshot'
@@ -389,5 +389,12 @@ describe('finishLine (the personal banner on an ended board)', () => {
     expect(finishLine(viewer, winnerId)).toMatch(/Your pair finished 1st$/)
     const benched = state.tournament!.entrants.find((e) => finalResults(viewer).didntPlay.includes(viewer.tournament!.pairs.find((p) => p.id === e.id)!.name))!.playerIds[0]
     expect(finishLine(viewer, benched)).toMatch(/Thanks for coming 👋$/)
+  })
+})
+
+describe('recordWithPoints', () => {
+  it('shows the record and the rounded share of points won, or just the record when unscored', () => {
+    expect(recordWithPoints({ wins: 4, losses: 2, pointsPct: 0.534 })).toBe('4–2 · 53% pts')
+    expect(recordWithPoints({ wins: 4, losses: 2, pointsPct: null })).toBe('4–2')
   })
 })

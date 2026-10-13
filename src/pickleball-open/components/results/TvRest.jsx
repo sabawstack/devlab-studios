@@ -3,9 +3,8 @@
 // rows that fit are shown (never a clipped one). Anything left over is counted
 // and sent to the phone board's full list through the QR beside it.
 import { useEffect, useRef, useState } from 'react'
-import { tvRestColumns, winLoss } from '../../../lib/pickleball/open/results'
+import { tvRestColumns, recordWithPoints } from '../../../lib/pickleball/open/results'
 
-const pct = (value) => (value === null ? '–' : `${Math.round(value * 100)}%`)
 const WRAP = '[overflow-wrap:anywhere]'
 
 /** The rows of `list` that end within `room` px of its top, counted from the first. */
@@ -65,7 +64,7 @@ function FittedRest({ rest, didntPlay }) {
         // The record wraps under the name in a narrow column instead of squeezing it.
         <span className="flex flex-wrap items-baseline justify-between gap-x-3">
           <span className={`min-w-[8ch] ${WRAP}`}><b className="text-pickle-neon tabular-nums">{entry.place}</b> {entry.name}</span>
-          <span className="whitespace-nowrap tabular-nums text-mist">{winLoss(entry)} · {pct(entry.winRate)}</span>
+          <span className="whitespace-nowrap tabular-nums text-mist">{recordWithPoints(entry)}</span>
         </span>
       ),
     })),

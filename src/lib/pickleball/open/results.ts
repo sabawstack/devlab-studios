@@ -181,6 +181,10 @@ export function summaryText(results: Pick<FinalResults, 'players' | 'games' | 'd
 
 export const winLoss = (e: Pick<ResultEntry, 'wins' | 'losses'>): string => `${e.wins}–${e.losses}`
 
+/** "4–2 · 53% pts": the record plus the share of points won (just the record when no game was scored). */
+export const recordWithPoints = (e: Pick<ResultEntry, 'wins' | 'losses' | 'pointsPct'>): string =>
+  e.pointsPct === null || e.pointsPct === undefined ? winLoss(e) : `${winLoss(e)} · ${Math.round(e.pointsPct * 100)}% pts`
+
 /** For the Share results button: the podium with W–L, and the board link. */
 export function shareText(results: FinalResults, boardUrl: string): string {
   const podium = results.podium

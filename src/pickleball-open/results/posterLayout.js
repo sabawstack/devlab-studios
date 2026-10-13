@@ -7,7 +7,7 @@
 // Text is fitted, never cut: shrink on one line first, then wrap to two lines
 // (at spaces, or after a hyphen inside a very long word), shrinking further if
 // it must. Ranking comes from results.ts; nothing here re-ranks anyone.
-import { podiumDisplayOrder, podiumStepColumns, summaryText, winLoss } from '../../lib/pickleball/open/results'
+import { podiumDisplayOrder, podiumStepColumns, recordWithPoints, summaryText } from '../../lib/pickleball/open/results'
 
 export const POSTER = Object.freeze({ width: 1080, height: 1350, pad: 72, bandHeight: 220 })
 
@@ -173,7 +173,6 @@ export function entryCells(count, { x, width, columns, gap }) {
   })
 }
 
-const pct = (value) => (value === null || value === undefined ? '–' : `${Math.round(value * 100)}%`)
 const ORDINAL = { 1: '1st', 2: '2nd', 3: '3rd' }
 
 /**
@@ -191,9 +190,9 @@ export function posterModel(results, { hostName, dateText }) {
     steps: podiumDisplayOrder(results.podium).map((step) => ({
       place: step.place,
       label: ORDINAL[step.place],
-      entries: step.entries.map((e) => ({ name: e.name, stat: `${winLoss(e)} · ${pct(e.winRate)}` })),
+      entries: step.entries.map((e) => ({ name: e.name, stat: recordWithPoints(e) })),
     })),
-    rest: shown.map((e) => ({ place: String(e.place), name: e.name, stat: `${winLoss(e)} · ${pct(e.winRate)}` })),
+    rest: shown.map((e) => ({ place: String(e.place), name: e.name, stat: recordWithPoints(e) })),
     more: moreLabel(more, pairs ? 'pair' : 'player'),
     summary: summaryText(results),
   }

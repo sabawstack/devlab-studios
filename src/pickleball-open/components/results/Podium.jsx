@@ -2,10 +2,9 @@
 // Top three, standing 2nd · 1st · 3rd with 1st tallest. A shared place puts
 // everyone on that step (a tie for 3rd can make four people). The steps rise
 // and the names fade in once; nothing moves under prefers-reduced-motion.
-import { podiumDisplayOrder, podiumStepColumns, winLoss } from '../../../lib/pickleball/open/results'
+import { podiumDisplayOrder, podiumStepColumns, recordWithPoints } from '../../../lib/pickleball/open/results'
 
 const PLACE = { 1: '1st', 2: '2nd', 3: '3rd' }
-const pct = (value) => (value === null ? '–' : `${Math.round(value * 100)}%`)
 
 // Step colours: 1st neon with ink text, 2nd team-B violet with ink text, 3rd navy with white text.
 // On the TV the names and steps scale with --pb-fit (set by the TV, so a big tie still fits).
@@ -19,7 +18,7 @@ function Entry({ entry, highlight, tv }) {
   return (
     <li className={`grid gap-0.5 ${highlight ? 'text-pickle-neon' : ''}`}>
       <span className={`font-bold leading-tight [overflow-wrap:anywhere] ${tv ? 'text-[calc(var(--pb-fit,1)*clamp(1.2rem,1.9vw,3rem))]' : 'text-base sm:text-lg'}`}>{entry.name}</span>
-      <span className={`tabular-nums text-mist ${tv ? 'text-[clamp(1.05rem,1.35vw,2rem)]' : 'text-sm'}`}>{winLoss(entry)} · {pct(entry.winRate)}</span>
+      <span className={`tabular-nums text-mist ${tv ? 'text-[clamp(1.05rem,1.35vw,2rem)]' : 'text-sm'}`}>{recordWithPoints(entry)}</span>
     </li>
   )
 }
