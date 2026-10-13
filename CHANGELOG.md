@@ -54,7 +54,7 @@ decided against that surface specifically:
 ### Changed
 
 - Dependabot now updates react, react-dom and their types together, and skips the Tailwind, TypeScript, ESLint and Vitest major versions that need a hand-made migration, so it stops opening update PRs that leave the two React packages on different versions or that cannot build.
-- The new `react-hooks/set-state-in-effect` lint rule is a warning for now, and the unused LinkedIn and Twitter icon exports are gone (lucide 1.x removed brand icons), so the pending dev-tool and icon updates can build.
+- The new `react-hooks/set-state-in-effect` and `react-hooks/refs` lint rules are warnings for now, and the unused LinkedIn and Twitter icon exports are gone (lucide 1.x removed brand icons), so the pending dev-tool and icon updates can build.
 
 ## [2.2.0] - 2026-10-13
 

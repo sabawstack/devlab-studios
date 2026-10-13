@@ -25,9 +25,12 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^[A-Z_]' }],
-      // Added in react-hooks 7.1; it flags the load-on-mount pattern used across
-      // the admin app. Kept visible as a warning until those effects are reworked.
+      // Added in react-hooks 7.1. set-state-in-effect flags the load-on-mount
+      // pattern across the admin app; refs flags the latest-value ref in
+      // useCommandQueue and the Turnstile hook's container ref. Kept visible as
+      // warnings until those spots are reworked.
       'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/refs': 'warn',
     },
   },
   {
