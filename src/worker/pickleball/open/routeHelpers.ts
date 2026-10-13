@@ -1,5 +1,5 @@
 import { normalizePublicCode } from '../../../lib/pickleball/open/codes'
-import { checkRateLimit, clientIp, rateLimitedResponse } from '../../rateLimit.js'
+import { checkRateLimit, checkRateLimitStrict, clientIp, rateLimitedResponse } from '../../rateLimit.js'
 import { jsonResponse } from '../../utils/responses.js'
 import type { Credentials, DoResult } from './OpenSessionDO'
 
@@ -63,11 +63,11 @@ export function openErrorResponse(error: unknown, route: string): Response {
  * Self check-in is anonymous, so each address is limited before the DO is
  * reached. 30 per 10 minutes, not fewer: a whole venue often shares one
  * address on its Wi-Fi. The DO adds a per-session cap on top. Fails CLOSED
- * like session creation: without a working limiter, anonymous writes are
- * refused. The caller drains any body first.
+ * like session creation: without a working limiter (no binding, or one that
+ * errors), anonymous writes are refused with a 503. The caller drains any body first.
  */
 export async function checkInIpLimited(env: Env, request: Request): Promise<Response | null> {
-  if (!env.RATE_LIMITER) return jsonResponse({ error: 'Check-in is temporarily unavailable. Try again shortly.' }, 503)
-  const rate = await checkRateLimit(env, 'open-checkin-ip', clientIp(request), { limit: 30, windowMs: 10 * 60_000 })
+  const rate = await checkRateLimitStrict(env, 'open-checkin-ip', clientIp(request), { limit: 30, windowMs: 10 * 60_000 })
+  if (rate.unavailable) return jsonResponse({ error: 'Check-in is temporarily unavailable. Try again shortly.' }, 503)
   return rate.limited ? rateLimitedResponse('Too many check-ins from this network. Try again in a few minutes.', rate.retryAfterSeconds) : null
 }

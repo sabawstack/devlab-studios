@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { baseItemSchema, seoSchema, slugSchema } from './shared'
+import { baseItemSchema, linkHrefSchema, requiredLinkHrefSchema, seoSchema, slugSchema } from './shared'
 
 export const serviceSchema = baseItemSchema.extend({
   eyebrow: z.string().optional().default(''),
@@ -15,8 +15,8 @@ export const projectSchema = baseItemSchema.extend({
   title: z.string().min(1),
   description: z.string().min(1),
   techStack: z.array(z.string()).default([]),
-  liveUrl: z.string().default('#'),
-  sourceUrl: z.string().default('#'),
+  liveUrl: linkHrefSchema.default('#'),
+  sourceUrl: linkHrefSchema.default('#'),
   imageUrl: z.string().optional().default(''),
   type: z.enum(['Automation', 'Website']),
 })
@@ -95,7 +95,7 @@ export const certificationSchema = baseItemSchema.extend({
   name: z.string().min(1),
   issuer: z.string().min(1),
   issuedDate: z.string().optional().default(''),
-  credentialUrl: z.string().optional().default(''),
+  credentialUrl: linkHrefSchema.optional().default(''),
   badgeImageUrl: z.string().optional().default(''),
 })
 export type Certification = z.infer<typeof certificationSchema>
@@ -141,7 +141,7 @@ export const resourceSchema = baseItemSchema.extend({
   title: z.string().min(1),
   description: z.string().optional().default(''),
   resourceType: z.enum(['template', 'checklist', 'external-link', 'download']).default('download'),
-  url: z.string().min(1),
+  url: requiredLinkHrefSchema,
   icon: z.string().optional().default(''),
   tags: z.array(z.string()).default([]),
   isFeatured: z.boolean().default(false),
@@ -158,7 +158,7 @@ export type Faq = z.infer<typeof faqSchema>
 export const redirectSchema = z.object({
   id: z.string().optional(),
   fromPath: z.string().min(1).startsWith('/'),
-  toPath: z.string().min(1),
+  toPath: requiredLinkHrefSchema,
   statusCode: z.union([z.literal(301), z.literal(302)]).default(301),
   note: z.string().optional().default(''),
 })

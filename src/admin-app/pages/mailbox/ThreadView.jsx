@@ -74,8 +74,55 @@ function Attachments({ attachments }) {
   )
 }
 
-function ReplyBox({ threadId, parentMessageId, onDone }) {
+/**
+ * Where Send goes, said before Send is pressed.
+ *
+ * Reply-To silently decides the recipient in every mail client, which is
+ * exactly what makes it a hijack: a forged message on a lead's thread with a
+ * Reply-To elsewhere, and the answer goes to the forger. So the resolved
+ * address is always shown, and when the server says it needs confirming (the
+ * message is unverified, or Reply-To is a different domain from From) the
+ * operator has to tick a box naming it — the server checks the same thing.
+ */
+function RecipientNotice({ target, confirmed, onConfirm, disabled }) {
+  if (!target?.address) return null
+  const sourceLabel =
+    target.source === 'reply_to' ? 'from the Reply-To header' : target.source === 'from' ? 'the sender' : 'the thread'
+
+  return (
+    <div
+      className={`rounded-lg border px-3 py-2 text-xs ${
+        target.requiresConfirmation ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-slate-200 bg-slate-50 text-slate-700'
+      }`}
+    >
+      <p>
+        To: <strong>{target.address}</strong> <span className="text-slate-500">({sourceLabel})</span>
+      </p>
+      {target.warnings?.length ? (
+        <ul className="mt-1 list-disc pl-4">
+          {target.warnings.map((warning) => (
+            <li key={warning}>{warning}</li>
+          ))}
+        </ul>
+      ) : null}
+      {target.requiresConfirmation ? (
+        <label className="mt-2 flex items-center gap-2 font-semibold">
+          <input
+            type="checkbox"
+            checked={confirmed}
+            disabled={disabled}
+            onChange={(event) => onConfirm(event.target.checked)}
+          />
+          I have checked that {target.address} is the right recipient.
+        </label>
+      ) : null}
+    </div>
+  )
+}
+
+function ReplyBox({ threadId, parentMessageId, replyTarget, onDone }) {
   const [body, setBody] = useState('')
+  const [confirmed, setConfirmed] = useState(false)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState(null)
   const [attachmentIds, setAttachmentIds] = useState([])
@@ -85,8 +132,12 @@ function ReplyBox({ threadId, parentMessageId, onDone }) {
   // that shows files it will not send is worse than one that shows none.
   const [pickerKey, setPickerKey] = useState(0)
 
+  const needsConfirmation = Boolean(replyTarget?.requiresConfirmation)
+  const blocked = needsConfirmation && !confirmed
+
   async function submit(asDraft) {
     if (!body.trim() && !asDraft) return
+    if (blocked) return
 
     setBusy(true)
     setFeedback(null)
@@ -96,8 +147,12 @@ function ReplyBox({ threadId, parentMessageId, onDone }) {
         inReplyToMessageId: parentMessageId ?? null,
         asDraft,
         attachmentIds,
+        // The exact address the operator confirmed; the server refuses if what
+        // it resolves now is different.
+        confirmRecipient: needsConfirmation && confirmed ? replyTarget.address : null,
       })
       setBody('')
+      setConfirmed(false)
       setAttachmentIds([])
       setPickerKey((current) => current + 1)
       setFeedback({
@@ -125,6 +180,7 @@ function ReplyBox({ threadId, parentMessageId, onDone }) {
       <label className="block text-xs font-semibold text-slate-600" htmlFor={`reply-${threadId}`}>
         Reply as hello@devlabconnect.com
       </label>
+      <RecipientNotice target={replyTarget} confirmed={confirmed} onConfirm={setConfirmed} disabled={busy} />
       <textarea
         id={`reply-${threadId}`}
         value={body}
@@ -136,10 +192,15 @@ function ReplyBox({ threadId, parentMessageId, onDone }) {
       <AttachmentPicker key={pickerKey} attachmentIds={attachmentIds} onChange={setAttachmentIds} disabled={busy} />
       <Feedback feedback={feedback} />
       <div className="flex flex-wrap items-center gap-2">
-        <button type="submit" disabled={busy || !body.trim()} className={primaryButtonClass}>
+        <button type="submit" disabled={busy || blocked || !body.trim()} className={primaryButtonClass}>
           {busy ? 'Working…' : 'Send'}
         </button>
-        <button type="button" disabled={busy || !body.trim()} onClick={() => submit(true)} className={buttonClass}>
+        <button
+          type="button"
+          disabled={busy || blocked || !body.trim()}
+          onClick={() => submit(true)}
+          className={buttonClass}
+        >
           Save draft
         </button>
         <p className="text-xs text-slate-500">
@@ -175,7 +236,7 @@ function ThreadView({ threadId, onChanged }) {
     }
   }
 
-  const { thread, messages, outbound } = data
+  const { thread, messages, outbound, replyTarget } = data
   const pending = (outbound ?? []).filter((item) => item.status === 'queued' || item.status === 'collected')
   const drafts = (outbound ?? []).filter((item) => item.status === 'draft')
   const failed = (outbound ?? []).filter((item) => item.status === 'failed')
@@ -262,6 +323,14 @@ function ThreadView({ threadId, onChanged }) {
               <div className="mt-1 flex flex-wrap items-center gap-3">
                 <p className="text-sm font-medium text-slate-800">{message.subject || '(no subject)'}</p>
                 <AuthResults auth={message.auth} />
+                {inbound && message.verified === false ? (
+                  <span
+                    className="rounded border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-xs font-semibold text-amber-800"
+                    title="DMARC did not pass at our mail edge, so the From address is the sender's claim, not a verified fact."
+                  >
+                    Unverified sender
+                  </span>
+                ) : null}
               </div>
 
               {message.isDsn && message.dsn ? (
@@ -335,6 +404,9 @@ function ThreadView({ threadId, onChanged }) {
       <ReplyBox
         threadId={thread.id}
         parentMessageId={lastInbound?.id ?? null}
+        // Keyed on the target so a changed recipient resets the confirmation.
+        key={`${replyTarget?.messageId ?? ''}:${replyTarget?.address ?? ''}`}
+        replyTarget={replyTarget}
         onDone={() => {
           reload()
           // The list shows message counts and last-activity time, so it is

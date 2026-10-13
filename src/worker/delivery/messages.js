@@ -132,9 +132,18 @@ export function buildNotificationEmail(lead, { attribution = null } = {}) {
 }
 
 /**
- * Confirmation sent to the visitor. Deliberately states only what actually
- * happens — that the inquiry was received and a human will reply — with no
- * response-time promise the studio has not committed to.
+ * Confirmation sent to the visitor.
+ *
+ * A FIXED ACKNOWLEDGEMENT, NOTHING THE VISITOR TYPED. This mail goes to
+ * whatever address the form was given, from our own domain and DKIM-signed, so
+ * anything echoed from the submission — the name, the message — is text a
+ * stranger gets to send under the studio's name to an arbitrary inbox (a
+ * phishing link in the name field was enough). It therefore carries no
+ * greeting by name and no copy of the message; only the inquiry type picks
+ * between two fixed texts. Security audit F4 / M5.
+ *
+ * Deliberately states only what actually happens — that the inquiry was
+ * received and a human will reply — with no response-time promise.
  */
 export function buildConfirmationEmail(lead) {
   const isEmployment = lead.inquiryType === 'employment_opportunity' || lead.inquiryType === 'contract_collaboration'
@@ -146,28 +155,16 @@ export function buildConfirmationEmail(lead) {
     ? 'If there is a fit, you will get a direct reply with availability and next steps.'
     : 'You will get a reply with the clearest next step for your system — usually a short discovery conversation or a scoped recommendation.'
 
-  const text = [
-    `Hi ${lead.name},`,
-    '',
-    intro,
-    '',
-    next,
-    '',
-    'For reference, this is what was submitted:',
-    '',
-    lead.message,
-    '',
-    '— DevLab Studios',
-    'https://www.devlabstudios.com',
-  ].join('\n')
+  const notYou = 'If you did not contact DevLab Studios, you can ignore this email.'
+
+  const text = ['Hello,', '', intro, '', next, '', notYou, '', '— DevLab Studios', 'https://www.devlabstudios.com'].join('\n')
 
   const html = `
     <div style="font-family:system-ui,-apple-system,sans-serif;color:#111321;line-height:1.6;">
-      <p>Hi ${escapeHtml(lead.name)},</p>
+      <p>Hello,</p>
       <p>${escapeHtml(intro)}</p>
       <p>${escapeHtml(next)}</p>
-      <p style="color:#535b73;">For reference, this is what was submitted:</p>
-      <blockquote style="margin:0;padding:12px 16px;border-left:3px solid #4500ff;background:#f5f5fc;white-space:pre-wrap;">${escapeHtml(lead.message)}</blockquote>
+      <p style="color:#535b73;">${escapeHtml(notYou)}</p>
       <p>— DevLab Studios<br><a href="https://www.devlabstudios.com">devlabstudios.com</a></p>
     </div>
   `.trim()
@@ -179,13 +176,19 @@ export function buildConfirmationEmail(lead) {
   }
 }
 
-/** Lead-magnet delivery: the requested resource plus one clear next step. */
-export function buildLeadMagnetEmail(lead, offer) {
+/**
+ * Lead-magnet delivery: the requested resource plus one clear next step.
+ *
+ * Same rule as the confirmation: nothing the visitor typed is echoed (no
+ * greeting by name). The offer title and URL come from the server-owned
+ * registry, never from the submission.
+ */
+export function buildLeadMagnetEmail(_lead, offer) {
   const url = offer?.url || 'https://www.devlabstudios.com/insights'
   const title = offer?.title || 'Your requested resource'
 
   const text = [
-    `Hi ${lead.name},`,
+    'Hello,',
     '',
     `Here is ${title}:`,
     url,
@@ -197,7 +200,7 @@ export function buildLeadMagnetEmail(lead, offer) {
 
   const html = `
     <div style="font-family:system-ui,-apple-system,sans-serif;color:#111321;line-height:1.6;">
-      <p>Hi ${escapeHtml(lead.name)},</p>
+      <p>Hello,</p>
       <p>Here is <strong>${escapeHtml(title)}</strong>:</p>
       <p><a href="${escapeHtml(url)}">${escapeHtml(url)}</a></p>
       <p>If you want this applied to your own intake and follow-up process, reply to this email or <a href="https://www.devlabstudios.com/contact">start an inquiry</a>.</p>

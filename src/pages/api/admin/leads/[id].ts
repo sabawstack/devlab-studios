@@ -11,6 +11,7 @@ import { recordAuditEvent } from '../../../../worker/repositories/auditLog.js'
 import { getEnv } from '../../../../lib/env'
 import { adminErrorResponse, drainRequestBody, jsonResponse, readJsonBody } from '../../../../lib/http'
 import { leadUpdateSchema } from '../../../../lib/schemas/inquiry'
+import { withAdmin } from '../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -33,7 +34,7 @@ async function loadDetail(db: D1Database, id: string) {
   return { ...lead, attempts, attribution, consents, activities }
 }
 
-export const GET: APIRoute = async ({ params }) => {
+const unguardedGET: APIRoute = async ({ params }) => {
   const id = params.id as string
   const env = getEnv()
   if (!env.DB) return jsonResponse({ error: 'D1 DB binding is not configured.' }, 503)
@@ -49,7 +50,7 @@ export const GET: APIRoute = async ({ params }) => {
  * visitor-supplied field, so this endpoint cannot be used to rewrite what
  * someone actually submitted.
  */
-export const PATCH: APIRoute = async ({ params, request, locals }) => {
+const unguardedPATCH: APIRoute = async ({ params, request, locals }) => {
   const id = params.id as string
   const env = getEnv()
   if (!env.DB) {
@@ -113,3 +114,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
     return adminErrorResponse(error)
   }
 }
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)
+export const PATCH = withAdmin(unguardedPATCH)

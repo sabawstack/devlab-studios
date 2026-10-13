@@ -7,6 +7,7 @@ import zapierBadge from '../../assets/certificates/Zapier_Certificate.png'
 import makeBadge from '../../assets/certificates/Make_Certificate.png'
 import n8nBadge from '../../assets/certificates/N8N_Certificate.png'
 import highLevelBadge from '../../assets/certificates/HighLevelCertificate.png'
+import { sanitizeLinkFields } from '../safeHref'
 
 const BADGE_IMAGES: Record<string, ImageMetadata> = {
   'cert-zapier-no-code-automation': zapierBadge,
@@ -108,7 +109,8 @@ export async function loadProfileContent(): Promise<ProfileContentData> {
   if (!env.DB) return attachOptimizedBadges(staticProfileContent)
 
   try {
-    const data = await getProfileContent(env.DB)
+    // Profile/certification links re-checked at read time; see src/lib/safeHref.ts.
+    const data = sanitizeLinkFields(await getProfileContent(env.DB))
     if (!hasContent(data)) return await attachOptimizedBadges(staticProfileContent)
     return await attachOptimizedBadges(resolveBadgeImages(data as ProfileContentData))
   } catch {

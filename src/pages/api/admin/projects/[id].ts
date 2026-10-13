@@ -8,8 +8,9 @@ import { getEnv } from '../../../../lib/env'
 import { normalizeProjectMedia } from '../../../../lib/media'
 import { adminErrorResponse, jsonResponse, readJsonBody } from '../../../../lib/http'
 import { buildAuditMetadata, buildDeleteAuditMetadata } from '../../../../lib/audit.js'
+import { withAdmin } from '../../../../lib/adminGuard'
 
-export const GET: APIRoute = async ({ params }) => {
+const unguardedGET: APIRoute = async ({ params }) => {
   const env = getEnv()
   if (!env.DB) return jsonResponse({ error: 'D1 DB binding is not configured.' }, 503)
 
@@ -18,7 +19,7 @@ export const GET: APIRoute = async ({ params }) => {
   return jsonResponse(normalizeProjectMedia(project, env))
 }
 
-export const PUT: APIRoute = async ({ params, request, locals }) => {
+const unguardedPUT: APIRoute = async ({ params, request, locals }) => {
   const env = getEnv()
   if (!env.DB) return jsonResponse({ error: 'D1 DB binding is not configured.' }, 503)
 
@@ -38,7 +39,7 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
   }
 }
 
-export const PATCH: APIRoute = async ({ params, request, locals }) => {
+const unguardedPATCH: APIRoute = async ({ params, request, locals }) => {
   const env = getEnv()
   if (!env.DB) return jsonResponse({ error: 'D1 DB binding is not configured.' }, 503)
 
@@ -59,7 +60,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
   }
 }
 
-export const DELETE: APIRoute = async ({ params, locals }) => {
+const unguardedDELETE: APIRoute = async ({ params, locals }) => {
   const env = getEnv()
   if (!env.DB) return jsonResponse({ error: 'D1 DB binding is not configured.' }, 503)
 
@@ -83,3 +84,9 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
   await recordAuditEvent(env.DB, { actorEmail: locals.adminEmail || null, action: 'delete', entityType: 'projects', entityId: projectId, metadata: buildDeleteAuditMetadata(existing, 'Project') })
   return jsonResponse(deleted)
 }
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)
+export const PUT = withAdmin(unguardedPUT)
+export const PATCH = withAdmin(unguardedPATCH)
+export const DELETE = withAdmin(unguardedDELETE)

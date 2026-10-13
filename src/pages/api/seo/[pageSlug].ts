@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro'
 import { getSeoMetadata } from '../../../worker/repositories/content.js'
 import { getEnv } from '../../../lib/env'
-import { publicJson } from '../../../lib/publicContent'
+import { publicContentFailure, publicJson } from '../../../lib/publicContent'
 
 export const GET: APIRoute = async ({ params }) => {
   const env = getEnv()
@@ -14,7 +14,6 @@ export const GET: APIRoute = async ({ params }) => {
     const data = await getSeoMetadata(env.DB, params.pageSlug as string)
     return publicJson({ data, source: data ? 'd1' : 'static-fallback', configured: Boolean(data) })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return publicJson({ data: null, source: 'static-fallback', configured: false, error: message })
+    return publicContentFailure(null, 'seo', error)
   }
 }

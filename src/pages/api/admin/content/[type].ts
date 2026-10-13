@@ -6,8 +6,9 @@ import { SINGLETON_CONTENT_SCHEMAS } from '../../../../lib/schemas/legacyContent
 import { getEnv } from '../../../../lib/env'
 import { adminErrorResponse, jsonResponse, readJsonBody } from '../../../../lib/http'
 import { buildAuditMetadata } from '../../../../lib/audit.js'
+import { withAdmin } from '../../../../lib/adminGuard'
 
-export const GET: APIRoute = async ({ params }) => {
+const unguardedGET: APIRoute = async ({ params }) => {
   const handlers = getSingletonContentType(params.type as string)
   if (!handlers) return jsonResponse({ error: 'Unknown content type.' }, 404)
 
@@ -18,7 +19,7 @@ export const GET: APIRoute = async ({ params }) => {
   return jsonResponse(data)
 }
 
-export const PUT: APIRoute = async ({ params, request, locals }) => {
+const unguardedPUT: APIRoute = async ({ params, request, locals }) => {
   const type = params.type as string
   const handlers = getSingletonContentType(type)
   if (!handlers) return jsonResponse({ error: 'Unknown content type.' }, 404)
@@ -47,3 +48,7 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
     return adminErrorResponse(error)
   }
 }
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)
+export const PUT = withAdmin(unguardedPUT)

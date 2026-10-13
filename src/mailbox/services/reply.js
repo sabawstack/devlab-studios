@@ -16,12 +16,66 @@ import { KIND_OUTBOUND, buildMessageId, buildReferenceChain, parseReferences } f
 import { buildOutboundMessage, replySubject } from '../outbound/buildMessage.js'
 import { newId, operationError } from '../repositories/helpers.js'
 import { getMessage, listMessagesForThread } from '../repositories/messages.js'
-import { queueOutbound } from '../repositories/outbound.js'
+import { promoteDraft, queueOutbound } from '../repositories/outbound.js'
 import { claimOutboundAttachments, listOutboundAttachments } from '../repositories/outboundAttachments.js'
 import { createThread, getThread } from '../repositories/threads.js'
 import { checkSuppression } from '../../lead-engine/repositories/suppression.js'
-import { normalizeEmail } from '../../lead-engine/domain/domains.js'
+import { emailDomain, normalizeEmail, strictRecipient } from '../../lead-engine/domain/domains.js'
 import { createLogger } from '../../lead-engine/services/log.js'
+
+/**
+ * Who a reply to `parent` would go to, and whether a person must confirm it.
+ *
+ * Reply-To wins over From when the sender set one — that is what it is for,
+ * and ignoring it sends the answer somewhere nobody reads. But Reply-To is
+ * also the cheapest hijack there is: a forged From that threads onto a lead's
+ * conversation, plus a Reply-To pointing elsewhere, and the next reply quietly
+ * goes to the forger. So the resolved address is always shown in the composer,
+ * and it needs an explicit confirmation when
+ *
+ *   - Reply-To's domain differs from From's domain, or
+ *   - the parent message is unverified (anything but DMARC pass from the edge).
+ *
+ * Pure: the thread GET uses it to show the composer what the server will do,
+ * and `composeReply` uses it to enforce the same answer.
+ *
+ * @param {object|null} parent the inbound message being answered, if any
+ * @param {object} thread
+ * @returns {{ address: string|null, source: 'reply_to'|'from'|'thread'|null,
+ *             fromAddress: string|null, replyTo: string|null,
+ *             warnings: string[], requiresConfirmation: boolean }}
+ */
+export function resolveReplyRecipient(parent, thread) {
+  const fromAddress = normalizeEmail(parent?.fromAddress) ?? null
+  const replyTo = normalizeEmail(parent?.replyTo) ?? null
+
+  let address = null
+  let source = null
+  if (replyTo) {
+    address = strictRecipient(replyTo)
+    source = 'reply_to'
+  } else if (fromAddress) {
+    address = strictRecipient(fromAddress)
+    source = 'from'
+  } else if (thread?.correspondent) {
+    address = strictRecipient(thread.correspondent)
+    source = 'thread'
+  }
+
+  const warnings = []
+  if (replyTo && fromAddress && emailDomain(replyTo) !== emailDomain(fromAddress)) {
+    warnings.push(
+      `The message asks for replies to ${replyTo}, a different domain from the sender ${fromAddress}.`,
+    )
+  }
+  if (parent && parent.direction === 'inbound' && parent.auth?.dmarc !== 'pass') {
+    warnings.push(
+      'The sender of this message is unverified (DMARC did not pass), so its From and Reply-To may be forged.',
+    )
+  }
+
+  return { address, source, fromAddress, replyTo, warnings, requiresConfirmation: warnings.length > 0 }
+}
 
 /**
  * Queues a reply.
@@ -38,8 +92,16 @@ import { createLogger } from '../../lead-engine/services/log.js'
  * refusing early tells the operator before they spend effort writing, and the
  * check runs again nowhere else because a draft is promoted, not re-composed.
  *
+ * `confirmRecipient` is the address the operator was shown and confirmed. It
+ * is required, and must equal the address resolved now, whenever
+ * `resolveReplyRecipient` says confirmation is needed — so a message that
+ * arrived between viewing and sending cannot swap the recipient underneath
+ * the confirmation. An explicit `toAddress` is the operator's own choice and
+ * needs no confirmation.
+ *
  * @param {{ threadId: string, inReplyToMessageId?: string|null, bodyText: string,
  *           subject?: string|null, toAddress?: string|null, actorEmail?: string|null,
+ *           confirmRecipient?: string|null,
  *           asDraft?: boolean, attachmentIds?: string[], correlationId?: string }} input
  */
 export async function composeReply(env, input) {
@@ -61,10 +123,23 @@ export async function composeReply(env, input) {
     parent = [...messages].reverse().find((message) => message.direction === 'inbound') ?? null
   }
 
-  // Reply-To wins over From when the sender set one — that is what it is for,
-  // and ignoring it sends the answer somewhere nobody reads.
-  const recipient = normalizeEmail(input.toAddress || parent?.replyTo || parent?.fromAddress || thread.correspondent)
-  if (!recipient) throw operationError('This thread has no address to reply to.', 400)
+  // See resolveReplyRecipient for why Reply-To wins and when it must be
+  // confirmed. An explicit override is validated just as strictly.
+  let recipient
+  if (input.toAddress) {
+    recipient = strictRecipient(input.toAddress)
+    if (!recipient) throw operationError('That recipient is not a single valid address.', 422)
+  } else {
+    const resolved = resolveReplyRecipient(parent, thread)
+    recipient = resolved.address
+    if (!recipient) throw operationError('This thread has no address to reply to.', 400)
+    if (resolved.requiresConfirmation && strictRecipient(input.confirmRecipient) !== recipient) {
+      throw operationError(
+        `Confirm the recipient before replying: this reply would go to ${recipient}. ${resolved.warnings.join(' ')}`,
+        409,
+      )
+    }
+  }
 
   const body = String(input.bodyText ?? '').trim()
   // A draft may be empty — that is what a draft is. A reply being sent may not.
@@ -90,7 +165,7 @@ export async function composeReply(env, input) {
     parentMessageId: parent?.messageId ?? null,
   })
 
-  const queued = await queueOutbound(db, {
+  const drafted = await queueOutbound(db, {
     id: outboundId,
     threadId: thread.id,
     inReplyToMessageId: parent?.id ?? null,
@@ -103,20 +178,25 @@ export async function composeReply(env, input) {
     inReplyTo: parent?.messageId ?? null,
     references: references.length > 0 ? references.map((id) => `<${id}>`).join(' ') : null,
     envelopeFrom: verpAddress(KIND_OUTBOUND, outboundId),
-    status: input.asDraft ? 'draft' : 'queued',
+    // ALWAYS inserted as a draft, even when sending: the transmitter can only
+    // collect `queued` rows, so the reply is invisible to it until its
+    // attachments are claimed. Queueing first left a window where a poll
+    // could collect the message without its files (and a claim failure left
+    // it queued without them for good).
+    status: 'draft',
     leadId: thread.leadId ?? null,
     createdBy: input.actorEmail ?? null,
   })
 
   // Claimed AFTER the row exists, because an upload is bound to a message and
-  // the message did not exist a moment ago. A failure here throws, leaving the
-  // reply queued without its files rather than silently sending a message the
-  // operator believes carries them -- see the note on the same risk in
-  // repositories/outboundAttachments.js.
-  const attachments = await claimOutboundAttachments(db, {
-    ids: input.attachmentIds ?? [],
-    outboundId,
-  })
+  // the message did not exist a moment ago. A failure here throws, and the
+  // half-made draft is discarded (its uploads released) so a retry neither
+  // sends a message without the files the operator attached nor duplicates
+  // the draft.
+  const attachments = await claimOrDiscard(db, input.attachmentIds ?? [], outboundId, logger)
+
+  // Only now may the transmitter see it.
+  const queued = input.asDraft ? drafted : await promoteDraft(db, outboundId)
 
   logger.log(input.asDraft ? 'mailbox.reply_drafted' : 'mailbox.reply_queued', {
     outbound_id: outboundId,
@@ -152,7 +232,7 @@ export async function composeNew(env, input) {
   const db = env.DB
   const logger = createLogger({ correlationId: input.correlationId })
 
-  const recipient = normalizeEmail(input.toAddress)
+  const recipient = strictRecipient(input.toAddress)
   if (!recipient) throw operationError('A valid recipient address is required.', 422)
 
   const body = String(input.bodyText ?? '').trim()
@@ -176,7 +256,7 @@ export async function composeNew(env, input) {
 
   const outboundId = newId()
 
-  const queued = await queueOutbound(db, {
+  const drafted = await queueOutbound(db, {
     id: outboundId,
     threadId: thread.id,
     inReplyToMessageId: null,
@@ -192,15 +272,19 @@ export async function composeNew(env, input) {
     inReplyTo: null,
     references: null,
     envelopeFrom: verpAddress(KIND_OUTBOUND, outboundId),
-    status: input.asDraft ? 'draft' : 'queued',
+    // ALWAYS inserted as a draft, even when sending: the transmitter can only
+    // collect `queued` rows, so the reply is invisible to it until its
+    // attachments are claimed. Queueing first left a window where a poll
+    // could collect the message without its files (and a claim failure left
+    // it queued without them for good).
+    status: 'draft',
     leadId: null,
     createdBy: input.actorEmail ?? null,
   })
 
-  const attachments = await claimOutboundAttachments(db, {
-    ids: input.attachmentIds ?? [],
-    outboundId,
-  })
+  const attachments = await claimOrDiscard(db, input.attachmentIds ?? [], outboundId, logger)
+
+  const queued = input.asDraft ? drafted : await promoteDraft(db, outboundId)
 
   logger.log(input.asDraft ? 'mailbox.compose_drafted' : 'mailbox.compose_queued', {
     outbound_id: outboundId,
@@ -209,6 +293,40 @@ export async function composeNew(env, input) {
   })
 
   return { outbound: queued, threadId: thread.id }
+}
+
+/**
+ * Binds uploads to a just-inserted draft, or undoes the draft.
+ *
+ * D1 offers no interactive transaction, so this is the closest to atomic the
+ * insert-claim-promote sequence gets: on any claim failure the uploads this
+ * draft already took are released and the draft row is deleted, then the
+ * original error is rethrown for the operator.
+ *
+ * @param {D1Database} db
+ * @param {string[]} ids
+ * @param {string} outboundId
+ * @param {{ log: (event: string, fields: object) => void }} logger
+ */
+async function claimOrDiscard(db, ids, outboundId, logger) {
+  try {
+    return await claimOutboundAttachments(db, { ids, outboundId })
+  } catch (error) {
+    try {
+      await db.batch([
+        db
+          .prepare('UPDATE mailbox_outbound_attachments SET outbound_id = NULL, position = 0 WHERE outbound_id = ?')
+          .bind(outboundId),
+        db.prepare("DELETE FROM mailbox_outbound WHERE id = ? AND status = 'draft'").bind(outboundId),
+      ])
+    } catch (cleanupError) {
+      logger.log('mailbox.claim_rollback_failed', {
+        outbound_id: outboundId,
+        error: cleanupError instanceof Error ? cleanupError.message : 'unknown',
+      })
+    }
+    throw error
+  }
 }
 
 /**

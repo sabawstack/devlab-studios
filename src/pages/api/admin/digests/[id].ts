@@ -3,6 +3,7 @@ import { deleteDigest, listDigests, setDigestStatus } from '../../../../worker/r
 import { recordAuditEvent } from '../../../../worker/repositories/auditLog.js'
 import { getEnv } from '../../../../lib/env'
 import { adminErrorResponse, drainRequestBody, jsonResponse, readJsonBody } from '../../../../lib/http'
+import { withAdmin } from '../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -14,7 +15,7 @@ async function findDigest(db: D1Database, id: string) {
 }
 
 /** Publish / unpublish. Unpublishing hides the day from the site without losing it. */
-export const PATCH: APIRoute = async ({ params, request, locals }) => {
+const unguardedPATCH: APIRoute = async ({ params, request, locals }) => {
   const id = params.id as string
   const env = getEnv()
   if (!env.DB) {
@@ -57,7 +58,7 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
  * publishes something that should not carry the DevLab byline, waiting for the
  * retention sweep is not an acceptable remedy.
  */
-export const DELETE: APIRoute = async ({ params, request, locals }) => {
+const unguardedDELETE: APIRoute = async ({ params, request, locals }) => {
   const id = params.id as string
   const env = getEnv()
   await drainRequestBody(request)
@@ -81,3 +82,7 @@ export const DELETE: APIRoute = async ({ params, request, locals }) => {
     return adminErrorResponse(error)
   }
 }
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const PATCH = withAdmin(unguardedPATCH)
+export const DELETE = withAdmin(unguardedDELETE)

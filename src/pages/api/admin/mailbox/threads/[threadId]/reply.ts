@@ -9,6 +9,7 @@ import {
   readValidatedBody,
   requireDatabase,
 } from '../../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -25,6 +26,12 @@ const replySchema = z.object({
   inReplyToMessageId: z.string().trim().max(100).optional().nullable(),
   /** Overrides the recipient, for a thread where the right address is not the sender. */
   toAddress: z.email().trim().max(320).optional().nullable(),
+  /**
+   * The recipient the operator was shown and confirmed. Required (and must
+   * match) when the reply target is unverified or its Reply-To points at a
+   * different domain than its From — see resolveReplyRecipient.
+   */
+  confirmRecipient: z.string().trim().max(320).optional().nullable(),
 })
 
 /**
@@ -38,7 +45,7 @@ const replySchema = z.object({
  * testable. Suppression is re-checked inside `composeReply` at this moment,
  * not at the moment the thread arrived.
  */
-export const POST: APIRoute = async (context) =>
+const unguardedPOST: APIRoute = async (context) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -54,6 +61,7 @@ export const POST: APIRoute = async (context) =>
       subject: body.data.subject ?? null,
       inReplyToMessageId: body.data.inReplyToMessageId ?? null,
       toAddress: body.data.toAddress ?? null,
+      confirmRecipient: body.data.confirmRecipient ?? null,
       actorEmail: actorEmail(context),
     })
 
@@ -68,3 +76,6 @@ export const POST: APIRoute = async (context) =>
         : 'Queued. The configured external sender transmits it on its next run.',
     })
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const POST = withAdmin(unguardedPOST)

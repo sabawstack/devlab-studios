@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro'
 import { z } from 'zod'
-import { authorizeOutbox } from '../../../../../lead-engine/outbox/auth.js'
+import { authorizeOutboxRequest } from '../../../../../lead-engine/outbox/auth.js'
 import { recordBounce } from '../../../../../lead-engine/services/outbox.js'
 import {
   handleRoute,
@@ -39,8 +39,8 @@ export const POST: APIRoute = async (context) =>
     const database = requireDatabase()
     if (!database.ok) return database.response
 
-    const auth = authorizeOutbox(database.env, context.request)
-    if (!auth.ok) return jsonResponse({ error: auth.error }, auth.status)
+    const auth = await authorizeOutboxRequest(database.env, context.request)
+    if (!auth.ok) return auth.response
 
     const body = await readValidatedBody(context.request, bounceSchema)
     if (!body.ok) return body.response

@@ -42,6 +42,11 @@ export function mapMessage(row) {
     parseStatus: row.parse_status,
     parseError: row.parse_error,
     auth: { spf: row.auth_spf, dkim: row.auth_dkim, dmarc: row.auth_dmarc },
+    // Whether the edge verified the sender. Only `dmarc=pass` from Cloudflare's
+    // own Authentication-Results counts (see inbound/parse.js); anything else
+    // means the From address is the sender's unverified claim, and the UI says
+    // so. Outbound rows are ours, so the question does not apply.
+    verified: row.direction === 'inbound' ? row.auth_dmarc === 'pass' : true,
     isDsn: row.is_dsn === 1,
     dsn: row.is_dsn === 1
       ? {

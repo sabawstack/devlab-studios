@@ -143,10 +143,15 @@ export async function correlateBounce(db, { envelopeTo, originalMessageId, faile
  * Works out which lead an ordinary inbound message is from.
  *
  * @param {D1Database} db
- * @param {{ fromAddress: string, inReplyTo: string|null, referenceIds: string[] }} input
+ * The address fallback runs only when `senderVerified` (DMARC pass from the
+ * edge). An unauthenticated From is a claim anyone can make, and attaching a
+ * forged message to a lead puts it in the CRM's conversation and reply queue.
+ * Callers that omit the flag get the strict behaviour.
+ *
+ * @param {{ fromAddress: string, inReplyTo: string|null, referenceIds: string[], senderVerified?: boolean }} input
  * @returns {Promise<{ leadId: string|null, draftId: string|null, method: string|null }>}
  */
-export async function correlateInbound(db, { fromAddress, inReplyTo, referenceIds = [] }) {
+export async function correlateInbound(db, { fromAddress, inReplyTo, referenceIds = [], senderVerified = false }) {
   // Our own identifiers first. A prospect replying from a different address
   // than the one we wrote to — a personal address, or a shared inbox — is
   // common, and the threading headers are the only thing that still connects
@@ -165,6 +170,8 @@ export async function correlateInbound(db, { fromAddress, inReplyTo, referenceId
       if (row?.lead_id) return { leadId: row.lead_id, draftId: null, method: 'message_id' }
     }
   }
+
+  if (!senderVerified) return { leadId: null, draftId: null, method: null }
 
   const lead = await findLeadByEmail(db, fromAddress)
   if (lead) return { leadId: lead.leadId, draftId: null, method: 'address' }

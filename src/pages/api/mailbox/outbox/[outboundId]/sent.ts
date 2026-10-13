@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro'
 import { z } from 'zod'
-import { authorizeBearer } from '../../../../../lead-engine/outbox/auth.js'
+import { authorizeBearerRequest } from '../../../../../lead-engine/outbox/auth.js'
 import { getOutbound, markSent } from '../../../../../mailbox/repositories/outbound.js'
 import { getThread } from '../../../../../mailbox/repositories/threads.js'
 import { insertMessage } from '../../../../../mailbox/repositories/messages.js'
@@ -37,8 +37,8 @@ export const POST: APIRoute = async (context) =>
     const database = requireDatabase()
     if (!database.ok) return database.response
 
-    const auth = authorizeBearer(database.env, context.request, 'MAILBOX_OUTBOX_TOKEN')
-    if (!auth.ok) return jsonResponse({ error: auth.error }, auth.status)
+    const auth = await authorizeBearerRequest(database.env, context.request, 'MAILBOX_OUTBOX_TOKEN')
+    if (!auth.ok) return auth.response
 
     const body = await readValidatedBody(context.request, sentSchema)
     if (!body.ok) return body.response

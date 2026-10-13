@@ -3,6 +3,7 @@ import { HUMAN_MAILBOXES, MAILBOX, MAILBOX_LABELS, isValidMailbox } from '../../
 import { listOutboundByStatus } from '../../../../../mailbox/repositories/outbound.js'
 import { listSentThreads, listThreads, unreadCounts } from '../../../../../mailbox/repositories/threads.js'
 import { handleRoute, jsonResponse, notFound, requireDatabase } from '../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -48,7 +49,7 @@ const OUTBOUND_FOLDERS: Record<string, string[]> = {
   failed: ['failed'],
 }
 
-export const GET: APIRoute = async ({ params, request, url }) =>
+const unguardedGET: APIRoute = async ({ params, request, url }) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -111,3 +112,6 @@ export const GET: APIRoute = async ({ params, request, url }) =>
       machineMailboxes: [MAILBOX.BOUNCE, MAILBOX.DMARC],
     })
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)

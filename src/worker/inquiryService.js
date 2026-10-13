@@ -2,7 +2,7 @@ import { createInquiry, findLeadByIdempotencyKey, findRecentDuplicateLead } from
 import { buildActivityStatement, buildAttributionStatement, buildConsentStatement } from './repositories/leadContext.js'
 import { attemptLeadDelivery } from './leadDelivery.js'
 import { verifyTurnstileToken } from './turnstile.js'
-import { checkRateLimit, clientIp, rateLimitedResponse } from './rateLimit.js'
+import { checkRateLimit, clientAddress, clientIp, rateLimitedResponse } from './rateLimit.js'
 import { qualifyInquiry } from '../lib/leads/qualification'
 import { computeIdempotencyKey, normalizeInquiry } from '../lib/leads/normalize'
 import { CONSENT_TEXT_VERSION, PRIVACY_POLICY_VERSION } from '../config/consent.js'
@@ -65,6 +65,44 @@ export async function readBoundedJson(request, env) {
 }
 
 /**
+ * The `leads.source` values a public form may claim. The source is recorded
+ * as-is and drives which confirmation template is sent and how the lead is
+ * reported, so a caller can never pick it freely (e.g. claim `lead-magnet`):
+ * anything outside the route's list becomes the route's default. A CMS form's
+ * own id still reaches the lead through `attribution.formId`.
+ */
+export const CONTACT_SOURCES = Object.freeze(['contact-form', 'devlabstudios-contact-form'])
+// The fixed /contact forms, then the CMS call-to-action blocks' form ids (scripts/cms/updates/2026-09-17-business-first-content.sql).
+export const INQUIRY_SOURCES = Object.freeze([
+  'inquiry-form', 'business-inquiry-form', 'employment-inquiry-form',
+  'home-final-cta', 'insights-final-cta', 'solutions-final-cta',
+])
+
+/**
+ * @param {unknown} value
+ * @param {readonly string[]} allowed  the first entry is the default
+ * @returns {string}
+ */
+export function allowedSource(value, allowed) {
+  const source = typeof value === 'string' ? value.trim() : ''
+  return allowed.includes(source) ? source : allowed[0]
+}
+
+// CR, LF, NEL and the Unicode line and paragraph separators.
+const LINE_BREAKS = /[\r\n\u0085\u2028\u2029]+/g
+
+/**
+ * CR, LF and the Unicode line/paragraph separators become one space, for a
+ * visitor-written value that ends up in an email subject.
+ *
+ * @param {string} text
+ * @returns {string}
+ */
+export function singleLine(text) {
+  return String(text).replace(LINE_BREAKS, ' ')
+}
+
+/**
  * Flattens Zod issues into `{ field: message }` for inline display. Only the
  * schema's own messages are returned — never raw input, never internals.
  */
@@ -88,7 +126,7 @@ export async function enforceSubmissionGuards(env, request, { bucket, action, al
 
   const requestHostname = new URL(request.url).hostname
   const isLocalRequest = requestHostname === 'localhost' || requestHostname === '127.0.0.1'
-  const turnstileResult = await verifyTurnstileToken(env.TURNSTILE_SECRET_KEY, turnstileToken, clientIp(request), {
+  const turnstileResult = await verifyTurnstileToken(env.TURNSTILE_SECRET_KEY, turnstileToken, clientAddress(request), {
     expectedHostname: requestHostname,
     expectedAction: action,
     allowMissingSecret: allowMissingSecret || isLocalRequest,

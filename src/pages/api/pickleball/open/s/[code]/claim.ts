@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro'
 import { getEnv } from '../../../../../../lib/env'
-import { drainRequestBody } from '../../../../../../lib/http'
 import { currentHost, signInFirst } from '../../../../../../worker/pickleball/open/hostSession'
+import { refuseLargeBody } from '../../../../../../worker/pickleball/open/requestBody'
 import { codeFrom, doResponse, hostIpLimited, hostKeyFrom, notFound, openErrorResponse, openSessionStub } from '../../../../../../worker/pickleball/open/routeHelpers'
 import { crossSiteRefusal } from '../../../../../../worker/pickleball/open/sameOrigin'
 
@@ -9,8 +9,8 @@ import { crossSiteRefusal } from '../../../../../../worker/pickleball/open/sameO
 export const POST: APIRoute = async ({ request, params }) => {
   const env = getEnv()
   try {
-    await drainRequestBody(request)
-    const refused = crossSiteRefusal(request) ?? (await hostIpLimited(env, request))
+    // Takes no body: anything sent is read off up to a small cap, never buffered whole.
+    const refused = (await refuseLargeBody(request, undefined, env)) ?? crossSiteRefusal(request) ?? (await hostIpLimited(env, request))
     if (refused) return refused
     const code = codeFrom(params)
     if (!code) return notFound()

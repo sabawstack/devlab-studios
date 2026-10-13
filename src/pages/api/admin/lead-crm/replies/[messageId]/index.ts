@@ -11,6 +11,7 @@ import {
   readValidatedBody,
   requireDatabase,
 } from '../../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -29,7 +30,7 @@ const replyActionSchema = z.object({
  * on a screen, and getting it into a mailbox is a separate, explicit push to
  * Zoho Drafts followed by a person pressing Send.
  */
-export const POST: APIRoute = async (context) =>
+const unguardedPOST: APIRoute = async (context) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -79,3 +80,6 @@ export const POST: APIRoute = async (context) =>
 
     return jsonResponse({ ok: true })
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const POST = withAdmin(unguardedPOST)

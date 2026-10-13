@@ -2,6 +2,7 @@
 import { brandingAssets } from '../config/branding.js'
 import { logoFallbackSrc } from '../lib/logoFallback'
 import type { SiteSettingsData } from '../lib/content/siteSettings'
+import { safeHref } from '../lib/safeHref'
 
 interface Props {
   siteSettings: SiteSettingsData
@@ -15,10 +16,13 @@ const rawTagline = String(footer.tagline || '').trim()
 const footerTagline = !rawTagline || /^(?:smoke test|version history) tagline\b/i.test(rawTagline)
   ? canonicalTagline
   : rawTagline.replace(' - ', ' — ')
-const quickLinks = footer.quickLinks || []
-const socialLinks = footer.socialLinks || []
+// safeHref is the render-time half of the CMS link policy (src/lib/safeHref.ts).
+const withSafeHrefs = (links: Array<{ label: string; href: string }>) =>
+  links.map((link) => ({ ...link, href: safeHref(link.href) }))
+const quickLinks = withSafeHrefs(footer.quickLinks || [])
+const socialLinks = withSafeHrefs(footer.socialLinks || [])
 const legalLinks = footer.legalLinks?.length
-  ? footer.legalLinks
+  ? withSafeHrefs(footer.legalLinks)
   : [
       { label: 'Privacy Policy', href: '/privacy' },
       { label: 'Terms of Service', href: '/terms' },

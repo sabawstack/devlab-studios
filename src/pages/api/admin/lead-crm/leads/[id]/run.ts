@@ -11,6 +11,7 @@ import {
   readValidatedBody,
   requireDatabase,
 } from '../../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -26,7 +27,7 @@ const runSchema = z.object({
  * decided to start it. That is what makes this button safe to use for
  * diagnosis: what it does is what the engine would have done.
  */
-export const POST: APIRoute = async (context) =>
+const unguardedPOST: APIRoute = async (context) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -58,3 +59,6 @@ export const POST: APIRoute = async (context) =>
     // crawl that found a blocked site is not an API error.
     return jsonResponse(outcome)
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const POST = withAdmin(unguardedPOST)

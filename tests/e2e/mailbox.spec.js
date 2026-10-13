@@ -383,6 +383,14 @@ test.describe('the mail client, with mail in it', () => {
     expect(composed.ok(), `compose answered ${composed.status()}`).toBe(true)
     const { outbound } = await composed.json()
 
+    // Collected first, as a real transmitter does: a failure callback is only
+    // accepted for a COLLECTED message (security audit F10), so reporting a
+    // reply failed that was never handed out answers 409.
+    const collected = await page.request.get(`${baseURL}/api/mailbox/outbox?limit=50`, {
+      headers: { Authorization: `Bearer ${MAILBOX_OUTBOX_TOKEN}` },
+    })
+    expect(collected.ok(), `the outbox answered ${collected.status()}`).toBe(true)
+
     // The real 451 that Postfix returned while OpenDKIM could not read its key.
     const failed = await page.request.post(`${baseURL}/api/mailbox/outbox/${outbound.id}/failed`, {
       headers: { Authorization: `Bearer ${MAILBOX_OUTBOX_TOKEN}` },

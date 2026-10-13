@@ -62,8 +62,22 @@ export interface DuprPrepared {
 type Cached = LoadedSession & { access: HostAccess }
 
 type Actor = { role: 'host' } | { role: 'captain'; captain: CaptainRecord }
-/** extraKey: a host socket signed in with an extra host link, which deleting the account revokes. */
-type Attachment = { code: string; role: 'viewer' | 'host' | 'captain'; captainId?: string; extraKey?: boolean }
+/** A socket's message allowance: messages in the current window, when it began, and AUTH attempts over the socket's life. */
+type SocketBudget = { windowStart: number; count: number; auths: number }
+/**
+ * extraKey: a host socket signed in with an extra host link, which deleting the account revokes.
+ * budget lives here, not in memory, so it survives hibernation.
+ */
+type Attachment = { code: string; role: 'viewer' | 'host' | 'captain'; captainId?: string; extraKey?: boolean; budget?: SocketBudget }
+/** The serialized frames for one (state, captains) pair; built on first need and reused until either changes. */
+type Frames = {
+  state: OpenSessionState
+  captains: readonly CaptainRecord[]
+  parts: { viewer: ViewerSnapshot; courts: ReturnType<typeof hostCourts> }
+  viewer: string
+  host: string | null
+  perCaptain: Map<string, string>
+}
 type Identified = { role: 'host'; extraKey: boolean; payload: HostSnapshot } | { role: 'captain'; captainId: string; payload: CaptainSnapshot }
 
 const IDEMPOTENCY_TTL_MS = 10 * 60_000
@@ -80,6 +94,34 @@ const COMMAND_WINDOW_MS = 60_000
 // once still fits (the route also limits each address).
 const CHECK_IN_LIMIT = 60
 const CHECK_IN_WINDOW_MS = 5 * 60_000
+// WebSocket abuse limits. Every broadcast is one send per socket, so the count
+// is capped per session: 300 is a packed club night (players, a TV per court,
+// captains, the host) with room to spare. A real client sends one small AUTH
+// per socket and nothing else, so anything beyond these is a misbehaving or
+// hostile client and the socket is closed.
+export const MAX_SOCKETS = 300
+export const MAX_WS_MESSAGE_BYTES = 4096
+export const WS_MESSAGE_LIMIT = 10
+export const WS_MESSAGE_WINDOW_MS = 10_000
+export const WS_AUTH_LIMIT = 5
+const WS_POLICY_VIOLATION = 1008
+const WS_TOO_BIG = 1009
+
+/** Counts one message against a socket's budget; `over` once it is past either limit. */
+export function spendBudget(budget: SocketBudget | undefined, isAuth: boolean, nowMs: number): { budget: SocketBudget; over: boolean } {
+  const fresh = !budget || nowMs - budget.windowStart >= WS_MESSAGE_WINDOW_MS
+  const base = fresh ? { windowStart: nowMs, count: 0, auths: budget?.auths ?? 0 } : budget
+  const next = { windowStart: base.windowStart, count: base.count + 1, auths: base.auths + (isAuth ? 1 : 0) }
+  return { budget: next, over: next.count > WS_MESSAGE_LIMIT || next.auths > WS_AUTH_LIMIT }
+}
+
+/** Byte length of a WebSocket message, without decoding a binary one. */
+function messageBytes(message: ArrayBuffer | string): number {
+  if (typeof message !== 'string') return message.byteLength
+  // UTF-16 length is a lower bound on UTF-8 bytes and ×3 an upper one: only encode when it could matter.
+  if (message.length * 3 <= MAX_WS_MESSAGE_BYTES) return message.length
+  return message.length > MAX_WS_MESSAGE_BYTES ? message.length : new TextEncoder().encode(message).byteLength
+}
 
 /** Sliding-window counter: the kept times, and the seconds to wait (0 when this call is allowed and counted). */
 function windowRetryAfter(times: readonly number[], limit: number, windowMs: number, nowMs: number): { times: number[]; retryAfter: number } {
@@ -93,6 +135,31 @@ export class OpenSessionDO extends DurableObject<Env> {
   private chain: Promise<unknown> = Promise.resolve()
   private commandTimes: number[] = []
   private checkInTimes: number[] = []
+  private frames: Frames | null = null
+
+  /** The serialized snapshots for this state; rebuilt only when the state or captains changed (both are replaced, never mutated). */
+  private framesFor(loaded: Cached): Frames {
+    if (this.frames && this.frames.state === loaded.state && this.frames.captains === loaded.captains) return this.frames
+    const parts = { viewer: toViewerSnapshot(loaded.state), courts: hostCourts(loaded.state) }
+    this.frames = {
+      state: loaded.state, captains: loaded.captains, parts,
+      viewer: JSON.stringify({ type: 'VIEWER', payload: parts.viewer }), host: null, perCaptain: new Map(),
+    }
+    return this.frames
+  }
+
+  private hostFrame(frames: Frames): string {
+    frames.host ??= JSON.stringify({ type: 'HOST', payload: toHostSnapshot(frames.state, frames.captains, frames.parts) })
+    return frames.host
+  }
+
+  private captainFrame(frames: Frames, captain: CaptainRecord): string {
+    const cached = frames.perCaptain.get(captain.id)
+    if (cached) return cached
+    const message = JSON.stringify({ type: 'CAPTAIN', payload: toCaptainSnapshot(frames.state, captain, frames.parts) })
+    frames.perCaptain.set(captain.id, message)
+    return message
+  }
 
   /** Runs fn after every earlier call has settled: one command at a time, even across awaits. */
   private serial<T>(fn: () => Promise<T>): Promise<T> {
@@ -146,7 +213,7 @@ export class OpenSessionDO extends DurableObject<Env> {
   async viewer(code: string): Promise<ViewerSnapshot | null> {
     return this.serial(async () => {
       const loaded = await this.load(code)
-      return loaded ? toViewerSnapshot(loaded.state) : null
+      return loaded ? this.framesFor(loaded).parts.viewer : null
     })
   }
 
@@ -168,9 +235,11 @@ export class OpenSessionDO extends DurableObject<Env> {
   }
 
   async command(code: string, credentials: Credentials, envelope: unknown): Promise<DoResult<CommandBody>> {
+    // The route already validated the (size-capped) body; this re-check runs outside the queue,
+    // so a malformed call never holds up real commands.
+    const parsed = commandEnvelopeSchema.safeParse(envelope)
+    if (!parsed.success) return { status: 400, body: { error: 'That request was not understood.' } }
     return this.serial(async () => {
-      const parsed = commandEnvelopeSchema.safeParse(envelope)
-      if (!parsed.success) return { status: 400, body: { error: 'That request was not understood.' } }
       const loaded = await this.load(code)
       if (!loaded) return { status: 404, body: { error: 'Session not found.' } }
       const actor = await this.actorFor(loaded, credentials)
@@ -214,14 +283,11 @@ export class OpenSessionDO extends DurableObject<Env> {
   }
 
   async checkIn(code: string, body: unknown): Promise<DoResult<CheckInBody>> {
+    const parsed = checkInSchema.safeParse(body)
+    if (!parsed.success) return { status: 400, body: { error: 'Check your details and try again.' } }
     return this.serial(async () => {
-      const parsed = checkInSchema.safeParse(body)
-      if (!parsed.success) return { status: 400, body: { error: 'Check your details and try again.' } }
       const loaded = await this.load(code)
       if (!loaded) return { status: 404, body: { error: 'Session not found.' } }
-      const limit = windowRetryAfter(this.checkInTimes, CHECK_IN_LIMIT, CHECK_IN_WINDOW_MS, Date.now())
-      this.checkInTimes = limit.times
-      if (limit.retryAfter > 0) return { status: 429, body: { error: 'Lots of people are checking in. Try again in a minute.' }, retryAfterSeconds: limit.retryAfter }
 
       const now = new Date().toISOString()
       const ctx = { now, newId: () => crypto.randomUUID() }
@@ -229,7 +295,14 @@ export class OpenSessionDO extends DurableObject<Env> {
       const result = applyCheckIn(loaded.state, entry, ctx)
       if (!result.ok) return { status: result.status, body: { error: result.error } }
       const answer = { playerId: result.playerId, name: result.name, alreadyCheckedIn: result.alreadyCheckedIn }
+      // A name already on the list and playing changes nothing, so it costs none of the
+      // session's allowance: repeating it cannot lock real arrivals out (only the per-IP limit applies).
       if (result.alreadyCheckedIn) return { status: 200, body: answer }
+
+      // Only a check-in that adds a player or brings one back from a break is counted.
+      const limit = windowRetryAfter(this.checkInTimes, CHECK_IN_LIMIT, CHECK_IN_WINDOW_MS, Date.now())
+      this.checkInTimes = limit.times
+      if (limit.retryAfter > 0) return { status: 429, body: { error: 'Lots of people are checking in. Try again in a minute.' }, retryAfterSeconds: limit.retryAfter }
 
       const next = finalizeCommand(result.state, ctx)
       await persistDiff(this.env.PICKLEBALL_DB, loaded.state, next, null)
@@ -240,9 +313,9 @@ export class OpenSessionDO extends DurableObject<Env> {
   }
 
   async createCaptain(code: string, hostKey: string | null, body: unknown): Promise<DoResult<CaptainLinkBody>> {
+    const parsed = createCaptainSchema.safeParse(body)
+    if (!parsed.success) return { status: 400, body: { error: 'Pick a court for the captain.' } }
     return this.serial(async () => {
-      const parsed = createCaptainSchema.safeParse(body)
-      if (!parsed.success) return { status: 400, body: { error: 'Pick a court for the captain.' } }
       const auth = await this.authorized(code, hostKey)
       if (!('state' in auth)) return auth
       const court = auth.state.courts.find((c) => c.id === parsed.data.courtId)
@@ -401,12 +474,12 @@ export class OpenSessionDO extends DurableObject<Env> {
   async forgetHost(hostId: string): Promise<void> {
     return this.serial(async () => {
       if (this.loaded?.access.hostId === hostId) this.loaded = { ...this.loaded, access: { hostId: null, extraKeyHashes: [] } }
-      const viewer = this.loaded ? JSON.stringify({ type: 'VIEWER', payload: toViewerSnapshot(this.loaded.state) }) : null
+      const viewer = this.loaded ? this.framesFor(this.loaded).viewer : null
       for (const ws of this.ctx.getWebSockets()) {
         const attachment = ws.deserializeAttachment() as Attachment | null
         if (attachment?.role !== 'host' || !attachment.extraKey) continue
         try {
-          ws.serializeAttachment({ code: attachment.code, role: 'viewer' } satisfies Attachment)
+          ws.serializeAttachment({ code: attachment.code, role: 'viewer', budget: attachment.budget } satisfies Attachment)
           ws.send(JSON.stringify({ type: 'AUTH_FAILED' }))
           if (viewer) ws.send(viewer)
         } catch {
@@ -440,31 +513,26 @@ export class OpenSessionDO extends DurableObject<Env> {
    */
   private broadcast(): void {
     if (!this.loaded) return
-    const { state, captains } = this.loaded
-    // Built once and shared by the host and every captain snapshot in this pass.
-    const parts = { viewer: toViewerSnapshot(state), courts: hostCourts(state) }
-    const viewer = JSON.stringify({ type: 'VIEWER', payload: parts.viewer })
-    const host = JSON.stringify({ type: 'HOST', payload: toHostSnapshot(state, captains, parts) })
-    const perCaptain = new Map<string, string>()
+    const { captains } = this.loaded
+    // Built once per state and shared by this pass and every RESYNC until the next change.
+    const frames = this.framesFor(this.loaded)
     for (const ws of this.ctx.getWebSockets()) {
       const attachment = ws.deserializeAttachment() as Attachment | null
       try {
         if (attachment?.role === 'host') {
-          ws.send(host)
+          ws.send(this.hostFrame(frames))
           continue
         }
         if (attachment?.role === 'captain' && attachment.captainId) {
           const captain = captains.find((c) => c.id === attachment.captainId)
           if (captain) {
-            const message = perCaptain.get(captain.id) ?? JSON.stringify({ type: 'CAPTAIN', payload: toCaptainSnapshot(state, captain, parts) })
-            perCaptain.set(captain.id, message)
-            ws.send(message)
+            ws.send(this.captainFrame(frames, captain))
             continue
           }
-          ws.serializeAttachment({ code: attachment.code, role: 'viewer' } satisfies Attachment)
+          ws.serializeAttachment({ code: attachment.code, role: 'viewer', budget: attachment.budget } satisfies Attachment)
           ws.send(JSON.stringify({ type: 'CAPTAIN_REVOKED' }))
         }
-        ws.send(viewer)
+        ws.send(frames.viewer)
       } catch {
         // a socket mid-close; it is dropped by the runtime
       }
@@ -488,69 +556,104 @@ export class OpenSessionDO extends DurableObject<Env> {
     if (request.headers.get('Upgrade') !== 'websocket') return new Response('Expected a WebSocket upgrade.', { status: 400 })
     const code = request.headers.get('X-Open-Code') ?? ''
     if (!this.ctx.id.equals(this.env.OPEN_SESSION.idFromName(code))) return new Response('Coordinator mismatch.', { status: 400 })
-    const snapshot = await this.viewer(code)
-    if (!snapshot) return new Response('Session not found.', { status: 404 })
+    // Every broadcast is one send per socket: past the cap, new sockets are refused (the client keeps polling and retries).
+    if (this.ctx.getWebSockets().length >= MAX_SOCKETS) {
+      return new Response('Too many connections to this session. Try again shortly.', { status: 429, headers: { 'Retry-After': '30' } })
+    }
+    const viewer = await this.serial(async () => {
+      const loaded = await this.load(code)
+      return loaded ? this.framesFor(loaded).viewer : null
+    })
+    if (!viewer) return new Response('Session not found.', { status: 404 })
 
     const [client, server] = Object.values(new WebSocketPair())
     this.ctx.acceptWebSocket(server)
     server.serializeAttachment({ code, role: 'viewer' } satisfies Attachment)
-    server.send(JSON.stringify({ type: 'VIEWER', payload: snapshot }))
+    server.send(viewer)
     return new Response(null, { status: 101, webSocket: client })
   }
 
-  async webSocketMessage(ws: WebSocket, message: ArrayBuffer | string): Promise<void> {
-    let parsed: { type?: string; hostKey?: unknown; captainKey?: unknown }
+  /** Closes a socket for breaking the message rules; it may already be closing. */
+  private closeSocket(ws: WebSocket, code: number, reason: string): void {
     try {
-      parsed = JSON.parse(String(message))
+      ws.close(code, reason)
     } catch {
+      // already closing
+    }
+  }
+
+  async webSocketMessage(ws: WebSocket, message: ArrayBuffer | string): Promise<void> {
+    // Dropped before JSON.parse: a real client only ever sends a ~100-byte AUTH.
+    if (messageBytes(message) > MAX_WS_MESSAGE_BYTES) {
+      this.closeSocket(ws, WS_TOO_BIG, 'Message too large')
       return
     }
     const attachment = ws.deserializeAttachment() as Attachment | null
     if (!attachment) return
-
-    if (parsed.type === 'AUTH') {
-      const credentials: Credentials = {
-        hostKey: typeof parsed.hostKey === 'string' && parsed.hostKey.length <= 128 ? parsed.hostKey : null,
-        captainKey: typeof parsed.captainKey === 'string' && parsed.captainKey.length <= 128 ? parsed.captainKey : null,
-      }
-      try {
-        const who = await this.identify(attachment.code, credentials)
-        if (who?.role === 'host') {
-          ws.serializeAttachment({ code: attachment.code, role: 'host', ...(who.extraKey ? { extraKey: true } : {}) } satisfies Attachment)
-          ws.send(JSON.stringify({ type: 'HOST', payload: who.payload }))
-        } else if (who?.role === 'captain') {
-          ws.serializeAttachment({ code: attachment.code, role: 'captain', captainId: who.captainId } satisfies Attachment)
-          ws.send(JSON.stringify({ type: 'CAPTAIN', payload: who.payload }))
-        } else {
-          ws.send(JSON.stringify({ type: 'AUTH_FAILED' }))
-        }
-      } catch (error) {
-        this.logWsError(error, attachment.code, 'AUTH')
-        // Not a refused key: the client keeps it and retries (AUTH_FAILED would make it forget the key).
-        try {
-          ws.send(JSON.stringify({ type: 'AUTH_ERROR' }))
-        } catch {
-          // socket already closed
-        }
-      }
+    let parsed: { type?: string; hostKey?: unknown; captainKey?: unknown }
+    try {
+      parsed = JSON.parse(typeof message === 'string' ? message : new TextDecoder().decode(message))
+    } catch {
+      parsed = {}
+    }
+    // Every message counts, junk included; AUTH also has a per-socket lifetime cap.
+    const spent = spendBudget(attachment.budget, parsed?.type === 'AUTH', Date.now())
+    if (spent.over) {
+      this.closeSocket(ws, WS_POLICY_VIOLATION, 'Too many messages')
       return
     }
+    const current: Attachment = { ...attachment, budget: spent.budget }
+    ws.serializeAttachment(current)
 
-    if (parsed.type === 'RESYNC') {
-      try {
-        const loaded = await this.serial(() => this.load(attachment.code))
-        if (!loaded) return
-        if (attachment.role === 'host') {
-          ws.send(JSON.stringify({ type: 'HOST', payload: toHostSnapshot(loaded.state, loaded.captains) }))
-          return
-        }
-        const captain = attachment.role === 'captain' ? loaded.captains.find((c) => c.id === attachment.captainId) : undefined
-        if (captain) ws.send(JSON.stringify({ type: 'CAPTAIN', payload: toCaptainSnapshot(loaded.state, captain) }))
-        else ws.send(JSON.stringify({ type: 'VIEWER', payload: toViewerSnapshot(loaded.state) }))
-      } catch (error) {
-        // a failed resync is retried by the client's next RESYNC
-        this.logWsError(error, attachment.code, 'RESYNC')
+    if (parsed?.type === 'AUTH') {
+      await this.authenticateSocket(ws, current, parsed)
+      return
+    }
+    if (parsed?.type === 'RESYNC') await this.resyncSocket(ws, current)
+  }
+
+  private async authenticateSocket(ws: WebSocket, attachment: Attachment, parsed: { hostKey?: unknown; captainKey?: unknown }): Promise<void> {
+    const credentials: Credentials = {
+      hostKey: typeof parsed.hostKey === 'string' && parsed.hostKey.length <= 128 ? parsed.hostKey : null,
+      captainKey: typeof parsed.captainKey === 'string' && parsed.captainKey.length <= 128 ? parsed.captainKey : null,
+    }
+    try {
+      const who = await this.identify(attachment.code, credentials)
+      if (who?.role === 'host') {
+        ws.serializeAttachment({ code: attachment.code, role: 'host', budget: attachment.budget, ...(who.extraKey ? { extraKey: true } : {}) } satisfies Attachment)
+        ws.send(JSON.stringify({ type: 'HOST', payload: who.payload }))
+      } else if (who?.role === 'captain') {
+        ws.serializeAttachment({ code: attachment.code, role: 'captain', captainId: who.captainId, budget: attachment.budget } satisfies Attachment)
+        ws.send(JSON.stringify({ type: 'CAPTAIN', payload: who.payload }))
+      } else {
+        ws.send(JSON.stringify({ type: 'AUTH_FAILED' }))
       }
+    } catch (error) {
+      this.logWsError(error, attachment.code, 'AUTH')
+      // Not a refused key: the client keeps it and retries (AUTH_FAILED would make it forget the key).
+      try {
+        ws.send(JSON.stringify({ type: 'AUTH_ERROR' }))
+      } catch {
+        // socket already closed
+      }
+    }
+  }
+
+  /** The socket's current snapshot, from the frames cached for this state (nothing is rebuilt per RESYNC). */
+  private async resyncSocket(ws: WebSocket, attachment: Attachment): Promise<void> {
+    try {
+      const loaded = await this.serial(() => this.load(attachment.code))
+      if (!loaded) return
+      const frames = this.framesFor(loaded)
+      if (attachment.role === 'host') {
+        ws.send(this.hostFrame(frames))
+        return
+      }
+      const captain = attachment.role === 'captain' ? loaded.captains.find((c) => c.id === attachment.captainId) : undefined
+      ws.send(captain ? this.captainFrame(frames, captain) : frames.viewer)
+    } catch (error) {
+      // a failed resync is retried by the client's next RESYNC
+      this.logWsError(error, attachment.code, 'RESYNC')
     }
   }
 

@@ -7,13 +7,14 @@ import { recordAuditEvent } from '../../../../worker/repositories/auditLog.js'
 import { getEnv } from '../../../../lib/env'
 import { jsonResponse, readJsonBody } from '../../../../lib/http'
 import { buildAuditMetadata } from '../../../../lib/audit.js'
+import { withAdmin } from '../../../../lib/adminGuard'
 
 interface ProjectReferenceRecord {
   id: string
   status?: string
 }
 
-export const GET: APIRoute = async ({ params }) => {
+const unguardedGET: APIRoute = async ({ params }) => {
   const slug = params.slug as string
   const env = getEnv()
   if (!env.DB) return jsonResponse({ error: 'D1 DB binding is not configured.' }, 503)
@@ -22,7 +23,7 @@ export const GET: APIRoute = async ({ params }) => {
   return jsonResponse(page || { slug, title: slug, status: 'draft', blocks: [] })
 }
 
-export const PUT: APIRoute = async ({ params, request, locals }) => {
+const unguardedPUT: APIRoute = async ({ params, request, locals }) => {
   const slug = params.slug as string
   const env = getEnv()
   if (!env.DB) return jsonResponse({ error: 'D1 DB binding is not configured.' }, 503)
@@ -72,3 +73,7 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
 
   return jsonResponse(saved)
 }
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)
+export const PUT = withAdmin(unguardedPUT)

@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro'
 import { requeueOutbound } from '../../../../../../mailbox/repositories/outbound.js'
 import { handleRoute, jsonResponse, requireDatabase } from '../../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -16,10 +17,13 @@ export const prerender = false
  * Only a `failed` row moves. `collected` is refused with a 409 precisely
  * because it is the ambiguous one.
  */
-export const POST: APIRoute = async ({ params }) =>
+const unguardedPOST: APIRoute = async ({ params }) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
 
     return jsonResponse({ outbound: await requeueOutbound(database.env.DB, params.outboundId!) })
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const POST = withAdmin(unguardedPOST)

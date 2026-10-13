@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { authorizeOutbox, readBearerToken, timingSafeEqual } from './auth.js'
+import { authorizeBearer, authorizeBearerRequest, authorizeOutbox, readBearerToken, timingSafeEqual } from './auth.js'
 
 /**
  * A new authentication surface on an endpoint that hands out prospect email
@@ -72,7 +72,17 @@ describe('authorizeOutbox', () => {
 
     expect(result.ok).toBe(false)
     expect(result.status).toBe(503)
-    expect(result.error).toMatch(/too short/i)
+    // The same generic text as "unset": an unauthenticated caller learns
+    // nothing about the deployment's configuration (F11). The operator gets
+    // the specifics from the log.
+    expect(result.error).toBe('This endpoint is not configured.')
+    expect(result.error).not.toMatch(/LEAD_OUTBOX_TOKEN|short/i)
+  })
+
+  it('never names the environment variable in a 503 body', () => {
+    const result = authorizeBearer({}, requestWith('Bearer x'), 'MAILBOX_OUTBOX_TOKEN')
+    expect(result.status).toBe(503)
+    expect(result.error).not.toMatch(/MAILBOX_OUTBOX_TOKEN/)
   })
 
   it('reports a misconfiguration as 503 and a bad credential as 401', () => {
@@ -98,5 +108,63 @@ describe('authorizeOutbox', () => {
     const result = authorizeOutbox({ LEAD_OUTBOX_TOKEN: `  ${GOOD_TOKEN}\n` }, requestWith(`Bearer ${GOOD_TOKEN}`))
 
     expect(result.ok).toBe(true)
+  })
+})
+
+describe('authorizeBearerRequest (F11)', () => {
+  const TOKEN = 'b'.repeat(48)
+
+  function limiter() {
+    const failures = new Map()
+    const stub = (key) => ({
+      async peek(_key, limit) {
+        return { limited: (failures.get(key) ?? 0) >= limit, retryAfterSeconds: 60 }
+      },
+      async record() {
+        failures.set(key, (failures.get(key) ?? 0) + 1)
+      },
+    })
+    return {
+      failures,
+      idFromName: (name) => name,
+      get: (id) => stub(id),
+    }
+  }
+
+  const request = (header) =>
+    new Request('https://www.example.com/api/mailbox/outbox', {
+      headers: { ...(header ? { authorization: header } : {}), 'cf-connecting-ip': '203.0.113.9' },
+    })
+
+  it('counts each 401 against the caller and answers 429 once over the limit', async () => {
+    const RATE_LIMITER = limiter()
+    const env = { MAILBOX_OUTBOX_TOKEN: TOKEN, RATE_LIMITER }
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const result = await authorizeBearerRequest(env, request('Bearer wrong'), 'MAILBOX_OUTBOX_TOKEN')
+      expect(result.ok).toBe(false)
+      expect(result.response.status).toBe(401)
+    }
+
+    // Over the limit: refused before the token is even compared — including
+    // the right one, so the endpoint is no longer a guessing oracle.
+    const throttled = await authorizeBearerRequest(env, request(`Bearer ${TOKEN}`), 'MAILBOX_OUTBOX_TOKEN')
+    expect(throttled.ok).toBe(false)
+    expect(throttled.response.status).toBe(429)
+  })
+
+  it('does not count successful calls', async () => {
+    const RATE_LIMITER = limiter()
+    const env = { MAILBOX_OUTBOX_TOKEN: TOKEN, RATE_LIMITER }
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      expect((await authorizeBearerRequest(env, request(`Bearer ${TOKEN}`), 'MAILBOX_OUTBOX_TOKEN')).ok).toBe(true)
+    }
+    expect([...RATE_LIMITER.failures.values()].reduce((a, b) => a + b, 0)).toBe(0)
+  })
+
+  it('answers a generic 503 when unconfigured', async () => {
+    const result = await authorizeBearerRequest({}, request('Bearer x'), 'MAILBOX_OUTBOX_TOKEN')
+    expect(result.response.status).toBe(503)
+    expect(await result.response.json()).toEqual({ error: 'This endpoint is not configured.' })
   })
 })

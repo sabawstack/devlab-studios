@@ -13,6 +13,7 @@ import {
   readValidatedBody,
   requireDatabase,
 } from '../../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -31,7 +32,7 @@ const draftSchema = z.object({
 })
 
 /** One draft: read it back. */
-export const GET: APIRoute = async ({ params, request }) =>
+const unguardedGET: APIRoute = async ({ params, request }) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -50,7 +51,7 @@ export const GET: APIRoute = async ({ params, request }) =>
  * changing what was actually put on the wire — the thread would show text
  * nobody received.
  */
-export const PATCH: APIRoute = async ({ params, request }) =>
+const unguardedPATCH: APIRoute = async ({ params, request }) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -79,10 +80,15 @@ export const PATCH: APIRoute = async ({ params, request }) =>
   })
 
 /** Discards a draft. A real delete — nothing was transmitted, so there is no record to keep. */
-export const DELETE: APIRoute = async ({ params }) =>
+const unguardedDELETE: APIRoute = async ({ params }) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
 
     return jsonResponse(await deleteDraft(database.env.DB, params.outboundId!))
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)
+export const PATCH = withAdmin(unguardedPATCH)
+export const DELETE = withAdmin(unguardedDELETE)

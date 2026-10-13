@@ -11,10 +11,11 @@ import {
   readValidatedBody,
   requireDatabase,
 } from '../../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../../lib/adminGuard'
 
 export const prerender = false
 
-export const GET: APIRoute = async ({ params, request }) =>
+const unguardedGET: APIRoute = async ({ params, request }) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -26,7 +27,7 @@ export const GET: APIRoute = async ({ params, request }) =>
     return jsonResponse({ campaign, stageCounts })
   })
 
-export const PATCH: APIRoute = async (context) =>
+const unguardedPATCH: APIRoute = async (context) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -59,3 +60,7 @@ export const PATCH: APIRoute = async (context) =>
 
     return jsonResponse({ campaign })
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)
+export const PATCH = withAdmin(unguardedPATCH)

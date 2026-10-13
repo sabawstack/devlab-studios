@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { linkHrefSchema, refineSafeLinks } from './shared'
 
 /**
  * Schemas for the five content types that predate the schema-driven
@@ -78,7 +79,7 @@ export const resourcesContentSchema = z.object({
 const navigationItemInputSchema = z.object({
   id: z.string().optional(),
   label: z.string().optional().default(''),
-  href: z.string().optional().default(''),
+  href: linkHrefSchema.optional().default(''),
   sortOrder: z.union([z.number(), z.string()]).optional(),
   status: z.string().optional(),
 })
@@ -87,7 +88,7 @@ export const siteSettingsContentSchema = z.object({
   navigation: z.array(navigationItemInputSchema).optional().default([]),
   footer: z.record(z.string(), z.unknown()).optional().default({}),
   ctas: z.record(z.string(), z.unknown()).optional().default({}),
-})
+}).superRefine(refineSafeLinks)
 
 const seoPageInputSchema = z.object({
   id: z.string().optional(),
@@ -133,7 +134,8 @@ export const profileContentSchema = z.object({
   tools: z.array(z.object({ id: z.string().optional(), key: z.string().optional(), label: z.string().optional().default(''), icon: z.string().optional().default('Wrench'), sortOrder: z.union([z.number(), z.string()]).optional(), status: z.string().optional() })).optional().default([]),
   workflowPatterns: z.array(z.object({ id: z.string().optional(), key: z.string().optional(), label: z.string().optional().default(''), icon: z.string().optional().default('Settings'), sortOrder: z.union([z.number(), z.string()]).optional(), status: z.string().optional() })).optional().default([]),
   systemCharacteristics: z.array(z.object({ id: z.string().optional(), key: z.string().optional(), label: z.string().optional().default(''), icon: z.string().optional().default('Settings'), sortOrder: z.union([z.number(), z.string()]).optional(), status: z.string().optional() })).optional().default([]),
-})
+  // `about` is a loose record, so its linkedinUrl/githubUrl/resumeUrl are checked here.
+}).superRefine(refineSafeLinks)
 
 export const SINGLETON_CONTENT_SCHEMAS: Record<string, z.ZodTypeAny> = {
   services: servicesContentSchema,

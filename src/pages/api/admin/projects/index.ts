@@ -7,8 +7,9 @@ import { getEnv } from '../../../../lib/env'
 import { normalizeProjectMedia } from '../../../../lib/media'
 import { adminErrorResponse, jsonResponse, readJsonBody } from '../../../../lib/http'
 import { buildCreateAuditMetadata } from '../../../../lib/audit.js'
+import { withAdmin } from '../../../../lib/adminGuard'
 
-export const GET: APIRoute = async () => {
+const unguardedGET: APIRoute = async () => {
   const env = getEnv()
   if (!env.DB) return jsonResponse({ error: 'D1 DB binding is not configured.' }, 503)
 
@@ -20,7 +21,7 @@ export const GET: APIRoute = async () => {
   )
 }
 
-export const POST: APIRoute = async ({ request, locals }) => {
+const unguardedPOST: APIRoute = async ({ request, locals }) => {
   const env = getEnv()
   if (!env.DB) return jsonResponse({ error: 'D1 DB binding is not configured.' }, 503)
 
@@ -38,3 +39,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return adminErrorResponse(error)
   }
 }
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)
+export const POST = withAdmin(unguardedPOST)

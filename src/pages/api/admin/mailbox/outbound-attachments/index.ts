@@ -7,6 +7,7 @@ import { sanitizeFilename, safeContentType } from '../../../../../mailbox/inboun
 import { createOutboundAttachment } from '../../../../../mailbox/repositories/outboundAttachments.js'
 import { newId } from '../../../../../mailbox/repositories/helpers.js'
 import { actorEmail, handleRoute, jsonResponse, requireDatabase } from '../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -28,7 +29,7 @@ export const prerender = false
  * The per-file cap is checked here; the per-MESSAGE total is checked at claim
  * time, because a message is not a message until it exists.
  */
-export const POST: APIRoute = async (context) =>
+const unguardedPOST: APIRoute = async (context) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -87,3 +88,6 @@ export const POST: APIRoute = async (context) =>
 
     return jsonResponse({ attachment }, 201)
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const POST = withAdmin(unguardedPOST)

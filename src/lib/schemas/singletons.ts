@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { pageBlockSchema } from './blocks'
-import { seoSchema } from './shared'
+import { linkHrefSchema, refineSafeLinks, requiredLinkHrefSchema, seoSchema } from './shared'
 
 export const siteSettingsSchema = z.object({
   brandName: z.string().min(1),
@@ -9,14 +9,14 @@ export const siteSettingsSchema = z.object({
   logoSideUrl: z.string().default(''),
   defaultOgImage: z.string().default(''),
   availabilityStatus: z.string().default(''),
-  legalLinks: z.array(z.object({ label: z.string(), href: z.string() })).default([]),
+  legalLinks: z.array(z.object({ label: z.string(), href: linkHrefSchema })).default([]),
 })
 export type SiteSettings = z.infer<typeof siteSettingsSchema>
 
 export const navigationSchema = z.object({
   items: z.array(z.object({
     label: z.string().min(1),
-    href: z.string().min(1),
+    href: requiredLinkHrefSchema,
     isExternal: z.boolean().default(false),
   })).default([]),
 })
@@ -28,9 +28,9 @@ export const footerSchema = z.object({
   email: z.string().default(''),
   location: z.string().default(''),
   copyright: z.string().default(''),
-  legalLinks: z.array(z.object({ label: z.string(), href: z.string() })).default([]),
-  quickLinks: z.array(z.object({ label: z.string(), href: z.string() })).default([]),
-  socialLinks: z.array(z.object({ label: z.string(), href: z.string() })).default([]),
+  legalLinks: z.array(z.object({ label: z.string(), href: linkHrefSchema })).default([]),
+  quickLinks: z.array(z.object({ label: z.string(), href: linkHrefSchema })).default([]),
+  socialLinks: z.array(z.object({ label: z.string(), href: linkHrefSchema })).default([]),
 })
 export type Footer = z.infer<typeof footerSchema>
 
@@ -42,10 +42,10 @@ export const profileSchema = z.object({
   location: z.string().default(''),
   availability: z.string().default(''),
   photoUrl: z.string().default(''),
-  resumeUrl: z.string().default(''),
+  resumeUrl: linkHrefSchema.default(''),
   email: z.string().default(''),
-  linkedinUrl: z.string().optional().default(''),
-  githubUrl: z.string().optional().default(''),
+  linkedinUrl: linkHrefSchema.optional().default(''),
+  githubUrl: linkHrefSchema.optional().default(''),
   technicalSkills: z.array(z.string()).default([]),
   personalSkills: z.array(z.string()).default([]),
 })
@@ -62,7 +62,9 @@ export const pageSingletonSchema = z.object({
   status: z.enum(['draft', 'published', 'archived']).default('draft'),
   blocks: z.array(pageBlockSchema).default([]),
   seo: seoSchema.optional(),
-})
+  // Belt and braces over the per-field link schemas in blocks.ts: any block
+  // prop named like a link is held to the same URL policy.
+}).superRefine(refineSafeLinks)
 export type PageSingleton = z.infer<typeof pageSingletonSchema>
 
 /** Privacy/Terms are simple long-form pages, not block-composed. */

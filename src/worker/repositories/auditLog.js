@@ -55,3 +55,19 @@ export async function listAuditEvents(db, { entityType = null, entityId = null, 
     createdAt: row.created_at,
   }))
 }
+
+/**
+ * The `.catch` for an audit write that must not fail the request it records
+ * (the change has already happened). It used to be `.catch(() => undefined)`,
+ * which made a broken audit trail invisible; now every dropped row is logged
+ * with enough context to reconstruct it.
+ *
+ * @param {unknown} error
+ */
+export function logAuditFailure(error) {
+  console.error(JSON.stringify({
+    event: 'audit_log_write',
+    outcome: 'failure',
+    errorMessage: error instanceof Error ? error.message : String(error),
+  }))
+}

@@ -17,8 +17,23 @@
  * details for every lead in the pipeline.
  */
 
+import { clientIp, peekRateLimit, rateLimitedResponse, recordRateLimitFailure } from '../../worker/rateLimit.js'
+
 /** Minimum length worth accepting. A short token is a guessable one. */
 const MIN_TOKEN_LENGTH = 32
+
+/**
+ * The public answer for a deployment without a usable token. Deliberately the
+ * same for "unset" and "too short", and naming no variable: an unauthenticated
+ * caller learns nothing about how the deployment is configured. The operator
+ * gets the specifics from the log line `authorizeBearer` writes.
+ */
+export const NOT_CONFIGURED_MESSAGE = 'This endpoint is not configured.'
+
+/** Failed bearer attempts allowed per client IP per window, across all outbox routes. */
+export const AUTH_FAILURE_LIMIT = 10
+export const AUTH_FAILURE_WINDOW_MS = 10 * 60_000
+const AUTH_FAILURE_BUCKET = 'outbox-auth-failure'
 
 /**
  * Compares two strings without an early exit.
@@ -74,16 +89,14 @@ export function authorizeBearer(env, request, variable) {
   if (!expected) {
     // 503, not 401: the caller's credentials are not the problem, and saying
     // "unauthorized" would send an operator hunting for a token that the
-    // deployment never had.
-    return { ok: false, status: 503, error: `This endpoint is not configured. Set ${variable}.` }
+    // deployment never had. The variable is named in the LOG, not the body.
+    logConfigProblem(variable, 'unset')
+    return { ok: false, status: 503, error: NOT_CONFIGURED_MESSAGE }
   }
 
   if (expected.length < MIN_TOKEN_LENGTH) {
-    return {
-      ok: false,
-      status: 503,
-      error: `${variable} is too short to be safe. Use at least ${MIN_TOKEN_LENGTH} random characters.`,
-    }
+    logConfigProblem(variable, `shorter than ${MIN_TOKEN_LENGTH} characters`)
+    return { ok: false, status: 503, error: NOT_CONFIGURED_MESSAGE }
   }
 
   if (!timingSafeEqual(readBearerToken(request), expected)) {
@@ -91,6 +104,59 @@ export function authorizeBearer(env, request, variable) {
   }
 
   return { ok: true }
+}
+
+function logConfigProblem(variable, problem) {
+  console.error(JSON.stringify({ event: 'outbox.auth_not_configured', variable, problem }))
+}
+
+/**
+ * `authorizeBearer` for a route, with failed attempts logged and limited.
+ *
+ * A 401 is logged (no token material — only the route and the client IP) and
+ * counted against the caller's IP. Once an IP has failed AUTH_FAILURE_LIMIT
+ * times in the window it gets 429 BEFORE its token is even compared, so the
+ * endpoint cannot be used as a guessing oracle. Successful calls are never
+ * counted. The limiter fails open (see worker/rateLimit.js) — the token check
+ * itself is what keeps the endpoint closed.
+ *
+ * @param {Env} env
+ * @param {Request} request
+ * @param {string} variable
+ * @returns {Promise<{ ok: true } | { ok: false, response: Response }>}
+ */
+export async function authorizeBearerRequest(env, request, variable) {
+  const ip = clientIp(request)
+
+  const throttled = await peekRateLimit(env, AUTH_FAILURE_BUCKET, ip, { limit: AUTH_FAILURE_LIMIT })
+  if (throttled.limited) {
+    return {
+      ok: false,
+      response: rateLimitedResponse('Too many failed attempts. Try again later.', throttled.retryAfterSeconds),
+    }
+  }
+
+  const auth = authorizeBearer(env, request, variable)
+  if (auth.ok) return { ok: true }
+
+  if (auth.status === 401) {
+    let path = ''
+    try {
+      path = new URL(request.url).pathname
+    } catch {
+      path = ''
+    }
+    console.warn(JSON.stringify({ event: 'outbox.auth_failed', path, ip }))
+    await recordRateLimitFailure(env, AUTH_FAILURE_BUCKET, ip, { windowMs: AUTH_FAILURE_WINDOW_MS })
+  }
+
+  return {
+    ok: false,
+    response: new Response(JSON.stringify({ error: auth.error }), {
+      status: auth.status,
+      headers: { 'content-type': 'application/json' },
+    }),
+  }
 }
 
 /**
@@ -102,4 +168,14 @@ export function authorizeBearer(env, request, variable) {
  */
 export function authorizeOutbox(env, request) {
   return authorizeBearer(env, request, 'LEAD_OUTBOX_TOKEN')
+}
+
+/**
+ * `authorizeOutbox` with failed attempts logged and limited.
+ *
+ * @param {Env} env
+ * @param {Request} request
+ */
+export function authorizeOutboxRequest(env, request) {
+  return authorizeBearerRequest(env, request, 'LEAD_OUTBOX_TOKEN')
 }

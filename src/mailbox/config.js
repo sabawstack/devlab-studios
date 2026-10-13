@@ -47,6 +47,15 @@ export const LIMITS = Object.freeze({
 
   /** Recipients recorded per header. A message addressed to more is truncated. */
   maxRecipients: 50,
+
+  /**
+   * Inbound messages stored per sender address per rolling 24 hours. Beyond
+   * this the message is dropped and the drop is logged with its reason
+   * (`mailbox.ingest` result `dropped`, reason `sender_daily_cap`). Generous
+   * next to any real correspondent, including DMARC reporters; it exists so
+   * one address cannot fill D1 and R2.
+   */
+  maxInboundPerSenderPerDay: 100,
 })
 
 /**

@@ -51,12 +51,22 @@ export async function revokeAdminSession(db, { jti, adminEmail = null, expiresAt
 }
 
 /**
+ * Whether a token may still be used.
+ *
+ * FAILS CLOSED (October 2026 security audit, L2). This used to return
+ * "not revoked" on any D1 error, so during a D1 outage -- or on a database
+ * missing migration 0008 -- a token the admin had explicitly signed out kept
+ * working. An unreadable revocation list is now 'unknown', which requireAdmin
+ * refuses with a 503. A token with no `jti` cannot be revoked at all, so it is
+ * treated as revoked (every token issued since 0008 carries one).
+ *
  * @param {D1Database} db
  * @param {string | undefined} jti
- * @returns {Promise<boolean>}
+ * @returns {Promise<'active' | 'revoked' | 'unknown'>}
  */
-export async function isAdminSessionRevoked(db, jti) {
-  if (!db || !jti) return false
+export async function getAdminSessionRevocationState(db, jti) {
+  if (!jti) return 'revoked'
+  if (!db) return 'unknown'
 
   try {
     const row = await db
@@ -64,14 +74,25 @@ export async function isAdminSessionRevoked(db, jti) {
       .bind(jti, new Date().toISOString())
       .first()
 
-    return Boolean(row)
-  } catch {
-    // Deliberately fails OPEN, and only ever to the posture that shipped
-    // before revocation existed: if this table is unreachable (or not yet
-    // migrated) every valid signed token is accepted, exactly as it was
-    // before. Failing closed here would instead lock every admin out of the
-    // CMS over a missing migration or a transient D1 blip, which is a worse
-    // and far more likely outcome than the narrow window it would close.
-    return false
+    return row ? 'revoked' : 'active'
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: 'admin_session_revocation_check',
+      outcome: 'failure',
+      errorMessage: error instanceof Error ? error.message : String(error),
+    }))
+    return 'unknown'
   }
+}
+
+/**
+ * True unless the token is positively known to be active -- a failed lookup
+ * counts as revoked.
+ *
+ * @param {D1Database} db
+ * @param {string | undefined} jti
+ * @returns {Promise<boolean>}
+ */
+export async function isAdminSessionRevoked(db, jti) {
+  return (await getAdminSessionRevocationState(db, jti)) !== 'active'
 }

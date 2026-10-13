@@ -7,6 +7,7 @@ import {
   PIPELINE_STATUSES,
   QUALIFICATION_RESULTS,
 } from '../../../../lib/schemas/inquiry'
+import { withAdmin } from '../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -22,7 +23,7 @@ function allowed(value: string | null, options: readonly string[]): string | nul
   return value && options.includes(value) ? value : null
 }
 
-export const GET: APIRoute = async ({ url }) => {
+const unguardedGET: APIRoute = async ({ url }) => {
   const env = getEnv()
   if (!env.DB) return jsonResponse({ error: 'D1 DB binding is not configured.' }, 503)
 
@@ -54,3 +55,6 @@ export const GET: APIRoute = async ({ url }) => {
 
   return jsonResponse(leads)
 }
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)

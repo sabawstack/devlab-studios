@@ -3,6 +3,7 @@ import { getLatestAiRun } from '../../../../../lead-engine/repositories/aiRuns.j
 import { listUnansweredReplies } from '../../../../../lead-engine/repositories/conversations.js'
 import { listDrafts } from '../../../../../lead-engine/repositories/drafts.js'
 import { handleRoute, jsonResponse, requireDatabase } from '../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -14,7 +15,7 @@ export const prerender = false
  * before it is analysed, and a reply the model flagged for human attention
  * deliberately has no draft.
  */
-export const GET: APIRoute = async ({ url }) =>
+const unguardedGET: APIRoute = async ({ url }) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -44,3 +45,6 @@ export const GET: APIRoute = async ({ url }) =>
 
     return jsonResponse({ replies: enriched })
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)

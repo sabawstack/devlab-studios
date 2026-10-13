@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro'
 import { getMessage } from '../../../../../../mailbox/repositories/messages.js'
 import { contentDisposition } from '../../../../../../mailbox/inbound/filenames.js'
 import { handleRoute, jsonResponse, notFound, requireDatabase } from '../../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -19,7 +20,7 @@ export const prerender = false
  * type is not used; it is hard-coded here, because the type of THIS object is
  * something we know rather than something the message gets to tell us.
  */
-export const GET: APIRoute = async ({ params, request }) =>
+const unguardedGET: APIRoute = async ({ params, request }) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -54,3 +55,6 @@ export const GET: APIRoute = async ({ params, request }) =>
       },
     })
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)

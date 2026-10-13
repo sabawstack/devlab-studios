@@ -10,6 +10,7 @@ import {
   readValidatedBody,
   requireDatabase,
 } from '../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -19,7 +20,7 @@ const jobActionSchema = z.object({
   limit: z.number().int().min(1).max(25).optional(),
 })
 
-export const GET: APIRoute = async ({ url }) =>
+const unguardedGET: APIRoute = async ({ url }) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -46,7 +47,7 @@ export const GET: APIRoute = async ({ url }) =>
  * the whole dry-run procedure depends on being able to push work through
  * without waiting for 22:00 UTC.
  */
-export const POST: APIRoute = async (context) =>
+const unguardedPOST: APIRoute = async (context) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -84,3 +85,7 @@ export const POST: APIRoute = async (context) =>
 
     return jsonResponse(result)
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)
+export const POST = withAdmin(unguardedPOST)

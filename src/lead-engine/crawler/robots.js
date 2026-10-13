@@ -18,6 +18,12 @@
  */
 
 import { CRAWLER } from '../config/defaults.js'
+import { isSameSite } from '../domain/domains.js'
+import { readBounded } from './fetchPage.js'
+import { checkRedirect, checkUrlSafety } from './ssrf.js'
+
+/** Bytes of robots.txt read before the stream is abandoned. */
+const ROBOTS_MAX_BYTES = 200_000
 
 /** Our own token, matched case-insensitively against User-agent lines. */
 const OUR_TOKEN = 'devlabresearchbot'
@@ -152,41 +158,74 @@ export async function fetchRobots(origin, options = {}) {
   const fetchImpl = options.fetchImpl || fetch
   const userAgent = options.userAgent || CRAWLER.userAgent
   const timeoutMs = options.timeoutMs ?? CRAWLER.requestTimeoutMs
+  const maxRedirects = options.maxRedirects ?? CRAWLER.maxRedirects ?? 5
+
+  const refused = (status) => ({ allowed: () => false, crawlDelayMs: null, status })
+
+  // The same SSRF guard every crawler fetch passes, applied to the robots.txt
+  // URL itself and then to every redirect hop. Following redirects with the
+  // runtime (`redirect: 'follow'`) would let a site bounce this request into
+  // private address space or a metadata endpoint unchecked.
+  let current = `${origin}/robots.txt`
+  if (!checkUrlSafety(current).safe) return refused('unsafe_url')
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
-    const response = await fetchImpl(`${origin}/robots.txt`, {
-      headers: { 'User-Agent': userAgent, Accept: 'text/plain' },
-      redirect: 'follow',
-      signal: controller.signal,
-    })
+    for (let hop = 0; hop <= maxRedirects; hop += 1) {
+      const response = await fetchImpl(current, {
+        headers: { 'User-Agent': userAgent, Accept: 'text/plain' },
+        redirect: 'manual',
+        signal: controller.signal,
+      })
 
-    if (response.status >= 500) {
-      // A failing server is not a server to crawl. Refusing here also stops the
-      // crawler from adding load to something already in trouble.
-      return { allowed: () => false, crawlDelayMs: null, status: 'server_error' }
+      if (response.status >= 300 && response.status < 400) {
+        await response.body?.cancel().catch(() => {})
+        const location = response.headers.get('location')
+        if (!location) return refused('redirect_without_location')
+
+        const target = new URL(location, current).toString()
+        const verdict = checkRedirect(current, target, isSameSite)
+        // An unsafe or off-site redirect is not followed. Refusing (rather
+        // than treating robots.txt as absent) is the conservative reading:
+        // we could not read the site's rules, so we do not crawl it.
+        if (!verdict.allowed) return refused(verdict.reason || 'unsafe_redirect')
+
+        current = target
+        continue
+      }
+
+      if (response.status >= 500) {
+        await response.body?.cancel().catch(() => {})
+        // A failing server is not a server to crawl. Refusing here also stops the
+        // crawler from adding load to something already in trouble.
+        return refused('server_error')
+      }
+
+      if (!response.ok) {
+        await response.body?.cancel().catch(() => {})
+        // 404/403 and friends: no restrictions published.
+        return { allowed: () => true, crawlDelayMs: null, status: 'absent' }
+      }
+
+      // A robots.txt is a small text file. Read at most the ceiling, chunk by
+      // chunk, and abandon the stream after it — `response.text()` would
+      // buffer the whole body before any limit could apply.
+      const { text } = await readBounded(response, ROBOTS_MAX_BYTES)
+      const parsed = parseRobots(text, userAgent.toLowerCase())
+
+      return {
+        allowed: (path) => isPathAllowed(parsed, path),
+        crawlDelayMs: parsed.crawlDelay === null ? null : Math.min(parsed.crawlDelay * 1000, 30_000),
+        status: parsed.matchedSpecificAgent ? 'matched_agent' : 'matched_wildcard',
+      }
     }
 
-    if (!response.ok) {
-      // 404/403 and friends: no restrictions published.
-      return { allowed: () => true, crawlDelayMs: null, status: 'absent' }
-    }
-
-    // A robots.txt is a small text file. Anything enormous is either not a
-    // robots.txt or is trying to make us buffer it.
-    const text = (await response.text()).slice(0, 200_000)
-    const parsed = parseRobots(text, userAgent.toLowerCase())
-
-    return {
-      allowed: (path) => isPathAllowed(parsed, path),
-      crawlDelayMs: parsed.crawlDelay === null ? null : Math.min(parsed.crawlDelay * 1000, 30_000),
-      status: parsed.matchedSpecificAgent ? 'matched_agent' : 'matched_wildcard',
-    }
+    return refused('too_many_redirects')
   } catch {
     // Network failure or timeout. Same reasoning as a 5xx.
-    return { allowed: () => false, crawlDelayMs: null, status: 'unreachable' }
+    return refused('unreachable')
   } finally {
     clearTimeout(timer)
   }

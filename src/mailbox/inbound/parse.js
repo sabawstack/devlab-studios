@@ -74,6 +74,9 @@ export async function sha256Hex(bytes) {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
+/** The authserv-id Cloudflare Email Routing stamps on the header it adds. */
+export const TRUSTED_AUTHSERV_ID = 'mx.cloudflare.net'
+
 /**
  * Reads the edge's `Authentication-Results`.
  *
@@ -83,21 +86,55 @@ export async function sha256Hex(bytes) {
  * bounce is plausibly genuine rather than a forged one aimed at poisoning our
  * own suppression list.
  *
- * Only the FIRST such header is read. Anything after it was added by a hop we
- * do not control, and trusting the last one lets a sender append their own
- * `dmarc=pass`.
+ * ONLY THE TOPMOST HEADER, AND ONLY IF CLOUDFLARE WROTE IT. A sender may put
+ * any number of `Authentication-Results` headers in the message they submit,
+ * each claiming `dmarc=pass`. The receiving edge adds its own header ABOVE
+ * everything already in the message, so the first one is the only one a hop
+ * we trust produced — and even that is believed only when its authserv-id is
+ * Cloudflare's (`mx.cloudflare.net`). Anything else — no header, a first
+ * header from some other host — yields `unknown` for every mechanism, which
+ * the rest of the mailbox treats exactly like a failure: unverified.
+ *
+ * `Headers.get()` joins repeated headers with ", ", so the topmost header is
+ * the text before the first comma once parenthesised comments (which may
+ * contain commas in some MTAs' output) are removed.
  *
  * @param {Headers} headers
  * @returns {{ spf: string|null, dkim: string|null, dmarc: string|null }}
  */
 export function parseAuthenticationResults(headers) {
-  const raw = headers?.get?.('authentication-results') ?? ''
+  const unknown = { spf: 'unknown', dkim: 'unknown', dmarc: 'unknown' }
+  const raw = String(headers?.get?.('authentication-results') ?? '')
+  if (!raw.trim()) return unknown
+
+  const topmost = stripHeaderComments(raw).split(',')[0]
+  const [authservSegment, ...results] = topmost.split(';')
+  const authservId = String(authservSegment ?? '').trim().split(/\s+/)[0].toLowerCase()
+  if (authservId !== TRUSTED_AUTHSERV_ID) return unknown
+
+  const body = results.join(';')
   const read = (mechanism) => {
-    const match = new RegExp(`(?:^|[;\\s])${mechanism}\\s*=\\s*([a-z]+)`, 'i').exec(raw)
+    const match = new RegExp(`(?:^|[;\\s])${mechanism}\\s*=\\s*([a-z]+)`, 'i').exec(body)
     return match ? match[1].toLowerCase() : null
   }
 
   return { spf: read('spf'), dkim: read('dkim'), dmarc: read('dmarc') }
+}
+
+/**
+ * Removes RFC 5322 comments — `(…)`, nested included — from a header value.
+ * Bounded so a hostile run of parentheses cannot loop for long.
+ *
+ * @param {string} value
+ */
+function stripHeaderComments(value) {
+  let out = String(value).slice(0, 16_384)
+  for (let pass = 0; pass < 8; pass += 1) {
+    const next = out.replace(/\([^()]*\)/g, ' ')
+    if (next === out) break
+    out = next
+  }
+  return out
 }
 
 /** @param {{ name?: string, address?: string }|undefined} mailbox */

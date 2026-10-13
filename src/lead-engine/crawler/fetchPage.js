@@ -28,7 +28,7 @@ import { assertSafeUrl, checkRedirect, checkUrlSafety, UnsafeUrlError } from './
  * @param {number} maxBytes
  * @returns {Promise<{ text: string, bytes: number, truncated: boolean }>}
  */
-async function readBounded(response, maxBytes) {
+export async function readBounded(response, maxBytes) {
   const body = response.body
   if (!body) return { text: '', bytes: 0, truncated: false }
 

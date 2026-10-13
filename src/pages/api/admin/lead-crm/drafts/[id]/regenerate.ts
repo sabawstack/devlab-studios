@@ -11,6 +11,7 @@ import {
   readValidatedBody,
   requireDatabase,
 } from '../../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -22,7 +23,7 @@ export const prerender = false
  * handler — and every regeneration is recorded as its own AI run with the
  * variant on it.
  */
-export const POST: APIRoute = async (context) =>
+const unguardedPOST: APIRoute = async (context) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -50,3 +51,6 @@ export const POST: APIRoute = async (context) =>
 
     return jsonResponse({ draft: result.draft, violations: result.violations })
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const POST = withAdmin(unguardedPOST)

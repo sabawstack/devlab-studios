@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { authorizeOutbox } from '../../../lead-engine/outbox/auth.js'
+import { authorizeOutboxRequest } from '../../../lead-engine/outbox/auth.js'
 import { collectOutbox } from '../../../lead-engine/services/outbox.js'
 import { checkRateLimit, clientIp, rateLimitedResponse } from '../../../worker/rateLimit.js'
 import { handleRoute, jsonResponse, requireDatabase } from '../../../lead-engine/schemas/route'
@@ -30,8 +30,8 @@ export const GET: APIRoute = async (context) =>
     const database = requireDatabase()
     if (!database.ok) return database.response
 
-    const auth = authorizeOutbox(database.env, context.request)
-    if (!auth.ok) return jsonResponse({ error: auth.error }, auth.status)
+    const auth = await authorizeOutboxRequest(database.env, context.request)
+    if (!auth.ok) return auth.response
 
     // Rate limited even though it is authenticated: a misconfigured schedule
     // polling every second would walk the pipeline on every call.

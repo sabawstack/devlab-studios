@@ -54,6 +54,39 @@ decided against that surface specifically:
 ### Security
 
 - **Security:** the admin login check could be skipped with a percent-encoded path (`/api/%61dmin/...`), because the middleware checked the raw path while Astro routes on the decoded one. The gate now checks the decoded, slash-collapsed routing path (malformed escapes are refused with 400), with unit and end-to-end tests for encoded, double-encoded, mixed-case and doubled-slash paths. Production's `*.workers.dev` address and per-version preview URLs are switched off so the app is only served on www.devlabstudios.com behind the domain's Cloudflare protections.
+- Every `/api/admin/*` route handler (except login/logout) now checks the admin session itself via `withAdmin` (src/lib/adminGuard.ts), so a request that slips past the middleware gate gets 401 instead of running; a unit test fails if any admin route is exported without it.
+- CMS link fields (navigation, footer, page-block CTAs, profile, project, certification, resource and redirect links) refuse `javascript:`, `data:`, `vbscript:`, protocol-relative and other non-allow-listed URLs on save, and the public read path plus the Navbar and Footer render any stored unsafe link as `#`.
+- Admin login now locks an account for 15 minutes after 10 failed attempts within 15 minutes from any number of addresses, on top of the existing per-IP limits, with the same generic error text.
+- Admin login now runs the full PBKDF2 check for unknown emails too, so response time no longer reveals which emails are admins.
+- The admin session revocation check now fails closed: if D1 cannot be read, the request is refused (503) instead of accepting a possibly signed-out token.
+- `ADMIN_AUTH_MODE=disabled` is now refused unless the request is to localhost and `ADMIN_AUTH_DISABLED_LOCAL_ONLY=true` is set, so a mistyped variable cannot open a deployed CMS.
+- Rolling back a content version now re-validates the snapshot through the same schema as a normal save, and refuses it (400) if it no longer passes.
+- Media replace/delete now accepts only well-formed keys of image objects, not any object in the bucket.
+- Audit-log write failures on media changes and password changes are now logged instead of silently dropped.
+- Open-play command, captain, check-in, claim, reopen and DUPR-export bodies are now size-capped while they stream in (32 KB for commands, 4 KB for the rest; 413 when over) and validated in the route, so only parsed data ever reaches the session's Durable Object; check-in no longer forwards the raw body.
+- Session creation now caps its body at 64 KB (413 when over) instead of reading it unbounded.
+- A session now accepts at most 300 live sockets (new upgrades get 429), closes a socket that sends a message over 4 KB (1009) or more than 10 messages in 10 s or more than 5 AUTH attempts (1008), and answers RESYNC from snapshots cached per state instead of rebuilding them.
+- Repeating a self check-in for a player already on the list and playing is now a free 200: only check-ins that add a player or bring one back from a break use up the session's check-in allowance, so a flood of repeats can no longer lock real arrivals out.
+- Per-IP rate limits now count an IPv6 client by its /64 network (an IPv4-mapped address by its IPv4 address), so rotating addresses inside one /64 no longer gets a fresh allowance; Turnstile still receives the real address.
+- Session creation and self check-in now fail closed (503) when the rate limiter errors, not only when its binding is missing.
+- Public content endpoints (articles, projects, services, profile content, site settings, SEO) no longer return raw D1 error text, and a failed read is sent with Cache-Control: no-store so the edge never caches it.
+- /api/contact and /api/inquiries no longer let the caller pick the stored lead source (for example `lead-magnet`): only known form ids are kept, anything else becomes the route's default.
+- The legacy /api/contact subject now has line breaks flattened to spaces.
+- Mailbox replies now show the resolved recipient in the composer, and require an explicit confirmation of that exact address when the message being answered is unverified (DMARC not pass) or its Reply-To is on a different domain than its From; the server refuses (409) a reply whose confirmed address does not match.
+- Inbound mail is only threaded by subject, or linked to a lead by its From address, when Cloudflare's edge reported DMARC pass; other mail starts its own thread and is labelled "Unverified sender".
+- Authentication-Results is read only from the topmost header and only when its authserv-id is Cloudflare's (`mx.cloudflare.net`); anything else is recorded as `unknown`, so a sender can no longer add their own `dmarc=pass`.
+- Suppression and recipient validity are re-checked when a draft is re-addressed, when a draft is sent, and when the transmitter collects the queue; a reply suppressed before collection is marked failed with the reason instead of being handed out.
+- Contact, inquiry and lead-magnet confirmation emails no longer repeat the visitor's name or message, and go to each address at most once per 24 hours (address stored only as a SHA-256 hash, migration 0017); owner notifications are unchanged.
+- DMARC report attachments are inflated as a stream with a byte cap and the decompressor is cancelled past it, closing a decompression-bomb memory exhaustion.
+- The crawler's robots.txt fetch follows redirects manually through the same SSRF and same-site checks as page fetches, and reads at most 200 KB.
+- Outbox transmitter callbacks only move a collected message to sent, failed or back to queued; a callback for a draft, queued, cancelled or failed message answers 409 instead of changing it.
+- Failed bearer-token attempts on the lead-engine and mailbox outbox endpoints are logged and limited per client IP (429 after 10 failures in 10 minutes), and an unconfigured endpoint answers a generic 503 that no longer names the environment variable.
+- Inbound mail from one sender is capped at 100 messages per 24 hours; extra messages are dropped and logged with the reason `sender_daily_cap`.
+- Outgoing recipients (replies, new messages, draft edits, visitor confirmations) must be exactly one plain address; comma- or semicolon-separated lists and quoted or angle-bracket tricks are refused.
+- One queued reply whose attachment is missing from storage no longer fails the whole outbox batch; that reply is marked failed with the reason and the rest are delivered.
+- A reply with attachments stays invisible to the transmitter until its files are attached; if attaching fails, the half-made reply is discarded and its uploads released, so nothing is sent without its files.
+- **Security headers:** both header sources (middleware and `public/_headers`) now carry the same policy (stale Zoho hosts removed) and a test keeps them in sync; Cloudflare Web Analytics is allowed in the CSP instead of being blocked with an error on every page; `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Resource-Policy: same-site` and a fuller `Permissions-Policy` (payment, USB, serial, Bluetooth, HID, motion sensors, topics, screen capture off) are sent; admin pages and admin API responses are `Cache-Control: no-store`; the preview deployment is `noindex, nofollow`.
+- Upgraded Astro 7.1.6 to 7.3.8 (fixes GHSA-26w7-cxv4-gfx2) with @astrojs/cloudflare 14.3.4, @astrojs/react 7.0.1 and devalue 5.9.4; astro and the runtime adapters now sit in `dependencies` so the production audit covers them, the stale GHSA-qwww-vcr4-c8h2 allowlist entry is gone, and CI GitHub Actions are pinned by commit SHA.
 
 ### Fixed
 

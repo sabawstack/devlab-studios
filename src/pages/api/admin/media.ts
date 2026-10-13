@@ -1,8 +1,10 @@
 import type { APIRoute } from 'astro'
 import { getEnv } from '../../../lib/env'
 import { deleteMediaAsset, findMediaReferences, findMediaReferencesForAssets, listMediaAssets, recordMediaAsset, replaceMediaReferences } from '../../../worker/repositories/mediaAssets.js'
-import { recordAuditEvent } from '../../../worker/repositories/auditLog.js'
+import { logAuditFailure, recordAuditEvent } from '../../../worker/repositories/auditLog.js'
 import { checkRateLimit, clientIp, rateLimitedResponse } from '../../../worker/rateLimit.js'
+import { isManageableMediaKey, isManageableMediaObject } from '../../../lib/mediaKeys'
+import { withAdmin } from '../../../lib/adminGuard'
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -107,7 +109,7 @@ function objectUrl(baseUrl: string, key: string): string {
   return `${baseUrl.replace(/\/$/, '')}/${key.split('/').map(encodeURIComponent).join('/')}`
 }
 
-export const GET: APIRoute = async ({ url }) => {
+const unguardedGET: APIRoute = async ({ url }) => {
   const env = getEnv()
   if (!env.MEDIA_BUCKET) return jsonResponse({ error: 'R2 MEDIA_BUCKET binding is not configured.' }, 503)
 
@@ -188,7 +190,7 @@ export const GET: APIRoute = async ({ url }) => {
   })
 }
 
-export const POST: APIRoute = async ({ request, locals }) => {
+const unguardedPOST: APIRoute = async ({ request, locals }) => {
   const env = getEnv()
   if (!env.MEDIA_BUCKET) return jsonResponse({ error: 'R2 MEDIA_BUCKET binding is not configured.' }, 503)
   if (!String(env.R2_PUBLIC_BASE_URL || '').trim()) {
@@ -226,7 +228,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // already in R2, so the upload has succeeded. Letting an audit-log write
   // fail the response would tell the admin it failed, and the natural retry
   // then uploads a second copy under a fresh UUID key.
-  if (env.DB) await recordAuditEvent(env.DB, { actorEmail: locals.adminEmail || null, action: 'create', entityType: 'media', entityId: key, metadata: { summary: `Uploaded media: ${file.name}.`, filename: file.name, contentType: file.type, size: file.size } }).catch(() => undefined)
+  if (env.DB) await recordAuditEvent(env.DB, { actorEmail: locals.adminEmail || null, action: 'create', entityType: 'media', entityId: key, metadata: { summary: `Uploaded media: ${file.name}.`, filename: file.name, contentType: file.type, size: file.size } }).catch(logAuditFailure)
 
   return jsonResponse({
     key,
@@ -237,7 +239,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }, 201)
 }
 
-export const PATCH: APIRoute = async ({ request, locals }) => {
+const unguardedPATCH: APIRoute = async ({ request, locals }) => {
   const env = getEnv()
   if (!env.MEDIA_BUCKET) return jsonResponse({ error: 'R2 MEDIA_BUCKET binding is not configured.' }, 503)
   if (!env.DB) return jsonResponse({ error: 'D1 DB binding is not configured.' }, 503)
@@ -250,8 +252,10 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
   const oldKey = String(formData.get('oldKey') || '').replace(/^\/+/, '')
   const file = formData.get('file')
   if (!oldKey || !file || typeof file === 'string') return jsonResponse({ error: 'An existing key and replacement image are required.' }, 400)
+  if (!isManageableMediaKey(oldKey)) return jsonResponse({ error: 'That media key is not valid.' }, 400)
   const oldObject = await env.MEDIA_BUCKET.head(oldKey)
   if (!oldObject) return jsonResponse({ error: 'Media object not found.' }, 404)
+  if (!isManageableMediaObject(oldKey, oldObject)) return jsonResponse({ error: 'Only images in the media library can be replaced.' }, 400)
   const validationError = await validateOptimizedImage(file)
   if (validationError) return jsonResponse({ error: validationError }, 400)
 
@@ -276,7 +280,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
     // an oldUrl that no longer exists (404ing all of them) and then delete
     // nextKey, the sole surviving copy of the image.
     await deleteMediaAsset(env.DB, oldKey).catch(() => undefined)
-    await recordAuditEvent(env.DB, { actorEmail: locals.adminEmail || null, action: 'replace', entityType: 'media', entityId: nextKey, metadata: { summary: `Replaced media ${oldKey} with ${file.name}; updated ${references.length} reference${references.length === 1 ? '' : 's'}.`, oldKey, nextKey, referenceCount: references.length } }).catch(() => undefined)
+    await recordAuditEvent(env.DB, { actorEmail: locals.adminEmail || null, action: 'replace', entityType: 'media', entityId: nextKey, metadata: { summary: `Replaced media ${oldKey} with ${file.name}; updated ${references.length} reference${references.length === 1 ? '' : 's'}.`, oldKey, nextKey, referenceCount: references.length } }).catch(logAuditFailure)
     return jsonResponse({ key: nextKey, url: nextUrl, filename: file.name, contentType: file.type, size: file.size, referencesUpdated: references.length })
   } catch (error) {
     if (referencesUpdated) {
@@ -293,7 +297,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
   }
 }
 
-export const DELETE: APIRoute = async ({ request, url, locals }) => {
+const unguardedDELETE: APIRoute = async ({ request, url, locals }) => {
   const env = getEnv()
   if (!env.MEDIA_BUCKET) return jsonResponse({ error: 'R2 MEDIA_BUCKET binding is not configured.' }, 503)
   if (!env.DB) return jsonResponse({ error: 'D1 DB binding is not configured.' }, 503)
@@ -301,8 +305,10 @@ export const DELETE: APIRoute = async ({ request, url, locals }) => {
   if (limited) return limited
   const key = String(url.searchParams.get('key') || '').replace(/^\/+/, '')
   if (!key) return jsonResponse({ error: 'A media key is required.' }, 400)
+  if (!isManageableMediaKey(key)) return jsonResponse({ error: 'That media key is not valid.' }, 400)
   const object = await env.MEDIA_BUCKET.head(key)
   if (!object) return jsonResponse({ error: 'Media object not found.' }, 404)
+  if (!isManageableMediaObject(key, object)) return jsonResponse({ error: 'Only images in the media library can be deleted.' }, 400)
   const publicBaseUrl = String(env.R2_PUBLIC_BASE_URL || '').trim()
   const publicUrl = publicBaseUrl ? objectUrl(publicBaseUrl, key) : key
   const references = await findMediaReferences(env.DB, [key, publicUrl])
@@ -312,6 +318,12 @@ export const DELETE: APIRoute = async ({ request, url, locals }) => {
   // Object is gone from R2; the delete has happened and cannot be undone, so
   // neither of these bookkeeping writes may turn it into a reported failure.
   await deleteMediaAsset(env.DB, key).catch(() => undefined)
-  await recordAuditEvent(env.DB, { actorEmail: locals.adminEmail || null, action: 'delete', entityType: 'media', entityId: key, metadata: { summary: `Deleted unreferenced media: ${key}.`, key, size: object.size } }).catch(() => undefined)
+  await recordAuditEvent(env.DB, { actorEmail: locals.adminEmail || null, action: 'delete', entityType: 'media', entityId: key, metadata: { summary: `Deleted unreferenced media: ${key}.`, key, size: object.size } }).catch(logAuditFailure)
   return jsonResponse({ key })
 }
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)
+export const POST = withAdmin(unguardedPOST)
+export const PATCH = withAdmin(unguardedPATCH)
+export const DELETE = withAdmin(unguardedDELETE)

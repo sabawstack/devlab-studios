@@ -42,13 +42,16 @@ function bucket() {
   return { objects, async put(key, value) { objects.set(key, value); return { key } }, async get(key) { return objects.has(key) ? { body: objects.get(key) } : null } }
 }
 
-function message({ from, to, raw }) {
+/** What Cloudflare's edge stamps on a message whose sender DMARC vouched for. */
+const VERIFIED = { 'authentication-results': 'mx.cloudflare.net; dkim=pass header.d=prospect.example; spf=pass; dmarc=pass' }
+
+function message({ from, to, raw, headers = {} }) {
   const bytes = new TextEncoder().encode(raw)
   return {
     from,
     to,
     rawSize: bytes.byteLength,
-    headers: new Headers(),
+    headers: new Headers(headers),
     raw: new ReadableStream({ start(controller) { controller.enqueue(bytes); controller.close() } }),
   }
 }
@@ -361,7 +364,7 @@ describe('an ordinary reply from a known lead', () => {
       '',
     ].join('\r\n')
 
-    await ingestEmail(env, message({ from: RECIPIENT, to: 'hello@devlabconnect.com', raw: reply }))
+    await ingestEmail(env, message({ from: RECIPIENT, to: 'hello@devlabconnect.com', raw: reply, headers: VERIFIED }))
 
     const conversations = await env.DB.prepare('SELECT * FROM lead_conversations').all()
     expect(conversations.results).toHaveLength(1)
@@ -377,5 +380,56 @@ describe('an ordinary reply from a known lead', () => {
     // And the mailbox thread is linked to the lead.
     const [thread] = await listThreads(env.DB, { mailbox: MAILBOX.HELLO })
     expect(thread.leadId).toBe('lead-1')
+  })
+
+  it('does NOT attach an unverified message to the lead by its From address alone', async () => {
+    // F2: a forged From matching a lead's address must not land in that lead's
+    // CRM conversation. Without DMARC pass the address is only a claim.
+    const forged = [
+      `From: Someone <${RECIPIENT}>`,
+      'To: hello@devlabconnect.com',
+      'Subject: Re: Hello',
+      'Reply-To: attacker@evil.example',
+      'Message-ID: <forged-1@evil.example>',
+      'Content-Type: text/plain; charset=utf-8',
+      '',
+      'Please send the invoice here instead.',
+      '',
+    ].join('\r\n')
+
+    await ingestEmail(env, message({ from: RECIPIENT, to: 'hello@devlabconnect.com', raw: forged }))
+
+    const messages = await env.DB.prepare('SELECT * FROM lead_messages').all()
+    expect(messages.results).toHaveLength(0)
+    const [thread] = await listThreads(env.DB, { mailbox: MAILBOX.HELLO })
+    expect(thread.leadId).toBeNull()
+  })
+
+  it('does not trust a dmarc=pass that a sender wrote below the edge header', async () => {
+    const forged = [
+      `From: Someone <${RECIPIENT}>`,
+      'To: hello@devlabconnect.com',
+      'Subject: Re: Hello',
+      'Message-ID: <forged-2@evil.example>',
+      'Content-Type: text/plain; charset=utf-8',
+      '',
+      'x',
+      '',
+    ].join('\r\n')
+
+    // Headers joins repeats with ", " — the edge's verdict first, the forged
+    // one after it.
+    await ingestEmail(
+      env,
+      message({
+        from: RECIPIENT,
+        to: 'hello@devlabconnect.com',
+        raw: forged,
+        headers: { 'authentication-results': 'mx.cloudflare.net; spf=fail; dmarc=fail, evil.example; dmarc=pass' },
+      }),
+    )
+
+    const messages = await env.DB.prepare('SELECT * FROM lead_messages').all()
+    expect(messages.results).toHaveLength(0)
   })
 })

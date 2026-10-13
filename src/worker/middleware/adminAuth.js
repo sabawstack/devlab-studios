@@ -1,6 +1,13 @@
 import { jsonResponse } from '../utils/responses'
-import { checkRateLimit, clearRateLimit, rateLimitedResponse, clientIp } from '../rateLimit.js'
-import { isAdminSessionRevoked, revokeAdminSession } from '../repositories/adminSessions.js'
+import {
+  checkRateLimit,
+  clearRateLimit,
+  clientIp,
+  peekRateLimit,
+  rateLimitedResponse,
+  recordRateLimitFailure,
+} from '../rateLimit.js'
+import { getAdminSessionRevocationState, revokeAdminSession } from '../repositories/adminSessions.js'
 import {
   getAdminCredential,
   getPasswordChangedAtSeconds,
@@ -23,6 +30,19 @@ const LOGIN_WINDOW_MS = 15 * 60 * 1000
 const LOGIN_MAX_ATTEMPTS = 8
 // Per source address across ALL accounts, so spraying is bounded too.
 const LOGIN_MAX_ATTEMPTS_PER_IP = 20
+// Per ACCOUNT across all addresses. The two limits above are both keyed on
+// the source IP, so an attacker with many addresses got unlimited guesses at
+// the one known owner email. Counts FAILURES only (a correct login clears it),
+// and reaching the ceiling locks the account for a fixed period -- including
+// against the right password, which is what makes it a lockout rather than a
+// throttle. The trade-off is deliberate: an attacker can keep the owner locked
+// out, but can no longer keep guessing.
+const LOGIN_ACCOUNT_FAILURE_LIMIT = 10
+const LOGIN_ACCOUNT_LOCK_MS = 15 * 60 * 1000
+const LOGIN_FAILURE_BUCKET = 'admin-login-account-failures'
+const LOGIN_LOCK_BUCKET = 'admin-login-account-lock'
+/** One message for every throttled/locked outcome, so none says which limit (or account) tripped. */
+const LOGIN_THROTTLED_MESSAGE = 'Too many login attempts. Try again later.'
 
 function textBytes(value) {
   return new TextEncoder().encode(value)
@@ -164,6 +184,20 @@ export async function hashPassword(password) {
   ].join('$')
 }
 
+/**
+ * Verified against when the email is unknown, so an unknown address costs the
+ * same PBKDF2 work as a known one and response time does not reveal which
+ * emails are admins. Random per isolate and never matches anything.
+ */
+let dummyPasswordHashPromise
+function dummyPasswordHash() {
+  if (!dummyPasswordHashPromise) {
+    const randomPassword = bytesToBase64Url(crypto.getRandomValues(new Uint8Array(24)))
+    dummyPasswordHashPromise = hashPassword(randomPassword)
+  }
+  return dummyPasswordHashPromise
+}
+
 /** True for a credential stored in one of the retired weak formats. */
 function usesRetiredHashFormat(storedHash) {
   return RETIRED_PASSWORD_HASH_PREFIXES.has(String(storedHash || '').split('$')[0])
@@ -266,6 +300,29 @@ function getClientIp(c) {
 // See src/worker/RateLimiterDO.ts.
 const LOGIN_BUCKET = 'admin-login'
 
+/**
+ * Counts one failed login against the account and, once the account reaches
+ * LOGIN_ACCOUNT_FAILURE_LIMIT inside the window, locks it for
+ * LOGIN_ACCOUNT_LOCK_MS. The lock is its own bucket so it lasts the full period
+ * from the moment it trips, rather than ending whenever the oldest failure in
+ * the window happens to expire.
+ */
+async function recordAccountLoginFailure(env, accountKey) {
+  await recordRateLimitFailure(env, LOGIN_FAILURE_BUCKET, accountKey, { windowMs: LOGIN_WINDOW_MS })
+  const failures = await peekRateLimit(env, LOGIN_FAILURE_BUCKET, accountKey, { limit: LOGIN_ACCOUNT_FAILURE_LIMIT })
+  if (!failures.limited) return
+
+  await recordRateLimitFailure(env, LOGIN_LOCK_BUCKET, accountKey, { windowMs: LOGIN_ACCOUNT_LOCK_MS })
+  await clearRateLimit(env, LOGIN_FAILURE_BUCKET, accountKey)
+  // The email itself is deliberately not logged: the key may be an attacker's
+  // guess, and the log is not the place to collect them.
+  console.warn(JSON.stringify({
+    event: 'admin_login_account_locked',
+    failures: LOGIN_ACCOUNT_FAILURE_LIMIT,
+    lockMinutes: LOGIN_ACCOUNT_LOCK_MS / 60000,
+  }))
+}
+
 export async function handleAdminLogin(c) {
   if (getAdminAuthMode(c.env) === 'disabled') {
     return jsonResponse({ error: 'Admin password login is disabled.' }, 400)
@@ -300,8 +357,14 @@ export async function handleAdminLogin(c) {
   for (const [identity, limit] of [[loginKey, LOGIN_MAX_ATTEMPTS], [clientIp(c.req.raw), LOGIN_MAX_ATTEMPTS_PER_IP]]) {
     const rate = await checkRateLimit(c.env, LOGIN_BUCKET, identity, { limit, windowMs: LOGIN_WINDOW_MS })
     if (rate.limited) {
-      return rateLimitedResponse('Too many login attempts. Try again later.', rate.retryAfterSeconds)
+      return rateLimitedResponse(LOGIN_THROTTLED_MESSAGE, rate.retryAfterSeconds)
     }
+  }
+
+  const accountKey = email || 'unknown'
+  const lock = await peekRateLimit(c.env, LOGIN_LOCK_BUCKET, accountKey, { limit: 1 })
+  if (lock.limited) {
+    return rateLimitedResponse(LOGIN_THROTTLED_MESSAGE, lock.retryAfterSeconds)
   }
 
   const admin = await resolveAdmin(c.env, email)
@@ -316,13 +379,18 @@ export async function handleAdminLogin(c) {
     }, 503)
   }
 
-  const isValidPassword = Boolean(admin && await verifyPassword(password, admin.passwordHash))
+  // Always derive: an unknown email is checked against a dummy hash so it
+  // takes as long as a known one (no user enumeration by timing).
+  const passwordMatches = await verifyPassword(password, admin ? admin.passwordHash : await dummyPasswordHash())
+  const isValidPassword = Boolean(admin) && passwordMatches
 
   if (!isValidPassword) {
+    await recordAccountLoginFailure(c.env, accountKey)
     return jsonResponse({ error: 'Invalid email or password.' }, 401)
   }
 
   await clearRateLimit(c.env, LOGIN_BUCKET, loginKey)
+  await clearRateLimit(c.env, LOGIN_FAILURE_BUCKET, accountKey)
 
   const now = Math.floor(Date.now() / 1000)
   const token = await signSessionPayload({
@@ -486,10 +554,32 @@ export async function handleAdminLogout(c) {
   )
 }
 
+const LOOPBACK_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]'])
+
+/**
+ * ADMIN_AUTH_MODE=disabled makes every caller an admin, so a mistyped var in a
+ * deployed environment would open the whole CMS. It is honoured only for a
+ * request to a loopback host AND with the explicit local-only opt-in
+ * ADMIN_AUTH_DISABLED_LOCAL_ONLY=true -- neither of which a request to the
+ * preview or production hostname can satisfy.
+ */
+function isDisabledModeAllowed(c) {
+  if (String(c.env.ADMIN_AUTH_DISABLED_LOCAL_ONLY || '').trim() !== 'true') return false
+  try {
+    return LOOPBACK_HOSTNAMES.has(new URL(c.req.url).hostname)
+  } catch {
+    return false
+  }
+}
+
 export async function requireAdmin(c, next) {
   const authMode = getAdminAuthMode(c.env)
 
   if (authMode === 'disabled') {
+    if (!isDisabledModeAllowed(c)) {
+      console.error(JSON.stringify({ event: 'admin_auth_disabled_refused', outcome: 'failure' }))
+      return jsonResponse({ error: 'Admin authentication is not configured for this environment.' }, 503)
+    }
     c.set('adminEmail', 'admin-auth-disabled')
     c.set('adminAuthMode', 'disabled')
     return next()
@@ -506,7 +596,13 @@ export async function requireAdmin(c, next) {
     if (session?.email) {
       // A signed, unexpired token is not sufficient on its own — it may have
       // been explicitly signed out. See repositories/adminSessions.js.
-      if (await isAdminSessionRevoked(c.env.DB, session.jti)) {
+      // Fails CLOSED: if the revocation list cannot be read, a signed-out
+      // token would otherwise be accepted for as long as D1 is unhealthy.
+      const revocation = await getAdminSessionRevocationState(c.env.DB, session.jti)
+      if (revocation === 'unknown') {
+        return jsonResponse({ error: 'Your admin session could not be verified right now. Try again shortly.' }, 503)
+      }
+      if (revocation === 'revoked') {
         return jsonResponse({ error: 'This admin session has been signed out.' }, 401)
       }
 

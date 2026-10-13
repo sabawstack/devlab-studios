@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { findUnsafeLinkPaths, isSafeHref, UNSAFE_HREF_MESSAGE } from '../safeHref'
 
 export const contentStatusSchema = z.enum(['draft', 'published', 'archived'])
 export type ContentStatus = z.infer<typeof contentStatusSchema>
@@ -35,3 +36,21 @@ export const baseItemSchema = z.object({
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 })
+
+/**
+ * A clickable link an editor can set. Refuses javascript:, data:,
+ * protocol-relative and every other scheme outside the allow-list in
+ * src/lib/safeHref.ts -- the public read path re-applies the same policy.
+ */
+export const linkHrefSchema = z.string().refine(isSafeHref, { message: UNSAFE_HREF_MESSAGE })
+export const requiredLinkHrefSchema = z.string().min(1).refine(isSafeHref, { message: UNSAFE_HREF_MESSAGE })
+
+/**
+ * For loosely-typed content (`z.record(...)` blobs): fails validation if any
+ * link-named field, at any depth, holds an unsafe URL.
+ */
+export function refineSafeLinks(data: unknown, ctx: z.RefinementCtx): void {
+  for (const path of findUnsafeLinkPaths(data)) {
+    ctx.addIssue({ code: 'custom', path, message: UNSAFE_HREF_MESSAGE })
+  }
+}

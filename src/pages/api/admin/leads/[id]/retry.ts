@@ -12,6 +12,7 @@ import { recordAuditEvent } from '../../../../../worker/repositories/auditLog.js
 import { checkRateLimit, clientIp, rateLimitedResponse } from '../../../../../worker/rateLimit.js'
 import { getEnv } from '../../../../../lib/env'
 import { drainRequestBody, jsonResponse } from '../../../../../lib/http'
+import { withAdmin } from '../../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -24,7 +25,7 @@ export const prerender = false
 const RETRY_WINDOW_MS = 5 * 60 * 1000
 const RETRY_MAX_ATTEMPTS = 10
 
-export const POST: APIRoute = async ({ params, request, locals }) => {
+const unguardedPOST: APIRoute = async ({ params, request, locals }) => {
   const id = params.id as string
   const env = getEnv()
 
@@ -71,3 +72,6 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 
   return jsonResponse({ ...updatedLead, attempts, attribution, consents, activities })
 }
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const POST = withAdmin(unguardedPOST)

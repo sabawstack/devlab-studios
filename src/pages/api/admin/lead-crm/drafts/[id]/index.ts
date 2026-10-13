@@ -12,10 +12,11 @@ import {
   readValidatedBody,
   requireDatabase,
 } from '../../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../../lib/adminGuard'
 
 export const prerender = false
 
-export const GET: APIRoute = async ({ params, request }) =>
+const unguardedGET: APIRoute = async ({ params, request }) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -35,7 +36,7 @@ export const GET: APIRoute = async ({ params, request }) =>
  * things, and turning it into a restriction on the human would be both
  * patronizing and wrong, since they may well know a fact the engine does not.
  */
-export const PUT: APIRoute = async (context) =>
+const unguardedPUT: APIRoute = async (context) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -64,7 +65,7 @@ export const PUT: APIRoute = async (context) =>
     return jsonResponse({ draft, advisory: advisory.violations })
   })
 
-export const DELETE: APIRoute = async ({ params }) =>
+const unguardedDELETE: APIRoute = async ({ params }) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -72,3 +73,8 @@ export const DELETE: APIRoute = async ({ params }) =>
     await discardDraft(database.env.DB, params.id!)
     return jsonResponse({ ok: true })
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)
+export const PUT = withAdmin(unguardedPUT)
+export const DELETE = withAdmin(unguardedDELETE)

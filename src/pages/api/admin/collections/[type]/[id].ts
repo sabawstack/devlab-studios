@@ -4,8 +4,9 @@ import { recordAuditEvent } from '../../../../../worker/repositories/auditLog.js
 import { getEnv } from '../../../../../lib/env'
 import { jsonResponse } from '../../../../../lib/http'
 import { buildDeleteAuditMetadata } from '../../../../../lib/audit.js'
+import { withAdmin } from '../../../../../lib/adminGuard'
 
-export const DELETE: APIRoute = async ({ params, locals }) => {
+const unguardedDELETE: APIRoute = async ({ params, locals }) => {
   const type = params.type as string
   const id = params.id as string
   const collection = getPerItemCollection(type)
@@ -21,3 +22,6 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 
   return jsonResponse({ id })
 }
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const DELETE = withAdmin(unguardedDELETE)

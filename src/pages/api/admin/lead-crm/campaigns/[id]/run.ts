@@ -9,6 +9,7 @@ import {
   readValidatedBody,
   requireDatabase,
 } from '../../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -19,7 +20,7 @@ export const prerender = false
  * armed. `dryRun` discovers and dedupes without enqueueing a single crawl, so
  * candidate quality can be inspected at no cost to anybody else's servers.
  */
-export const POST: APIRoute = async (context) =>
+const unguardedPOST: APIRoute = async (context) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -45,3 +46,6 @@ export const POST: APIRoute = async (context) =>
 
     return jsonResponse(result)
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const POST = withAdmin(unguardedPOST)

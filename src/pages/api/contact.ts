@@ -1,9 +1,12 @@
 import type { APIRoute } from 'astro'
 import { getEnv } from '../../lib/env'
 import {
+  allowedSource,
+  CONTACT_SOURCES,
   enforceSubmissionGuards,
   jsonResponse,
   readBoundedJson,
+  singleLine,
   submitInquiry,
 } from '../../worker/inquiryService.js'
 import { CONSENT_TYPES, PRIVACY_POLICY_VERSION } from '../../config/consent.js'
@@ -83,8 +86,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       message: String(payload.message || ''),
       // The legacy subject is visitor-written and carries real meaning (the
       // Pickleball beta form relies on it), so it is preserved verbatim
-      // instead of being replaced by the type-derived one.
-      subjectOverride: String(payload.subject || ''),
+      // instead of being replaced by the type-derived one. Line breaks are
+      // flattened, so it can never carry a header if delivery ever builds raw mail.
+      subjectOverride: singleLine(String(payload.subject || '')),
       company: '',
       website: '',
       phone: '',
@@ -110,7 +114,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         privacyPolicyVersion: PRIVACY_POLICY_VERSION,
       },
     },
-    source: String(payload.source || '').trim() || 'contact-form',
+    source: allowedSource(payload.source, CONTACT_SOURCES),
     consentType: CONSENT_TYPES.contact,
     locals,
     // Passed through solely so the Lead Intelligence Engine can read its

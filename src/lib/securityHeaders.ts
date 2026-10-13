@@ -1,10 +1,21 @@
 const LOCALHOST_HOSTNAMES = new Set(['localhost', '127.0.0.1'])
 
+// Features the site never uses are switched off for every page and frame.
+// web-share and clipboard-write stay at their defaults (the results poster
+// and "Share results" use them).
+export const PERMISSIONS_POLICY = [
+  'camera=()', 'microphone=()', 'geolocation=()', 'payment=()', 'usb=()', 'serial=()',
+  'bluetooth=()', 'hid=()', 'magnetometer=()', 'gyroscope=()', 'accelerometer=()',
+  'browsing-topics=()', 'display-capture=()',
+].join(', ')
+
 function buildContentSecurityPolicy(isLocalhost: boolean): string {
   const directives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://challenges.cloudflare.com",
-    "connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.google.com https://www.googletagmanager.com https://challenges.cloudflare.com",
+    // static.cloudflareinsights.com: Cloudflare Web Analytics, injected by the
+    // zone; without it the beacon is blocked and every page logs a CSP error.
+    "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://challenges.cloudflare.com https://static.cloudflareinsights.com",
+    "connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.google.com https://www.googletagmanager.com https://challenges.cloudflare.com https://cloudflareinsights.com",
     "img-src 'self' data: https:",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
@@ -37,13 +48,25 @@ function buildSecurityHeaders(isLocalhost: boolean): Record<string, string> {
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
-    'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+    'Permissions-Policy': PERMISSIONS_POLICY,
+    // Isolates the browsing context from cross-origin openers (OAuth and
+    // Turnstile here are redirects/iframes, not popups that need an opener).
+    'Cross-Origin-Opener-Policy': 'same-origin',
+    // Our responses may only be loaded by our own site (link-preview crawlers
+    // don't enforce CORP, so shared links still unfurl).
+    'Cross-Origin-Resource-Policy': 'same-site',
     'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
   }
 }
 
-function robotsTagFor(pathname: string): string | null {
-  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin/')) return 'noindex, nofollow'
+function isAdminPath(pathname: string): boolean {
+  return pathname.startsWith('/admin') || pathname.startsWith('/api/admin/')
+}
+
+function robotsTagFor(pathname: string, hostname: string): string | null {
+  // The preview deployment must never compete with production in search.
+  if (hostname.endsWith('.workers.dev')) return 'noindex, nofollow'
+  if (isAdminPath(pathname)) return 'noindex, nofollow'
   if (pathname.startsWith('/landing-sample-')) return 'noindex, follow'
   return null
 }
@@ -79,9 +102,14 @@ export function applySecurityHeaders(response: Response, pathname: string, hostn
     headers.set(name, value)
   }
 
-  const robotsTag = robotsTagFor(pathname)
+  const robotsTag = robotsTagFor(pathname, hostname)
   if (robotsTag) {
     headers.set('X-Robots-Tag', robotsTag)
+  }
+
+  // Admin pages and data must never sit in a shared or browser cache.
+  if (isAdminPath(pathname)) {
+    headers.set('Cache-Control', 'no-store')
   }
 
   return new Response(response.body, {

@@ -6,8 +6,9 @@ import { recordAuditEvent } from '../../../../../worker/repositories/auditLog.js
 import { getEnv } from '../../../../../lib/env'
 import { adminErrorResponse, jsonResponse, readJsonBody } from '../../../../../lib/http'
 import { buildAuditMetadata, buildCreateAuditMetadata } from '../../../../../lib/audit.js'
+import { withAdmin } from '../../../../../lib/adminGuard'
 
-export const GET: APIRoute = async ({ params }) => {
+const unguardedGET: APIRoute = async ({ params }) => {
   const type = params.type as string
   const env = getEnv()
   if (!env.DB) return jsonResponse({ error: 'D1 DB binding is not configured.' }, 503)
@@ -21,7 +22,7 @@ export const GET: APIRoute = async ({ params }) => {
   return jsonResponse({ error: 'Unknown collection type.' }, 404)
 }
 
-export const PUT: APIRoute = async ({ params, request, locals }) => {
+const unguardedPUT: APIRoute = async ({ params, request, locals }) => {
   const type = params.type as string
   const collection = getReplaceAllCollection(type)
   if (!collection) return jsonResponse({ error: 'Unknown replace-all collection type.' }, 404)
@@ -42,7 +43,7 @@ export const PUT: APIRoute = async ({ params, request, locals }) => {
   return jsonResponse(await collection.list(env.DB))
 }
 
-export const POST: APIRoute = async ({ params, request, locals }) => {
+const unguardedPOST: APIRoute = async ({ params, request, locals }) => {
   const type = params.type as string
   const collection = getPerItemCollection(type)
   if (!collection) return jsonResponse({ error: 'Unknown per-item collection type.' }, 404)
@@ -76,3 +77,8 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
     return adminErrorResponse(error)
   }
 }
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)
+export const PUT = withAdmin(unguardedPUT)
+export const POST = withAdmin(unguardedPOST)

@@ -2,8 +2,10 @@ import type { APIRoute } from 'astro'
 import { getEnv } from '../../lib/env'
 import { inquiryRequestSchema } from '../../lib/schemas/inquiry'
 import {
+  allowedSource,
   enforceSubmissionGuards,
   fieldErrorsFromZod,
+  INQUIRY_SOURCES,
   jsonResponse,
   readBoundedJson,
   submitInquiry,
@@ -47,7 +49,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   return submitInquiry(env, {
     input: parsed.data,
-    source: String((parsed.data.attribution as { formId?: string })?.formId || 'inquiry-form'),
+    // Only a known form id becomes the source; anything else (including
+    // `lead-magnet`) is recorded as the default. The id itself stays in attribution.
+    source: allowedSource((parsed.data.attribution as { formId?: string })?.formId, INQUIRY_SOURCES),
     consentType: CONSENT_TYPES.contact,
     locals,
     // Passed through solely so the Lead Intelligence Engine can read its

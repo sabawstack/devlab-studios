@@ -22,10 +22,11 @@ import {
   readValidatedBody,
   requireDatabase,
 } from '../../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../../lib/adminGuard'
 
 export const prerender = false
 
-export const GET: APIRoute = async ({ params }) =>
+const unguardedGET: APIRoute = async ({ params }) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -41,7 +42,7 @@ export const GET: APIRoute = async ({ params }) =>
  * adding it, because the whole outreach gate rests on being able to point at
  * where a business published its own contact details.
  */
-export const POST: APIRoute = async (context) =>
+const unguardedPOST: APIRoute = async (context) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -106,7 +107,7 @@ export const POST: APIRoute = async (context) =>
     return jsonResponse({ contact }, 201)
   })
 
-export const PATCH: APIRoute = async (context) =>
+const unguardedPATCH: APIRoute = async (context) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -118,7 +119,7 @@ export const PATCH: APIRoute = async (context) =>
     return jsonResponse({ ok: true })
   })
 
-export const DELETE: APIRoute = async (context) =>
+const unguardedDELETE: APIRoute = async (context) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -130,3 +131,9 @@ export const DELETE: APIRoute = async (context) =>
     await refreshNextAction(database.env.DB, context.params.id!)
     return jsonResponse({ ok: true })
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)
+export const POST = withAdmin(unguardedPOST)
+export const PATCH = withAdmin(unguardedPATCH)
+export const DELETE = withAdmin(unguardedDELETE)

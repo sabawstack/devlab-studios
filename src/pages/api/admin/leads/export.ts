@@ -5,6 +5,7 @@ import { getEnv } from '../../../../lib/env'
 import { jsonResponse } from '../../../../lib/http'
 import { toCsv } from '../../../../lib/leads/csv'
 import { INQUIRY_TYPES, PIPELINE_STATUSES, QUALIFICATION_RESULTS } from '../../../../lib/schemas/inquiry'
+import { withAdmin } from '../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -43,7 +44,7 @@ function allowed(value: string | null, options: readonly string[]): string | nul
   return value && options.includes(value) ? value : null
 }
 
-export const GET: APIRoute = async ({ url, locals }) => {
+const unguardedGET: APIRoute = async ({ url, locals }) => {
   const env = getEnv()
   if (!env.DB) return jsonResponse({ error: 'D1 DB binding is not configured.' }, 503)
 
@@ -76,3 +77,6 @@ export const GET: APIRoute = async ({ url, locals }) => {
     },
   })
 }
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)

@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro'
+import { withAdmin } from '../../../lib/adminGuard'
 
-export const GET: APIRoute = ({ locals }) => {
+const unguardedGET: APIRoute = ({ locals }) => {
   return new Response(JSON.stringify({
     ok: true,
     email: locals.adminEmail,
@@ -10,3 +11,6 @@ export const GET: APIRoute = ({ locals }) => {
     headers: { 'Content-Type': 'application/json' },
   })
 }
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)

@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro'
 import { exportDraft } from '../../../../../../lead-engine/services/draftExport.js'
 import { recordAuditEvent } from '../../../../../../worker/repositories/auditLog.js'
 import { actorEmail, handleRoute, jsonResponse, requireDatabase } from '../../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -17,7 +18,7 @@ export const prerender = false
  * in `exportDraft`: suppression is re-checked at the moment of the click, and
  * an AI draft that tripped the content guard is refused.
  */
-export const GET: APIRoute = async (context) =>
+const unguardedGET: APIRoute = async (context) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -44,7 +45,7 @@ export const GET: APIRoute = async (context) =>
     })
   })
 
-export const POST: APIRoute = async (context) =>
+const unguardedPOST: APIRoute = async (context) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -68,3 +69,7 @@ export const POST: APIRoute = async (context) =>
       instruction: 'Nothing has been sent. Open the file in your mail client, review it, and send it yourself.',
     })
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)
+export const POST = withAdmin(unguardedPOST)

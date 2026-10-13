@@ -13,6 +13,35 @@
  */
 
 import { bounded, clampLimit, newId, nowIso, operationError } from './helpers.js'
+import { checkSuppression } from '../../lead-engine/repositories/suppression.js'
+import { strictRecipient } from '../../lead-engine/domain/domains.js'
+
+/** D1 reports `changes`; older shapes report `rows_written`. */
+function changed(result) {
+  return Number(result?.meta?.changes ?? result?.meta?.rows_written ?? 0) > 0
+}
+
+/**
+ * Why `address` may not be sent to right now, or null if it may.
+ *
+ * Re-checked at every point a message moves toward the wire -- draft edit,
+ * draft promotion, collection -- not only when it was composed. Someone may
+ * opt out, or an operator may suppress a domain, while a reply sits in Drafts
+ * or the queue; the gate has to run when it matters.
+ *
+ * @param {D1Database} db
+ * @param {string} address
+ * @returns {Promise<string|null>}
+ */
+export async function sendBlockReason(db, address) {
+  const recipient = strictRecipient(address)
+  if (!recipient) return 'The recipient is not a single valid address.'
+  const suppression = await checkSuppression(db, recipient)
+  if (suppression.suppressed) {
+    return `That address is suppressed${suppression.entry?.reason ? ` (${suppression.entry.reason})` : ''}.`
+  }
+  return null
+}
 
 function mapOutbound(row) {
   if (!row) return null
@@ -113,6 +142,22 @@ export async function collectQueued(db, { limit = 10 } = {}) {
   const now = nowIso()
 
   for (const row of result.results || []) {
+    // Suppression and address validity, re-checked at the last moment this
+    // application controls. A blocked row is marked failed with the reason --
+    // terminal, visible in the Outbox, never handed out -- rather than silently
+    // skipped (it would be re-offered forever) or sent.
+    const blocked = await sendBlockReason(db, row.to_address)
+    if (blocked) {
+      await db
+        .prepare(
+          "UPDATE mailbox_outbound SET status = 'failed', failed_at = ?, error = ?, updated_at = ? " +
+            "WHERE id = ? AND status = 'queued'",
+        )
+        .bind(now, bounded(`Not sent: ${blocked}`, 1_000), now, row.id)
+        .run()
+      continue
+    }
+
     const claimed = await db
       .prepare(
         "UPDATE mailbox_outbound SET status = 'collected', collected_at = ?, updated_at = ? " +
@@ -123,7 +168,7 @@ export async function collectQueued(db, { limit = 10 } = {}) {
 
     // D1 reports rows_written; a claim that changed nothing was won by someone
     // else and must not be handed out here as well.
-    if (Number(claimed.meta?.changes ?? claimed.meta?.rows_written ?? 0) > 0) {
+    if (changed(claimed)) {
       collected.push(mapOutbound({ ...row, status: 'collected', collected_at: now }))
     }
   }
@@ -145,15 +190,28 @@ export async function markSent(db, id, { providerMessageId = null, sentAt = null
   const row = await getOutbound(db, id)
   if (!row) throw operationError('Outbound message not found.', 404)
   if (row.status === 'sent') return { status: 'already_sent', outbound: row }
+  // ONLY FROM `collected`. The transmitter can only have sent what it was
+  // handed; a callback naming a draft, a cancelled reply or one still queued
+  // is a bug or a forged call, and honouring it would show a message as
+  // delivered that never left, or resurrect one a person cancelled.
+  if (row.status !== 'collected') {
+    throw operationError(`This message is ${row.status}; only a collected message can be confirmed sent.`, 409)
+  }
 
   const now = nowIso()
-  await db
+  const result = await db
     .prepare(
       "UPDATE mailbox_outbound SET status = 'sent', sent_at = ?, provider_message_id = ?, " +
-        "error = NULL, failed_at = NULL, updated_at = ? WHERE id = ?",
+        "error = NULL, failed_at = NULL, updated_at = ? WHERE id = ? AND status = 'collected'",
     )
     .bind(sentAt || now, providerMessageId, now, id)
     .run()
+
+  if (!changed(result)) {
+    const current = await getOutbound(db, id)
+    if (current?.status === 'sent') return { status: 'already_sent', outbound: current }
+    throw operationError(`This message is ${current?.status ?? 'gone'}; it was not confirmed sent.`, 409)
+  }
 
   return { status: 'ok', outbound: await getOutbound(db, id) }
 }
@@ -173,14 +231,27 @@ export async function markFailed(db, id, { error = null, retryable = false } = {
   const row = await getOutbound(db, id)
   if (!row) throw operationError('Outbound message not found.', 404)
   if (row.status === 'sent') return { status: 'already_sent', outbound: row }
+  // Same rule as markSent: only a `collected` row may be reported failed.
+  // Repeating the same terminal report is idempotent; anything else is a 409,
+  // so a failure callback can no longer re-queue a draft or a cancelled reply.
+  if (row.status === 'failed' && !retryable) return { status: 'already_failed', outbound: row }
+  if (row.status !== 'collected') {
+    throw operationError(`This message is ${row.status}; only a collected message can be reported failed.`, 409)
+  }
 
   const now = nowIso()
-  await db
+  const result = await db
     .prepare(
-      `UPDATE mailbox_outbound SET status = ?, failed_at = ?, error = ?, updated_at = ? WHERE id = ?`,
+      `UPDATE mailbox_outbound SET status = ?, failed_at = ?, error = ?, updated_at = ?
+       WHERE id = ? AND status = 'collected'`,
     )
     .bind(retryable ? 'queued' : 'failed', now, error ? bounded(error, 1_000) : null, now, id)
     .run()
+
+  if (!changed(result)) {
+    const current = await getOutbound(db, id)
+    throw operationError(`This message is ${current?.status ?? 'gone'}; the failure was not recorded.`, 409)
+  }
 
   return { status: 'ok', outbound: await getOutbound(db, id) }
 }
@@ -274,6 +345,19 @@ export async function updateDraft(db, id, input) {
     throw operationError(`This reply is ${row.status} and can no longer be edited.`, 409)
   }
 
+  // A new recipient gets the same gates composing one does: one strictly valid
+  // address, not suppressed. Editing a draft must not be the way around the
+  // check composeReply ran on the original address.
+  let toAddress = null
+  if (input.toAddress !== undefined) {
+    toAddress = strictRecipient(input.toAddress)
+    if (!toAddress) throw operationError('That recipient is not a single valid address.', 422)
+    const blocked = await sendBlockReason(db, toAddress)
+    if (blocked) {
+      throw operationError(`${blocked} Remove it on the Suppression screen first if this is deliberate.`, 409)
+    }
+  }
+
   await db
     .prepare(
       `UPDATE mailbox_outbound
@@ -286,7 +370,7 @@ export async function updateDraft(db, id, input) {
     .bind(
       input.subject === undefined ? null : bounded(input.subject, 500),
       input.bodyText === undefined ? null : bounded(input.bodyText, 100_000),
-      input.toAddress === undefined ? null : String(input.toAddress).toLowerCase(),
+      toAddress,
       nowIso(),
       id,
     )
@@ -309,6 +393,14 @@ export async function promoteDraft(db, id) {
   if (row.status === 'queued') return row
   if (row.status !== 'draft') {
     throw operationError(`This reply is already ${row.status}.`, 409)
+  }
+
+  // Re-checked here: a draft can sit for days and the address may have opted
+  // out since. A blocked draft STAYS a draft (409) so the operator can see why
+  // and change the recipient; collection checks again regardless.
+  const blocked = await sendBlockReason(db, row.toAddress)
+  if (blocked) {
+    throw operationError(`${blocked} Remove it on the Suppression screen first if this is deliberate.`, 409)
   }
 
   const now = nowIso()

@@ -122,3 +122,86 @@ describe('fetchRobots', () => {
     expect(robots.crawlDelayMs).toBe(30_000)
   })
 })
+
+describe('fetchRobots redirects and size (F7)', () => {
+  function redirect(location, status = 301) {
+    return new Response(null, { status, headers: { location } })
+  }
+
+  it('follows redirects manually and only within the site', async () => {
+    const seen = []
+    const robots = await fetchRobots('https://example.com', {
+      fetchImpl: async (url, init) => {
+        seen.push({ url, redirect: init.redirect })
+        return seen.length === 1
+          ? redirect('https://www.example.com/robots.txt')
+          : new Response('User-agent: *\nDisallow: /x\n', { status: 200 })
+      },
+    })
+    expect(seen.map((call) => call.redirect)).toEqual(['manual', 'manual'])
+    expect(seen[1].url).toBe('https://www.example.com/robots.txt')
+    expect(robots.allowed('/x/y')).toBe(false)
+  })
+
+  it('refuses to follow a redirect into private address space', async () => {
+    let calls = 0
+    const robots = await fetchRobots('https://example.com', {
+      fetchImpl: async () => {
+        calls += 1
+        return redirect('http://169.254.169.254/latest/meta-data')
+      },
+    })
+    expect(calls).toBe(1)
+    expect(robots.allowed('/')).toBe(false)
+    expect(robots.status).toMatch(/^unsafe_redirect/)
+  })
+
+  it('does not follow an off-site redirect', async () => {
+    const robots = await fetchRobots('https://example.com', {
+      fetchImpl: async () => redirect('https://elsewhere.example.org/robots.txt'),
+    })
+    expect(robots.status).toBe('offsite_redirect')
+    expect(robots.allowed('/')).toBe(false)
+  })
+
+  it('gives up on a redirect loop', async () => {
+    const robots = await fetchRobots('https://example.com', {
+      fetchImpl: async () => redirect('https://example.com/robots.txt'),
+    })
+    expect(robots.status).toBe('too_many_redirects')
+  })
+
+  it('refuses an unsafe origin without fetching', async () => {
+    let calls = 0
+    const robots = await fetchRobots('http://127.0.0.1', {
+      fetchImpl: async () => {
+        calls += 1
+        return new Response('', { status: 404 })
+      },
+    })
+    expect(calls).toBe(0)
+    expect(robots.allowed('/')).toBe(false)
+  })
+
+  it('stops reading an enormous body at the ceiling and cancels the stream', async () => {
+    let pulled = 0
+    let cancelled = false
+    const chunk = new TextEncoder().encode('# '.padEnd(64 * 1024, 'x') + '\n')
+    const body = new ReadableStream({
+      pull(controller) {
+        pulled += 1
+        controller.enqueue(chunk)
+      },
+      cancel() {
+        cancelled = true
+      },
+    })
+    const robots = await fetchRobots('https://example.com', {
+      fetchImpl: async () => new Response(body, { status: 200 }),
+    })
+    expect(robots.status).toBe('matched_wildcard')
+    expect(cancelled).toBe(true)
+    // 200 KB ceiling at 64 KB per chunk: a handful of pulls, not an endless read.
+    expect(pulled).toBeLessThan(10)
+  })
+})

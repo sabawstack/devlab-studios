@@ -1,13 +1,15 @@
 import type { APIRoute } from 'astro'
 import { getEnv } from '../../../../lib/env'
+import { discardUnreadBody } from '../../../../lib/http'
 import { OPEN_SESSION_TURNSTILE_ACTION } from '../../../../lib/pickleball/open/constants'
 import { generatePublicCode } from '../../../../lib/pickleball/open/codes'
 import { buildInitialState } from '../../../../lib/pickleball/open/create'
 import { createSessionSchema } from '../../../../lib/schemas/pickleball/open/createSession'
 import { randomBase64Url, sha256Base64Url } from '../../../../lib/pickleball/webCrypto.js'
+import { BODY_LIMITS, readSmallJson } from '../../../../worker/pickleball/open/requestBody'
 import { openErrorResponse } from '../../../../worker/pickleball/open/routeHelpers'
 import { createOpenSession } from '../../../../worker/repositories/pickleball/open/openSessions'
-import { checkRateLimit, clientIp, rateLimitedResponse } from '../../../../worker/rateLimit.js'
+import { checkRateLimitStrict, clientAddress, clientIp, rateLimitedResponse } from '../../../../worker/rateLimit.js'
 import { verifyTurnstileToken } from '../../../../worker/turnstile.js'
 import { jsonResponse } from '../../../../worker/utils/responses.js'
 
@@ -18,23 +20,26 @@ export const POST: APIRoute = async ({ request }) => {
   const env = getEnv()
   try {
     // Fails CLOSED (spec §10): anonymous creation without a working limiter
-    // is an open spam relay, unlike a read endpoint briefly not counting.
-    if (!env.RATE_LIMITER) {
-      await request.arrayBuffer().catch(() => {})
+    // (no binding, or one that errors) is an open spam relay, unlike a read
+    // endpoint briefly not counting.
+    const rate = await checkRateLimitStrict(env, 'open-create', clientIp(request), { limit: CREATE_LIMIT, windowMs: DAY_MS })
+    if (rate.unavailable) {
+      await discardUnreadBody(request, env)
       return jsonResponse({ error: 'Starting sessions is temporarily unavailable. Try again shortly.' }, 503)
     }
-    const rate = await checkRateLimit(env, 'open-create', clientIp(request), { limit: CREATE_LIMIT, windowMs: DAY_MS })
     if (rate.limited) {
-      await request.arrayBuffer().catch(() => {})
+      await discardUnreadBody(request, env)
       return rateLimitedResponse('That is a lot of sessions for one day. Try again tomorrow.', rate.retryAfterSeconds)
     }
 
-    const parsed = createSessionSchema.safeParse(await request.json().catch(() => null))
+    const body = await readSmallJson(request, BODY_LIMITS.sessionCreate, null, env)
+    if (!body.ok) return body.response
+    const parsed = createSessionSchema.safeParse(body.value)
     if (!parsed.success) return jsonResponse({ error: 'Check the session details and try again.' }, 400)
 
     const hostname = new URL(request.url).hostname
     const isLocal = hostname === 'localhost' || hostname === '127.0.0.1'
-    const verification = await verifyTurnstileToken(env.TURNSTILE_SECRET_KEY, parsed.data.turnstileToken, clientIp(request), {
+    const verification = await verifyTurnstileToken(env.TURNSTILE_SECRET_KEY, parsed.data.turnstileToken, clientAddress(request), {
       expectedHostname: hostname,
       expectedAction: OPEN_SESSION_TURNSTILE_ACTION,
       allowMissingSecret: isLocal,

@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro'
 import { getAttachment } from '../../../../../mailbox/repositories/messages.js'
 import { contentDisposition, safeContentType } from '../../../../../mailbox/inbound/filenames.js'
 import { handleRoute, jsonResponse, notFound, requireDatabase } from '../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -22,7 +23,7 @@ export const prerender = false
  *   4. `nosniff`, so a browser does not decide for itself that our
  *      `application/octet-stream` is really HTML.
  */
-export const GET: APIRoute = async ({ params, request }) =>
+const unguardedGET: APIRoute = async ({ params, request }) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -57,3 +58,6 @@ export const GET: APIRoute = async ({ params, request }) =>
       },
     })
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)

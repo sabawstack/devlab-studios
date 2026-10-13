@@ -5,6 +5,7 @@ import { Mail, Menu, X } from './icons/icons.js'
 import { logoFallbackSrc } from '../lib/logoFallback'
 import { brandingAssets } from '../config/branding.js'
 import type { SiteSettingsData } from '../lib/content/siteSettings'
+import { safeHref } from '../lib/safeHref'
 
 interface Props {
   siteSettings: SiteSettingsData
@@ -13,7 +14,8 @@ interface Props {
 
 const fallbackLogoSrc = await logoFallbackSrc()
 const { siteSettings, currentPath } = Astro.props
-const navLinks = (siteSettings.navigation || []).map((item) => ({ label: item.label, href: item.href }))
+// safeHref is the render-time half of the CMS link policy (src/lib/safeHref.ts).
+const navLinks = (siteSettings.navigation || []).map((item) => ({ label: item.label, href: safeHref(item.href) }))
 const desktopContactLabel = siteSettings.ctas?.navbarContactLabel || 'Discuss Your System'
 const mobileContactLabel = siteSettings.ctas?.mobileContactLabel || desktopContactLabel
 const linkBase = 'site-navbar__link rounded-full px-3 py-2 text-sm font-semibold transition focus-visible:outline-none'

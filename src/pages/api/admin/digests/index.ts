@@ -5,6 +5,7 @@ import { runDailyDigest } from '../../../../worker/digest/runDigest.js'
 import { checkRateLimit, clientIp } from '../../../../worker/rateLimit.js'
 import { getEnv } from '../../../../lib/env'
 import { drainRequestBody, jsonResponse } from '../../../../lib/http'
+import { withAdmin } from '../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -15,7 +16,7 @@ export const prerender = false
  * rows only, so unpublishing a day removes it from the site while leaving it
  * visible to whoever needs to look at what was removed.
  */
-export const GET: APIRoute = async () => {
+const unguardedGET: APIRoute = async () => {
   const env = getEnv()
   if (!env.DB) return jsonResponse({ error: 'D1 DB binding is not configured.' }, 503)
 
@@ -30,7 +31,7 @@ export const GET: APIRoute = async () => {
  * fetches and up to ten Workers AI calls against a daily allocation. An admin
  * holding down a button should not be able to spend the day's neurons.
  */
-export const POST: APIRoute = async ({ request, locals }) => {
+const unguardedPOST: APIRoute = async ({ request, locals }) => {
   const env = getEnv()
   await drainRequestBody(request)
 
@@ -65,3 +66,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   return jsonResponse(result)
 }
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)
+export const POST = withAdmin(unguardedPOST)

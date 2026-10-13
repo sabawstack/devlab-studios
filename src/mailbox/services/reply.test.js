@@ -66,13 +66,16 @@ function bucket() {
   }
 }
 
-function message(raw, { from = 'jane@prospect.example', to = 'hello@devlabconnect.com' } = {}) {
+/** Cloudflare's edge verdict for a sender DMARC vouched for. */
+const VERIFIED = 'mx.cloudflare.net; dkim=pass header.d=prospect.example; spf=pass; dmarc=pass'
+
+function message(raw, { from = 'jane@prospect.example', to = 'hello@devlabconnect.com', auth = VERIFIED } = {}) {
   const bytes = new TextEncoder().encode(raw)
   return {
     from,
     to,
     rawSize: bytes.byteLength,
-    headers: new Headers(),
+    headers: new Headers(auth ? { 'authentication-results': auth } : {}),
     raw: new ReadableStream({ start(controller) { controller.enqueue(bytes); controller.close() } }),
   }
 }
@@ -466,8 +469,18 @@ describe('the collect / confirm round trip', () => {
     // repeatedly the moment the fault cleared.
     expect(await collectQueued(env.DB)).toHaveLength(0)
 
-    await markFailed(env.DB, queued.id, { error: 'temporary', retryable: true })
-    expect((await getOutbound(env.DB, queued.id)).status).toBe('queued')
+    // A callback cannot move a FAILED row back into the queue — only a
+    // collected one (F10). Re-queueing a failure is the person's Retry button.
+    await expect(markFailed(env.DB, queued.id, { error: 'temporary', retryable: true })).rejects.toMatchObject({
+      status: 409,
+    })
+    expect((await getOutbound(env.DB, queued.id)).status).toBe('failed')
+
+    // A collected reply reported retryable does go back.
+    const second = await composeReply(env, { bodyText: 'y', threadId })
+    await collectQueued(env.DB)
+    await markFailed(env.DB, second.id, { error: 'temporary', retryable: true })
+    expect((await getOutbound(env.DB, second.id)).status).toBe('queued')
     expect(await collectQueued(env.DB)).toHaveLength(1)
   })
 

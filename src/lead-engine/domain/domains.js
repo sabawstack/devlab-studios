@@ -248,6 +248,42 @@ export function normalizeEmail(value) {
   return address
 }
 
+/**
+ * The address a message may be ADDRESSED to — stricter than `normalizeEmail`.
+ *
+ * `normalizeEmail` is deliberately permissive because it is used for
+ * comparison and suppression lookup, where reading more addresses as valid is
+ * the safe direction. Building a recipient is the opposite case: `a@x.com,b@y.com`
+ * passes the permissive check (it only looks at the LAST `@` and at
+ * whitespace), and a transmitter that hands that string to `RCPT TO` or a
+ * `To:` header mails two people. So a recipient must be one plain
+ * `local@domain`: dot-atom local part, LDH domain labels, nothing else — no
+ * commas, semicolons, quotes, angle brackets, a second `@`, or control
+ * characters.
+ *
+ * @param {unknown} value
+ * @returns {string|null} the normalized address, or null if it is not exactly one plain address
+ */
+export function strictRecipient(value) {
+  const address = normalizeEmail(value)
+  if (!address || address.length > 254) return null
+
+  const atIndex = address.indexOf('@')
+  if (atIndex !== address.lastIndexOf('@')) return null
+
+  const local = address.slice(0, atIndex)
+  const domain = address.slice(atIndex + 1)
+  if (local.length > 64) return null
+  if (!/^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*$/.test(local)) return null
+
+  const labels = domain.split('.')
+  if (labels.length < 2) return null
+  if (!labels.every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label))) return null
+  if (!/^[a-z]{2,63}$|^xn--[a-z0-9-]{1,59}$/.test(labels[labels.length - 1])) return null
+
+  return address
+}
+
 /** The domain part of a normalized address, for domain-scoped suppression. */
 export function emailDomain(value) {
   const normalized = normalizeEmail(value)

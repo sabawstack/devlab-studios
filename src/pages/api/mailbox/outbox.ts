@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro'
-import { authorizeBearer } from '../../../lead-engine/outbox/auth.js'
+import { authorizeBearerRequest } from '../../../lead-engine/outbox/auth.js'
 import { collectQueued } from '../../../mailbox/repositories/outbound.js'
-import { renderOutbound } from '../../../mailbox/services/reply.js'
+import { renderCollectedBatch } from '../../../mailbox/services/outboxBatch.js'
 import { checkRateLimit, clientIp, rateLimitedResponse } from '../../../worker/rateLimit.js'
 import { handleRoute, jsonResponse, requireDatabase } from '../../../lead-engine/schemas/route'
 
@@ -41,8 +41,8 @@ export const GET: APIRoute = async (context) =>
     const database = requireDatabase()
     if (!database.ok) return database.response
 
-    const auth = authorizeBearer(database.env, context.request, 'MAILBOX_OUTBOX_TOKEN')
-    if (!auth.ok) return jsonResponse({ error: auth.error }, auth.status)
+    const auth = await authorizeBearerRequest(database.env, context.request, 'MAILBOX_OUTBOX_TOKEN')
+    if (!auth.ok) return auth.response
 
     // Rate limited even though authenticated: a misconfigured schedule polling
     // every second would otherwise hammer D1 all day.
@@ -60,13 +60,10 @@ export const GET: APIRoute = async (context) =>
     })
 
     return jsonResponse({
-      // Sequential, not Promise.all: rendering now reads attachment bytes out
-      // of R2, and a batch of ten messages each carrying 10 MB would otherwise
-      // be held in memory all at once.
-      messages: await collected.filter(Boolean).reduce(
-        async (previous, outbound) => [...(await previous), await renderOutbound(database.env, outbound)],
-        Promise.resolve([] as unknown[]),
-      ),
+      // One unrenderable row (an attachment gone from R2) is marked failed with
+      // its reason and left out; the rest of the batch is still delivered.
+      // Throwing here instead would strand every row already marked collected.
+      messages: await renderCollectedBatch(database.env, collected.filter(Boolean)),
       sent: false,
       instruction:
         'Nothing has been sent. Submit each `raw` message using its `envelope`, then POST to ' +

@@ -8,6 +8,7 @@ import {
   normalizeCompanyName,
   normalizeEmail,
   parseWebsite,
+  strictRecipient,
 } from './domains.js'
 
 describe('canonicalDomain', () => {
@@ -149,5 +150,33 @@ describe('normalizeCompanyName', () => {
 
   it('strips diacritics', () => {
     expect(normalizeCompanyName('Café Properties')).toBe('cafe properties')
+  })
+})
+
+describe('strictRecipient', () => {
+  it('accepts one plain address, normalized', () => {
+    expect(strictRecipient('Jane.Doe+tag@Example.co.uk')).toBe('jane.doe+tag@example.co.uk')
+    expect(strictRecipient('Jane <jane@example.com>')).toBe('jane@example.com')
+  })
+
+  it('rejects anything that could name more than one recipient or smuggle syntax', () => {
+    for (const value of [
+      'a@example.com,b@example.org',
+      'a@example.com;b@example.org',
+      '"a,b"@example.com',
+      'a@b@example.com',
+      'a..b@example.com',
+      '.a@example.com',
+      'a@-example.com',
+      'a@example',
+      'a@example.c',
+      'a@exa_mple.com',
+      'a@example.com\r\nBcc: x@y.com',
+      `${'a'.repeat(65)}@example.com`,
+      '',
+      null,
+    ]) {
+      expect(strictRecipient(value), String(value)).toBeNull()
+    }
   })
 })

@@ -6,17 +6,80 @@
 // Workers.
 
 /**
- * The client address, preferring Cloudflare's own header. `x-forwarded-for` is
- * client-controllable in general, but on Workers `cf-connecting-ip` is set by
- * the edge and cannot be spoofed by the caller, so it is tried first.
+ * The client address as the edge reported it, preferring Cloudflare's own
+ * header. `x-forwarded-for` is client-controllable in general, but on Workers
+ * `cf-connecting-ip` is set by the edge and cannot be spoofed by the caller, so
+ * it is tried first. Use this where the real address is needed (Turnstile's
+ * `remoteip`); rate limits use `clientIp`.
+ *
+ * @param {Request} request
+ * @returns {string}
+ */
+export function clientAddress(request) {
+  return request.headers.get('cf-connecting-ip')
+    || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || 'unknown'
+}
+
+/**
+ * The identity a per-IP rate limit counts against. IPv4 is the address
+ * itself; IPv6 is its /64 network, because one household or VPS is handed a
+ * whole /64 and could otherwise rotate through 2^64 addresses, each with a
+ * fresh allowance. An IPv4-mapped IPv6 address counts as its IPv4 address.
  *
  * @param {Request} request
  * @returns {string}
  */
 export function clientIp(request) {
-  return request.headers.get('cf-connecting-ip')
-    || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || 'unknown'
+  return rateLimitIp(clientAddress(request))
+}
+
+const IPV4 = /^(?:\d{1,3}\.){3}\d{1,3}$/
+const HEXTET = /^[0-9a-f]{1,4}$/
+
+/**
+ * Normalizes one address for rate limiting (see clientIp). Anything that is
+ * not a valid IPv6 literal is returned trimmed, so a malformed header still
+ * gets a (bounded) key of its own rather than an error.
+ *
+ * @param {string} raw
+ * @returns {string}
+ */
+export function rateLimitIp(raw) {
+  const address = String(raw || '').trim().slice(0, 64)
+  if (!address.includes(':')) return address || 'unknown'
+  const hextets = ipv6Hextets(address)
+  if (!hextets) return address.toLowerCase()
+  const isMapped = hextets.slice(0, 5).every((h) => h === 0) && hextets[5] === 0xffff
+  if (isMapped) return [hextets[6] >> 8, hextets[6] & 0xff, hextets[7] >> 8, hextets[7] & 0xff].join('.')
+  return `${hextets.slice(0, 4).map((h) => h.toString(16)).join(':')}::/64`
+}
+
+/**
+ * The eight 16-bit groups of an IPv6 literal, or null when it is not one.
+ * Accepts `::` compression, a trailing dotted IPv4, brackets and a zone id.
+ *
+ * @param {string} text
+ * @returns {number[] | null}
+ */
+function ipv6Hextets(text) {
+  let address = text.toLowerCase().replace(/^\[|\]$/g, '').replace(/%.*$/, '')
+  const tail = address.match(/:((?:\d{1,3}\.){3}\d{1,3})$/)
+  if (tail) {
+    const octets = tail[1].split('.').map(Number)
+    if (!IPV4.test(tail[1]) || octets.some((o) => o > 255)) return null
+    address = `${address.slice(0, -tail[1].length)}${((octets[0] << 8) | octets[1]).toString(16)}:${((octets[2] << 8) | octets[3]).toString(16)}`
+  }
+  const halves = address.split('::')
+  if (halves.length > 2) return null
+  const head = halves[0] ? halves[0].split(':') : []
+  const rest = halves.length === 2 && halves[1] ? halves[1].split(':') : []
+  const groups = halves.length === 2
+    ? [...head, ...Array(8 - head.length - rest.length).fill('0'), ...rest]
+    : head
+  if (groups.length !== 8 || (halves.length === 2 && head.length + rest.length > 7)) return null
+  if (!groups.every((g) => HEXTET.test(g))) return null
+  return groups.map((g) => parseInt(g, 16))
 }
 
 /**
@@ -45,6 +108,32 @@ export async function checkRateLimit(env, bucket, identity, { limit, windowMs })
     return await stub.check(key, limit, windowMs)
   } catch {
     return { limited: false, retryAfterSeconds: 0 }
+  }
+}
+
+/**
+ * Like checkRateLimit, but FAILS CLOSED: a missing binding or a limiter that
+ * throws reports `{ limited: true, unavailable: true }`. For anonymous writes
+ * where an uncounted request is worse than a refused one (session creation,
+ * self check-in); the caller answers 503 for `unavailable`.
+ *
+ * @param {{ RATE_LIMITER?: DurableObjectNamespace }} env
+ * @param {string} bucket
+ * @param {string} identity
+ * @param {{ limit: number, windowMs: number }} options
+ * @returns {Promise<{ limited: boolean, retryAfterSeconds: number, unavailable?: boolean }>}
+ */
+export async function checkRateLimitStrict(env, bucket, identity, { limit, windowMs }) {
+  if (!env?.RATE_LIMITER) return { limited: true, retryAfterSeconds: 0, unavailable: true }
+  try {
+    const key = `${bucket}:${identity}`
+    const stub = env.RATE_LIMITER.get(env.RATE_LIMITER.idFromName(key))
+    const result = await stub.check(key, limit, windowMs)
+    if (!result || typeof result.limited !== 'boolean') return { limited: true, retryAfterSeconds: 0, unavailable: true }
+    return result
+  } catch (error) {
+    console.error(JSON.stringify({ event: 'rate_limit.unavailable', bucket, error: error instanceof Error ? error.message : 'unknown' }))
+    return { limited: true, retryAfterSeconds: 0, unavailable: true }
   }
 }
 

@@ -9,6 +9,7 @@ import {
   readValidatedBody,
   requireDatabase,
 } from '../../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -31,7 +32,7 @@ const stateSchema = z.object({
  * retention decision, and it is not one an archive button should be quietly
  * making.
  */
-export const POST: APIRoute = async ({ params, request }) =>
+const unguardedPOST: APIRoute = async ({ params, request }) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -59,3 +60,6 @@ export const POST: APIRoute = async ({ params, request }) =>
 
     return jsonResponse({ thread: await getThread(db, thread.id) })
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const POST = withAdmin(unguardedPOST)

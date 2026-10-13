@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { linkHrefSchema } from './shared'
 
 export const iconMotifSchema = z.enum(['fullstack', 'automation', 'data', 'editorial'])
 export const ICON_MOTIFS = iconMotifSchema.options
@@ -18,8 +19,8 @@ const heroBlockSchema = z.object({
     tagline: z.string().optional().default(''),
     heading: z.string().min(1),
     subheading: z.string().optional().default(''),
-    primaryCta: z.object({ label: z.string(), href: z.string() }).optional(),
-    secondaryCta: z.object({ label: z.string(), href: z.string() }).optional(),
+    primaryCta: z.object({ label: z.string(), href: linkHrefSchema }).optional(),
+    secondaryCta: z.object({ label: z.string(), href: linkHrefSchema }).optional(),
     imageUrl: z.string().optional().default(''),
     variant: z.enum(['system', 'editorial', 'compact']).optional().default('editorial'),
     iconMotif: iconMotifSchema.optional().default('fullstack'),
@@ -193,8 +194,8 @@ const ctaBlockSchema = z.object({
     eyebrow: z.string().optional().default(''),
     heading: z.string().min(1),
     body: z.string().optional().default(''),
-    primaryCta: z.object({ label: z.string(), href: z.string() }),
-    secondaryCta: z.object({ label: z.string(), href: z.string() }).optional(),
+    primaryCta: z.object({ label: z.string(), href: linkHrefSchema }),
+    secondaryCta: z.object({ label: z.string(), href: linkHrefSchema }).optional(),
     /**
      * Routing context carried into the inquiry form. `inquiryType` preselects
      * the form's type so a visitor arriving from a solution page never has to

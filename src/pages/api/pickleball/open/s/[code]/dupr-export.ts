@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro'
 import { getEnv } from '../../../../../../lib/env'
-import { drainRequestBody } from '../../../../../../lib/http'
+import { discardUnreadBody } from '../../../../../../lib/http'
 import { duprExportRequestSchema } from '../../../../../../lib/schemas/pickleball/open/host'
 import { sendOrRelease } from '../../../../../../worker/pickleball/open/duprExport'
 import { currentHost, signInFirst } from '../../../../../../worker/pickleball/open/hostSession'
@@ -23,11 +23,11 @@ export const POST: APIRoute = async ({ request, params }) => {
     const refused = crossSiteRefusal(request) ?? (await hostIpLimited(env, request))
     const code = codeFrom(params)
     if (refused || !code) {
-      await drainRequestBody(request)
+      await discardUnreadBody(request, env)
       return refused ?? notFound()
     }
     // No body (or not JSON) means no zone; no zone, or one we do not know, dates games in UTC (like GET …/dupr).
-    const body = await readSmallJson(request, MAX_BODY_BYTES, {})
+    const body = await readSmallJson(request, MAX_BODY_BYTES, {}, env)
     if (!body.ok) return body.response
     const parsed = duprExportRequestSchema.safeParse(body.value)
     if (!parsed.success) {

@@ -91,6 +91,22 @@ export async function ingestEmail(env, message, options = {}) {
     return { status: 'duplicate', messageId: already.id, threadId: already.threadId }
   }
 
+  // Per-sender daily cap. THE ONE DELIBERATE EXCEPTION to "never silently
+  // discarded": not silent (it is logged with its reason), and bounded to a
+  // sender who has already delivered more in a day than any correspondent
+  // plausibly writes. Without it one address can fill D1 and R2 at will.
+  const senderKey = String(fields.fromAddress || envelopeFrom || '').toLowerCase()
+  if (senderKey && (await inboundCountSince(db, senderKey, now)) >= LIMITS.maxInboundPerSenderPerDay) {
+    logger.log('mailbox.ingest', {
+      result: 'dropped',
+      reason: 'sender_daily_cap',
+      mailbox,
+      cap: LIMITS.maxInboundPerSenderPerDay,
+      size: totalSize,
+    })
+    return { status: 'dropped', reason: 'sender_daily_cap' }
+  }
+
   // The row id is generated here so the R2 key can be built from it, and so a
   // key is never derived from anything that came out of the message.
   const rowId = newId()
@@ -124,8 +140,16 @@ export async function ingestEmail(env, message, options = {}) {
   // useful as a thread label — the failed recipient is.
   const correspondent = isDsn ? dsn?.primary?.recipient || fields.fromAddress : fields.fromAddress
 
+  // Read once, used twice: whether the heuristics that trust the From address
+  // (subject threading, address correlation) may run at all. A spoofed From
+  // with a copied subject would otherwise join a lead's conversation and make
+  // its Reply-To the next reply's recipient.
+  const auth = parseAuthenticationResults(message.headers)
+  const senderVerified = auth.dmarc === 'pass'
+
   // 6. Thread, then store.
   const thread = await resolveThread(db, {
+    senderVerified,
     mailbox: effectiveMailbox,
     correspondent,
     correspondentName: fields.fromName,
@@ -161,7 +185,7 @@ export async function ingestEmail(env, message, options = {}) {
     rawSize: totalSize,
     parseStatus,
     parseError: parseResult.error,
-    auth: parseAuthenticationResults(message.headers),
+    auth,
     isDsn,
     dsn: dsn?.primary
       ? {
@@ -194,6 +218,7 @@ export async function ingestEmail(env, message, options = {}) {
         })
       : await correlateInbound(db, {
           fromAddress: fields.fromAddress,
+          senderVerified,
           inReplyTo: fields.inReplyTo,
           referenceIds: fields.referenceIds,
         })
@@ -373,7 +398,8 @@ async function storeAttachments(db, bucket, messageRowId, attachments, now, logg
 /**
  * Finds the thread this message belongs to, or starts one.
  *
- * Identifiers first, the fenced subject heuristic second, a new thread last.
+ * Identifiers first, the fenced subject heuristic second (verified senders
+ * only), a new thread last.
  * See domain/threading.js for why that order and why subject never decides
  * alone.
  */
@@ -384,7 +410,9 @@ async function resolveThread(db, input) {
   )
   if (byIdentifier) return byIdentifier
 
-  const bySubject = await findThreadBySubject(
+  // The subject heuristic matches on the From address, which only means
+  // something when DMARC vouched for it. Unverified mail starts its own thread.
+  const bySubject = !input.senderVerified ? null : await findThreadBySubject(
     db,
     { mailbox: input.mailbox, correspondent: input.correspondent, subject: input.subject },
     input.now,
@@ -397,4 +425,25 @@ async function resolveThread(db, input) {
     correspondent: input.correspondent,
     correspondentName: input.correspondentName,
   })
+}
+
+/**
+ * Inbound messages stored from one sender in the 24 hours before `now`.
+ * Served by idx_mailbox_messages_from.
+ *
+ * @param {D1Database} db
+ * @param {string} sender lowercased From (or envelope sender when From is empty)
+ * @param {Date} now
+ */
+async function inboundCountSince(db, sender, now) {
+  const since = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
+  const row = await db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM mailbox_messages
+       WHERE direction = 'inbound' AND received_at >= ?
+         AND (from_address = ? OR (from_address = '' AND envelope_from = ?))`,
+    )
+    .bind(since, sender, sender)
+    .first()
+  return Number(row?.n ?? 0)
 }

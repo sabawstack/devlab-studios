@@ -9,10 +9,11 @@ import {
 import { recordAuditEvent } from '../../../../worker/repositories/auditLog.js'
 import { settingsUpdateSchema } from '../../../../lead-engine/schemas/index'
 import { actorEmail, handleRoute, jsonResponse, readValidatedBody, requireDatabase } from '../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../lib/adminGuard'
 
 export const prerender = false
 
-export const GET: APIRoute = async () =>
+const unguardedGET: APIRoute = async () =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -27,7 +28,7 @@ export const GET: APIRoute = async () =>
     return jsonResponse({ settings: maskSecrets(settings, metadata), metadata })
   })
 
-export const PUT: APIRoute = async (context) =>
+const unguardedPUT: APIRoute = async (context) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -55,7 +56,7 @@ export const PUT: APIRoute = async (context) =>
     return jsonResponse({ ok: true })
   })
 
-export const DELETE: APIRoute = async (context) =>
+const unguardedDELETE: APIRoute = async (context) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -74,3 +75,8 @@ export const DELETE: APIRoute = async (context) =>
 
     return jsonResponse({ ok: true })
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)
+export const PUT = withAdmin(unguardedPUT)
+export const DELETE = withAdmin(unguardedDELETE)

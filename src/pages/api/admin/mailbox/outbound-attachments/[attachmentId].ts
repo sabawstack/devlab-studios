@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro'
 import { deleteUnclaimedAttachment } from '../../../../../mailbox/repositories/outboundAttachments.js'
 import { handleRoute, jsonResponse, requireDatabase } from '../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -16,10 +17,13 @@ export const prerender = false
  * two inconsistencies; an orphaned object costs storage and is swept by the
  * `outbound_id IS NULL` index the migration adds for exactly this.
  */
-export const DELETE: APIRoute = async ({ params }) =>
+const unguardedDELETE: APIRoute = async ({ params }) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
 
     return jsonResponse({ attachment: await deleteUnclaimedAttachment(database.env.DB, params.attachmentId!) })
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const DELETE = withAdmin(unguardedDELETE)

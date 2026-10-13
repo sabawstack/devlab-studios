@@ -15,6 +15,7 @@ import { listTrackingTokens } from '../../../../../../lead-engine/repositories/t
 import { describeMxState } from '../../../../../../lead-engine/contacts/validate.js'
 import { checkOutreachReadiness } from '../../../../../../lead-engine/services/outreach.js'
 import { handleRoute, jsonResponse, notFound, requireDatabase } from '../../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -26,7 +27,7 @@ export const prerender = false
  * together, and a request per panel would make opening a lead visibly slow over
  * a long connection.
  */
-export const GET: APIRoute = async ({ params, request }) =>
+const unguardedGET: APIRoute = async ({ params, request }) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -120,3 +121,6 @@ export const GET: APIRoute = async ({ params, request }) =>
       readiness: { ready: readiness.ready, blockers: readiness.blockers },
     })
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)

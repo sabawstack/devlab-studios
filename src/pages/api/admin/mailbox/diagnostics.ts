@@ -4,6 +4,7 @@ import { listUnparsed } from '../../../../mailbox/repositories/messages.js'
 import { outboundCounts } from '../../../../mailbox/repositories/outbound.js'
 import { listThreads, unreadCounts } from '../../../../mailbox/repositories/threads.js'
 import { handleRoute, jsonResponse, requireDatabase } from '../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -17,7 +18,7 @@ export const prerender = false
  * the inbox keeps looking fine — which is exactly the kind this codebase has
  * been bitten by before.
  */
-export const GET: APIRoute = async () =>
+const unguardedGET: APIRoute = async () =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -53,3 +54,6 @@ export const GET: APIRoute = async () =>
       mailboxes: MAILBOX_LABELS,
     })
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)

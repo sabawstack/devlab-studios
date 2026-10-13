@@ -13,6 +13,7 @@ import {
   readValidatedBody,
   requireDatabase,
 } from '../../../../../../lead-engine/schemas/route'
+import { withAdmin } from '../../../../../../lib/adminGuard'
 
 export const prerender = false
 
@@ -27,7 +28,7 @@ const statusSchema = z.object({
  * historical message — the conversation view is a record of what was actually
  * said, which is what makes it worth reading before replying.
  */
-export const GET: APIRoute = async ({ params, request }) =>
+const unguardedGET: APIRoute = async ({ params, request }) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -43,7 +44,7 @@ export const GET: APIRoute = async ({ params, request }) =>
     return jsonResponse({ conversation, messages, lead })
   })
 
-export const PATCH: APIRoute = async (context) =>
+const unguardedPATCH: APIRoute = async (context) =>
   handleRoute(async () => {
     const database = requireDatabase()
     if (!database.ok) return database.response
@@ -54,3 +55,7 @@ export const PATCH: APIRoute = async (context) =>
     await updateConversationStatus(database.env.DB, context.params.id!, body.data.status)
     return jsonResponse({ ok: true, status: body.data.status })
   })
+
+// Authenticated per handler as well as by src/middleware.ts; see src/lib/adminGuard.ts.
+export const GET = withAdmin(unguardedGET)
+export const PATCH = withAdmin(unguardedPATCH)

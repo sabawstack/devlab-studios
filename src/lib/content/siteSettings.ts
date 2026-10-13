@@ -1,6 +1,7 @@
 import { getSiteSettingsContent } from '../../worker/repositories/content.js'
 import { siteSettingsContent } from '../../data/siteSettingsContent.js'
 import { getEnv } from '../env'
+import { sanitizeLinkFields } from '../safeHref'
 
 const canonicalTagline = 'Your Vision, Digitally Crafted — one solution at a time, always evolving.'
 
@@ -36,7 +37,9 @@ export async function loadSiteSettings(): Promise<SiteSettingsData> {
   if (!env.DB) return siteSettingsContent
 
   try {
-    const data = await getSiteSettingsContent(env.DB)
+    // D1 content is sanitised again here, not only validated on save: a row
+    // that predates the link-scheme rule must still render inert.
+    const data = sanitizeLinkFields(await getSiteSettingsContent(env.DB))
     if (!data) return siteSettingsContent
 
     const footer = (data.footer || {}) as SiteSettingsData['footer']

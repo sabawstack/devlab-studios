@@ -4,6 +4,7 @@ import { privacyPage } from '../../data/pages/privacy'
 import { termsPage } from '../../data/pages/terms'
 import { processPage } from '../../data/pages/process'
 import { workPage } from '../../data/pages/work'
+import { sanitizeLinkFields } from '../safeHref'
 
 export interface PageBlock {
   type: string
@@ -36,7 +37,8 @@ export async function loadPage(slug: string): Promise<PageData | null> {
   if (!env.DB) return fallback
 
   try {
-    const data = await getPage(env.DB, slug, { includeDrafts: false })
+    // Block CTA hrefs re-checked at read time; see src/lib/safeHref.ts.
+    const data = sanitizeLinkFields(await getPage(env.DB, slug, { includeDrafts: false }))
     if (!data?.blocks?.length) return fallback
     return data
   } catch {

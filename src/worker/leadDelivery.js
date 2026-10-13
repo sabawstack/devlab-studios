@@ -4,7 +4,9 @@ import { getLeadAttribution, recordLeadActivity } from './repositories/leadConte
 import { buildConfirmationEmail, buildLeadMagnetEmail, buildNotificationEmail } from './delivery/messages.js'
 import { buildWebhookPayload, createResendProvider, createWebhookProvider } from './delivery/providers.js'
 import { classifyDeliveryFailure, isRetryable, nextRetryAt } from './delivery/classify.js'
+import { claimConfirmationSlot, releaseConfirmationSlot } from './delivery/confirmationCap.js'
 import { getLeadMagnet } from '../config/offers.js'
+import { strictRecipient } from '../lead-engine/domain/domains.js'
 
 const DEFAULT_RECIPIENT = 'hello@devlabstudios.com'
 /** `leads.source` value that marks a lead-magnet capture rather than an inquiry. */
@@ -52,6 +54,10 @@ async function pendingTargets(env, lead, attempts) {
     {
       provider: confirmationProvider,
       required: false,
+      // Visitor-addressed mail is gated: one plain address, and at most one
+      // confirmation per address per 24 hours (see delivery/confirmationCap.js).
+      gate: (now) => confirmationGate(env, lead, now),
+      release: (now) => releaseConfirmationSlot(env.DB, lead.email, now),
       buildPayload: () => {
         // The offer is resolved from the server-owned registry by id, never
         // from a URL the submission carried — see src/config/offers.js.
@@ -78,8 +84,90 @@ async function pendingTargets(env, lead, attempts) {
   return targets.filter((target) => target.provider.isConfigured && !succeeded.has(target.provider.name))
 }
 
+/**
+ * Whether the visitor confirmation may be sent now.
+ *
+ * FAILS CLOSED: if the cap cannot be checked (for instance the migration has
+ * not been applied yet), the confirmation is skipped rather than sent
+ * uncapped. The owner notification is a separate target and is unaffected.
+ *
+ * @returns {Promise<{ allowed: true } | { allowed: false, reason: string, message: string }>}
+ */
+async function confirmationGate(env, lead, now) {
+  if (!strictRecipient(lead.email)) {
+    return { allowed: false, reason: 'invalid_recipient', message: 'Not sent: the address is not a single valid recipient.' }
+  }
+  try {
+    if (await claimConfirmationSlot(env.DB, lead.email, { now })) return { allowed: true }
+    return {
+      allowed: false,
+      reason: 'recipient_daily_cap',
+      message: 'Not sent: this address already received a confirmation in the last 24 hours.',
+    }
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        event: 'lead_delivery',
+        outcome: 'confirmation_cap_unavailable',
+        leadId: lead.id,
+        error: error instanceof Error ? error.message : 'unknown',
+      }),
+    )
+    return { allowed: false, reason: 'cap_unavailable', message: 'Not sent: the recipient cap could not be checked.' }
+  }
+}
+
 async function deliverToTarget(env, lead, target) {
   let attemptNumber = (await countDeliveryAttempts(env.DB, lead.id, target.provider.name)) + 1
+
+  const claimedAt = new Date()
+  if (target.gate) {
+    const verdict = await target.gate(claimedAt)
+    if (!verdict.allowed) {
+      // Recorded as a completed attempt (the schema admits only success or
+      // failure) with the reason in error_category / error_message, so Retry
+      // does not keep re-trying a send that was deliberately withheld and the
+      // admin still shows why nothing went out.
+      await recordDeliveryAttempt(env.DB, {
+        leadId: lead.id,
+        target: target.provider.name,
+        attemptNumber,
+        status: 'success',
+        errorMessage: verdict.message,
+        errorCategory: `skipped_${verdict.reason}`,
+      })
+      console.log(
+        JSON.stringify({
+          event: 'lead_delivery',
+          outcome: 'skipped',
+          leadId: lead.id,
+          target: target.provider.name,
+          reason: verdict.reason,
+        }),
+      )
+      return { ok: true, target: target.provider.name, skipped: verdict.reason }
+    }
+  }
+
+  const outcome = await sendWithRetries(env, lead, target, attemptNumber)
+  if (!outcome.ok && target.release) {
+    // Nothing went out, so the slot is given back and a later Retry may send.
+    await target.release(claimedAt).catch((error) => {
+      console.error(
+        JSON.stringify({
+          event: 'lead_delivery',
+          outcome: 'confirmation_release_failed',
+          leadId: lead.id,
+          error: error instanceof Error ? error.message : 'unknown',
+        }),
+      )
+    })
+  }
+  return outcome
+}
+
+async function sendWithRetries(env, lead, target, firstAttemptNumber) {
+  let attemptNumber = firstAttemptNumber
 
   for (let tryIndex = 0; tryIndex < MAX_ATTEMPTS_PER_INVOCATION; tryIndex += 1) {
     const startedAt = Date.now()

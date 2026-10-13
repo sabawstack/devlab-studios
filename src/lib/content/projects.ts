@@ -4,6 +4,7 @@ import { portfolioItems } from '../../data/portfolio.js'
 import { getEnv } from '../env'
 import { optimizeImage, type OptimizedPicture } from '../images/optimizeImage'
 import type { ImageMetadata } from 'astro'
+import { sanitizeLinkFields } from '../safeHref'
 
 type ImageSource = ImageMetadata | string | undefined
 
@@ -119,7 +120,8 @@ export async function loadProjects(): Promise<ProjectData[]> {
   if (!env.DB) return attachOptimizedImages(normalizedPortfolioItems)
 
   try {
-    const projects = await listProjects(env.DB)
+    // liveUrl/sourceUrl re-checked at read time; see src/lib/safeHref.ts.
+    const projects = sanitizeLinkFields(await listProjects(env.DB))
     if (!projects.length) return await attachOptimizedImages(normalizedPortfolioItems)
     return await attachOptimizedImages(
       mergeWithStaticImages(projects.map((project: RawProjectRow) => normalizeProjectMedia(project, env))),

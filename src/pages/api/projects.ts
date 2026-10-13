@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro'
 import { listProjects } from '../../worker/repositories/projects.js'
 import { getEnv } from '../../lib/env'
 import { normalizeProjectMedia } from '../../lib/media'
-import { publicJson } from '../../lib/publicContent'
+import { publicContentFailure, publicJson } from '../../lib/publicContent'
 
 export const GET: APIRoute = async () => {
   const env = getEnv()
@@ -19,7 +19,6 @@ export const GET: APIRoute = async () => {
       configured: true,
     })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return publicJson({ data: [], source: 'static-fallback', configured: false, error: message })
+    return publicContentFailure([], 'projects', error)
   }
 }

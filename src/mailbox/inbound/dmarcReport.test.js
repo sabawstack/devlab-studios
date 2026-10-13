@@ -263,3 +263,27 @@ async function makeZip(name, content) {
   }
   return out
 }
+
+describe('decompression bomb (F6)', () => {
+  async function gzip(bytes) {
+    return new Uint8Array(
+      await new Response(new Blob([bytes]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer(),
+    )
+  }
+
+  it('stops inflating at the ceiling instead of buffering the whole output', async () => {
+    const { inflate } = await import('./dmarcReport.js')
+    // 4 MB of zeros compresses to a few KB.
+    const bomb = await gzip(new Uint8Array(4 * 1024 * 1024))
+    expect(bomb.byteLength).toBeLessThan(64 * 1024)
+
+    await expect(inflate(bomb, 'gzip', 256 * 1024)).rejects.toThrow(/expands to more/i)
+  })
+
+  it('still inflates a report under the ceiling', async () => {
+    const { inflate } = await import('./dmarcReport.js')
+    const text = new TextEncoder().encode('<feedback/>')
+    const out = await inflate(await gzip(text), 'gzip', 1024)
+    expect(new TextDecoder().decode(out)).toBe('<feedback/>')
+  })
+})

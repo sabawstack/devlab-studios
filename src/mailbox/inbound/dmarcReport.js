@@ -115,13 +115,39 @@ async function unzipSingleEntry(bytes) {
  * @param {'gzip'|'deflate-raw'} format
  * @returns {Promise<Uint8Array>}
  */
-async function inflate(bytes, format) {
-  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream(format))
-  const buffer = await new Response(stream).arrayBuffer()
-  if (buffer.byteLength > MAX_DECOMPRESSED_BYTES) {
-    throw new Error('That report expands to more than we will read.')
+export async function inflate(bytes, format, maxBytes = MAX_DECOMPRESSED_BYTES) {
+  // STREAMED, with the ceiling enforced per chunk. Buffering the whole output
+  // first and checking its size afterwards (the previous shape) let a few KB
+  // of compressed input expand to gigabytes in memory before the check ran —
+  // a decompression bomb only needs the check to come late. The declared ZIP
+  // size is attacker-chosen too, so it cannot be the only guard.
+  const reader = new Blob([bytes]).stream().pipeThrough(new DecompressionStream(format)).getReader()
+  const chunks = []
+  let total = 0
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (!value) continue
+      total += value.byteLength
+      if (total > maxBytes) {
+        throw new Error('That report expands to more than we will read.')
+      }
+      chunks.push(value)
+    }
+  } finally {
+    // Stops the decompressor rather than letting it run on into the bomb.
+    await reader.cancel().catch(() => {})
   }
-  return new Uint8Array(buffer)
+
+  const out = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) {
+    out.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return out
 }
 
 /**
