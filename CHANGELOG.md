@@ -51,6 +51,10 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+### Changed
+
+- Dependabot now updates react, react-dom and their types together, and skips the Tailwind, TypeScript, ESLint and Vitest major versions that need a hand-made migration, so it stops opening update PRs that leave the two React packages on different versions or that cannot build.
+
 ## [2.2.0] - 2026-10-13
 
 ### Security
