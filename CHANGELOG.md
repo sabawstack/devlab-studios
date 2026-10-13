@@ -51,6 +51,8 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-10-13
+
 ### Security
 
 - **Security:** the admin login check could be skipped with a percent-encoded path (`/api/%61dmin/...`), because the middleware checked the raw path while Astro routes on the decoded one. The gate now checks the decoded, slash-collapsed routing path (malformed escapes are refused with 400), with unit and end-to-end tests for encoded, double-encoded, mixed-case and doubled-slash paths. Production's `*.workers.dev` address and per-version preview URLs are switched off so the app is only served on www.devlabstudios.com behind the domain's Cloudflare protections.
