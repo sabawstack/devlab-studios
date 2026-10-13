@@ -5,6 +5,9 @@
 // comparative-language check on /pickleball/how-it-works would flag it).
 import type { StackingMode } from '../types'
 
+/** Shown above the mode picker on the create form and the host console. */
+export const MODE_HELP = 'Every mode keeps rotation fair: whoever has played the fewest games goes on next. The mode only changes who plays with and against whom.'
+
 export const MODE_ORDER: readonly StackingMode[] = ['PADDLE_STACK', 'WINNERS_LOSERS', 'BY_STANDING', 'BALANCED']
 
 export const MODE_INFO: Record<StackingMode, { label: string; summary: string }> = {
@@ -14,14 +17,14 @@ export const MODE_INFO: Record<StackingMode, { label: string; summary: string }>
   },
   WINNERS_LOSERS: {
     label: 'Winners play winners',
-    summary: 'Winners meet winners and losers meet losers, and last game’s partners end up on opposite sides.',
+    summary: 'Of those due next (fewest games), winners meet winners and losers meet losers, and last game’s partners end up on opposite sides.',
   },
   BY_STANDING: {
     label: 'By standing',
-    summary: 'Players close in today’s standings play each other: 1st and 4th against 2nd and 3rd.',
+    summary: 'Of those due next (fewest games), players close in today’s standings play each other: 1st and 4th against 2nd and 3rd.',
   },
   BALANCED: {
     label: 'Balanced teams',
-    summary: 'Teams are split so their skill adds up as evenly as possible.',
+    summary: 'The four due next (fewest games) are split so their skill adds up as evenly as possible.',
   },
 }

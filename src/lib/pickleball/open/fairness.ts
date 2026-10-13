@@ -85,7 +85,7 @@ function buildIndex(state: OpenSessionState) {
   return { startedTimes, finishedGames, startedByPlayer }
 }
 
-/** Available players in the order paddle stack would seat them. */
+/** Available players in the order paddle stack would seat them: fewest games, then forced sit-outs, then longest wait. */
 export function queueOrder(state: OpenSessionState): QueueEntry[] {
   const busy = busyPlayerIds(state.matches)
   const courts = Math.max(1, state.courts.filter((c) => c.enabled).length)
@@ -99,11 +99,11 @@ export function queueOrder(state: OpenSessionState): QueueEntry[] {
       const satOut = Math.floor(watched / courts)
       return { player: p, games: p.gamesOffset + (finishedGames.get(p.id) ?? 0), satOut, forced: satOut >= SIT_OUT_LIMIT }
     })
-    .sort((a, b) => {
-      if (a.forced !== b.forced) return a.forced ? -1 : 1
-      if (a.forced) return byWait(a, b)
-      return a.games - b.games || byWait(a, b)
-    })
+    // Fair first: fewest games always goes first; within a games count the
+    // sit-out guard's forced players lead, then longest wait. (Forced players
+    // used to jump every games count, which let someone with more games play
+    // while someone with fewer waited once a court had more than 12 players.)
+    .sort((a, b) => a.games - b.games || Number(b.forced) - Number(a.forced) || byWait(a, b))
 }
 
 export interface FairnessSummary {

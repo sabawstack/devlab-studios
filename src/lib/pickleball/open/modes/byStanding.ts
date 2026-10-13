@@ -1,12 +1,12 @@
 // src/lib/pickleball/open/modes/byStanding.ts
-// By standing (spec §5.2): rank the players due to play by today's standings,
-// take the window of 4 adjacent ranks around the longest-waiting player, and
-// play 1st + 4th against 2nd + 3rd.
+// By standing (spec §5.2): rank the fair pool (fewest games played, longest
+// wait; see fairPool) by today's standings, take the window of 4 adjacent
+// ranks around the longest-waiting player, and play 1st + 4th against 2nd + 3rd.
 import { byWait, type QueueEntry } from '../fairness'
 import { keepsRules, pickFour } from '../rules'
 import { computeStandings } from '../standings'
 import { opponentCost, partnerCost, splitTeams, type ModeInput, type Proposal } from './paddleStack'
-import { dueWindow, setKey } from './shared'
+import { fairPool, setKey } from './shared'
 
 /** 1st + 4th vs 2nd + 3rd of a rank-ordered four; the paddle-stack split if that would part a keep-together pair. */
 function standingSplit(ranked: readonly string[], input: ModeInput): Proposal {
@@ -21,14 +21,18 @@ function lexicographic(a: readonly number[], b: readonly number[]): number {
 
 export function proposeByStanding(input: ModeInput): Proposal | null {
   const { state, queue, history, rules, exclude } = input
-  const due = dueWindow(queue)
+  const pool = fairPool(queue, rules, exclude)
+  const due = [...pool.required, ...pool.optional]
   if (due.length < 4) return null
   const rows = computeStandings(state.players, state.matches)
   const rankOf = new Map(rows.map((row, index) => [row.playerId, index]))
   const rank = (id: string) => rankOf.get(id) ?? rows.length
   const ranked = [...due].sort((a, b) => rank(a.player.id) - rank(b.player.id) || byWait(a, b))
-  const forced = due.filter((e) => e.forced).map((e) => e.player.id)
-  const anchor: QueueEntry = due.find((e) => e.forced) ?? [...due].sort(byWait)[0]
+  // Fairness outranks the standings: a window must seat every required player
+  // (lower games tiers, then the sit-out guard's forced players).
+  const must = [...pool.required, ...pool.optional.filter((e) => e.forced)]
+  const required = must.map((e) => e.player.id)
+  const anchor: QueueEntry = must[0] ?? [...pool.optional].sort(byWait)[0]
   const at = ranked.indexOf(anchor)
   const banned = exclude ? setKey(exclude) : null
 
@@ -37,8 +41,7 @@ export function proposeByStanding(input: ModeInput): Proposal | null {
     const window = ranked.slice(start, start + 4)
     const ids = window.map((e) => e.player.id)
     if (banned !== null && setKey(ids) === banned) continue
-    // The sit-out guard outranks the standings: a window must seat every forced player.
-    if (forced.slice(0, 4).some((id) => !ids.includes(id))) continue
+    if (required.slice(0, 4).some((id) => !ids.includes(id))) continue
     const proposal = standingSplit(ids, input)
     if (!keepsRules(proposal.teamA, proposal.teamB, rules)) continue
     const score = [
@@ -51,13 +54,11 @@ export function proposeByStanding(input: ModeInput): Proposal | null {
   }
   if (best) return standingSplit(best.ids, input)
 
-  // No window seats every forced player within the rules: forced players first,
-  // then the nearest ranks to the anchor.
+  // No window seats every required player within the rules: required players
+  // first, then the optional ones nearest in rank to the anchor.
   const anchorRank = rank(anchor.player.id)
-  const nearest = [...due].sort((a, b) => Number(b.forced) - Number(a.forced)
-    || Math.abs(rank(a.player.id) - anchorRank) - Math.abs(rank(b.player.id) - anchorRank))
-  const four = pickFour(nearest.map((e) => e.player.id), rules, exclude, new Set(queue.map((e) => e.player.id)))
-    ?? pickFour(queue.map((e) => e.player.id), rules, exclude)
+  const nearest = pool.optional.filter((e) => !e.forced).sort((a, b) => Math.abs(rank(a.player.id) - anchorRank) - Math.abs(rank(b.player.id) - anchorRank))
+  const four = pickFour([...required, ...nearest.map((e) => e.player.id)], rules, exclude, new Set(queue.map((e) => e.player.id)))
   if (!four) return null
   return standingSplit([...four].sort((a, b) => rank(a) - rank(b)), input)
 }

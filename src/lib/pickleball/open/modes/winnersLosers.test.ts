@@ -69,4 +69,23 @@ describe('winners play winners', () => {
     expect(shuffledSplits(['A1', 'A2', 'B1', 'B2'], tags)).toHaveLength(2)
     expect(shuffledSplits(['A1', 'A2', 'B1', 'C1'], tags)).toEqual([])
   })
+
+  it('fair first: winners who have played more wait while losers who have played less go on', () => {
+    // One court. A and B won both their games (2 played); C, D, E and F lost their only game.
+    const matches: OpenMatch[] = [
+      finished('m1', ['A1', 'A2'], ['C1', 'C2'], 'A', 11, 3, 0),
+      finished('m2', ['B1', 'B2'], ['D1', 'D2'], 'A', 11, 4, 20),
+      finished('m3', ['A1', 'A2'], ['E1', 'E2'], 'A', 11, 5, 40),
+      finished('m4', ['B1', 'B2'], ['F1', 'F2'], 'A', 11, 6, 60),
+    ]
+    const waited: Record<string, number> = { C: 10, D: 30, E: 50, F: 70, A: 50, B: 70 }
+    const ids = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'D1', 'D2', 'E1', 'E2', 'F1', 'F2']
+    const state = sessionState({
+      settings,
+      players: ids.map((id, i) => player(id, { position: i, waitingSince: at(waited[id[0]]) })),
+      matches,
+    })
+    const p = proposeForCourt(state)!
+    expect([...p.teamA, ...p.teamB].sort()).toEqual(['C1', 'C2', 'D1', 'D2'])
+  })
 })

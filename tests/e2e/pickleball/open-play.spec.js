@@ -304,7 +304,7 @@ test.describe('stacking modes, rules and fairness', () => {
     await expect(page.locator('input[name="cf-turnstile-response"]')).toHaveValue(/.+/, { timeout: 30_000 })
     await page.getByRole('button', { name: /^Start session/ }).click()
     await page.getByRole('link', { name: 'I saved it — go to courts' }).click()
-    await expect(page.getByRole('button', { name: 'Mode: Winners play winners' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Game mode: Winners play winners' })).toBeVisible()
   })
 
   test('switching mode mid-session leaves the proposed game alone and shows on the board', async ({ page, request }) => {
@@ -313,9 +313,9 @@ test.describe('stacking modes, rules and fairness', () => {
     await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
     await expect(page.getByTestId('court-1')).toContainText('Up next')
     const before = await page.getByTestId('court-1').innerText()
-    await page.getByRole('button', { name: 'Mode: Paddle stack' }).click()
-    await page.getByRole('dialog', { name: 'Who plays next' }).getByRole('radio', { name: /^By standing/ }).click()
-    await expect(page.getByRole('button', { name: 'Mode: By standing' })).toBeVisible()
+    await page.getByRole('button', { name: 'Game mode: Paddle stack' }).click()
+    await page.getByRole('dialog', { name: 'Game mode' }).getByRole('radio', { name: /^By standing/ }).click()
+    await expect(page.getByRole('button', { name: 'Game mode: By standing' })).toBeVisible()
     expect(await page.getByTestId('court-1').innerText()).toBe(before)
     expect((await hostSnapshot(request, code, hostKey)).settings.mode).toBe('BY_STANDING')
     const viewer = await (await request.get(`/api/pickleball/open/s/${code}/state`)).json()

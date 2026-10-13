@@ -51,6 +51,14 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+### Fixed
+
+- Pickleball open play: rotation is fair first in every game mode. The next four always come from the players with the fewest games played (ties by longest wait), widening one games count at a time only when fewer than four can be seated; nobody with more games is picked while someone with fewer waits, except when a keep-together/keep-apart rule leaves no other game. Winners play winners used to pick four winners from the eight longest-waiting, so on one court earlier winners with more games jumped ahead of losers with fewer; by standing used the same window. On one court winners and losers games now take turns. The sit-out guard now leads within a games count instead of jumping it (in winners play winners, a player out 3 rounds goes first).
+
+### Changed
+
+- Pickleball game mode copy: the create form's picker is headed "Choose game mode" with "Every mode keeps rotation fair: whoever has played the fewest games goes on next. The mode only changes who plays with and against whom."; the host console button reads "Game mode: …" and its sheet is titled "Game mode". Mode summaries, the rotation page rules and mode details, the guide and the landing page describe fair-first rotation instead of the "eight waiting longest" window.
+
 ## [2.1.2] - 2026-10-13
 
 ### Changed

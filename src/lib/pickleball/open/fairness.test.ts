@@ -23,7 +23,7 @@ describe('fairness', () => {
     expect(roundsSatOut(state.players[0], state)).toBe(2) // 5 started games / 2 enabled courts
   })
 
-  it('orders the queue: forced first, then fewest games, then longest wait', () => {
+  it('orders the queue: fewest games first, then forced sit-outs, then longest wait', () => {
     const state = sessionState({
       courts: [court('c1', 1)],
       players: [
@@ -34,8 +34,12 @@ describe('fairness', () => {
       ],
       matches: [12, 13].map((n) => finished(`m${n}`, ['a', 'b'], ['c', 'd'], 'A', 11, 1, n)),
     })
-    // Veteran and Waiting have sat out 2 rounds since minute 0 -> forced, oldest first by position tie.
-    expect(queueOrder(state).map((e) => e.player.id)).toEqual(['Veteran', 'Waiting', 'Rested', 'Fresh'])
+    // Veteran, Waiting and Rested have sat out 2 rounds -> forced. Fair first:
+    // forced players no longer jump a lower games count (Veteran and Waiting
+    // have 3 games; Rested and Fresh none). Within a count, forced lead.
+    const queue = queueOrder(state)
+    expect(queue.map((e) => e.player.id)).toEqual(['Rested', 'Fresh', 'Veteran', 'Waiting'])
+    expect(queue.map((e) => e.forced)).toEqual([true, false, true, true])
   })
 
   it('records partners and opponents from in-progress and finished games', () => {

@@ -132,7 +132,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
         </div>
         {tournament
           ? <span className="min-w-0 flex-1 truncate text-sm font-semibold text-mist sm:flex-none">{tournament.formatLabel}</span>
-          : <Button variant="ghost" aria-haspopup="dialog" onClick={() => setDialog({ type: 'mode' })}>Mode: {MODE_INFO[host.settings.mode]?.label ?? 'Paddle stack'}</Button>}
+          : <Button variant="ghost" aria-haspopup="dialog" onClick={() => setDialog({ type: 'mode' })}>Game mode: {MODE_INFO[host.settings.mode]?.label ?? 'Paddle stack'}</Button>}
         <Button variant="neon" onClick={() => setDialog({ type: 'share' })}>Share board</Button>
         {/* The menu is placed against the header, not the button: on a phone More wraps to the
             left edge, and a menu anchored to its right side ran off the screen. */}

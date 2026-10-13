@@ -8,6 +8,7 @@ import { createSession } from './lib/api'
 import { rememberHostedSession } from './lib/hostKeys'
 import HostLinkPanel from './components/HostLinkPanel.jsx'
 import { ModePicker } from './components/ModePicker.jsx'
+import { MODE_HELP } from '../lib/pickleball/open/modes/info'
 import { FormatPicker } from './tournament/Choice.jsx'
 import { Button, Panel } from './components/ui.jsx'
 
@@ -131,9 +132,10 @@ export default function CreateSessionApp({ siteKey }) {
             </Panel>
           ) : (
             <Panel className="md:col-span-2">
-              <p className="mb-3 font-semibold">Who plays next</p>
+              <p className="font-semibold">Choose game mode</p>
+              <p className="mb-3 mt-1 text-sm text-mist">{MODE_HELP}</p>
               <ModePicker value={details.mode} onChange={(mode) => update({ mode })} />
-              <p className="mt-3 text-sm text-mist">You can switch any time during the session. Anyone who has sat out 2 rounds in a row goes on next, whichever you pick (a keep-together or keep-apart rule can hold them back), and every proposed game can be edited before it starts.</p>
+              <p className="mt-3 text-sm text-mist">You can switch any time during the session, and every proposed game can be edited before it starts. A keep-together or keep-apart rule can hold a player back or bring a partner on early.</p>
             </Panel>
           )}
           <label className="flex min-h-11 items-center gap-3 md:col-span-2">

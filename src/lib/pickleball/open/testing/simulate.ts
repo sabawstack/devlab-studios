@@ -39,6 +39,24 @@ export interface SimulationResult {
   maxSatOut: number
   /** Every round's games, as started. */
   rounds: OpenMatch[][]
+  /** Largest games-played spread (most minus fewest, all players) seen at any proposal or at the end. */
+  maxSpread: number
+  /** Rounds in which someone seated had played more games than someone left waiting. */
+  unfairRounds: number
+}
+
+function finishedGames(state: OpenSessionState): Map<string, number> {
+  const games = new Map(state.players.map((p) => [p.id, 0]))
+  for (const m of state.matches) {
+    if (m.status !== 'FINISHED') continue
+    for (const id of [...m.teamA, ...m.teamB]) games.set(id, (games.get(id) ?? 0) + 1)
+  }
+  return games
+}
+
+function spread(games: ReadonlyMap<string, number>): number {
+  const values = [...games.values()]
+  return values.length ? Math.max(...values) - Math.min(...values) : 0
 }
 
 export function simulate({ players, courts, rounds, seed, mode = 'PADDLE_STACK', rules = [], skills = false }: SimulationOptions): SimulationResult {
@@ -50,10 +68,14 @@ export function simulate({ players, courts, rounds, seed, mode = 'PADDLE_STACK',
   })
   let minute = 0
   let maxSatOut = 0
+  let maxSpread = 0
+  let unfairRounds = 0
   const played: OpenMatch[][] = []
   const streak = new Map(state.players.map((p) => [p.id, 0]))
   for (let round = 0; round < rounds; round += 1) {
     minute += 1
+    const before = finishedGames(state)
+    maxSpread = Math.max(maxSpread, spread(before))
     state = fillProposals(state, ctxAt(minute))
     minute += 1
     state = {
@@ -63,6 +85,9 @@ export function simulate({ players, courts, rounds, seed, mode = 'PADDLE_STACK',
     const live = state.matches.filter((m) => m.status === 'IN_PROGRESS')
     played.push(live)
     const playing = new Set(live.flatMap((m) => [...m.teamA, ...m.teamB]))
+    const seatedMost = Math.max(-Infinity, ...[...playing].map((id) => before.get(id) ?? 0))
+    const waitingFewest = Math.min(Infinity, ...state.players.filter((p) => !playing.has(p.id)).map((p) => before.get(p.id) ?? 0))
+    if (seatedMost > waitingFewest) unfairRounds += 1
     for (const p of state.players) {
       const next = playing.has(p.id) ? 0 : (streak.get(p.id) ?? 0) + 1
       streak.set(p.id, next)
@@ -83,5 +108,6 @@ export function simulate({ players, courts, rounds, seed, mode = 'PADDLE_STACK',
       players: state.players.map((p) => (playing.has(p.id) ? { ...p, waitingSince: at(minute) } : p)),
     }
   }
-  return { state, maxSatOut, rounds: played }
+  maxSpread = Math.max(maxSpread, spread(finishedGames(state)))
+  return { state, maxSatOut, rounds: played, maxSpread, unfairRounds }
 }

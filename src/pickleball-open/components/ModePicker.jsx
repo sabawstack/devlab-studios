@@ -1,8 +1,8 @@
-import { MODE_INFO, MODE_ORDER } from '../../lib/pickleball/open/modes/info'
+import { MODE_HELP, MODE_INFO, MODE_ORDER } from '../../lib/pickleball/open/modes/info'
 import { Sheet } from './ui.jsx'
 
-/** The four ways to pick who plays next, each with its one-line explanation (spec §5.2). */
-export function ModePicker({ value, onChange, label = 'Who plays next' }) {
+/** The four game modes, each with its one-line explanation (spec §5.2). */
+export function ModePicker({ value, onChange, label = 'Choose game mode' }) {
   return (
     <div className="grid gap-2" role="radiogroup" aria-label={label}>
       {MODE_ORDER.map((mode) => {
@@ -22,9 +22,10 @@ export function ModePicker({ value, onChange, label = 'Who plays next' }) {
 /** Mid-session switch. The change applies from the next proposal only (spec §5.2). */
 export default function ModeSheet({ mode, onPick, onClose }) {
   return (
-    <Sheet title="Who plays next" onClose={onClose}>
-      <ModePicker value={mode} onChange={onPick} />
-      <p className="mt-4 text-sm text-mist">A change applies from the next game proposed. Games already proposed or on court stay as they are. Anyone who has sat out 2 rounds in a row still goes on next, in every mode, unless a keep-together or keep-apart rule holds them back.</p>
+    <Sheet title="Game mode" onClose={onClose}>
+      <p className="mb-4 text-sm text-mist">{MODE_HELP}</p>
+      <ModePicker value={mode} onChange={onPick} label="Game mode" />
+      <p className="mt-4 text-sm text-mist">A change applies from the next game proposed. Games already proposed or on court stay as they are. A keep-together or keep-apart rule can hold a player back or bring a partner on early.</p>
     </Sheet>
   )
 }

@@ -1,8 +1,8 @@
 // src/lib/pickleball/open/modes/modes.property.test.ts
 import { describe, expect, it } from 'vitest'
 import { pairKey } from '../fairness'
-import { simulate } from '../testing/simulate'
-import type { PairRule, StackingMode } from '../types'
+import { mulberry32, simulate } from '../testing/simulate'
+import type { OpenMatch, PairRule, StackingMode } from '../types'
 
 // Each mode task appends its mode here.
 const MODES: StackingMode[] = ['PADDLE_STACK', 'WINNERS_LOSERS', 'BY_STANDING', 'BALANCED']
@@ -30,6 +30,56 @@ describe('paddle stack partner rotation (property)', () => {
   })
 })
 
+/** 40 random sessions: 5–60 players on 1–16 courts (seeded, so a failure is reproducible). */
+const SESSIONS = (() => {
+  const random = mulberry32(2026)
+  return Array.from({ length: 40 }, (_, i) => ({ players: 5 + Math.floor(random() * 56), courts: 1 + Math.floor(random() * 16), seed: 100 + i }))
+})()
+
+describe.each(MODES)('%s fair rotation (property)', (mode) => {
+  it('games played never spread by more than 1, and nobody with more games is seated while someone with fewer waits', () => {
+    for (const { players, courts, seed } of SESSIONS) {
+      const result = simulate({ players, courts, rounds: 20, seed, mode, skills: true })
+      const label = `${players} players on ${courts} courts, seed ${seed}`
+      expect(result.maxSpread, label).toBeLessThanOrEqual(1)
+      expect(result.unfairRounds, label).toBe(0)
+      for (const round of result.rounds) {
+        const seated = round.flatMap((m) => [...m.teamA, ...m.teamB])
+        expect(new Set(seated).size, label).toBe(seated.length)
+      }
+    }
+  }, 60_000)
+})
+
+/** W–W, L–L or mixed, from each player's previous result. */
+function gameKinds(matches: readonly OpenMatch[]): { winners: number; losers: number; mixed: number } {
+  const finished = [...matches].filter((m) => m.status === 'FINISHED').sort((a, b) => a.seq - b.seq)
+  const lastTag = new Map<string, 'W' | 'L'>()
+  const kinds = { winners: 0, losers: 0, mixed: 0 }
+  for (const m of finished) {
+    const tags = [...m.teamA, ...m.teamB].map((id) => lastTag.get(id))
+    if (tags.every((t) => t === 'W')) kinds.winners += 1
+    else if (tags.every((t) => t === 'L')) kinds.losers += 1
+    else kinds.mixed += 1
+    for (const id of m.teamA) lastTag.set(id, m.winner === 'A' ? 'W' : 'L')
+    for (const id of m.teamB) lastTag.set(id, m.winner === 'B' ? 'W' : 'L')
+  }
+  return kinds
+}
+
+describe('winners play winners on one court (owner report)', () => {
+  it('12 players, 30 rounds: losers never fall behind, and winners and losers games both happen', () => {
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const { state, maxSpread, unfairRounds } = simulate({ players: 12, courts: 1, rounds: 30, seed, mode: 'WINNERS_LOSERS' })
+      expect(maxSpread).toBeLessThanOrEqual(1)
+      expect(unfairRounds).toBe(0)
+      const kinds = gameKinds(state.matches)
+      expect(kinds.winners).toBeGreaterThan(0)
+      expect(kinds.losers).toBeGreaterThan(0)
+    }
+  })
+})
+
 describe.each(MODES)('%s (property)', (mode) => {
   it.each([[5, 1], [8, 2], [12, 1], [14, 3], [20, 2], [24, 2], [40, 4], [96, 8]])(
     'with %i players on %i courts nobody is on two courts at once',
@@ -44,11 +94,16 @@ describe.each(MODES)('%s (property)', (mode) => {
     30_000,
   )
 
+  // Winners play winners lets a winners or losers game go ahead of a player
+  // forced after 2 rounds in the same games tier (at 12 players a court the
+  // guard would otherwise freeze the same four together for the whole
+  // session); a player out for 3 rounds is always seated, so its bound is 3.
+  const sitOutBound = mode === 'WINNERS_LOSERS' ? 3 : 2
   it.each([[12, 1], [14, 3], [24, 2], [36, 3], [96, 8]])(
-    'with ≤ 12 players per court (%i on %i), nobody sits out more than 2 rounds in a row',
+    `with ≤ 12 players per court (%i on %i), nobody sits out more than ${sitOutBound} rounds in a row`,
     (players, courts) => {
       for (const seed of [1, 2, 3, 4, 5]) {
-        expect(simulate({ players, courts, rounds: 30, seed, mode, skills: true }).maxSatOut).toBeLessThanOrEqual(2)
+        expect(simulate({ players, courts, rounds: 30, seed, mode, skills: true }).maxSatOut).toBeLessThanOrEqual(sitOutBound)
       }
     },
     30_000,
