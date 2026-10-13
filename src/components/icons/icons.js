@@ -49,8 +49,6 @@ export {
   ChevronLeft,
   ChevronRight,
   ArrowLeft,
-  Linkedin,
-  Twitter,
   Zap,
   Star,
   Heart,

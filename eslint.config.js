@@ -25,6 +25,9 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^[A-Z_]' }],
+      // Added in react-hooks 7.1; it flags the load-on-mount pattern used across
+      // the admin app. Kept visible as a warning until those effects are reworked.
+      'react-hooks/set-state-in-effect': 'warn',
     },
   },
   {
