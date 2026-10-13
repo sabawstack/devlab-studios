@@ -51,6 +51,8 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-10-13
+
 ### Fixed
 
 - Pickleball results poster: Download and Share now work on laptops, Android and iPhone. Laptops ("Download PNG") and Android ("Download") save the PNG through a blob: link instead of a ~1 MB data: URL that mobile browsers ignored; iPhone gets "Save to Photos", which opens the share sheet (its Save Image), plus a separate Share; Share sends the file only, with no title or text, which several apps dropped the image for. Facebook/Messenger/Instagram and other in-app browsers, which drop downloads, say how to open the page in a browser instead, phones get a "tap and hold the poster" tip, and any failure explains the fallback in place.
