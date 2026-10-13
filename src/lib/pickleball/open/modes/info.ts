@@ -6,14 +6,14 @@
 import type { StackingMode } from '../types'
 
 /** Shown above the mode picker on the create form and the host console. */
-export const MODE_HELP = 'Every mode keeps rotation fair: whoever has played the fewest games goes on next. The mode only changes who plays with and against whom.'
+export const MODE_HELP = 'Every mode keeps rotation fair: whoever has played the fewest games goes on next, and it mixes groups so you meet different players. The mode only changes who plays with and against whom.'
 
 export const MODE_ORDER: readonly StackingMode[] = ['PADDLE_STACK', 'WINNERS_LOSERS', 'BY_STANDING', 'BALANCED']
 
 export const MODE_INFO: Record<StackingMode, { label: string; summary: string }> = {
   PADDLE_STACK: {
     label: 'Paddle stack',
-    summary: 'Fewest games first, then longest wait. Partners rotate.',
+    summary: 'Fewest games first, groups mixed, then longest wait. Partners rotate.',
   },
   WINNERS_LOSERS: {
     label: 'Winners play winners',

@@ -66,25 +66,63 @@ function gameKinds(matches: readonly OpenMatch[]): GameKind[] {
   })
 }
 
-describe('winners play winners at every player count (owner report)', () => {
+/** How often the most repeated four played together, and the fewest different people any player shared a court with. */
+function mixing(matches: readonly OpenMatch[], ids: readonly string[]): { sameFour: number; fewestMet: number } {
+  const fours = new Map<string, number>()
+  const met = new Map<string, Set<string>>(ids.map((id) => [id, new Set<string>()]))
+  for (const m of matches) {
+    if (m.status !== 'FINISHED') continue
+    const four = [...m.teamA, ...m.teamB]
+    const key = [...four].sort().join('|')
+    fours.set(key, (fours.get(key) ?? 0) + 1)
+    for (const a of four) for (const b of four) if (a !== b) met.get(a)?.add(b)
+  }
+  return { sameFour: Math.max(0, ...fours.values()), fewestMet: Math.min(...[...met.values()].map((set) => set.size)) }
+}
+
+// Fewest different court-mates each player must have had over 30 rounds a
+// court (one game every 3–5 rounds, 3 court-mates a game), in every mode.
+const MIXING_CASES: Array<[players: number, courts: number, fewestMet: number]> = [[12, 1, 8], [16, 1, 9], [20, 1, 7], [32, 2, 11]]
+
+describe.each(MODES)('%s fair and social rotation (owner report)', (mode) => {
   // cycle = rounds for everyone to play once; sitting out cycle - 1 rounds is
-  // unavoidable, and winners mode may add one round (never below 3).
-  it.each([[12, 1], [14, 1], [16, 1], [20, 1], [32, 2], [48, 3]])(
-    '%i players on %i courts, 30 rounds a court: losers never fall behind, and winners and losers games both happen',
-    (players, courts) => {
+  // unavoidable, and one round more is allowed so groups can mix (never below 3).
+  it.each(MIXING_CASES)(
+    '%i players on %i courts, 30 rounds a court: fair, no four together more than twice, everyone meets ≥ %i people',
+    (players, courts, fewestMet) => {
       const cycle = Math.ceil(players / (4 * courts))
       for (const seed of [1, 2, 3, 4, 5]) {
-        const { state, maxSpread, unfairRounds, maxSatOut } = simulate({ players, courts, rounds: 30, seed, mode: 'WINNERS_LOSERS' })
+        const { state, maxSpread, unfairRounds, maxSatOut } = simulate({ players, courts, rounds: 30, seed, mode, skills: true })
         expect(maxSpread).toBeLessThanOrEqual(1)
         expect(unfairRounds).toBe(0)
         expect(maxSatOut).toBeLessThanOrEqual(Math.max(3, cycle))
-        const kinds = gameKinds(state.matches)
-        expect(kinds.filter((k) => k === 'W').length).toBeGreaterThan(0)
-        expect(kinds.filter((k) => k === 'L').length).toBeGreaterThan(0)
+        const mixed = mixing(state.matches, state.players.map((p) => p.id))
+        expect(mixed.sameFour, `seed ${seed}`).toBeLessThanOrEqual(2)
+        expect(mixed.fewestMet, `seed ${seed}`).toBeGreaterThanOrEqual(fewestMet)
+        if (mode === 'WINNERS_LOSERS') {
+          const kinds = gameKinds(state.matches)
+          expect(kinds.filter((k) => k === 'W').length).toBeGreaterThan(0)
+          expect(kinds.filter((k) => k === 'L').length).toBeGreaterThan(0)
+        }
       }
     },
     30_000,
   )
+})
+
+describe('winners play winners at every player count (owner report)', () => {
+  it.each([[14, 1], [48, 3]])('%i players on %i courts: winners and losers games both happen, fairly', (players, courts) => {
+    const cycle = Math.ceil(players / (4 * courts))
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const { state, maxSpread, unfairRounds, maxSatOut } = simulate({ players, courts, rounds: 30, seed, mode: 'WINNERS_LOSERS' })
+      expect(maxSpread).toBeLessThanOrEqual(1)
+      expect(unfairRounds).toBe(0)
+      expect(maxSatOut).toBeLessThanOrEqual(Math.max(3, cycle))
+      const kinds = gameKinds(state.matches)
+      expect(kinds.filter((k) => k === 'W').length).toBeGreaterThan(0)
+      expect(kinds.filter((k) => k === 'L').length).toBeGreaterThan(0)
+    }
+  }, 30_000)
 
   it('12 players on 1 court alternate: a winners game and a losers game between every mixed game', () => {
     for (const seed of [1, 2, 3, 4, 5]) {
@@ -110,11 +148,10 @@ describe.each(MODES)('%s (property)', (mode) => {
     30_000,
   )
 
-  // Winners play winners lets a winners or losers game go ahead of a player
-  // forced after 2 rounds in the same games tier (at 12 players a court the
-  // guard would otherwise freeze the same four together for the whole
-  // session); a player out for 3 rounds is always seated, so its bound is 3.
-  const sitOutBound = mode === 'WINNERS_LOSERS' ? 3 : 2
+  // A player forced after 2 rounds is preferred but not required until 3
+  // (social.ts overdueAfter): at 12 players a court a strict 2-round guard
+  // replays the same four together all session, so the bound is 3 in every mode.
+  const sitOutBound = 3
   it.each([[12, 1], [14, 3], [24, 2], [36, 3], [96, 8]])(
     `with ≤ 12 players per court (%i on %i), nobody sits out more than ${sitOutBound} rounds in a row`,
     (players, courts) => {

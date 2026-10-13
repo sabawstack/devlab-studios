@@ -1,7 +1,8 @@
 // src/lib/pickleball/open/modes/paddleStack.ts
 import { pairKey, type PartnerHistory, type QueueEntry } from '../fairness'
-import { honoursTogether, NO_RULES, pickFour, type ActiveRules } from '../rules'
+import { honoursTogether, NO_RULES, type ActiveRules } from '../rules'
 import type { OpenSessionState, Team } from '../types'
+import { fairSocialFour } from './social'
 
 export interface Proposal {
   teamA: Team
@@ -61,7 +62,8 @@ export function splitTeams(four: readonly string[], history: PartnerHistory, rul
   return bestSplit(allSplits(four), history, rules) ?? allSplits(four)[0]
 }
 
-export function proposePaddleStack({ queue, history, rules, exclude }: ModeInput): Proposal | null {
-  const four = pickFour(queue.map((entry) => entry.player.id), rules, exclude)
-  return four ? splitTeams(four, history, rules) : null
+/** Fewest games first; among equals, the four who have met least (social.ts), then longest wait. */
+export function proposePaddleStack(input: ModeInput): Proposal | null {
+  const four = fairSocialFour(input)
+  return four ? splitTeams(four, input.history, input.rules) : null
 }

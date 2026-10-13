@@ -15,16 +15,16 @@ import '../../styles/pickleball-open.css'
 const seo = await loadPageSeo('pickleball-rotation')
 const ART = { PADDLE_STACK: PaddleStackArt, WINNERS_LOSERS: WinnersShuffleArt, BY_STANDING: StandingWindowArt, BALANCED: BalancedSplitArt }
 const DETAIL = {
-  PADDLE_STACK: 'The four who have played fewest games go on, longest wait first. The four are split so earlier partners are kept apart when another split allows it.',
+  PADDLE_STACK: 'The four who have played fewest games go on; among equals, the four who have shared a court least, then longest wait. The four are split so earlier partners are kept apart when another split allows it.',
   WINNERS_LOSERS: 'Each player carries the result of their last game. Among the players due next (fewest games played), four winners go on together when there are four, else four losers, else whoever is due — so a game can mix winners and losers. Winners never jump ahead of anyone who has played fewer games, so on one court winners games and losers games take turns. Two winning pairs are split up: each side gets one player from each pair, so last game’s partners face each other.',
   BY_STANDING: 'The players due next (fewest games played) are ranked by today’s standings. The longest-waiting of them goes on with three players next to them in that ranking (four neighbouring ranks), the 1st and 4th of those four against the 2nd and 3rd.',
-  BALANCED: 'The four due next (fewest games played, longest wait first), split so each team’s skill adds up as evenly as possible. Skill is what the player or host entered, else today’s win rate. Repeat partners break ties.',
+  BALANCED: 'The four due next (fewest games played; among equals, the four who have shared a court least), split so each team’s skill adds up as evenly as possible. Skill is what the player or host entered, else today’s win rate. Repeat partners break ties.',
 }
 const modes = MODE_ORDER.map((mode) => ({ mode, ...MODE_INFO[mode], detail: DETAIL[mode], Art: ART[mode], rounds: rotationExample(2, mode) }))
 
 const rules = [
   'Fair first, in every mode: whoever has played the fewest games goes on next. The app never picks someone with more games while someone with fewer is waiting (only a keep-together/keep-apart rule, a host edit or Skip can).',
-  'Among players on the same number of games, anyone who has sat out 2 rounds in a row goes first, then whoever has waited longest. In winners play winners, a player can wait one round longer than that so winners and losers get their own games.',
+  'Among players on the same number of games, the app mixes groups so you meet different players: it picks the four who have shared a court least, then whoever has waited longest. Anyone who has sat out 2 rounds in a row is preferred, and can wait one round more so groups (and in winners play winners, winners and losers games) can mix.',
   'Then the mode decides only who plays with and against whom (below).',
   'Keep-together and keep-apart rules are never broken: a court waits, and says why, rather than break one. A rule can hold a player back, or bring a partner on a game early.',
   'A late arrival starts level with whoever has played least.',
@@ -87,7 +87,7 @@ const rules = [
           </div>
         </section>
       ))}
-      <p class="mt-6 text-sm text-[#b5c4e1]">With up to 12 players per court, nobody sits out more than 2 rounds in a row (3 in winners play winners, so winners and losers get their own games), unless a keep-together or keep-apart rule holds them back. With more, the wait is shared evenly, and in winners play winners a player can wait one round longer than everyone’s turn takes.</p>
+      <p class="mt-6 text-sm text-[#b5c4e1]">With up to 12 players per court, nobody sits out more than 3 rounds in a row, in any mode, unless a keep-together or keep-apart rule holds them back. With more, the wait is shared evenly: nobody waits more than one round longer than everyone’s turn takes.</p>
     </section>
 
     <div class="mt-12">
