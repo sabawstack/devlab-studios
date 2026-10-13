@@ -607,7 +607,7 @@ test.describe('tournament final results (screens)', () => {
       return [decoded.naturalWidth, decoded.naturalHeight]
     })).toEqual([1080, 1350])
     const poster = page.waitForEvent('download')
-    await page.getByRole('dialog', { name: 'Results poster' }).getByRole('link', { name: 'Download' }).click()
+    await page.getByRole('dialog', { name: 'Results poster' }).getByRole('button', { name: 'Download PNG' }).click()
     expect((await poster).suggestedFilename()).toBe('saturday-cup-results.png')
   })
 })

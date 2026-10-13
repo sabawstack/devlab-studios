@@ -1108,7 +1108,7 @@ test.describe('final results', () => {
     expect(await posterImage(preview)).toEqual({ type: 'image/png', width: 1080, height: 1350 })
     await expect(sheet.getByRole('button', { name: 'Share' })).toHaveCount(0)
     const download = page.waitForEvent('download')
-    await sheet.getByRole('link', { name: 'Download' }).click()
+    await sheet.getByRole('button', { name: 'Download PNG' }).click()
     expect((await download).suggestedFilename()).toBe('sunday-open-play-results.png')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   })
@@ -1133,7 +1133,7 @@ test.describe('final results', () => {
     await page.evaluate(() => { navigator.share = () => Promise.reject(Object.assign(new Error('nope'), { name: 'NotAllowedError' })) })
     await sheet.getByRole('button', { name: 'Share' }).click()
     await expect(sheet.getByRole('alert')).toContainText("Couldn't share the poster")
-    await expect(sheet.getByRole('link', { name: 'Download' })).toBeVisible()
+    await expect(sheet.getByRole('button', { name: 'Download PNG' })).toBeVisible()
   })
 
   test('a game still on court when the session ended can be saved from the results screen', async ({ page, request }) => {
