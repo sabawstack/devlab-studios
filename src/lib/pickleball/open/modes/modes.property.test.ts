@@ -52,30 +52,46 @@ describe.each(MODES)('%s fair rotation (property)', (mode) => {
 })
 
 /** W–W, L–L or mixed, from each player's previous result. */
-function gameKinds(matches: readonly OpenMatch[]): { winners: number; losers: number; mixed: number } {
+type GameKind = 'W' | 'L' | 'x'
+
+/** Each finished game in order: W (four winners), L (four losers) or x (mixed), from each player's previous result. */
+function gameKinds(matches: readonly OpenMatch[]): GameKind[] {
   const finished = [...matches].filter((m) => m.status === 'FINISHED').sort((a, b) => a.seq - b.seq)
   const lastTag = new Map<string, 'W' | 'L'>()
-  const kinds = { winners: 0, losers: 0, mixed: 0 }
-  for (const m of finished) {
+  return finished.map((m) => {
     const tags = [...m.teamA, ...m.teamB].map((id) => lastTag.get(id))
-    if (tags.every((t) => t === 'W')) kinds.winners += 1
-    else if (tags.every((t) => t === 'L')) kinds.losers += 1
-    else kinds.mixed += 1
     for (const id of m.teamA) lastTag.set(id, m.winner === 'A' ? 'W' : 'L')
     for (const id of m.teamB) lastTag.set(id, m.winner === 'B' ? 'W' : 'L')
-  }
-  return kinds
+    return tags.every((t) => t === 'W') ? 'W' : tags.every((t) => t === 'L') ? 'L' : 'x'
+  })
 }
 
-describe('winners play winners on one court (owner report)', () => {
-  it('12 players, 30 rounds: losers never fall behind, and winners and losers games both happen', () => {
+describe('winners play winners at every player count (owner report)', () => {
+  // cycle = rounds for everyone to play once; sitting out cycle - 1 rounds is
+  // unavoidable, and winners mode may add one round (never below 3).
+  it.each([[12, 1], [14, 1], [16, 1], [20, 1], [32, 2], [48, 3]])(
+    '%i players on %i courts, 30 rounds a court: losers never fall behind, and winners and losers games both happen',
+    (players, courts) => {
+      const cycle = Math.ceil(players / (4 * courts))
+      for (const seed of [1, 2, 3, 4, 5]) {
+        const { state, maxSpread, unfairRounds, maxSatOut } = simulate({ players, courts, rounds: 30, seed, mode: 'WINNERS_LOSERS' })
+        expect(maxSpread).toBeLessThanOrEqual(1)
+        expect(unfairRounds).toBe(0)
+        expect(maxSatOut).toBeLessThanOrEqual(Math.max(3, cycle))
+        const kinds = gameKinds(state.matches)
+        expect(kinds.filter((k) => k === 'W').length).toBeGreaterThan(0)
+        expect(kinds.filter((k) => k === 'L').length).toBeGreaterThan(0)
+      }
+    },
+    30_000,
+  )
+
+  it('12 players on 1 court alternate: a winners game and a losers game between every mixed game', () => {
     for (const seed of [1, 2, 3, 4, 5]) {
-      const { state, maxSpread, unfairRounds } = simulate({ players: 12, courts: 1, rounds: 30, seed, mode: 'WINNERS_LOSERS' })
-      expect(maxSpread).toBeLessThanOrEqual(1)
-      expect(unfairRounds).toBe(0)
-      const kinds = gameKinds(state.matches)
-      expect(kinds.winners).toBeGreaterThan(0)
-      expect(kinds.losers).toBeGreaterThan(0)
+      const kinds = gameKinds(simulate({ players: 12, courts: 1, rounds: 30, seed, mode: 'WINNERS_LOSERS' }).state.matches)
+      // The first three games are everyone's first; after that no two mixed games run back to back.
+      expect(kinds.slice(3).join('')).not.toContain('xx')
+      expect(kinds.slice(3).join('')).toMatch(/^(WLx)+(W|WL)?$/)
     }
   })
 })

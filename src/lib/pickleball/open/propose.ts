@@ -15,8 +15,10 @@ const PROPOSERS: Record<StackingMode, ModeProposer> = {
 }
 
 /**
- * Runs the session's current mode (spec §5.2). The sit-out guard is inside
- * queueOrder (forced players first), and every mode picks through pickFour, so
+ * Runs the session's current mode (spec §5.2). queueOrder is fair first
+ * (fewest games, then the sit-out guard's forced players, then longest wait),
+ * the modes other than paddle stack choose within modes/shared fairPool, and
+ * every mode picks through pickFour, so
  * keep-together/keep-apart can never be broken: no fitting four means null.
  */
 export function proposeForCourt(state: OpenSessionState, exclude?: readonly string[]): Proposal | null {

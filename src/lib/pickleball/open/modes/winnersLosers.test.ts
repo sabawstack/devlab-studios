@@ -71,21 +71,25 @@ describe('winners play winners', () => {
   })
 
   it('fair first: winners who have played more wait while losers who have played less go on', () => {
-    // One court. A and B won both their games (2 played); C, D, E and F lost their only game.
+    // One court. W1–W4 won both their games (2 played); L1–L4 lost their only
+    // game. Nobody has sat out 2 rounds, and all eight fit the old 8-player
+    // window, which used to pick the four winners here.
     const matches: OpenMatch[] = [
-      finished('m1', ['A1', 'A2'], ['C1', 'C2'], 'A', 11, 3, 0),
-      finished('m2', ['B1', 'B2'], ['D1', 'D2'], 'A', 11, 4, 20),
-      finished('m3', ['A1', 'A2'], ['E1', 'E2'], 'A', 11, 5, 40),
-      finished('m4', ['B1', 'B2'], ['F1', 'F2'], 'A', 11, 6, 60),
+      finished('m1', ['W1', 'W2'], ['X1', 'X2'], 'A', 11, 3, 0),
+      finished('m2', ['W3', 'W4'], ['X3', 'X4'], 'A', 11, 4, 20),
+      finished('m3', ['W1', 'W2'], ['L1', 'L2'], 'A', 11, 5, 40),
+      finished('m4', ['W3', 'W4'], ['L3', 'L4'], 'A', 11, 6, 60),
     ]
-    const waited: Record<string, number> = { C: 10, D: 30, E: 50, F: 70, A: 50, B: 70 }
-    const ids = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'D1', 'D2', 'E1', 'E2', 'F1', 'F2']
+    const since: Record<string, number> = { W1: 50, W2: 50, L1: 50, L2: 50, W3: 70, W4: 70, L3: 70, L4: 70 }
     const state = sessionState({
       settings,
-      players: ids.map((id, i) => player(id, { position: i, waitingSince: at(waited[id[0]]) })),
+      players: [
+        ...Object.keys(since).map((id, i) => player(id, { position: i, waitingSince: at(since[id]) })),
+        ...['X1', 'X2', 'X3', 'X4'].map((id, i) => player(id, { position: 10 + i, status: 'LEFT' })),
+      ],
       matches,
     })
     const p = proposeForCourt(state)!
-    expect([...p.teamA, ...p.teamB].sort()).toEqual(['C1', 'C2', 'D1', 'D2'])
+    expect([...p.teamA, ...p.teamB].sort()).toEqual(['L1', 'L2', 'L3', 'L4'])
   })
 })

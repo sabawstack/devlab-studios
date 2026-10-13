@@ -13,7 +13,7 @@ export interface Proposal {
 /** What every mode receives (built once per proposal by propose.ts). */
 export interface ModeInput {
   state: OpenSessionState
-  /** Available players in paddle-stack order: forced sit-outs first (spec §5.2 rule 1). */
+  /** Available players in paddle-stack order: fewest games, then forced sit-outs, then longest wait (fairness.ts queueOrder). */
   queue: readonly QueueEntry[]
   history: PartnerHistory
   rules: ActiveRules

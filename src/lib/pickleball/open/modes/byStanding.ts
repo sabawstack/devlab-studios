@@ -1,7 +1,9 @@
 // src/lib/pickleball/open/modes/byStanding.ts
 // By standing (spec §5.2): rank the fair pool (fewest games played, longest
 // wait; see fairPool) by today's standings, take the window of 4 adjacent
-// ranks around the longest-waiting player, and play 1st + 4th against 2nd + 3rd.
+// ranks around the anchor (the first player who must go on: a lower games tier
+// or a forced sit-out; else the longest-waiting in the pool), and play 1st +
+// 4th against 2nd + 3rd.
 import { byWait, type QueueEntry } from '../fairness'
 import { keepsRules, pickFour } from '../rules'
 import { computeStandings } from '../standings'

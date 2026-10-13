@@ -23,8 +23,8 @@ const DETAIL = {
 const modes = MODE_ORDER.map((mode) => ({ mode, ...MODE_INFO[mode], detail: DETAIL[mode], Art: ART[mode], rounds: rotationExample(2, mode) }))
 
 const rules = [
-  'Fair first, in every mode: whoever has played the fewest games goes on next. The app never picks someone with more games while someone with fewer is waiting (only a host edit or Skip can).',
-  'Among players on the same number of games, anyone who has sat out 2 rounds in a row goes first, then whoever has waited longest. In winners play winners, a winners or losers game can go ahead of them; anyone out 3 rounds in a row goes first.',
+  'Fair first, in every mode: whoever has played the fewest games goes on next. The app never picks someone with more games while someone with fewer is waiting (only a keep-together/keep-apart rule, a host edit or Skip can).',
+  'Among players on the same number of games, anyone who has sat out 2 rounds in a row goes first, then whoever has waited longest. In winners play winners, a player can wait one round longer than that so winners and losers get their own games.',
   'Then the mode decides only who plays with and against whom (below).',
   'Keep-together and keep-apart rules are never broken: a court waits, and says why, rather than break one. A rule can hold a player back, or bring a partner on a game early.',
   'A late arrival starts level with whoever has played least.',
@@ -87,7 +87,7 @@ const rules = [
           </div>
         </section>
       ))}
-      <p class="mt-6 text-sm text-[#b5c4e1]">With up to 12 players per court, nobody sits out more than 2 rounds in a row, whichever way you pick, unless a keep-together or keep-apart rule holds them back. With more, the wait is shared evenly.</p>
+      <p class="mt-6 text-sm text-[#b5c4e1]">With up to 12 players per court, nobody sits out more than 2 rounds in a row (3 in winners play winners, so winners and losers get their own games), unless a keep-together or keep-apart rule holds them back. With more, the wait is shared evenly, and in winners play winners a player can wait one round longer than everyone’s turn takes.</p>
     </section>
 
     <div class="mt-12">
