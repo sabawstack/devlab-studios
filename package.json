@@ -37,7 +37,7 @@
     "clsx": "^2.1.1",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
-    "fast-xml-parser": "^5.11.1",
+    "fast-xml-parser": "^5.11.2",
     "lucide-react": "^0.562.0",
     "postal-mime": "^3.0.0",
     "qrcode": "^1.5.4",
