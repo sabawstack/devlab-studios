@@ -6,8 +6,8 @@ import { getSiteSetting } from './worker/repositories/content.js'
 import { findRedirect } from './worker/repositories/redirects.js'
 import { applySecurityHeaders } from './lib/securityHeaders'
 import { drainRequestBody } from './lib/http'
+import { isAdminApiPath, routePath } from './lib/routePath'
 
-const ADMIN_API_PREFIX = '/api/admin/'
 const ADMIN_PUBLIC_ROUTES = new Set(['/api/admin/login', '/api/admin/logout'])
 const MAINTENANCE_PAGE = '/maintenance'
 const MAINTENANCE_GATED_PATHS = new Set(['/', '/about', '/solutions', '/profile', '/insights'])
@@ -53,7 +53,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return applySecurityHeaders(Response.redirect(destination.toString(), 301), url.pathname, url.hostname)
   }
 
-  if (url.pathname.startsWith(ADMIN_API_PREFIX) && !ADMIN_PUBLIC_ROUTES.has(url.pathname)) {
+  // Security decisions use the path the router will actually match: Astro
+  // decodes percent-escapes before routing, so the raw pathname is not enough
+  // (`/api/%61dmin/...` used to skip this gate and still reach the route).
+  const path = routePath(url.pathname)
+  if (path === null) {
+    await drainRequestBody(context.request)
+    return applySecurityHeaders(new Response('Bad request', { status: 400 }), url.pathname, url.hostname)
+  }
+
+  if (isAdminApiPath(path) && !ADMIN_PUBLIC_ROUTES.has(path)) {
     const honoContext = createHonoLikeContext(context.request, getEnv(), context.locals)
     let didContinue = false
     const result = await requireAdmin(honoContext, async () => {
@@ -68,7 +77,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  if (isMaintenanceGated(url.pathname) && url.pathname !== MAINTENANCE_PAGE) {
+  if (isMaintenanceGated(path) && path !== MAINTENANCE_PAGE) {
     const env = getEnv()
     const maintenanceMode = env.DB ? await getSiteSetting(env.DB, 'maintenance_mode', false) : false
     if (maintenanceMode) {

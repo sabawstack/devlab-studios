@@ -1,5 +1,10 @@
 {
   "name": "devlab-studios",
+  // Production is served only on www.devlabstudios.com. The *.workers.dev
+  // address skipped the domain's Cloudflare protections and exposed the same
+  // app on a second hostname, so it is switched off here (preview keeps its own).
+  "workers_dev": false,
+  "preview_urls": false,
   // Custom entrypoint (src/worker.ts) rather than @astrojs/cloudflare's
   // generated one: the generated entrypoint cannot export a Durable Object
   // class, and a DO must be exported from the Worker's entrypoint to be
@@ -232,6 +237,7 @@
   "env": {
     "preview": {
       "name": "devlab-studios-preview",
+      "workers_dev": true,
       // Nothing at the top level is inherited by an environment — every var and
       // binding preview needs must be repeated here. `wrangler` warns about the
       // omissions, and those warnings were accurate: RESEND_FROM_EMAIL and

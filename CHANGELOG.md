@@ -51,6 +51,10 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+### Security
+
+- **Security:** the admin login check could be skipped with a percent-encoded path (`/api/%61dmin/...`), because the middleware checked the raw path while Astro routes on the decoded one. The gate now checks the decoded, slash-collapsed routing path (malformed escapes are refused with 400), with unit and end-to-end tests for encoded, double-encoded, mixed-case and doubled-slash paths. Production's `*.workers.dev` address and per-version preview URLs are switched off so the app is only served on www.devlabstudios.com behind the domain's Cloudflare protections.
+
 ### Fixed
 
 - Pickleball open play: rotation is fair first in every game mode. The next four always come from the players with the fewest games played (ties by longest wait), widening one games count at a time only when fewer than four can be seated; nobody with more games is picked while someone with fewer waits, except when a keep-together/keep-apart rule leaves no other game. Winners play winners used to pick four winners from the eight longest-waiting, so on one court earlier winners with more games jumped ahead of losers with fewer; by standing used the same window. On one court winners and losers games now take turns. The sit-out guard now leads within a games count instead of jumping it. In winners play winners a player can wait one round past the longer of the guard (2 rounds) and the session's natural wait (one rotation, ceil(players / 4 per court) − 1 rounds) so winners and losers get their own games at every player count; the host board's waiting list (open play and tournaments) follows the same fewest-games-first order.

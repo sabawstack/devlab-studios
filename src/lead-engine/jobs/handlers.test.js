@@ -147,14 +147,16 @@ describe('admin API coverage', () => {
   it('routes the Lead CRM API through the existing admin gate', () => {
     const middleware = readFileSync(resolve(repoRoot, 'src/middleware.ts'), 'utf8')
 
-    expect(middleware).toContain("const ADMIN_API_PREFIX = '/api/admin/'")
-    expect(middleware).toContain('url.pathname.startsWith(ADMIN_API_PREFIX)')
+    // The gate must run on the decoded routing path, not the raw pathname:
+    // `/api/%61dmin/...` once skipped a raw-path check and reached the route.
+    expect(middleware).toContain('const path = routePath(url.pathname)')
+    expect(middleware).toContain('isAdminApiPath(path) && !ADMIN_PUBLIC_ROUTES.has(path)')
     expect(middleware).toContain('requireAdmin')
 
     // And that nothing under lead-crm was added to the unauthenticated list.
     const publicRoutes = middleware.slice(
       middleware.indexOf('const ADMIN_PUBLIC_ROUTES'),
-      middleware.indexOf('const PICKLEBALL_API_PREFIX'),
+      middleware.indexOf('const MAINTENANCE_PAGE'),
     )
     expect(publicRoutes).not.toMatch(/lead-crm/)
   })

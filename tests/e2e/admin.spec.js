@@ -61,6 +61,21 @@ test('health endpoint reports DB and media bucket bindings', async ({ request, b
   expect(body.hasMediaBucket).toBe(true)
 })
 
+test('the admin API gate cannot be skipped with an encoded or doubled path', async ({ playwright, baseURL }) => {
+  // A fresh client with no admin session (this file otherwise runs signed in).
+  const request = await playwright.request.newContext()
+  // Astro decodes the path before routing, so the gate must too: these all
+  // reach (or would reach) an admin route and must be refused without a session.
+  for (const path of ['/api/%61dmin/session', '/api/%2561dmin/session', '/api/admin%2Fsession', '/API/ADMIN/session', '/api//admin/session']) {
+    const response = await request.get(`${baseURL}${path}`)
+    expect([400, 401, 403, 404], path).toContain(response.status())
+    expect(response.status(), path).not.toBe(200)
+  }
+  const plain = await request.get(`${baseURL}/api/admin/session`)
+  expect(plain.status()).toBe(401)
+  await request.dispose()
+})
+
 test('rejects an invalid login', async ({ page }) => {
   await page.goto('/admin')
   await page.getByLabel('Email').fill(ADMIN_EMAIL)
