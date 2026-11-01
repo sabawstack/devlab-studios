@@ -31,7 +31,7 @@
     "*.css": "stylelint --fix"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^14.3.4",
+    "@astrojs/cloudflare": "^14.4.3",
     "@astrojs/react": "^7.0.1",
     "astro": "^7.3.8",
     "clsx": "^2.1.1",
