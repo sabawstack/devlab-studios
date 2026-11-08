@@ -149,6 +149,13 @@ body:after{content:'';position:fixed;inset:0;pointer-events:none;z-index:-1;back
 .sweet-status{font-size:12px;line-height:1.4;color:var(--peach);min-height:1.4em;margin:14px 0 0}
 @media (max-width:360px){.sweet-actions{flex-direction:column;align-items:stretch}.wedding-hashtag-hero{gap:9px}}
 @media (prefers-reduced-motion:reduce){.sweet-actions button{transition:none}}
+
+/* Stable 98px tap target; the wax itself gently breathes. */
+#seal{animation:none}
+#seal .wax{animation:waxBreathing 2.6s ease-in-out infinite}
+.opening.opened #seal{animation:sealaway .45s forwards}
+@keyframes waxBreathing{50%{transform:scale(1.06)}}
+@media(prefers-reduced-motion:reduce){#seal .wax{animation:none}}
 </style></head><body>
 <svg class="fabric-definitions" xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;pointer-events:none"><defs>
 <filter id="linenNoise" x="0" y="0" width="100%" height="100%">
