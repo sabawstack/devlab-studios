@@ -151,6 +151,7 @@ body:after{content:'';position:fixed;inset:0;pointer-events:none;z-index:-1;back
 @media (prefers-reduced-motion:reduce){.sweet-actions button{transition:none}}
 
 /* Stable 98px tap target; the wax itself gently breathes. */
+#envelope{cursor:pointer}
 #seal{animation:none}
 #seal .wax{animation:waxBreathing 2.6s ease-in-out infinite}
 .opening.opened #seal{animation:sealaway .45s forwards}
@@ -373,4 +374,9 @@ $('showerLove').addEventListener('click',()=>{
     status.textContent='Invitation link copied! Paste it into your message to guests.';
   });
 })();
+
+/* Envelope tap fallback: touching any part of the envelope opens it. */
+document.getElementById('envelope').addEventListener('click',event=>{
+ if(!event.target.closest('#seal'))document.getElementById('seal').click();
+});
 </script></body></html>
