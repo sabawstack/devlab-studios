@@ -1,0 +1,105 @@
+---
+/**
+ * A scene in a fixed-aspect frame with an HTML caption (audit UX-03 / BR.8).
+ *
+ * - The frame reserves the scene's aspect ratio, so nothing shifts while the
+ *   SVG renders, and if the art is missing the frame and caption remain.
+ * - The art is drawn in once, the first time the figure is on screen
+ *   (600 ms, stroke paths only); `prefers-reduced-motion` shows the finished
+ *   drawing immediately. Nothing loops.
+ * - Until a scene is approved (`artReady` in src/config/scenes.ts) only the
+ *   frame and caption render, unless `preview` is set (the brand review page).
+ */
+import SceneArt from './SceneArt.astro'
+import { getScene } from '../../config/scenes'
+
+interface Props {
+  sceneId: string
+  caption?: string
+  /** "Fig." number from the page's figure counter; omit for an unnumbered figure. */
+  figure?: number
+  /** Show unapproved art (brand review page only). */
+  preview?: boolean
+  class?: string
+}
+
+const { sceneId, caption, figure, preview = false, class: className = '' } = Astro.props
+const scene = getScene(sceneId)
+const [w, h] = scene ? scene.aspect.wide : [3, 2]
+const showArt = Boolean(scene && (scene.artReady || preview))
+const label = figure ? `Fig. ${String(figure).padStart(2, '0')}` : null
+---
+
+{scene && (
+  <figure class={`scene-frame ${className}`} data-scene-frame={scene.id}>
+    <div class="scene-frame__box rounded-dl-m border border-dl-rule bg-dl-paper" style={`aspect-ratio: ${w} / ${h}`}>
+      {showArt ? <SceneArt sceneId={scene.id} /> : <span class="sr-only">{scene.alt}</span>}
+    </div>
+    <figcaption class="mt-3 flex gap-3 text-step--1 text-dl-ink-3">
+      {label && <span class="label shrink-0 text-dl-ink-2">{label}</span>}
+      <span>{caption || scene.caption}</span>
+    </figcaption>
+  </figure>
+)}
+
+<style>
+  .scene-frame__box {
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    padding: clamp(0.5rem, 2vw, 1.5rem);
+  }
+  /* Draw-in: every symbol and connector path draws once when revealed. */
+  .scene-frame :global(.draw path:not([stroke-dasharray])),
+  .scene-frame :global(.draw rect:not([stroke-dasharray])),
+  .scene-frame :global(.draw circle:not([stroke-dasharray])),
+  .scene-frame :global(path.draw:not([stroke-dasharray])) {
+    stroke-dasharray: 1;
+  }
+  .scene-frame[data-drawn='pending'] :global(.draw path:not([stroke-dasharray])),
+  .scene-frame[data-drawn='pending'] :global(.draw rect:not([stroke-dasharray])),
+  .scene-frame[data-drawn='pending'] :global(.draw circle:not([stroke-dasharray])),
+  .scene-frame[data-drawn='pending'] :global(path.draw:not([stroke-dasharray])) {
+    stroke-dashoffset: 1;
+  }
+  .scene-frame[data-drawn='done'] :global(.draw path:not([stroke-dasharray])),
+  .scene-frame[data-drawn='done'] :global(.draw rect:not([stroke-dasharray])),
+  .scene-frame[data-drawn='done'] :global(.draw circle:not([stroke-dasharray])),
+  .scene-frame[data-drawn='done'] :global(path.draw:not([stroke-dasharray])) {
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset var(--duration-draw) var(--ease-draw);
+  }
+  /* Dashed strokes (unconnected paths, review circles) keep their pattern and are not drawn in. */
+  @media (prefers-reduced-motion: reduce) {
+    .scene-frame :global(.draw path:not([stroke-dasharray])),
+    .scene-frame :global(.draw rect:not([stroke-dasharray])),
+    .scene-frame :global(.draw circle:not([stroke-dasharray])),
+    .scene-frame :global(path.draw:not([stroke-dasharray])) {
+      stroke-dashoffset: 0 !important;
+      transition: none !important;
+    }
+  }
+</style>
+
+<script>
+  // One observer for every scene on the page; each draws once, then is left alone.
+  const frames = document.querySelectorAll<HTMLElement>('[data-scene-frame]')
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (!reduce && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue
+        const frame = entry.target as HTMLElement
+        requestAnimationFrame(() => { frame.dataset.drawn = 'done' })
+        observer.unobserve(frame)
+      }
+    }, { threshold: 0.35 })
+    frames.forEach((frame) => {
+      // Only frames below the fold animate; one already on screen at load is shown finished.
+      if (frame.getBoundingClientRect().top > window.innerHeight) {
+        frame.dataset.drawn = 'pending'
+        observer.observe(frame)
+      }
+    })
+  }
+</script>

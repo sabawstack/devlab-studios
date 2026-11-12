@@ -1,0 +1,16 @@
+---
+/** Hairline table with a paper-2 header (audit BR.10). Scrolls inside its own box on narrow screens. */
+interface Props { columns: string[]; rows: string[][]; caption?: string; class?: string }
+const { columns, rows, caption, class: className = '' } = Astro.props
+---
+<div class={`overflow-x-auto ${className}`}>
+  <table class="w-full border-collapse text-left text-step--1">
+    {caption && <caption class="label pb-2 text-left text-dl-ink-3">{caption}</caption>}
+    <thead class="bg-dl-paper-2">
+      <tr>{columns.map((column) => <th scope="col" class="label border-b border-dl-rule px-3 py-2 font-medium text-dl-ink-2">{column}</th>)}</tr>
+    </thead>
+    <tbody>
+      {rows.map((row) => <tr>{row.map((cell) => <td class="border-b border-dl-rule px-3 py-2 text-dl-ink">{cell}</td>)}</tr>)}
+    </tbody>
+  </table>
+</div>

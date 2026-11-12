@@ -1,0 +1,155 @@
+---
+/**
+ * Brand review page (audit UX-02 / UX-03 / TEST-04): every scene and every
+ * brand component state on one page, for the owner's approval and for the
+ * visual and accessibility tests.
+ *
+ * Not a public page. It answers 404 unless BRAND_REVIEW_ENABLED is "true"
+ * (set for preview only in wrangler.jsonc) or the request is to localhost
+ * (local dev and e2e), and it is never indexed.
+ */
+import '../index.css'
+import '../styles/brand.css'
+import { getEnv } from '../lib/env'
+import { isLoopbackRequest } from '../lib/loopback'
+import { SCENES } from '../config/scenes'
+import SceneFrame from '../components/brand/SceneFrame.astro'
+import Button from '../components/brand/Button.astro'
+import Panel from '../components/brand/Panel.astro'
+import Figure from '../components/brand/Figure.astro'
+import FactList from '../components/brand/FactList.astro'
+import ProofStrip from '../components/brand/ProofStrip.astro'
+import Disclosure from '../components/brand/Disclosure.astro'
+import Tag from '../components/brand/Tag.astro'
+import Table from '../components/brand/Table.astro'
+import Field from '../components/brand/Field.astro'
+import { createFigureCounter } from '../components/brand/figures'
+
+export const prerender = false
+
+if (getEnv().BRAND_REVIEW_ENABLED !== 'true' && !isLoopbackRequest(Astro.request)) {
+  return new Response('Not found', { status: 404, headers: { 'X-Robots-Tag': 'noindex, nofollow' } })
+}
+
+const figures = createFigureCounter()
+const sceneFigures = SCENES.map((scene) => ({ scene, number: figures.next() }))
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Brand review · DevLab Studios</title>
+    <link rel="preload" href="/fonts/bricolage-grotesque-latin-opsz.woff2" as="font" type="font/woff2" crossorigin />
+  </head>
+  <body class="brand min-h-screen">
+    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-10 focus:bg-dl-paper focus:p-2">Skip to content</a>
+    <header class="ink-panel">
+      <div class="mx-auto max-w-container px-[var(--gutter)] py-12">
+        <p class="label text-dl-ink-3">Working drawings · brand review</p>
+        <h1 class="mt-3 text-step-4">Scenes and components, for approval</h1>
+        <p class="mt-4 text-dl-ink-2">
+          Drawn in code from one symbol library. Scenes stay hidden on public pages until each is approved
+          (<code class="font-label">artReady</code> in <code class="font-label">src/config/scenes.ts</code>).
+        </p>
+      </div>
+    </header>
+
+    <main id="main" class="mx-auto max-w-container space-y-[var(--section-rhythm)] px-[var(--gutter)] py-16">
+      <section aria-labelledby="scenes-heading">
+        <p class="label text-dl-ink-3">§1 Scenes</p>
+        <h2 id="scenes-heading" class="mt-2 text-step-3">The six scenes</h2>
+        <div class="mt-10 grid gap-12 lg:grid-cols-2">
+          {sceneFigures.map(({ scene, number }) => (
+            <div>
+              <SceneFrame sceneId={scene.id} figure={number} preview />
+              <p class="label mt-2 text-dl-ink-3">{scene.code} · {scene.title} · {scene.artReady ? 'approved' : 'pending approval'}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section aria-labelledby="inverted-heading" class="ink-panel rounded-dl-m p-6 sm:p-10">
+        <p class="label text-dl-ink-3">§2 On an ink panel</p>
+        <h2 id="inverted-heading" class="mt-2 text-step-3">Scenes invert with the panel</h2>
+        <div class="mt-8 max-w-2xl">
+          <SceneFrame sceneId="persist-before-deliver" figure={figures.next()} preview />
+        </div>
+      </section>
+
+      <section aria-labelledby="type-heading">
+        <p class="label text-dl-ink-3">§3 Type</p>
+        <h2 id="type-heading" class="mt-2 text-step-3">Type scale</h2>
+        <div class="mt-8 space-y-4">
+          <p class="text-step-5 font-semibold leading-none tracking-tight">Systems that hold up</p>
+          <p class="text-step-4 font-semibold">Step 4 heading</p>
+          <p class="text-step-3 font-semibold">Step 3 heading</p>
+          <p class="text-step-2 font-semibold">Step 2 heading</p>
+          <p class="text-step-1">Step 1 lead paragraph for a section.</p>
+          <p class="text-step-0 text-dl-ink-2">Body text at step 0. Set in Bricolage Grotesque with optical sizing, 1.5 line height, a 60–72 character measure.</p>
+          <p class="label text-dl-ink-3">Mono label · Martian Mono · uppercase 0.08em</p>
+          <p class="brand-longform">Long-form body in Newsreader, used only inside articles and project write-ups.</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="buttons-heading">
+        <p class="label text-dl-ink-3">§4 Actions</p>
+        <h2 id="buttons-heading" class="mt-2 text-step-3">Buttons and tags</h2>
+        <div class="mt-8 flex flex-wrap items-center gap-6">
+          <Button href="#buttons-heading">Request the audit</Button>
+          <Button variant="quiet" href="#buttons-heading">See the work</Button>
+          <Button disabled>Disabled</Button>
+          <Tag>Lead intake</Tag>
+          <Tag tone="red">Failed delivery</Tag>
+        </div>
+      </section>
+
+      <section aria-labelledby="panels-heading">
+        <p class="label text-dl-ink-3">§5 Content</p>
+        <h2 id="panels-heading" class="mt-2 text-step-3">Panels, figures, facts and proof</h2>
+        <div class="mt-8 grid gap-6 md:grid-cols-2">
+          <Panel eyebrow="Framed panel" title="One record per inquiry"><p class="text-dl-ink-2">A hairline frame, never also a tint.</p></Panel>
+          <Panel surface="tinted" eyebrow="Tinted panel" title="Every failure visible"><p class="text-dl-ink-2">A paper-2 surface, never also a frame.</p></Panel>
+        </div>
+        <Figure number={figures.next()} caption="A real screenshot sits in a figure frame like this (synthetic data only)." class="mt-10">
+          <div class="grid aspect-[16/9] place-items-center text-dl-ink-3">screenshot</div>
+        </Figure>
+        <FactList class="mt-10" facts={[
+          { text: 'Inquiries are saved before any email or webhook is attempted.' },
+          { text: 'Every delivery attempt is recorded, with its failure reason.' },
+          { text: 'The admin requires a signed session on every route.', source: { label: 'Security notes', href: '#panels-heading' } },
+        ]} />
+        <ProofStrip class="mt-10" items={[
+          { kind: 'system', value: 'Persist-first', label: 'Saved before anything is sent' },
+          { kind: 'principle', value: 'One owner', label: 'Every inquiry has a named owner' },
+          { kind: 'credential', value: 'Certified', label: 'Cloud and automation certifications', evidenceUrl: '#panels-heading' },
+        ]} />
+        <Disclosure summary="Technical notes" class="mt-10"><p class="text-dl-ink-2">Stack, integrations and links live here, closed by default.</p></Disclosure>
+        <Table class="mt-10" caption="Delivery attempts (synthetic)" columns={['Target', 'Status', 'Attempt']} rows={[
+          ['Owner email', 'Delivered', '1'],
+          ['CRM', 'Delivered', '1'],
+          ['Webhook', 'Failed, retry queued', '2'],
+        ]} />
+      </section>
+
+      <section aria-labelledby="form-heading">
+        <p class="label text-dl-ink-3">§6 Forms</p>
+        <h2 id="form-heading" class="mt-2 text-step-3">Field states</h2>
+        <form class="mt-8 grid max-w-xl gap-6" onsubmit="return false">
+          <Field id="demo-name" label="Full name" help="As you would like to be addressed.">
+            <input id="demo-name" class="dl-control" autocomplete="name" aria-describedby="demo-name-help" />
+          </Field>
+          <Field id="demo-email" label="Work email" error="Enter an email address like name@company.com.">
+            <input id="demo-email" class="dl-control" type="email" value="not-an-email" aria-invalid="true" aria-describedby="demo-email-error" />
+          </Field>
+          <Field id="demo-message" label="What needs improvement">
+            <textarea id="demo-message" class="dl-control"></textarea>
+          </Field>
+          <div><Button type="submit">Send inquiry</Button></div>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

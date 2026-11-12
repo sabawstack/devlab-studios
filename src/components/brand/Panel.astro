@@ -1,0 +1,16 @@
+---
+/** A flat panel: paper-2 surface OR a hairline frame, never both (audit BR.10). */
+interface Props {
+  surface?: 'tinted' | 'framed'
+  eyebrow?: string
+  title?: string
+  as?: 'section' | 'div' | 'article'
+  class?: string
+}
+const { surface = 'framed', eyebrow, title, as: Tag = 'div', class: className = '' } = Astro.props
+---
+<Tag class={`rounded-dl-s p-5 sm:p-6 ${surface === 'tinted' ? 'bg-dl-paper-2' : 'border border-dl-rule'} ${className}`}>
+  {eyebrow && <p class="label text-dl-ink-3">{eyebrow}</p>}
+  {title && <h3 class="mt-1 text-step-1 text-dl-ink">{title}</h3>}
+  <div class={title || eyebrow ? 'mt-3' : ''}><slot /></div>
+</Tag>

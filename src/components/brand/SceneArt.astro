@@ -1,0 +1,192 @@
+---
+/**
+ * The six scenes (audit BR.8, S1-S6), composed from the Glyph library. Each
+ * draws a real operational situation; text inside the art is limited to short
+ * mono labels whose meaning is in the HTML caption. Strokes are currentColor
+ * or brand tokens, so every scene inverts on an ink panel.
+ *
+ * Status: drawn in code, PENDING OWNER APPROVAL (docs/brand/scenes.md). Until
+ * a scene's `artReady` is set in src/config/scenes.ts the public SceneFrame
+ * shows its frame and caption only; the brand review page shows the art.
+ */
+import Glyph from './Glyph.astro'
+import { getScene } from '../../config/scenes'
+
+interface Props {
+  sceneId: string
+  /** Element id prefix, unique per page, for the title/desc references. */
+  idPrefix?: string
+}
+
+const { sceneId, idPrefix = `scene-${sceneId}` } = Astro.props
+const scene = getScene(sceneId)
+const [w, h] = scene ? scene.aspect.wide : [3, 2]
+const width = 600
+const height = Math.round((width * h) / w)
+const line = { stroke: 'currentColor', 'stroke-width': 1.5, fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' } as const
+const dashed = { ...line, 'stroke-dasharray': '4 5' } as const
+const arrowHead = (x: number, y: number, dir: 'right' | 'down' | 'left' | 'up' = 'right') => {
+  const d = { right: `M${x - 7} ${y - 5} L${x} ${y} L${x - 7} ${y + 5}`, left: `M${x + 7} ${y - 5} L${x} ${y} L${x + 7} ${y + 5}`, down: `M${x - 5} ${y - 7} L${x} ${y} L${x + 5} ${y - 7}`, up: `M${x - 5} ${y + 7} L${x} ${y} L${x + 5} ${y + 7}` }[dir]
+  return d
+}
+const channels = [
+  { name: 'form', label: 'WEB FORM' },
+  { name: 'envelope', label: 'EMAIL' },
+  { name: 'chat', label: 'CHAT' },
+  { name: 'phone', label: 'PHONE' },
+] as const
+---
+
+{scene && (
+  <svg
+    viewBox={`0 0 ${width} ${height}`}
+    role="img"
+    aria-labelledby={`${idPrefix}-title ${idPrefix}-desc`}
+    class="scene-art block h-auto w-full text-dl-ink"
+    data-scene={scene.id}
+    preserveAspectRatio="xMidYMid meet"
+  >
+    <title id={`${idPrefix}-title`}>{scene.title}</title>
+    <desc id={`${idPrefix}-desc`}>{scene.alt}</desc>
+
+    {scene.id === 'fragmented-intake' && (
+      <g>
+        {channels.map((channel, i) => (
+          <>
+            <Glyph name={channel.name} x={40} y={30 + i * 88} label={channel.label} />
+            <path d={`M100 ${54 + i * 88} C 200 ${54 + i * 88 + (i % 2 ? 24 : -18)}, 300 ${54 + i * 88 + (i % 2 ? -20 : 22)}, 400 ${54 + i * 88}`} {...dashed} />
+          </>
+        ))}
+        <Glyph name="inbox" x={410} y={30} label="SHARED INBOX" />
+        <Glyph name="sheet" x={410} y={118} label="SPREADSHEET" />
+        <Glyph name="chat" x={410} y={206} label="DM THREAD" />
+        <Glyph name="note" x={410} y={294} label="SOMEONE'S NOTE" />
+        <Glyph name="clock" x={515} y={30} size={44} tone="red" label="AFTER HOURS" />
+        <g class="draw">
+          <rect x={490} y={262} width={96} height={52} rx={2} fill="var(--paper)" stroke="var(--redline)" stroke-width="1.5" pathLength="1" />
+          <text x={538} y={285} text-anchor="middle" fill="var(--redline)" font-family="var(--font-label)" font-size="9" letter-spacing="0.5">WHO OWNS</text>
+          <text x={538} y={299} text-anchor="middle" fill="var(--redline)" font-family="var(--font-label)" font-size="9" letter-spacing="0.5">THIS?</text>
+        </g>
+      </g>
+    )}
+
+    {scene.id === 'connected-system' && (
+      <g>
+        {channels.map((channel, i) => (
+          <>
+            <Glyph name={channel.name} x={40} y={30 + i * 88} label={channel.label} />
+            <path d={`M100 ${54 + i * 88} C 170 ${54 + i * 88}, 190 200, 238 200`} {...line} class="draw" pathLength="1" />
+          </>
+        ))}
+        <path d={arrowHead(240, 200)} {...line} class="draw" pathLength="1" />
+        <g class="draw">
+          <rect x={248} y={120} width={150} height={160} rx={4} fill="var(--paper-2)" stroke="currentColor" stroke-width="1.5" pathLength="1" />
+          <text x={262} y={142} fill="currentColor" font-family="var(--font-label)" font-size="9" letter-spacing="0.6">INQUIRY LEDGER</text>
+          {[0, 1, 2].map((row) => (
+            <>
+              <path d={`M262 ${162 + row * 36} H384`} stroke="var(--rule)" stroke-width="1" />
+              <rect x={262} y={168 + row * 36} width={44} height={14} rx={2} fill="var(--paper)" stroke="currentColor" stroke-width="1" />
+              <text x={284} y={178 + row * 36} text-anchor="middle" fill="currentColor" font-family="var(--font-label)" font-size="7">{['NEW', 'REPLIED', 'BOOKED'][row]}</text>
+              <text x={314} y={178 + row * 36} fill="currentColor" font-family="var(--font-label)" font-size="7">OWNER: {['ANA', 'BEN', 'ANA'][row]}</text>
+            </>
+          ))}
+        </g>
+        <path d="M398 200 H458" {...line} class="draw" pathLength="1" />
+        <path d={arrowHead(460, 200)} {...line} class="draw" pathLength="1" />
+        <Glyph name="person" x={470} y={170} size={60} label="ANA · OWNER" />
+        <Glyph name="check" x={530} y={150} size={34} tone="ok" />
+      </g>
+    )}
+
+    {scene.id === 'persist-before-deliver' && (
+      <g>
+        <Glyph name="form" x={30} y={120} label="SUBMISSION" />
+        <path d="M86 144 H140" {...line} class="draw" pathLength="1" />
+        <path d={arrowHead(142, 144)} {...line} class="draw" pathLength="1" />
+        <Glyph name="ledger" x={150} y={112} size={64} label="1 · SAVED FIRST" />
+        <path d="M222 144 C 262 144, 262 60, 300 60 M222 144 H300 M222 144 C 262 144, 262 228, 300 228" {...line} class="draw" pathLength="1" />
+        <Glyph name="envelope" x={308} y={36} label="EMAIL" />
+        <Glyph name="check" x={368} y={40} size={36} tone="ok" />
+        <Glyph name="process" x={308} y={120} label="CRM" />
+        <Glyph name="check" x={368} y={124} size={36} tone="ok" />
+        <Glyph name="api" x={308} y={204} label="WEBHOOK" tone="red" />
+        <Glyph name="warning" x={368} y={206} size={36} tone="red" />
+        <Glyph name="retry" x={410} y={206} size={36} tone="red" label="RETRY" />
+        <g class="draw">
+          <rect x={460} y={70} width={120} height={180} rx={4} fill="var(--paper-2)" stroke="currentColor" stroke-width="1.5" pathLength="1" />
+          <text x={472} y={92} fill="currentColor" font-family="var(--font-label)" font-size="8.5" letter-spacing="0.6">DELIVERY LOG</text>
+          {[0, 1, 2, 3].map((row) => (
+            <path d={`M472 ${112 + row * 30} H568`} stroke={row === 2 ? 'var(--redline)' : 'var(--rule)'} stroke-width={row === 2 ? 2 : 1} />
+          ))}
+          <text x={472} y={166} fill="var(--redline)" font-family="var(--font-label)" font-size="7.5">WEBHOOK · FAILED</text>
+        </g>
+      </g>
+    )}
+
+    {scene.id === 'handoff-to-person' && (
+      <g transform="translate(57 40)">
+        <Glyph name="process" x={40} y={80} label="AUTOMATED" />
+        <path d="M96 104 H196" {...line} class="draw" pathLength="1" />
+        <Glyph name="warning" x={200} y={80} tone="red" label="UNCLEAR CASE" />
+        <path d="M256 104 H420" {...dashed} />
+        <path d={arrowHead(422, 104)} {...line} class="draw" pathLength="1" />
+        <Glyph name="process" x={430} y={80} label="CONTINUES" />
+        <path d="M224 140 V300" {...line} class="draw" pathLength="1" />
+        <path d={arrowHead(224, 302, 'down')} {...line} class="draw" pathLength="1" />
+        <Glyph name="person" x={190} y={310} size={68} label="NAMED APPROVER" />
+        <Glyph name="stamp" x={290} y={330} size={56} tone="ok" label="APPROVED" />
+        <path d="M350 360 C 420 360, 460 300, 458 160" {...line} class="draw" pathLength="1" />
+        <path d={arrowHead(458, 158, 'up')} {...line} class="draw" pathLength="1" />
+      </g>
+    )}
+
+    {scene.id === 'build-in-layers' && (
+      <g>
+        {['INTERFACE', 'SERVICES / API', 'DATA', 'AUTOMATION', 'PEOPLE / HANDOFF'].map((name, i) => (
+          <g class="draw">
+            <rect x={70} y={22 + i * 64} width={460} height={44} rx={4} fill={i % 2 ? 'var(--paper)' : 'var(--paper-2)'} stroke="currentColor" stroke-width="1.5" pathLength="1" />
+            <text x={86} y={49 + i * 64} fill="currentColor" font-family="var(--font-label)" font-size="10" letter-spacing="0.8">{name}</text>
+            {i < 4 && [200, 300, 400].map((jx) => (
+              <path d={`M${jx} ${66 + i * 64} V${86 + i * 64}`} stroke="currentColor" stroke-width="1.5" />
+            ))}
+          </g>
+        ))}
+        <Glyph name="form" x={470} y={20} size={44} />
+        <Glyph name="api" x={470} y={84} size={44} />
+        <Glyph name="ledger" x={470} y={148} size={44} />
+        <Glyph name="process" x={470} y={212} size={44} />
+        <Glyph name="person" x={470} y={276} size={44} />
+      </g>
+    )}
+
+    {scene.id === 'workflow-audit' && (
+      <g>
+        {[0, 1, 2, 3, 4].map((i) => (
+          <>
+            <Glyph name={(['form', 'inbox', 'process', 'sheet', 'person'] as const)[i]} x={20 + i * 76} y={150} size={48} />
+            {i < 4 && <path d={`M${72 + i * 76} 174 H${92 + i * 76}`} {...line} class="draw" pathLength="1" />}
+          </>
+        ))}
+        {[{ cx: 120, n: 1 }, { cx: 196, n: 2 }, { cx: 272, n: 3 }].map((mark) => (
+          <g class="draw">
+            <circle cx={mark.cx} cy={174} r={30} fill="none" stroke="var(--redline)" stroke-width="2" stroke-dasharray="3 3" />
+            <circle cx={mark.cx + 24} cy={142} r={10} fill="var(--paper)" stroke="var(--redline)" stroke-width="1.5" />
+            <text x={mark.cx + 24} y={146} text-anchor="middle" fill="var(--redline)" font-family="var(--font-label)" font-size="10">{mark.n}</text>
+          </g>
+        ))}
+        <g class="draw">
+          <rect x={420} y={70} width={160} height={210} rx={4} fill="var(--paper-2)" stroke="currentColor" stroke-width="1.5" pathLength="1" />
+          <text x={434} y={94} fill="currentColor" font-family="var(--font-label)" font-size="8.5" letter-spacing="0.6">RECOMMENDED,</text>
+          <text x={434} y={108} fill="currentColor" font-family="var(--font-label)" font-size="8.5" letter-spacing="0.6">IN PRIORITY ORDER</text>
+          {[1, 2, 3].map((n) => (
+            <>
+              <circle cx={444} cy={124 + n * 40} r={9} fill="var(--paper)" stroke="var(--redline)" stroke-width="1.5" />
+              <text x={444} y={128 + n * 40} text-anchor="middle" fill="var(--redline)" font-family="var(--font-label)" font-size="9">{n}</text>
+              <path d={`M462 ${120 + n * 40} H566 M462 ${130 + n * 40} H530`} stroke="currentColor" stroke-width="1.5" />
+            </>
+          ))}
+        </g>
+      </g>
+    )}
+  </svg>
+)}

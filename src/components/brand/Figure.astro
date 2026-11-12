@@ -1,0 +1,20 @@
+---
+/**
+ * A numbered figure: frame + media + mono caption "Fig. 03 — caption"
+ * (audit BR.10). Pass the number from a per-page counter (createFigureCounter
+ * in ./figures.ts) so numbering follows the page order.
+ */
+interface Props {
+  number?: number
+  caption: string
+  class?: string
+}
+const { number, caption, class: className = '' } = Astro.props
+---
+<figure class={className}>
+  <div class="overflow-hidden rounded-dl-m border border-dl-rule bg-dl-paper"><slot /></div>
+  <figcaption class="mt-3 flex gap-3 text-step--1 text-dl-ink-3">
+    {number && <span class="label shrink-0 text-dl-ink-2">Fig. {String(number).padStart(2, '0')}</span>}
+    <span>{caption}</span>
+  </figcaption>
+</figure>

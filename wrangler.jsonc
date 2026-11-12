@@ -253,6 +253,8 @@
         // Preview D1 holds every static project (checked 2026-11-12), so D1 is
         // the only source here.
         "PROJECTS_STATIC_MERGE": "false",
+        // The brand review page (/brand), for approving scenes and components.
+        "BRAND_REVIEW_ENABLED": "true",
         "R2_PUBLIC_BASE_URL": "https://pub-2450236b7cbf4d68aa4bc07f9b606e29.r2.dev",
         "TURNSTILE_SITE_KEY": "0x4AAAAAAEO0gy1ZeS8AbYUC",
         "RESEND_FROM_EMAIL": "hello@devlabstudios.com",

@@ -71,7 +71,7 @@ projects, each against a different running server (`playwright.config.js`):
 
 | Project | Spec files | Server | Why |
 |---|---|---|---|
-| `static` | `public-pages.spec.js`, `contact-form.spec.js`, `image-weight.spec.js`, `legacy-urls.spec.js` (every URL in `tests/fixtures/legacy-sitemap.txt` still resolves) | `astro build && astro preview` | These pages don't need the real auth/D1 CRUD path — `astro preview` is faster to boot and closer to a CDN-cached static response |
+| `static` | `public-pages.spec.js`, `contact-form.spec.js`, `image-weight.spec.js`, `legacy-urls.spec.js` (every URL in `tests/fixtures/legacy-sitemap.txt` still resolves), `brand.spec.js` (scenes and components on `/brand`: byte budgets, three viewports, reduced motion, axe) | `astro build && astro preview` | These pages don't need the real auth/D1 CRUD path — `astro preview` is faster to boot and closer to a CDN-cached static response |
 | `worker` | `admin.spec.js`, `digest.spec.js`, `lead-crm.spec.js`, `pickleball/*.spec.js` | `wrangler dev --local` | Exercises the real ported auth (`adminAuth.js`), D1 CRUD, and `waitUntil` background delivery — `astro preview` doesn't run a real `workerd` runtime, so this is the only way to test those for real |
 
 `desktop-safari` and `mobile-safari` re-run the `static` specs against those

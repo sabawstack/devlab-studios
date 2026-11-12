@@ -1,0 +1,17 @@
+---
+/** Numbered, verifiable facts, each with an optional source link (audit BR.10). */
+interface Fact { text: string; source?: { label: string; href: string } }
+interface Props { facts: Fact[]; class?: string }
+const { facts, class: className = '' } = Astro.props
+---
+<ol class={`divide-y divide-dl-rule border-y border-dl-rule ${className}`}>
+  {facts.map((fact, index) => (
+    <li class="flex gap-4 py-4">
+      <span class="label shrink-0 pt-1 text-dl-ink-3">{String(index + 1).padStart(2, '0')}</span>
+      <span>
+        <span class="text-dl-ink">{fact.text}</span>
+        {fact.source && <a href={fact.source.href} class="ml-2 text-step--1 text-dl-ink-3">{fact.source.label}</a>}
+      </span>
+    </li>
+  ))}
+</ol>

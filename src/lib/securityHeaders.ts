@@ -68,6 +68,8 @@ function robotsTagFor(pathname: string, hostname: string): string | null {
   if (hostname.endsWith('.workers.dev')) return 'noindex, nofollow'
   if (isAdminPath(pathname)) return 'noindex, nofollow'
   if (pathname.startsWith('/landing-sample-')) return 'noindex, follow'
+  // The brand review page is for approval and tests, never for search.
+  if (pathname === '/brand' || pathname.startsWith('/brand/')) return 'noindex, nofollow'
   return null
 }
 

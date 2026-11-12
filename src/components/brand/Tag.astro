@@ -1,0 +1,6 @@
+---
+/** Mono uppercase tag with a hairline (audit BR.10). */
+interface Props { tone?: 'ink' | 'red'; class?: string }
+const { tone = 'ink', class: className = '' } = Astro.props
+---
+<span class={`label inline-flex items-center rounded-dl-xs border px-2 py-0.5 ${tone === 'red' ? 'border-dl-redline text-dl-redline' : 'border-dl-rule text-dl-ink-2'} ${className}`}><slot /></span>

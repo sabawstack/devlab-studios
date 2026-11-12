@@ -1,0 +1,33 @@
+---
+/**
+ * Form field shell (audit BR.10): mono label above, 48 px hairline control,
+ * helper text in ink-3, error in redline with a mark and text, 2 px redline
+ * focus ring. Put the input/select/textarea in the slot with class "dl-control"
+ * and pass its id.
+ */
+interface Props { id: string; label: string; help?: string; error?: string; class?: string }
+const { id, label, help, error, class: className = '' } = Astro.props
+const describedBy = [help && `${id}-help`, error && `${id}-error`].filter(Boolean).join(' ')
+---
+<div class={`dl-field ${error ? 'dl-field--error' : ''} ${className}`} data-described-by={describedBy || undefined}>
+  <label for={id} class="label mb-1.5 block text-dl-ink-2">{label}</label>
+  <slot />
+  {help && <p id={`${id}-help`} class="mt-1.5 text-step--1 text-dl-ink-3">{help}</p>}
+  {error && <p id={`${id}-error`} class="mt-1.5 flex items-center gap-1.5 text-step--1 text-dl-redline"><span aria-hidden="true">✕</span>{error}</p>}
+</div>
+
+<style>
+  .dl-field :global(.dl-control) {
+    width: 100%;
+    min-height: 48px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-xs);
+    background: var(--paper);
+    color: var(--ink);
+    padding: 0 0.75rem;
+    font: inherit;
+  }
+  .dl-field :global(textarea.dl-control) { padding: 0.75rem; min-height: 8rem; }
+  .dl-field :global(.dl-control:focus-visible) { outline: 2px solid var(--redline); outline-offset: 2px; }
+  .dl-field--error :global(.dl-control) { border-color: var(--redline); }
+</style>

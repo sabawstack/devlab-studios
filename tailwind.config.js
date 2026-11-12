@@ -5,8 +5,40 @@ export default {
     extend: {
       fontFamily: {
         sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
+        // "Working Drawings" brand (src/styles/brand.css); fallbacks are metric-matched there.
+        display: ['var(--font-display)'],
+        label: ['var(--font-label)'],
+        longform: ['var(--font-longform)'],
+      },
+      fontSize: {
+        'step--1': 'var(--step--1)',
+        'step-0': 'var(--step-0)',
+        'step-1': 'var(--step-1)',
+        'step-2': 'var(--step-2)',
+        'step-3': 'var(--step-3)',
+        'step-4': 'var(--step-4)',
+        'step-5': 'var(--step-5)',
+      },
+      borderRadius: {
+        'dl-xs': 'var(--radius-xs)',
+        'dl-s': 'var(--radius-s)',
+        'dl-m': 'var(--radius-m)',
+      },
+      maxWidth: {
+        container: 'var(--container)',
       },
       colors: {
+        // Brand roles as CSS variables, so `.ink-panel` inverts them in place.
+        dl: {
+          paper: 'var(--paper)',
+          'paper-2': 'var(--paper-2)',
+          ink: 'var(--ink)',
+          'ink-2': 'var(--ink-2)',
+          'ink-3': 'var(--ink-3)',
+          rule: 'var(--rule)',
+          redline: 'var(--redline)',
+          ok: 'var(--ok)',
+        },
         brand: {
           DEFAULT: '#4500ff',
           ink: '#11142a',

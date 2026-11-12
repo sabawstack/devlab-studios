@@ -18,6 +18,8 @@ interface Env {
    * Anything else: D1 is the only source. See src/lib/content/projectSources.ts.
    */
   PROJECTS_STATIC_MERGE?: string
+  /** "true" serves the brand review page (/brand); preview only. */
+  BRAND_REVIEW_ENABLED?: string
   RESEND_API_KEY?: string
   RESEND_FROM_EMAIL?: string
   LEAD_NOTIFICATION_EMAIL?: string

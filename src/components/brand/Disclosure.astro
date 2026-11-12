@@ -1,0 +1,9 @@
+---
+/** "Technical notes" style disclosure: mono summary row, native <details>, no animation (audit BR.10). */
+interface Props { summary: string; open?: boolean; class?: string }
+const { summary, open = false, class: className = '' } = Astro.props
+---
+<details class={`rounded-dl-s border border-dl-rule ${className}`} open={open}>
+  <summary class="label flex min-h-11 cursor-pointer items-center px-4 text-dl-ink-2">{summary}</summary>
+  <div class="border-t border-dl-rule px-4 py-4"><slot /></div>
+</details>
