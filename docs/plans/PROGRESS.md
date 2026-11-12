@@ -18,9 +18,9 @@ money, legal wording or a real data deletion are skipped and listed under
 | 4 | Brand foundation | done (PR #48, production at `1a2f663`; `/brand` 404 in production); **scene approval needed before Phases 5–6** |
 | 5 | Pages I | not started |
 | 6 | Pages II | not started |
-| 7 | Routes + SEO | not started |
+| 7 | Routes + SEO | page-independent part done (WEB-02, SEO-03/06/07/08); route work waits for Phases 5–6 |
 | 8 | Ops + editorial | done (PR #49, production at `4183fb1`) |
-| 9 | Performance | OPS-01 done in code; SEC-07 → Phase 10; TEST-06 partial |
+| 9 | Performance | OPS-01 done (PR #50, production at `bd559a5`, HIT verified from SIN); SEC-07 → Phase 10; TEST-06 partial |
 | 10 | Data-touching jobs | not started |
 | 11 | Product Worker split | not started |
 | 12 | Docs + release | not started |
@@ -35,7 +35,8 @@ money, legal wording or a real data deletion are skipped and listed under
 5. **Owner inputs for Phase 3 defaults**: legal operator name for privacy/terms (N5; operator wording used now), and the Facebook page / LinkedIn company URL for `sameAs` (only the existing LinkedIn profile and GitHub are listed). Also check `public/resume.pdf` for personal details you no longer want public; it was not changed.
 6. **Scene approval (gate for Phases 5–6):** review S1–S6 at `<preview>/brand`, then set `artReady: true` per approved scene (docs/brand/scenes.md), or send replacement art. Also confirm the "Working Drawings" direction (N1, default approve).
 7. **Uptime monitor (N8):** point a free-tier monitor at `/` and `/api/health` (docs/operations.md).
-8. Observed, not changed: `/haosweetitis/` returns 404 on production and preview; only `/haosweetitis/index.html` loads. Share that URL, or ask for a route fix.
+8. **Production article tags** (Phase 7, after migration `0018`): `scripts/cms/updates/2026-11-12-article-problem-tags.sql` (applied to preview). Until then production's home page falls back to the first non-technical article from the static data rule.
+9. Observed, not changed: `/haosweetitis/` returns 404 on production and preview; only `/haosweetitis/index.html` loads. Share that URL, or ask for a route fix.
 
 ## Phase 1 — Guard rails
 
@@ -142,3 +143,15 @@ Promotion: CI green on `4183fb1` → `development` (migration check ran: both pr
 | OPS-01 | done (code) | Cache API, generation key (`site_settings.html_cache_generation`, memo 2 s), bumped by any successful admin write and the digest; maintenance read memo 60 s; `CACHE_HTML` kill switch. 7 unit + 4 static e2e (HIT, tracking params, preview/admin/API never cached) + 1 worker e2e (save visible within 5 s). Baseline TTFB from the owner's location before the change: `/` 0.95 s, `/solutions` 0.64–0.91 s, `/about` 0.45–0.67 s |
 | SEC-07 | moved to Phase 10 | Pages carry Astro island loaders, inlined component scripts, the GA bootstrap and the Google Fonts `onload` handler. Plan: adopt Astro 7's built-in `security.csp` (build-time hashes, so compatible with the HTML cache), move GA to an external same-origin script, and drop the Google Fonts handler when the brand fonts go live (Phase 5). The plan lists SEC-07 as depending on OPS-07, also Phase 10 |
 | TEST-06 | partial | TTFB measured before/after from the owner's location; Lighthouse CI on preview needs the redesigned pages to set budgets against (Phase 5+) |
+
+Production after Phase 9: MISS then HIT from the Singapore edge; preview TTFB on HIT 0.24–0.79 s from the owner's location (baseline 0.45–0.97 s; the audit's 2–11 s was measured from other regions).
+
+## Phase 7 (part 1, page-independent)
+
+| Req | Status | Evidence |
+|---|---|---|
+| WEB-02 / SEO-06 | done | `src/config/robots.ts` drives meta + header; daily digest, offers, crawler, maintenance, 404 noindex; removed from sitemap; legacy URLs still 200 |
+| SEO-07 | partial | Pickleball 0.3–0.4; article lastmod from updatedAt. Category/audit/products/write-up priorities come with those routes (Phase 6) |
+| SEO-03 | done | Article schema image fallback, dateModified, author/publisher `@id` |
+| SEO-08 | done | 15 articles tagged (static + preview D1); home promotes owner articles only; briefs in docs/content/briefs.md. `site_settings.insights_featured_tag` not added: the audience rule covers the plan's intent without another setting |
+| SEO-01, SEO-04 (rest), WEB-01 | pending | Depend on the new routes and page copy (Phases 5–6) |
