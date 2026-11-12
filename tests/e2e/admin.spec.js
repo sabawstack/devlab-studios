@@ -370,9 +370,9 @@ test('a saved page shows on the public site immediately despite the HTML cache',
   const original = await (await page.request.get(`${baseURL}/api/admin/pages/process`)).json()
   const marker = `Cache purge marker ${Date.now()}`
   try {
-    await page.request.get(`${baseURL}/process`)
-    const warm = await page.request.get(`${baseURL}/process`)
-    expect(warm.headers()['x-devlab-cache']).toBe('HIT')
+    // Other tests save content in parallel, which (correctly) starts a new
+    // cache generation; poll until this page is warm in the current one.
+    await expect.poll(async () => (await page.request.get(`${baseURL}/process`)).headers()['x-devlab-cache'], { timeout: 10_000 }).toBe('HIT')
 
     const saved = await page.request.put(`${baseURL}/api/admin/pages/process`, {
       data: { slug: 'process', title: 'Process', status: 'published', blocks: [{ type: 'richText', props: { heading: marker, body: 'Published body.' } }] },
