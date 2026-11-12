@@ -308,7 +308,12 @@ export async function listUnansweredReplies(db, { limit = 50 } = {}) {
            SELECT 1 FROM lead_messages later
            WHERE later.conversation_id = m.conversation_id
              AND later.direction = 'outbound'
-             AND later.created_at > m.created_at
+             AND later.id != m.id
+             -- Compare when the messages were actually sent/received, not when
+             -- the rows were inserted: two rows written in the same millisecond
+             -- (an import, a retry) must still order correctly.
+             AND COALESCE(later.sent_at, later.received_at, later.created_at)
+                 >= COALESCE(m.received_at, m.sent_at, m.created_at)
          )
        ORDER BY m.created_at DESC
        LIMIT ?`,

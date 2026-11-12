@@ -506,6 +506,25 @@ describe('conversations', () => {
 
     expect(await listUnansweredReplies(db)).toHaveLength(0)
   })
+
+  it('does not treat an outbound message sent before the inbound one as its reply', async () => {
+    const { lead } = await seedLead()
+    const conversation = await ensureConversation(db, { leadId: lead.id, subject: 'Hello' })
+
+    await recordMessage(db, {
+      conversationId: conversation.id, leadId: lead.id, direction: 'outbound',
+      providerMessageId: 'out-0', fromAddress: 'stephen@devlabstudios.com',
+      toAddresses: ['hello@acme.com'], subject: 'Hello', bodyText: 'Intro.',
+      sentAt: '2026-09-18T09:00:00.000Z',
+    })
+    await recordMessage(db, {
+      conversationId: conversation.id, leadId: lead.id, direction: 'inbound',
+      providerMessageId: 'in-0', fromAddress: 'hello@acme.com', subject: 'Re: Hello',
+      bodyText: 'Interested.', receivedAt: '2026-09-18T10:00:00.000Z',
+    })
+
+    expect(await listUnansweredReplies(db)).toHaveLength(1)
+  })
 })
 
 describe('campaigns', () => {
