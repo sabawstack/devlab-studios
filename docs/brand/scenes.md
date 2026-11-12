@@ -1,5 +1,10 @@
 # Scenes and symbols ("Working Drawings")
 
+> Since 2.5.0 the site uses the Blueprint palette (ADR 0014). The scenes are
+> unchanged: they draw with `currentColor` and the role tokens, so they now
+> render light-on-navy. `--redline` is magenta and `--ok` green; the rule
+> below that scenes use no gradients still holds.
+
 The illustrated scenes the public site shows, how they are drawn, and how one is
 approved. Source: audit sections BR.5 (Direction 1), BR.8 and BR.10.
 

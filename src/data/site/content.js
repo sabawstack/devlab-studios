@@ -12,6 +12,8 @@
 // profile stay in the CMS; the page structure and this copy are code-owned
 // since 2.4.0 (see docs/content-model.md).
 
+import { COMPANY } from '../../config/company.js'
+
 export const OFFER_AUDIT = {
   slug: 'workflow-systems-audit',
   path: '/solutions/workflow-systems-audit',
@@ -284,7 +286,7 @@ export const ABOUT = {
   lead: 'DevLab Studios designs, builds and runs the systems behind small and mid-sized businesses: the ones that capture inquiries, move work between tools, keep data consistent and make failures visible.',
   facts: [
     { label: 'Founded', value: 'March 2026' },
-    { label: 'Based in', value: 'Cebu, Philippines' },
+    { label: 'Based in', value: COMPANY.locationLabel },
     { label: 'Works', value: 'Remote-first' },
     { label: 'Run by', value: 'Stephen Rey Agustinez' },
   ],

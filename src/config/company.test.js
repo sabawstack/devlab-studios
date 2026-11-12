@@ -21,6 +21,13 @@ describe('COMPANY location (ADR 0014)', () => {
     expect(COMPANY.locationLabel).toBe('Lapu-Lapu City, Cebu, Philippines')
   })
 
+  it('is the one location every public page shows', async () => {
+    const { ABOUT } = await import('../data/site/content.js')
+    const { default: aboutData } = await import('../data/about.js')
+    expect(ABOUT.facts.find((fact) => fact.label === 'Based in')?.value).toBe(COMPANY.locationLabel)
+    expect(aboutData.location).toBe(COMPANY.locationLabel)
+  })
+
   it('signs off the footer with the accountable architect', () => {
     expect(COMPANY.footerSignOff).toBe('Systems architected, engineered, and maintained end-to-end by Stephen Rey Agustinez.')
   })

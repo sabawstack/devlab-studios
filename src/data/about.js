@@ -1,10 +1,11 @@
 // src/data/about.js
 // Resume-sourced "About Me" content for Stephen Rey G. Agustinez
+import { COMPANY } from '../config/company.js'
 
 const aboutData = {
   name: "Stephen Rey G. Agustinez",
   role: "Founder, Full-Stack Developer & AI Automation Architect",
-  location: "Cebu, Philippines",
+  location: COMPANY.locationLabel,
   email: "hello@devlabstudios.com",
   resumeLink: "/resume.pdf",
   about:

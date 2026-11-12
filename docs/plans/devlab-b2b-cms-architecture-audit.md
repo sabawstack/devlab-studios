@@ -217,6 +217,8 @@ Each finding carries an ID, status (VERIFIED / INFERRED / HYPOTHESIS / UNKNOWN),
 
 ## BRAND. DevLab Studios Premium Brand Identity, Original Visual Storytelling & B2B Experience
 
+> **Amendment (2026-11-12, release 2.5.0).** The owner replaced the "Working Drawings" palette with the dark "Blueprint" direction: navy canvas, the logo gradient as the accent (through one token, never on text), Space Grotesk and JetBrains Mono, a sticky glass header, an interactive home page and the Node mascot. See [ADR 0014](../architecture/decisions/0014-blueprint-palette.md). The findings and the scene approach below stand; BR.10's paper/ink values, its "no gradients, no blur" rule and its "nothing loops" motion rule are superseded where ADR 0014 says so.
+
 ### BR.1 Current visual identity audit
 
 **Evidence basis.** No browser or screenshot tool was available in this session (no Chrome, no installed Playwright browsers; installing one is outside the audit's authority). The visual audit therefore rests on the design tokens, component source, the rendered HTML of every public page fetched from production on 2026-11-12, and pattern counts across the public UI source. Two dated Lighthouse screenshots in `docs/performance/baseline-2026-08-04/` show the pre-rebuild site and were used only to confirm continuity of the visual system (the repository states the "dark-native visual system, tokens, components" were kept through the 2026-09-17 rebuild). Pixel-level judgments (contrast measurements, spacing rhythm as rendered, animation smoothness) are **UNVERIFIED** and are assigned to the implementation session as the first verification task (TEST requirements).

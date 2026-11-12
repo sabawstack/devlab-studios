@@ -24,6 +24,7 @@ money, legal wording or a real data deletion are skipped and listed under
 | 10 | Data-touching jobs | done (PR #52, production at `8d17eca`); going live needs owner setup (Blockers 10–12) |
 | 11 | Product Worker split | not started: the redesign has shipped, so this is next once the Workers Paid plan decision (N7) is made |
 | 12 | Docs + release | v2.3.0 (PR #53) and **v2.4.0 released 2026-11-12** (PR #55); ADRs 0011–0013; full docs refresh (OPS-08) still open |
+| 13 | Blueprint rebrand | in progress on `feat/blueprint-rebrand` (target v2.5.0) |
 
 ## Blockers (owner)
 
@@ -214,3 +215,47 @@ PR #55 (`06501a8`, `37d736d`, release `033505f`); v2.4.0 tag and GitHub Release 
   - Pickleball shell on brand tokens (BR.16).
   - OPS-08 docs refresh.
   - Phase 11 (N7).
+
+## Phase 13 — Blueprint rebrand (target 2.5.0)
+
+**Plan.** Owner-approved "Blueprint" plan (2026-11-12): dark navy palette with
+the logo gradient, self-hosted Space Grotesk + JetBrains Mono, sticky glass
+shell, a new interactive home page, and Node as a secondary figure. Scope:
+home page + shared shell; every brand-layout page changes colour through the
+global tokens. Nav labels, header CTA label, routes, redirects and CMS data
+are unchanged. Decision record: ADR 0014.
+
+**Log.**
+
+| Step | Req | Status | Commit | Evidence |
+|---|---|---|---|---|
+| 0 | Branch from `origin/main` (`2748372`) | done | — | `feat/blueprint-rebrand` |
+| 1–3 | Token tests first, fonts, tokens, Tailwind, layout | done | `7e0e344` | Token test RED (20 failing) then 154/154. Fonts 22 KB + 40 KB = 62 KB. Visual pass on `/`, `/about`, `/contact`, a write-up and an article: readable on navy, scenes visible |
+| 4 | Shell: sticky glass nav, SVG mark, magenta current underline, footer sign-off + location | done | `9ba2b53` | Company test RED→GREEN; schema tests updated; header ≤ 64 px at 320/390/820/1440; footer test green |
+| 5 | NodeMascot (TDD) | done | `bcb1dc2` | 13 unit tests (role/title, decorative, states, distinct ids, slate + amber visor, packets only when active, ≤ 6 KB, no hex/script); `/brand` shows all states |
+| 6 | Home copy + guards (TDD) | done | `096a645` | `homeContent.test.js` RED (8) → 11/11 |
+| 7 | Home components + page | done | `096a645` | typecheck 0 errors, build OK; 1440 and 390 screenshots, no horizontal scroll |
+| 8 | e2e updates + `home-interactive.spec.js` | done | `096a645` | Static suite 225 passed, 1 skipped (pre-existing: no-article skip) |
+| 9 | Contact success state | done | `817f28b` | Assertions RED then contact-form 15/15 |
+| 10 | Social cards, icons, manifest | done | `6a61fd5` | 12 cards 45–59 KB; redesign + brand specs 33/33 |
+| 11 | Docs + changelog | done | this commit | ADR 0014, audit amendment, ADR 0012 status, scenes note, CHANGELOG `[Unreleased]` |
+| 12 | Full verification, visual capture, Lighthouse | pending | | |
+| 13 | PR, preview, release 2.5.0, production smoke | pending | | |
+
+**Deviations (rulings).**
+
+- The theme-color meta is exempt from the no-raw-hex guard (browsers read it before CSS).
+- Gradient buttons carry a navy scrim: white on bare magenta is only 3.1:1.
+- The inquiry form's submit button uses the gradient like every other primary action.
+- The schema privacy guard now forbids barangay and postal code instead of the city name "Lapu-Lapu" (owner decision 8; PROF-02 is city-level only, and Lapu-Lapu City is a city).
+- `Button.astro` wraps the global action classes; only `/brand` uses it.
+- The reliability grid puts rule 01 in a tall left column beside the other three; a two-row span would orphan the fourth card. Card 01 carries a three-line delivery log so it is not empty.
+- No `wide` prop on `PageHeader`: its aside grid is already 7/5.
+- The reliability card texts are the spec's, verbatim (including "summarizes").
+- The reduced-motion e2e uses `page.emulateMedia`: `test.use({ reducedMotion })` did not reach `matchMedia` in this config.
+- The Bricolage and Martian font files were removed (unreferenced after the swap). The web manifest's description dropped the retired portfolio tagline.
+
+- The About page's "Based in" fact and the profile's static fallback hard-coded "Cebu, Philippines"; both now read `COMPANY.locationLabel` (guarded by `company.test.js`). `/profile` shows the CMS profile row's own location, which was not changed (no D1 writes).
+
+**Open.** Filled in at steps 12–13.
+

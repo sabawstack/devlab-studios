@@ -1,6 +1,6 @@
 # 12. "Working Drawings" brand system and a code-owned scene registry
 
-**Status:** Accepted (B2B rebuild, Phase 4, 2026-11-12); all six scenes approved by the owner on 2026-11-12
+**Status:** Accepted (B2B rebuild, Phase 4, 2026-11-12); all six scenes approved by the owner on 2026-11-12. Palette, type and motion rules superseded by [ADR 0014](./0014-blueprint-palette.md) (Blueprint, 2026-11-12); the scene registry and approval gate stand.
 
 ## Context
 
