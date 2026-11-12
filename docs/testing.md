@@ -43,6 +43,16 @@ fast-forward push of `main` (see `docs/branch-workflow.md`), so the check is
 also enforced by process: push the branch, open the PR, and promote only the
 commit whose `validate` run is green.
 
+### Visual captures
+
+`scripts/visual/capture.mjs <baseUrl> <outDir> [--reduced-motion]` takes
+full-page screenshots of the canonical routes at 390x844, 820x1180 and
+1440x900. The **Visual capture** workflow (Actions → Visual capture → Run
+workflow) runs it against any URL and keeps the result as a 90-day artifact:
+production before a visual change ships, the preview URL for the page PR.
+Screenshots are never committed, because pages can show personal data; local
+runs go in the git-ignored `.visual/` folder.
+
 ### Fresh checkout
 
 The static suite works from a clean clone with no `.wrangler/state`: its web

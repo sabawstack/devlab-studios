@@ -61,3 +61,7 @@ scripts/dev/
 # the private backup bucket, never in git.
 backups/
 *.sqlite3
+
+# Local visual captures (scripts/visual/capture.mjs). Shared as CI artifacts,
+# never committed: pages can show personal data.
+/.visual/

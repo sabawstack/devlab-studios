@@ -1,0 +1,58 @@
+name: Visual capture
+
+# Full-page screenshots of the canonical routes at 390x844, 820x1180 and
+# 1440x900 (scripts/visual/capture.mjs), kept as a 90-day artifact. Run it
+# against production before a visual change ships (the "before") and against
+# the preview URL for a page PR (the "after"). Screenshots are never committed:
+# pages can show personal data.
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Site to capture
+        required: true
+        default: https://www.devlabstudios.com
+      label:
+        description: Artifact name suffix (e.g. production-baseline)
+        required: true
+        default: production
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Capture (motion on)
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+        run: node scripts/visual/capture.mjs "$BASE_URL" visual/default
+
+      - name: Capture (reduced motion)
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+        run: node scripts/visual/capture.mjs "$BASE_URL" visual/reduced-motion --reduced-motion
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: visual-${{ inputs.label }}
+          path: visual/
+          retention-days: 90
