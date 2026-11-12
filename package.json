@@ -27,7 +27,7 @@
     "lead-engine:zoho": "node scripts/lead-engine/zoho-setup.mjs"
   },
   "lint-staged": {
-    "*.{js,jsx}": "eslint --fix",
+    "*.{js,jsx,ts}": "eslint --fix",
     "*.css": "stylelint --fix"
   },
   "dependencies": {

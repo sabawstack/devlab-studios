@@ -55,7 +55,7 @@ decided against that surface specifically:
 
 - Dependabot now updates react, react-dom and their types together, and skips the Tailwind, TypeScript, ESLint and Vitest major versions that need a hand-made migration, so it stops opening update PRs that leave the two React packages on different versions or that cannot build.
 - The new `react-hooks/set-state-in-effect` and `react-hooks/refs` lint rules are warnings for now, and the unused LinkedIn and Twitter icon exports are gone (lucide 1.x removed brand icons), so the pending dev-tool and icon updates can build.
-
+- CI now runs on pull requests and pushes to both `development` and `main`, and runs typecheck, the unit suite and the static Playwright suite in addition to lint, build and the dependency audit; staged `.ts` files are linted on commit. Branch protection for the `validate` check is documented in docs/testing.md. (OPS-02)
 ### Fixed
 
 - The lead engine's "unanswered replies" list now orders messages by when they were sent or received instead of when their rows were inserted, so a reply recorded in the same millisecond as the inbound message (an import or a retry) is no longer listed as unanswered, and an outbound message sent before the inbound one no longer hides it.

@@ -20,6 +20,36 @@ wouldn't catch (several real bugs during that phase were only found because
 a full e2e flow was exercised — see `docs/content-model.md`'s history and
 git log for specifics).
 
+## What CI runs
+
+`.github/workflows/ci.yml` runs on every pull request and push to `main` and
+`development`, in this order, and fails the run on the first red step:
+
+1. `npm run lint`
+2. `npm run typecheck` (`astro check`)
+3. `npm run test:unit` (vitest)
+4. `npm run build`
+5. `npx audit-ci --config audit-ci.json` (production dependencies)
+6. `npx playwright test --project=static` (Chromium is cached by Playwright
+   version; traces are uploaded as an artifact when it fails)
+
+The `worker`, `admin-auth` and Safari projects are not in CI yet: run them
+locally when a change touches the admin, the Worker or pickleball.
+
+**Branch protection (a GitHub setting, not code).** In *Settings → Branches*,
+protect `main` and `development` with "Require status checks to pass before
+merging" and select the `validate` check. Production promotion is a
+fast-forward push of `main` (see `docs/branch-workflow.md`), so the check is
+also enforced by process: push the branch, open the PR, and promote only the
+commit whose `validate` run is green.
+
+### Fresh checkout
+
+The static suite works from a clean clone with no `.wrangler/state`: its web
+server applies the CMS migrations to the local D1, snapshots the state, and
+starts `astro preview` with remote bindings off (Workers AI is never called
+by a public page, and a remote proxy needs a Cloudflare login).
+
 ## Suite layout
 
 `tests/e2e/*.spec.js`, run via `npx playwright test`. Two Playwright
