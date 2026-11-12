@@ -106,7 +106,7 @@ function clearSessionCookie(c) {
   return `${SESSION_COOKIE}=; ${getCookieOptions(c, 0)}`
 }
 
-function getConfiguredAdmins(env) {
+export function getConfiguredAdmins(env) {
   if (env.ADMIN_USERS) {
     try {
       const users = JSON.parse(env.ADMIN_USERS)
@@ -614,6 +614,15 @@ export async function requireAdmin(c, next) {
       const passwordChangedAt = await getPasswordChangedAtSeconds(c.env.DB, session.email)
       if (passwordChangedAt > 0 && Number(session.iat || 0) < passwordChangedAt) {
         return jsonResponse({ error: 'Your password changed. Please sign in again.' }, 401)
+      }
+
+      // The account must still exist (CMS-04): removing a CMS-managed login
+      // ends its live sessions on their next request, instead of leaving them
+      // valid for the rest of their 8 hours. The environment bootstrap admin
+      // always resolves. Fails closed: an unreadable credential table only
+      // refuses logins that exist nowhere but D1.
+      if (!(await resolveAdmin(c.env, session.email))) {
+        return jsonResponse({ error: 'This admin login no longer exists.' }, 401)
       }
 
       c.set('adminEmail', session.email)

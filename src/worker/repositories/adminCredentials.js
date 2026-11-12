@@ -78,3 +78,32 @@ export async function upsertAdminCredential(db, { email, passwordHash, role = 'o
 
   return { email: normalizedEmail, role, passwordChangedAt: timestamp }
 }
+
+/**
+ * Every CMS-managed login, without its hash (CMS-04 / SEC-02).
+ *
+ * @param {import('@cloudflare/workers-types').D1Database} db
+ */
+export async function listAdminCredentials(db) {
+  const result = await db
+    .prepare('SELECT email, role, password_changed_at, created_at, updated_at FROM admin_credentials ORDER BY created_at ASC')
+    .all()
+  return (result.results || []).map((row) => ({
+    email: row.email,
+    role: row.role,
+    passwordChangedAt: row.password_changed_at,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }))
+}
+
+/**
+ * Removes a CMS-managed login. Its sessions stop working on their next request
+ * (requireAdmin checks that the account still exists). Does not swallow errors.
+ *
+ * @param {import('@cloudflare/workers-types').D1Database} db
+ */
+export async function deleteAdminCredential(db, email) {
+  const result = await db.prepare('DELETE FROM admin_credentials WHERE email = ?').bind(String(email || '').trim().toLowerCase()).run()
+  return Number(result?.meta?.changes || 0) > 0
+}

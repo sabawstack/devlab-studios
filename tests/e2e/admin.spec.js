@@ -1244,6 +1244,35 @@ test('the password change endpoint rejects an unauthenticated caller', async ({ 
   expect(response.status()).toBe(401)
 })
 
+// CMS-04 / SEC-02: a second operator gets their own login; removing it works
+// and the bootstrap login and your own cannot be removed.
+test('an admin can add and remove a second login', async ({ page, baseURL }) => {
+  await login(page)
+  const email = `second-${Date.now()}@example.com`
+  const created = await page.request.post(`${baseURL}/api/admin/credentials`, { data: { email, password: 'second-login-password' } })
+  expect(created.status(), await created.text()).toBe(201)
+  const list = await (await page.request.get(`${baseURL}/api/admin/credentials`)).json()
+  expect(list.logins.map((entry) => entry.email)).toContain(email)
+  expect(JSON.stringify(list)).not.toMatch(/pbkdf2/)
+
+  const second = await playwrightSignIn(page, baseURL, email, 'second-login-password')
+  expect(second).toBe(200)
+
+  expect((await page.request.post(`${baseURL}/api/admin/credentials`, { data: { email, password: 'second-login-password' } })).status()).toBe(409)
+  expect((await page.request.delete(`${baseURL}/api/admin/credentials?email=${encodeURIComponent(list.currentEmail)}`)).status()).toBe(409)
+  expect((await page.request.delete(`${baseURL}/api/admin/credentials?email=${encodeURIComponent(email)}`)).status()).toBe(200)
+})
+
+async function playwrightSignIn(page, baseURL, email, password) {
+  const context = await page.context().browser().newContext()
+  try {
+    const response = await context.request.post(`${baseURL}/api/admin/login`, { data: { email, password }, headers: { Origin: baseURL } })
+    return response.status()
+  } finally {
+    await context.close()
+  }
+}
+
 test('the Security screen refuses a wrong current password', async ({ page }) => {
   await login(page)
   await openAdminNavGroup(page, 'Operations')

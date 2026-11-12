@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { adminApi } from '../lib/adminApi'
 import { Eye, EyeOff, ShieldCheck } from '../../components/icons/icons'
+import AdminLoginsPanel from '../components/AdminLoginsPanel'
 
 const MIN_PASSWORD_LENGTH = 12
 
@@ -161,6 +162,8 @@ function SecurityPage() {
           </p>
         ) : null}
       </form>
+
+      <AdminLoginsPanel minPasswordLength={MIN_PASSWORD_LENGTH} />
     </div>
   )
 }
