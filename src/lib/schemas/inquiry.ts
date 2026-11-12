@@ -36,6 +36,17 @@ export const CONTACT_FORM_INQUIRY_TYPES: InquiryType[] = INQUIRY_TYPES.filter(
   (type) => !PRODUCT_INQUIRY_TYPES.includes(type),
 )
 
+/**
+ * The contact form select, grouped so a buyer sees business options first and
+ * the employment path is clearly separate (audit LEAD-03). Every type in
+ * CONTACT_FORM_INQUIRY_TYPES appears in exactly one group.
+ */
+export const CONTACT_FORM_INQUIRY_GROUPS: { label: string; types: InquiryType[] }[] = [
+  { label: 'A business system', types: ['business_system', 'software_project', 'workflow_audit', 'operations_care'] },
+  { label: 'Something else', types: ['partnership', 'general'] },
+  { label: 'Working with Stephen', types: ['employment_opportunity', 'contract_collaboration'] },
+]
+
 export function isProductInquiry(type: InquiryType): boolean {
   return PRODUCT_INQUIRY_TYPES.includes(type)
 }

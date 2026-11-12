@@ -332,24 +332,45 @@ test('a page version can be restored', async ({ page, baseURL }) => {
   expect(reset.ok()).toBeTruthy()
 })
 
-// Both tests below edit the /process page, so they run one after the other.
-test.describe.serial('the /process page', () => {
+// Both tests below edit the CMS Work page -- since the 2.4.0 redesign its
+// narratives are the CMS copy the public /work page renders -- so they run one
+// after the other.
+// A Work page with one synthetic narrative (the Work API only accepts projects
+// that exist in the database, so the test creates its own).
+const workPageWith = (projectId, marker, status) => ({
+  slug: 'work',
+  title: 'Work',
+  status,
+  blocks: [{
+    type: 'workProjectShowcase',
+    props: {
+      heading: 'Selected systems',
+      items: [{ projectId, description: 'Synthetic write-up for an e2e test.', challenge: marker, systemArchitecture: 'Synthetic system.', deliveryValue: 'Synthetic value.', status: 'published' }],
+    },
+  }],
+})
+// Put the page back; a database that never had one goes back to an empty draft,
+// which the public page treats as "not saved" (it renders the bundled copy).
+const restoreWorkPage = (page, baseURL, original) => page.request.put(`${baseURL}/api/admin/pages/work`, {
+  data: original?.blocks?.length ? original : { slug: 'work', title: 'Work', status: 'draft', blocks: [] },
+})
+
+test.describe.serial('the /work page', () => {
   // CMS-04: a signed preview link shows one page's draft, uncached and unindexed;
   // without it (or with a tampered one) the public page shows published content.
   test('a draft page is visible only through its preview link', async ({ page, baseURL }) => {
     await login(page)
-    const original = await (await page.request.get(`${baseURL}/api/admin/pages/process`)).json()
+    const original = await (await page.request.get(`${baseURL}/api/admin/pages/work`)).json()
     const marker = `Draft preview marker ${Date.now()}`
+    const projectId = await createProject(page, baseURL, { title: 'Preview Test System', status: 'published' })
     try {
-      const saved = await page.request.put(`${baseURL}/api/admin/pages/process`, {
-        data: { slug: 'process', title: 'Process', status: 'draft', blocks: [{ type: 'richText', props: { heading: marker, body: 'Draft body.' } }] },
-      })
+      const saved = await page.request.put(`${baseURL}/api/admin/pages/work`, { data: workPageWith(projectId, marker, 'draft') })
       expect(saved.ok(), await saved.text()).toBeTruthy()
 
-      const publicHtml = await (await page.request.get(`${baseURL}/process`)).text()
+      const publicHtml = await (await page.request.get(`${baseURL}/work`)).text()
       expect(publicHtml).not.toContain(marker)
 
-      const { url } = await (await page.request.get(`${baseURL}/api/admin/preview-token?type=page&id=process`)).json()
+      const { url } = await (await page.request.get(`${baseURL}/api/admin/preview-token?type=page&id=work`)).json()
       const preview = await page.request.get(`${baseURL}${url}`)
       expect(await preview.text()).toContain(marker)
       expect(preview.headers()['cache-control']).toMatch(/no-store/)
@@ -358,10 +379,11 @@ test.describe.serial('the /process page', () => {
       const tampered = await page.request.get(`${baseURL}${url.slice(0, -3)}abc`)
       expect(await tampered.text()).not.toContain(marker)
 
-      const wrongPage = url.replace('/process?', '/about?')
+      const wrongPage = url.replace('/work?', '/about?')
       expect(await (await page.request.get(`${baseURL}${wrongPage}`)).text()).not.toContain(marker)
     } finally {
-      if (original?.blocks?.length) await page.request.put(`${baseURL}/api/admin/pages/process`, { data: original })
+      await restoreWorkPage(page, baseURL, original)
+      await page.request.delete(`${baseURL}/api/admin/projects/${projectId}`, { headers: { Origin: baseURL } })
     }
   })
 
@@ -369,21 +391,21 @@ test.describe.serial('the /process page', () => {
   // page shows the change on the next request instead of after the TTL.
   test('a saved page shows on the public site immediately despite the HTML cache', async ({ page, baseURL }) => {
     await login(page)
-    const original = await (await page.request.get(`${baseURL}/api/admin/pages/process`)).json()
+    const original = await (await page.request.get(`${baseURL}/api/admin/pages/work`)).json()
     const marker = `Cache purge marker ${Date.now()}`
+    const projectId = await createProject(page, baseURL, { title: 'Cache Test System', status: 'published' })
     try {
       // Other tests save content in parallel, which (correctly) starts a new
       // cache generation; poll until this page is warm in the current one.
-      await expect.poll(async () => (await page.request.get(`${baseURL}/process`)).headers()['x-devlab-cache'], { timeout: 10_000 }).toBe('HIT')
+      await expect.poll(async () => (await page.request.get(`${baseURL}/work`)).headers()['x-devlab-cache'], { timeout: 10_000 }).toBe('HIT')
 
-      const saved = await page.request.put(`${baseURL}/api/admin/pages/process`, {
-        data: { slug: 'process', title: 'Process', status: 'published', blocks: [{ type: 'richText', props: { heading: marker, body: 'Published body.' } }] },
-      })
+      const saved = await page.request.put(`${baseURL}/api/admin/pages/work`, { data: workPageWith(projectId, marker, 'published') })
       expect(saved.ok(), await saved.text()).toBeTruthy()
 
-      await expect.poll(async () => (await (await page.request.get(`${baseURL}/process`)).text()).includes(marker), { timeout: 5_000 }).toBe(true)
+      await expect.poll(async () => (await (await page.request.get(`${baseURL}/work`)).text()).includes(marker), { timeout: 5_000 }).toBe(true)
     } finally {
-      if (original?.blocks?.length) await page.request.put(`${baseURL}/api/admin/pages/process`, { data: original })
+      await restoreWorkPage(page, baseURL, original)
+      await page.request.delete(`${baseURL}/api/admin/projects/${projectId}`, { headers: { Origin: baseURL } })
     }
   })
 })

@@ -1,545 +1,130 @@
 ---
-import { draftPreviewFor } from '../lib/content/preview'
-import Layout from '../layouts/Layout.astro'
-import SectionHeader from '../components/SectionHeader.jsx'
-import PrimaryButton from '../components/PrimaryButton.jsx'
-import VectorField from '../components/VectorField.astro'
-import LivingSystems from '../components/LivingSystems.astro'
-import * as Icons from '../components/icons/icons.js'
-import { ArrowRight, CheckCircle2, ShieldCheck, User } from '../components/icons/icons.js'
-import { getFaqSchema, getOrganizationSchema, getWebsiteSchema } from '../config/schema.js'
+/**
+ * Home (audit UX-06 / BR.9 / BR.14). Six sections, each answering one of the
+ * buyer's questions and naming its next step: who we are and what we build
+ * (hero), which problems (S1 → S2), what we build (three service lines), why
+ * trust us (Work figures, then S3 and the reliability rules), how to start
+ * (S6 and the audit). Copy lives in src/data/site/content.js; Work entries
+ * come from the CMS through loadWorkEntries.
+ */
+import BrandLayout from '../layouts/BrandLayout.astro'
+import PageHeader from '../components/brand/PageHeader.astro'
+import Section from '../components/brand/Section.astro'
+import SceneFrame from '../components/brand/SceneFrame.astro'
+import Figure from '../components/brand/Figure.astro'
+import Portrait from '../components/brand/Portrait.astro'
+import { createFigureCounter } from '../components/brand/figures'
+import { getOrganizationSchema, getWebsiteSchema } from '../config/schema.js'
+import { COMPANY } from '../config/company.js'
 import { loadPageSeo } from '../lib/content/seo'
-import { loadPage } from '../lib/content/pages'
-import { loadProjects } from '../lib/content/projects'
-import { loadArticlesContent } from '../lib/content/articles'
-import {
-  deliveryApproach,
-  operationalProblems,
-  reliabilityPrinciples,
-  solutionCategories,
-} from '../data/solutionsContent.js'
-import { getLeadMagnet } from '../config/offers.js'
-import HeroRallyArt from '../components/pickleball/art/HeroRallyArt.jsx'
-// Animation keyframes for the pickleball art; animation-only rules scoped to
-// .pb-anim, so nothing else on the home page is restyled.
-import '../styles/pickleball-open.css'
-
-// Copy claims only shipped behaviour of /pickleball (see its landing page).
-const pickleballProof = [
-  'Fair rotation on up to 16 courts: paddle stack, winners play winners, by standing or balanced teams.',
-  'Players follow every court by QR, and a TV board shows the hall. Nobody needs an account.',
-  'Tournaments too: round robin, pools then a bracket, or single or double elimination.',
-]
-
-function resolveIcon(name: string) {
-  return (Icons as Record<string, typeof Icons.Lightbulb>)[name] || Icons.Lightbulb
-}
+import { loadWorkEntries } from '../lib/content/work'
+import { HOME, OFFER_AUDIT, RELIABILITY_PRINCIPLES, SERVICE_LINES } from '../data/site/content.js'
 
 const seo = await loadPageSeo('home')
-const homePage = await loadPage('home', { includeDrafts: await draftPreviewFor(Astro, { type: 'page', id: 'home' }) })
-const workPage = await loadPage('work')
-const projects = await loadProjects()
-const { posts } = await loadArticlesContent()
-
-/**
- * Every section below reads its copy from the CMS block of the matching type
- * and falls back to the bundled default. That is the existing pattern on this
- * page — it keeps the page renderable before an editor has ever saved it,
- * which is what the static-fallback rule in AGENTS.md is about.
- */
-const blocks = homePage?.blocks || []
-const heroBlock = blocks.find((block) => block.type === 'hero')?.props || {}
-const problemBlock = blocks.find((block) => block.type === 'problemList')?.props || {}
-const solutionsBlock = blocks.find((block) => block.type === 'servicesGrid')?.props || {}
-const proofBlock = blocks.find((block) => block.type === 'workProjectShowcase')?.props || {}
-const approachBlock = blocks.find((block) => block.type === 'processSteps')?.props || {}
-const principlesBlock = blocks.find((block) => block.type === 'stats')?.props || {}
-const magnetBlock = blocks.find((block) => block.type === 'leadMagnet')?.props || {}
-const founderBlock = blocks.find((block) => block.type === 'richText')?.props || {}
-const faqBlock = blocks.find((block) => block.type === 'faq')?.props || {}
-const ctaBlock = blocks.find((block) => block.type === 'cta')?.props || {}
-
-const heroHeading = String(
-  heroBlock.heading || 'Build the systems your business needs to capture opportunities and operate reliably.',
-)
-const heroSubheading = String(
-  heroBlock.subheading ||
-    'DevLab Studios designs and connects conversion websites, backend services, structured data, CRM workflows, and AI automation into maintainable business systems.',
-)
-const heroKicker = String(heroBlock.kicker || heroBlock.eyebrow || 'Software and automation studio')
-const heroPrimary = (heroBlock.primaryCta as { label?: string; href?: string } | undefined) || {}
-const heroSecondary = (heroBlock.secondaryCta as { label?: string; href?: string } | undefined) || {}
-const heroSignals = Array.isArray(heroBlock.capabilities) && heroBlock.capabilities.length
-  ? heroBlock.capabilities
-  : [
-      { label: '01 / Capture', value: 'Intake and follow-up that never drops an inquiry' },
-      { label: '02 / Operate', value: 'Automation with visible failures and real owners' },
-      { label: '03 / Build', value: 'Interfaces, APIs, and data that outlive the first release' },
-    ]
-
-const problems = Array.isArray(problemBlock.items) && problemBlock.items.length ? problemBlock.items : operationalProblems
-
-/** Work items already carry an editor-approved, verified narrative — reuse them rather than inventing proof. */
-const workShowcase = workPage?.blocks.find((block) => block.type === 'workProjectShowcase')?.props || {}
-const projectsById = new Map(projects.map((project) => [project.id, project]))
-const featuredProof = (Array.isArray(workShowcase.items) ? workShowcase.items : [])
-  .filter((item: Record<string, unknown>) => item.status === 'published')
-  .flatMap((item: Record<string, unknown>) => {
-    const project = projectsById.get(String(item.projectId || ''))
-    return project ? [{ project, narrative: item }] : []
-  })
-  .slice(0, 3)
-
-const approachSteps = Array.isArray(approachBlock.steps) && approachBlock.steps.length
-  ? approachBlock.steps.map((step: Record<string, unknown>, index: number) => ({
-      step: String(index + 1).padStart(2, '0'),
-      title: String(step.title || deliveryApproach[index]?.title || ''),
-      description: String(step.description || deliveryApproach[index]?.description || ''),
-      outcomes: Array.isArray(step.outcomes) && step.outcomes.length ? step.outcomes : deliveryApproach[index]?.outcomes || [],
-      icon: String(step.icon || deliveryApproach[index]?.icon || 'Settings'),
-    }))
-  : deliveryApproach
-
-const principles = Array.isArray(principlesBlock.items) && principlesBlock.items.length
-  ? principlesBlock.items
-  : reliabilityPrinciples
-
-// An unknown offerId from the CMS falls back to the default rather than
-// rendering a card with no destination.
-const magnetOffer = getLeadMagnet(String(magnetBlock.offerId || '')) || getLeadMagnet('lead-intake-checklist')
-// SEO-08: business pages promote articles written for owners, never the
-// technical AI updates; any non-technical article if no owner article exists.
-const publishedInsights = posts.filter((post) => post.status !== 'draft')
-const latestInsight = publishedInsights.find((post) => (post as { audience?: string }).audience === 'owner')
-  || publishedInsights.find((post) => (post as { audience?: string }).audience !== 'technical')
-  || null
-
-const defaultFaqs = [
-  {
-    question: 'Do you only build automations?',
-    answer:
-      'No. Automation is one layer. The same engagements regularly include a conversion website, backend services, an API, a data model, dashboards, or an internal tool — whichever the workflow actually needs.',
-  },
-  {
-    question: 'Can you work with the tools we already use?',
-    answer:
-      'Yes. Systems are built around the CRM, forms, spreadsheets, inbox, and task tools already in place, using n8n, Make, Zapier, or direct API integration depending on what stays maintainable.',
-  },
-  {
-    question: 'What happens if an integration goes down?',
-    answer:
-      'Submissions are stored before any external delivery is attempted, every delivery attempt is recorded, and failed attempts stay visible to an administrator who can retry them. An outage leaves work undelivered, not lost.',
-  },
-  {
-    question: 'How does a project start?',
-    answer:
-      'With a workflow review. The goal is to understand the business problem, map the current process, and define the smallest reliable system that solves it before any build work begins.',
-  },
-  {
-    question: 'Who does the work?',
-    answer:
-      'Stephen Rey Agustinez, the founder, designs and implements the systems delivered through DevLab Studios. The Founder Profile lists the full technical background.',
-  },
-]
-const faqs = Array.isArray(faqBlock.items) && faqBlock.items.length ? faqBlock.items : defaultFaqs
-
-const jsonLd = [getOrganizationSchema(), getWebsiteSchema(), getFaqSchema(faqs)]
+const work = (await loadWorkEntries()).slice(0, 3)
+const figures = createFigureCounter()
+const jsonLd = [getOrganizationSchema(), getWebsiteSchema()]
 ---
 
-<Layout
-  title="DevLab Studios — Software and Automation Systems for Businesses"
-  seo={seo}
-  jsonLd={jsonLd}
->
-  <div>
-    <!-- 1. Outcome-focused hero -->
-    <section class="home-landing cinematic-panel relative overflow-hidden rounded-[2rem] p-6 text-white sm:p-9 lg:p-12">
-      <VectorField motif="fullstack" />
-      <div class="home-landing__grid relative z-10 grid items-center gap-10 lg:grid-cols-[1.04fr_0.96fr]">
-        <div class="home-landing__copy space-y-7 lg:py-8">
-          <p class="tech-kicker">{heroKicker}</p>
-          <div class="space-y-5">
-            <h1 class="text-[clamp(2rem,4.4vw,3.25rem)] font-semibold leading-[1.08] tracking-[-0.03em] text-white">
-              {heroHeading}
-            </h1>
-            <p class="max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">{heroSubheading}</p>
-          </div>
-
-          <div class="flex flex-wrap gap-3">
-            <PrimaryButton
-              to={heroPrimary.href || '/contact?type=business_system'}
-              variant="primary"
-              showIcon
-              data-cta-id="home-hero-primary"
-              data-cta-variant="primary"
-              data-inquiry-type="business_system"
-            >
-              {heroPrimary.label || 'Discuss Your System'}
-            </PrimaryButton>
-            <PrimaryButton
-              to={heroSecondary.href || '/work'}
-              variant="secondary"
-              data-cta-id="home-hero-secondary"
-              data-cta-variant="secondary"
-            >
-              {heroSecondary.label || 'View Our Work'}
-            </PrimaryButton>
-          </div>
-
-          <div class="home-landing__capabilities">
-            {heroSignals.map(({ label, value }: { label: string; value: string }) => (
-              <div>
-                <p>{label}</p>
-                <p>{value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <LivingSystems contentNodes={heroBlock.canvasNodes} statusLabel={String(heroBlock.statusLabel || 'System online')} />
+<BrandLayout title="DevLab Studios · Operations software that holds up" seo={seo} jsonLd={jsonLd}>
+  <PageHeader eyebrow={HOME.hero.eyebrow} heading={HOME.hero.heading} lead={HOME.hero.lead} ink>
+    <a href="/contact?type=business_system" class="dl-button-primary" data-cta-id="home-hero-primary" data-cta-variant="primary" data-inquiry-type="business_system">{HOME.hero.primary.label}</a>
+    <a href={HOME.hero.secondary.href} class="dl-button-quiet" data-cta-id="home-hero-secondary" data-cta-variant="secondary">{HOME.hero.secondary.label}</a>
+    <div slot="aside" class="flex items-center gap-5 border-t border-dl-rule pt-6 lg:flex-col lg:items-start lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0" data-founder-strip>
+      <Portrait size={128} loading="eager" class="shrink-0" />
+      <div>
+        <p class="text-step--1 text-dl-ink-2">{HOME.founder.text}</p>
+        <a href={COMPANY.founder.profilePath} class="label mt-3 inline-block text-dl-ink">{HOME.founder.linkLabel}</a>
       </div>
-    </section>
+    </div>
+  </PageHeader>
 
-    <!-- 2. The operational problems -->
-    <section class="chapter space-y-6" aria-labelledby="home-problems">
-      <SectionHeader
-        title={String(problemBlock.heading || 'The problems these systems are built to remove')}
-        subtitle={String(
-          problemBlock.subheading ||
-            'These are the failure modes that cost a business opportunities quietly, without anything obviously breaking.',
-        )}
-      />
-      <h2 id="home-problems" class="sr-only">Operational problems DevLab Studios addresses</h2>
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {problems.map((problem: { title: string; description?: string; icon?: string }) => {
-          const Icon = resolveIcon(problem.icon || 'AlertTriangle')
-          return (
-            <article class="light-artifact flex h-full flex-col gap-3 rounded-2xl bg-white/[0.94] p-5 shadow-[0_12px_28px_rgba(60,28,120,0.08)] ring-1 ring-slate-200">
-              <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-mint text-brand-teal">
-                <Icon className="h-5 w-5" aria-hidden="true" />
-              </span>
-              <h3 class="text-base font-semibold text-brand-ink">{problem.title}</h3>
-              {problem.description ? <p class="text-sm leading-relaxed text-slate-600">{problem.description}</p> : null}
-            </article>
-          )
-        })}
-      </div>
-    </section>
+  <Section id="home-problems" eyebrow={HOME.problems.eyebrow} heading={HOME.problems.heading} intro={HOME.problems.text}>
+    <div class="mt-10 grid gap-10 lg:grid-cols-2">
+      <SceneFrame sceneId="fragmented-intake" figure={figures.next()} />
+      <SceneFrame sceneId="connected-system" figure={figures.next()} />
+    </div>
+    <a href="/solutions" class="dl-button-quiet mt-8" data-cta-id="home-problems-solutions">How we fix it</a>
+  </Section>
 
-    <!-- 3. Solution categories -->
-    <section class="chapter space-y-6" aria-labelledby="home-solutions">
-      <SectionHeader
-        title={String(solutionsBlock.heading || 'Four ways that gets solved')}
-        subtitle={String(
-          solutionsBlock.subheading ||
-            'Each one is a complete system — the interface, the logic, the data, the integrations, and the handoff to a person.',
-        )}
-      />
-      <h2 id="home-solutions" class="sr-only">Solution categories</h2>
-      <div class="grid gap-4 md:grid-cols-2">
-        {solutionCategories.map((category) => {
-          const Icon = resolveIcon(category.icon)
-          return (
-            <article
-              class="light-artifact flex h-full flex-col gap-4 rounded-[1.75rem] bg-gradient-to-br from-[#fff9ff] via-[#fbf9ff] to-[#f2efff] p-6 shadow-[0_18px_38px_rgba(48,28,114,0.12)] sm:p-7"
-              data-view-event="solution_view"
-              data-solution-id={category.id}
-            >
-              <div class="flex items-start gap-3">
-                <span class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-mint text-brand-teal">
-                  <Icon className="h-5 w-5" aria-hidden="true" />
-                </span>
-                <div>
-                  <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">{category.eyebrow}</p>
-                  <h3 class="text-xl font-semibold text-brand-ink sm:text-2xl">{category.title}</h3>
-                </div>
-              </div>
-              <p class="text-sm leading-relaxed text-slate-700">{category.description}</p>
-              <p class="flex items-start gap-2 text-sm font-medium text-brand-ink">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-teal" aria-hidden="true" />
-                <span>{category.outcome}</span>
-              </p>
-              <a
-                href={`/solutions#${category.id}`}
-                class="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-brand-teal transition hover:text-brand-orange"
-              >
-                What this includes
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </a>
-            </article>
-          )
-        })}
-      </div>
-    </section>
-
-    <!-- 4. Verified project proof -->
-    {featuredProof.length > 0 ? (
-      <section class="chapter space-y-6" aria-labelledby="home-proof">
-        <SectionHeader
-          title={String(proofBlock.heading || 'Systems already running')}
-          subtitle={String(
-            proofBlock.subheading ||
-              'Each write-up describes the problem, the system designed for it, and what the system verifiably does — not what it is claimed to have earned.',
-          )}
-        />
-        <h2 id="home-proof" class="sr-only">Featured work</h2>
-        <div class="grid gap-4 lg:grid-cols-3">
-          {featuredProof.map(({ project, narrative }) => (
-            <article class="light-artifact flex h-full flex-col gap-4 rounded-2xl bg-white/[0.94] p-6 shadow-[0_14px_32px_rgba(60,28,120,0.10)] ring-1 ring-slate-200">
-              <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">{project.type} system</p>
-              <h3 class="text-lg font-semibold leading-snug text-brand-ink">{project.title}</h3>
-              <p class="text-sm leading-relaxed text-slate-600">{String(narrative.challenge || narrative.description || '')}</p>
-              <div class="flex flex-wrap gap-2">
-                {(project.techStack || []).slice(0, 4).map((technology: string) => (
-                  <span class="rounded-full border border-slate-200 bg-[#faf8ff] px-2.5 py-1 text-[0.7rem] font-semibold text-slate-600">
-                    {technology}
-                  </span>
-                ))}
-              </div>
-              <a
-                href="/work"
-                class="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-brand-teal transition hover:text-brand-orange"
-              >
-                Read the system write-up
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </a>
-            </article>
-          ))}
-        </div>
-      </section>
-    ) : null}
-
-    <!-- 4b. Product built and run by the studio -->
-    <section class="chapter-dark p-6 sm:p-8 lg:p-10" aria-labelledby="home-product" data-testid="home-pickleball">
-      <div class="grid gap-2 lg:grid-cols-[1fr_1fr] lg:items-center lg:gap-12">
-        <div class="space-y-5">
-          <p class="tech-kicker">Built by DevLab</p>
-          <h2 id="home-product" class="text-3xl font-semibold leading-tight text-white sm:text-4xl">Devlab Pickleball</h2>
-          <p class="max-w-xl text-white/75 sm:text-lg">
-            A free web app this studio builds and runs: host open play or a casual tournament for your group from one phone.
-          </p>
-          <ul class="space-y-2.5 text-sm text-white/80 sm:text-base">
-            {pickleballProof.map((point) => (
-              <li class="flex gap-2.5 leading-relaxed">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#c6ff2e] sm:mt-1" aria-hidden="true" />
-                <span>{point}</span>
-              </li>
-            ))}
-          </ul>
-          <div class="flex flex-wrap gap-3 pt-1">
-            <PrimaryButton to="/pickleball/new?ref=home" data-cta-id="home-pickleball-primary" data-cta-variant="primary" showIcon>
-              Start a free session
-            </PrimaryButton>
-            <PrimaryButton to="/pickleball?ref=home" variant="secondary" data-cta-id="home-pickleball-secondary" data-cta-variant="secondary">
-              See how it works
-            </PrimaryButton>
-          </div>
-        </div>
-        <div class="pb-anim mx-auto -mt-8 w-full max-w-xl lg:mt-0" data-testid="pb-artwork">
-          <HeroRallyArt className="h-auto w-full" />
-        </div>
-      </div>
-    </section>
-
-    <!-- 5. Delivery approach -->
-    <section class="chapter space-y-6" aria-labelledby="home-approach">
-      <SectionHeader
-        title={String(approachBlock.heading || 'How delivery works')}
-        subtitle={String(
-          approachBlock.subheading ||
-            'Four phases: understand the workflow, agree the system, build it in stages, and hand it over so the team can run it.',
-        )}
-      />
-      <h2 id="home-approach" class="sr-only">Delivery approach</h2>
-      <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {approachSteps.map((item: { step: string; title: string; description: string; outcomes: string[]; icon: string }) => {
-          const Icon = resolveIcon(item.icon)
-          return (
-            <article class="light-artifact flex h-full flex-col gap-3 rounded-2xl bg-white/[0.94] p-5 shadow-[0_12px_28px_rgba(60,28,120,0.08)] ring-1 ring-slate-200">
-              <div class="flex items-center gap-3">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-mint text-brand-teal">
-                  <Icon className="h-5 w-5" aria-hidden="true" />
-                </span>
-                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">Phase {item.step}</p>
-              </div>
-              <h3 class="text-lg font-semibold text-brand-ink">{item.title}</h3>
-              <p class="text-sm leading-relaxed text-slate-600">{item.description}</p>
-              <ul class="mt-auto space-y-1.5 text-sm text-slate-700">
-                {item.outcomes.map((outcome: string) => (
-                  <li class="flex gap-2 leading-relaxed">
-                    <ArrowRight className="mt-1 h-3.5 w-3.5 flex-shrink-0 text-brand-teal" aria-hidden="true" />
-                    <span>{outcome}</span>
-                  </li>
-                ))}
-              </ul>
-            </article>
-          )
-        })}
-      </div>
-    </section>
-
-    <!-- 6. Reliability principles -->
-    <section class="chapter-dark p-6 sm:p-8 lg:p-10" aria-labelledby="home-principles">
-      <div class="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
-        <div class="space-y-4">
-          <p class="tech-kicker">{String(principlesBlock.heading ? '' : 'Reliability')}</p>
-          <h2 id="home-principles" class="text-3xl font-semibold leading-tight text-white">
-            {String(principlesBlock.heading || 'What "reliable" has to mean before a system ships')}
-          </h2>
-          <p class="text-white/75">
-            {String(
-              principlesBlock.subheading ||
-                'These are not aspirations. They are the rules this studio builds to — including on this website, whose own inquiry pipeline works exactly this way.',
-            )}
-          </p>
-          <p class="flex items-start gap-2 text-sm text-white/60">
-            <ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-violet-300" aria-hidden="true" />
-            <span>Every layer has a purpose, and every handoff stays visible.</span>
-          </p>
-        </div>
-        <div class="grid gap-3 sm:grid-cols-2">
-          {principles.map((principle: { label: string; value: string }) => (
-            <div class="rounded-2xl border border-white/10 bg-white/[0.07] p-5 backdrop-blur-sm">
-              <p class="text-base font-semibold text-white">{principle.label}</p>
-              <p class="mt-2 text-sm leading-relaxed text-white/70">{principle.value}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-
-    <!-- 7. Insight + lead magnet -->
-    <section class="chapter grid gap-4 lg:grid-cols-[1.05fr_0.95fr]" aria-labelledby="home-insight">
-      <article class="light-artifact flex flex-col gap-4 rounded-[1.75rem] bg-white/[0.94] p-6 shadow-[0_14px_32px_rgba(60,28,120,0.10)] ring-1 ring-slate-200 sm:p-8">
-        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">
-          {String(magnetBlock.eyebrow || 'Free resource')}
-        </p>
-        <h2 id="home-insight" class="text-2xl font-semibold text-brand-ink">
-          {String(magnetBlock.heading || magnetOffer.title)}
-        </h2>
-        <p class="text-sm leading-relaxed text-slate-600">{String(magnetBlock.body || magnetOffer.summary)}</p>
-        <div class="mt-auto flex flex-wrap gap-3">
-          <PrimaryButton
-            to={`/offers/${magnetOffer.id}`}
-            variant="primary"
-            showIcon
-            data-cta-id="home-lead-magnet"
-            data-cta-variant="primary"
-            data-offer-id={magnetOffer.id}
-          >
-            Get the checklist
-          </PrimaryButton>
-          <PrimaryButton to={magnetOffer.path} variant="secondary" data-cta-id="home-lead-magnet-read" data-cta-variant="secondary">
-            Read it on the site
-          </PrimaryButton>
-        </div>
-      </article>
-
-      {latestInsight ? (
-        <article class="light-artifact flex flex-col gap-3 rounded-[1.75rem] bg-gradient-to-br from-[#f7fbff] via-white to-[#f3edff] p-6 shadow-[0_14px_32px_rgba(60,28,120,0.08)] ring-1 ring-slate-200 sm:p-8">
-          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">Latest insight</p>
-          <h3 class="text-xl font-semibold leading-snug text-brand-ink">{latestInsight.title}</h3>
-          <p class="text-sm leading-relaxed text-slate-600">{latestInsight.summary}</p>
-          <a
-            href={`/insights/${latestInsight.slug}`}
-            class="mt-auto inline-flex items-center gap-1.5 text-sm font-semibold text-brand-teal transition hover:text-brand-orange"
-          >
-            Read the article
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+  <Section id="home-solutions" eyebrow={HOME.solutions.eyebrow} heading={HOME.solutions.heading} class="border-t border-dl-rule">
+    <ol class="mt-10 grid gap-px overflow-hidden rounded-dl-s border border-dl-rule bg-dl-rule md:grid-cols-3">
+      {SERVICE_LINES.map((line, index) => (
+        <li class="flex flex-col bg-dl-paper p-6" data-solution-id={line.solutionId}>
+          <p class="label text-dl-ink-3">{String(index + 1).padStart(2, '0')}</p>
+          <h3 class="mt-3 text-step-1">{line.title}</h3>
+          <p class="mt-3 text-dl-ink-2">{line.outcome}</p>
+          <a href={`/solutions/${line.slug}`} class="dl-button-quiet mt-auto self-start pt-6" data-cta-id={`home-solution-${line.slug}`}>
+            What this includes<span class="sr-only">: {line.title}</span>
           </a>
-        </article>
-      ) : null}
-    </section>
+        </li>
+      ))}
+    </ol>
+    <p class="mt-6 text-dl-ink-2">
+      Not sure which? <a href={OFFER_AUDIT.path} data-cta-id="home-solutions-audit">Start with the {OFFER_AUDIT.title}</a>.
+    </p>
+  </Section>
 
-    <!-- 8. Founder credibility -->
-    <section class="chapter" aria-labelledby="home-founder">
-      <div class="light-artifact grid gap-6 rounded-[1.75rem] bg-white/[0.94] p-6 shadow-[0_14px_32px_rgba(60,28,120,0.10)] ring-1 ring-slate-200 sm:p-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center">
-        <div class="space-y-3">
-          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">
-            {String(founderBlock.eyebrow || 'Who builds it')}
-          </p>
-          <h2 id="home-founder" class="text-2xl font-semibold text-brand-ink sm:text-3xl">
-            {String(founderBlock.heading || 'One engineer accountable for the whole system')}
-          </h2>
-          <p class="text-sm leading-relaxed text-slate-600 sm:text-base">
-            {String(
-              founderBlock.body ||
-                'Stephen Rey Agustinez designs and builds the technical systems delivered through DevLab Studios — from customer-facing interfaces and backend services to APIs, databases, AI workflows, and operational automation. Nothing is handed to a subcontractor who was not in the original conversation.',
-            )}
-          </p>
-          <div class="flex flex-wrap gap-3 pt-2">
-            <PrimaryButton to="/profile" variant="secondary">
-              <User size={16} aria-hidden="true" />
-              View the Founder Profile
-            </PrimaryButton>
-          </div>
-        </div>
-        <ul class="grid gap-2 text-sm text-slate-700">
-          {['Full-stack development across React, Astro, Java, Spring Boot, and Laravel',
-            'Backend services, REST APIs, webhooks, and SQL-backed data models',
-            'AI automation architecture with n8n, Make, and Zapier',
-            'Integration, deployment, and documented handoff'].map((item) => (
-            <li class="flex gap-2 leading-relaxed">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-teal" aria-hidden="true" />
-              <span>{item}</span>
+  {work.length > 0 && (
+    <Section id="home-work" eyebrow={HOME.work.eyebrow} heading={HOME.work.heading} intro={HOME.work.text} class="border-t border-dl-rule">
+      <ul class="mt-10 grid gap-10 md:grid-cols-3">
+        {work.map((entry) => {
+          const picture = entry.project.optimizedImage
+          return (
+            <li>
+              <Figure number={figures.next()} caption={entry.project.title}>
+                {picture ? (
+                  <picture>
+                    <source type="image/avif" srcset={picture.avifSrcSet} />
+                    <source type="image/webp" srcset={picture.webpSrcSet} />
+                    <img src={picture.src} width={picture.width} height={picture.height} alt={`Screenshot of ${entry.project.title}`} loading="lazy" decoding="async" class="aspect-[4/3] w-full object-cover" />
+                  </picture>
+                ) : (
+                  <div class="aspect-[4/3]" />
+                )}
+              </Figure>
+              <p class="mt-4 text-dl-ink-2">{entry.problem}</p>
+              <a href={`/work/${entry.slug}`} class="dl-button-quiet mt-2" data-cta-id="home-work-item">Read the write-up<span class="sr-only">: {entry.project.title}</span></a>
             </li>
-          ))}
-        </ul>
-      </div>
-    </section>
+          )
+        })}
+      </ul>
+    </Section>
+  )}
 
-    <!-- 9. FAQ -->
-    <section class="chapter space-y-6" aria-labelledby="home-faq">
-      <SectionHeader
-        title={String(faqBlock.heading || 'Questions people ask first')}
-        subtitle={String(faqBlock.subheading || '')}
-      />
-      <h2 id="home-faq" class="sr-only">Frequently asked questions</h2>
-      <div class="grid gap-4 lg:grid-cols-2">
-        {faqs.map((faq: { question: string; answer: string }) => (
-          <article class="light-artifact rounded-2xl bg-white/[0.94] p-5 shadow-[0_12px_28px_rgba(60,28,120,0.08)] ring-1 ring-slate-200">
-            <h3 class="font-semibold text-brand-ink">{faq.question}</h3>
-            <p class="mt-2 text-sm leading-relaxed text-slate-600">{faq.answer}</p>
-          </article>
+  <Section id="home-reliability" eyebrow={HOME.reliability.eyebrow} heading={HOME.reliability.heading} intro={HOME.reliability.text} ink>
+    <div class="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-start">
+      <SceneFrame sceneId="persist-before-deliver" figure={figures.next()} />
+      <ol class="divide-y divide-dl-rule border-y border-dl-rule">
+        {RELIABILITY_PRINCIPLES.map((principle, index) => (
+          <li class="flex gap-4 py-4">
+            <span class="label shrink-0 pt-1 text-dl-ink-3">{String(index + 1).padStart(2, '0')}</span>
+            <span><strong class="block font-semibold">{principle.title}</strong><span class="text-dl-ink-2">{principle.text}</span></span>
+          </li>
         ))}
-      </div>
-    </section>
+      </ol>
+    </div>
+  </Section>
 
-    <!-- 10. Final business inquiry CTA -->
-    <section class="chapter-dark mb-0 p-6 sm:p-9" aria-labelledby="home-cta">
-      <div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-        <div class="space-y-3">
-          <p class="tech-kicker">{String(ctaBlock.eyebrow || 'Next step')}</p>
-          <h2 id="home-cta" class="text-3xl font-semibold leading-tight text-white">
-            {String(ctaBlock.heading || 'Start with the workflow that loses the most time.')}
-          </h2>
-          <p class="text-white/75">
-            {String(
-              ctaBlock.body ||
-                'Describe what is slowing down, and you will get a straight answer about whether the right first move is a website, an automation, an integration, an internal tool, or a backend service.',
-            )}
-          </p>
-        </div>
-        <div class="flex flex-wrap gap-3 lg:justify-end">
-          <PrimaryButton
-            to={String((ctaBlock.primaryCta as { href?: string })?.href || '/contact?type=business_system')}
-            showIcon
-            data-cta-id="home-final-primary"
-            data-cta-variant="primary"
-            data-inquiry-type="business_system"
-          >
-            {String((ctaBlock.primaryCta as { label?: string })?.label || 'Discuss Your System')}
-          </PrimaryButton>
-          <PrimaryButton
-            to={String((ctaBlock.secondaryCta as { href?: string })?.href || '/solutions')}
-            variant="secondary"
-            data-cta-id="home-final-secondary"
-            data-cta-variant="secondary"
-          >
-            {String((ctaBlock.secondaryCta as { label?: string })?.label || 'See the solutions')}
-          </PrimaryButton>
+  <Section id="home-start" eyebrow={HOME.start.eyebrow} heading={HOME.start.heading} intro={HOME.start.text}>
+    <div class="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:items-center">
+      <div>
+        <p class="text-step-1 font-semibold">{OFFER_AUDIT.title}</p>
+        <p class="mt-2 text-dl-ink-2">{OFFER_AUDIT.summary}</p>
+        <div class="mt-6 flex flex-wrap gap-x-6 gap-y-3">
+          <a href={OFFER_AUDIT.contactHref} class="dl-button-primary" data-cta-id="home-audit-primary" data-inquiry-type="workflow_audit">Request the audit</a>
+          <a href={OFFER_AUDIT.path} class="dl-button-quiet" data-cta-id="home-audit-details">What you receive</a>
         </div>
       </div>
-    </section>
-  </div>
-</Layout>
+      <SceneFrame sceneId="workflow-audit" figure={figures.next()} />
+    </div>
+  </Section>
+
+  <section id="home-cta" aria-labelledby="home-cta-heading" class="ink-panel">
+    <div class="mx-auto max-w-container px-[var(--gutter)] py-[calc(var(--section-rhythm)*0.75)]">
+      <h2 id="home-cta-heading" class="max-w-3xl text-step-3">{HOME.final.heading}</h2>
+      <p class="mt-4 text-step-1 text-dl-ink-2">{HOME.final.text}</p>
+      <a href="/contact?type=business_system" class="dl-button-primary mt-8" data-cta-id="home-final-primary" data-cta-variant="primary" data-inquiry-type="business_system">{HOME.final.primary.label}</a>
+    </div>
+  </section>
+</BrandLayout>

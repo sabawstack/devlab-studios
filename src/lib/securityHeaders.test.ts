@@ -22,6 +22,28 @@ describe('applySecurityHeaders', () => {
     expect(csp).toContain('https://static.cloudflareinsights.com')
   })
 
+  // SEC-07: Astro sends a CSP header on rendered pages whose script-src
+  // carries a hash per inline script and no 'unsafe-inline'. It is merged in,
+  // not overwritten, so inline scripts Astro did not render are blocked.
+  it("adopts the page's hashed script-src and keeps every other directive", () => {
+    const page = new Response('ok', { headers: { 'Content-Security-Policy': "script-src 'self' https://www.googletagmanager.com 'sha256-abc='; style-src 'self' 'unsafe-inline'" } })
+    const csp = applySecurityHeaders(page, '/', 'www.devlabstudios.com').headers.get('Content-Security-Policy') ?? ''
+    const scriptSrc = csp.split(';').map((part) => part.trim()).find((part) => part.startsWith('script-src')) ?? ''
+    expect(scriptSrc).toContain("'sha256-abc='")
+    expect(scriptSrc).not.toContain("'unsafe-inline'")
+    expect(scriptSrc).toContain('https://challenges.cloudflare.com')
+    expect(csp).toContain("frame-ancestors 'none'")
+    expect(csp).toContain('https://fonts.gstatic.com')
+    expect(csp.match(/script-src/g)).toHaveLength(1)
+  })
+
+  it('is idempotent when a merged response passes through again (edge cache)', () => {
+    const page = new Response('ok', { headers: { 'Content-Security-Policy': "script-src 'self' 'sha256-abc='" } })
+    const once = applySecurityHeaders(page, '/', 'www.devlabstudios.com')
+    const twice = applySecurityHeaders(once, '/', 'www.devlabstudios.com')
+    expect(twice.headers.get('Content-Security-Policy')).toBe(once.headers.get('Content-Security-Policy'))
+  })
+
   it('keeps admin pages and admin data out of every cache and out of search', () => {
     for (const path of ['/admin', '/admin/leads', '/api/admin/session']) {
       const h = headersFor(path)

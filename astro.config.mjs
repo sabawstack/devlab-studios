@@ -2,6 +2,7 @@ import { defineConfig } from 'astro/config'
 import cloudflare from '@astrojs/cloudflare'
 import react from '@astrojs/react'
 import tailwind from '@astrojs/tailwind'
+import { SCRIPT_SOURCES } from './src/config/cspSources.js'
 
 // The e2e static preview server gets its own local state so it never shares
 // D1 files with `wrangler dev` -- see scripts/e2e/snapshot-static-state.mjs.
@@ -19,6 +20,16 @@ export default defineConfig({
   adapter: cloudflare(
     staticE2EPersist ? { persistState: { path: staticE2EPersist }, remoteBindings: false } : {},
   ),
+  // SEC-07: a CSP <meta> on every page with a hash for each script Astro
+  // renders, so inline scripts need no 'unsafe-inline'. Styles keep
+  // 'unsafe-inline' (server-rendered style attributes such as scene aspect
+  // ratios need it), which also tells Astro not to emit style hashes.
+  security: {
+    csp: {
+      scriptDirective: { resources: SCRIPT_SOURCES },
+      styleDirective: { resources: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'] },
+    },
+  },
   image: {
     remotePatterns: [
       { protocol: 'https', hostname: 'pub-401ca3448c3348158cdb3e4e9a9dcb20.r2.dev' },
@@ -31,7 +42,7 @@ export default defineConfig({
   ],
   vite: {
     ssr: {
-      noExternal: ['react-helmet-async', 'react-router-dom', 'react-router', 'lucide-react', 'clsx'],
+      noExternal: ['react-router-dom', 'react-router', 'lucide-react', 'clsx'],
     },
   },
 })

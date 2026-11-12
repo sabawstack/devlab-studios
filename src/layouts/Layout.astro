@@ -52,41 +52,16 @@ function safeJsonLd(value: unknown): string {
       <script type="application/ld+json" set:html={safeJsonLd(block)} />
     ))}
 
-    <!-- Font preconnect + async load (non-render-blocking) -->
+    <!-- Plain stylesheet link: no inline onload handler, so the CSP needs no 'unsafe-inline' for scripts (SEC-07). -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'" />
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" /></noscript>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
     <link rel="icon" type="image/png" href="/devlabstudios-logo-only.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
-    <!-- Google tag (gtag.js), delayed so it does not compete with first render on mobile. -->
-    <script is:inline define:vars={{ gaMeasurementId }}>
-      if (gaMeasurementId) {
-      window.dataLayer = window.dataLayer || [];
-      // Explicitly global: define:vars may wrap this script in a scope, and
-      // src/lib/analytics.ts calls window.gtag.
-      window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
-      var gtag = window.gtag;
-      window.addEventListener('load', function () {
-        var loadAnalytics = function () {
-          var script = document.createElement('script');
-          script.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(gaMeasurementId);
-          script.async = true;
-          document.head.appendChild(script);
-          gtag('js', new Date());
-          gtag('config', gaMeasurementId, { client_storage: 'none', anonymize_ip: true });
-        };
-
-        if ('requestIdleCallback' in window) {
-          window.requestIdleCallback(loadAnalytics, { timeout: 3000 });
-        } else {
-          window.setTimeout(loadAnalytics, 1800);
-        }
-      });
-      }
-    </script>
+    <!-- Google tag, from an external file so no inline script is needed (SEC-07). -->
+    {gaMeasurementId && <script is:inline src="/scripts/ga.js" data-ga-id={gaMeasurementId} defer></script>}
   </head>
   <body class="public-page">
     <div class="public-shell relative flex min-h-screen flex-col">

@@ -1,0 +1,88 @@
+---
+/**
+ * Site navigation for the redesigned pages (audit G.2 / WEB-03): logo as home,
+ * the CMS navigation items (Home is the logo, so it is not repeated), and one
+ * primary CTA. Phones get a full-height sheet with 56 px targets; Escape and
+ * the close button return focus to the menu button.
+ */
+import type { SiteSettingsData } from '../../lib/content/siteSettings'
+import { safeHref } from '../../lib/safeHref'
+
+interface Props { siteSettings: SiteSettingsData; currentPath: string }
+const { siteSettings, currentPath } = Astro.props
+const links = (siteSettings.navigation || [])
+  .map((item) => ({ label: item.label, href: safeHref(item.href) }))
+  .filter((item) => item.href !== '/' && item.href !== '#')
+const ctaLabel = siteSettings.ctas?.navbarContactLabel || 'Discuss your system'
+const isCurrent = (href: string) => currentPath === href || (href !== '/' && currentPath.startsWith(`${href}/`))
+---
+<header class="dl-nav border-b border-dl-rule bg-dl-paper">
+  <div class="mx-auto flex max-w-container items-center justify-between gap-6 px-[var(--gutter)] py-4">
+    <a href="/" class="flex items-center gap-2.5 text-dl-ink no-underline" aria-label="DevLab Studios, home">
+      <img src="/devlabstudios-logo-only.png" alt="" width="28" height="28" class="h-7 w-7" />
+      <span class="text-step-0 font-semibold tracking-tight">DevLab Studios</span>
+    </a>
+    <nav aria-label="Primary" class="hidden lg:block">
+      <ul class="flex items-center gap-7">
+        {links.map((link) => (
+          <li><a href={link.href} class={`label text-dl-ink-2 no-underline hover:text-dl-ink ${isCurrent(link.href) ? 'dl-nav__current text-dl-ink' : ''}`} aria-current={isCurrent(link.href) ? 'page' : undefined}>{link.label}</a></li>
+        ))}
+      </ul>
+    </nav>
+    <div class="flex items-center gap-3">
+      <a href="/contact?type=business_system" class="dl-button-primary hidden sm:inline-flex" data-cta-id="navbar-contact" data-cta-variant="primary">{ctaLabel}</a>
+      <button type="button" class="dl-menu-button lg:hidden" aria-expanded="false" aria-controls="dl-mobile-menu" data-menu-open>
+        <span class="label">Menu</span>
+      </button>
+    </div>
+  </div>
+  <div id="dl-mobile-menu" class="dl-sheet ink-panel" hidden data-menu>
+    <div class="flex items-center justify-between px-[var(--gutter)] py-4">
+      <span class="text-step-0 font-semibold">DevLab Studios</span>
+      <button type="button" class="dl-menu-button" data-menu-close><span class="label">Close</span></button>
+    </div>
+    <nav aria-label="Primary (mobile)">
+      <ul class="px-[var(--gutter)]">
+        {links.map((link) => (
+          <li class="border-b border-dl-rule"><a href={link.href} class="flex min-h-14 items-center text-step-2 font-semibold no-underline" aria-current={isCurrent(link.href) ? 'page' : undefined}>{link.label}</a></li>
+        ))}
+      </ul>
+      <div class="px-[var(--gutter)] py-8">
+        <a href="/contact?type=business_system" class="dl-button-primary w-full justify-center" data-cta-id="mobile-menu-contact" data-cta-variant="primary">{ctaLabel}</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .dl-nav__current { text-decoration: underline; text-decoration-color: var(--redline); text-underline-offset: 0.5em; }
+  .dl-menu-button {
+    min-height: 44px; min-width: 44px; padding: 0 0.75rem;
+    border: 1px solid var(--rule); border-radius: var(--radius-s);
+    background: transparent; color: inherit; cursor: pointer;
+  }
+  .dl-sheet { position: fixed; inset: 0; z-index: 50; overflow-y: auto; }
+  .dl-sheet[hidden] { display: none; }
+</style>
+
+<script>
+  const sheet = document.querySelector<HTMLElement>('[data-menu]')
+  const openButton = document.querySelector<HTMLButtonElement>('[data-menu-open]')
+  const closeButton = document.querySelector<HTMLButtonElement>('[data-menu-close]')
+  function close() {
+    if (!sheet || sheet.hidden) return
+    sheet.hidden = true
+    openButton?.setAttribute('aria-expanded', 'false')
+    document.documentElement.style.overflow = ''
+    openButton?.focus()
+  }
+  openButton?.addEventListener('click', () => {
+    if (!sheet) return
+    sheet.hidden = false
+    openButton.setAttribute('aria-expanded', 'true')
+    document.documentElement.style.overflow = 'hidden'
+    sheet.querySelector<HTMLElement>('a, button')?.focus()
+  })
+  closeButton?.addEventListener('click', close)
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape') close() })
+</script>

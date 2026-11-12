@@ -6,7 +6,8 @@
  * without dragging in the Worker-only `cloudflare:workers` env binding.
  *
  * Excluded on purpose: admin routes, API routes, redirect sources such as
- * `/services`, and the landing samples (which are `noindex, follow`).
+ * `/services` and `/process`, and the retired landing samples. Work write-ups
+ * and articles are added by the sitemap from their content.
  */
 export interface PublicRoute {
   path: string
@@ -19,6 +20,10 @@ export interface PublicRoute {
 export const PUBLIC_ROUTES: PublicRoute[] = [
   { path: '/', changefreq: 'weekly', priority: '1.0' },
   { path: '/solutions', changefreq: 'monthly', priority: '0.9' },
+  { path: '/solutions/lead-intake-and-follow-up', changefreq: 'monthly', priority: '0.8' },
+  { path: '/solutions/workflow-and-ai-automation', changefreq: 'monthly', priority: '0.8' },
+  { path: '/solutions/custom-software-and-operations', changefreq: 'monthly', priority: '0.8' },
+  { path: '/solutions/workflow-systems-audit', changefreq: 'monthly', priority: '0.9' },
   { path: '/work', changefreq: 'monthly', priority: '0.9' },
   { path: '/insights', changefreq: 'weekly', priority: '0.8' },
   // /insights/daily is deliberately absent: it stays reachable from the
@@ -26,7 +31,7 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
   { path: '/about', changefreq: 'monthly', priority: '0.8' },
   { path: '/profile', changefreq: 'monthly', priority: '0.8' },
   { path: '/contact', changefreq: 'monthly', priority: '0.8' },
-  { path: '/process', changefreq: 'monthly', priority: '0.6' },
+  { path: '/products', changefreq: 'monthly', priority: '0.5' },
   // The free product sits below the business pages (SEO-07: 0.3-0.4).
   { path: '/pickleball', changefreq: 'monthly', priority: '0.4' },
   { path: '/pickleball/how-it-works', changefreq: 'monthly', priority: '0.3', seoSlug: 'pickleball-how-it-works' },

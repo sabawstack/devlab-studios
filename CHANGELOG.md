@@ -51,6 +51,35 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+### Added
+
+- The redesigned business site (audit Phases 5–6, "Working Drawings"): Home, Solutions, About, Work, Insights, Profile, Contact, Privacy, Terms and the 404 page now run on a new brand layout (paper and ink, self-hosted fonts, skip link, accessible navigation sheet, ink footer with Products and "Hiring? Contact Stephen"). Home is six sections under 800 words with the problem drawn as S1 → S2, the three service lines, Work figures, the reliability rules with S3, and the audit with S6; the founder is named once. (UX-04..UX-12, WEB-03, BR.9, BR.14)
+- One page per service line — `/solutions/lead-intake-and-follow-up`, `/solutions/workflow-and-ai-automation`, `/solutions/custom-software-and-operations` — and the entry offer at `/solutions/workflow-systems-audit` (who it is for, what you receive, three steps, questions). The old `/solutions#…` anchors still land on the matching line. (UX-07, BUS-01, BUS-02)
+- Work write-ups at `/work/<slug>`, built from the CMS Work narratives and their projects: problem → system → what it verifiably does, a system drawing, the real screenshots, the stack behind a closed "Technical notes" disclosure, and a founder line linking to the profile. Starter templates are no longer shown as work. (UX-08, WEB-05, PROF-01)
+- `/products`: Devlab Pickleball (live, free) with its shipped features, and three product ideas in exploration whose "Register interest" link opens the inquiry form locked to `product_interest`. (BUS-04)
+- Insights is organised by problem: mono problem tags, a filter that works without JavaScript (`?problem=`), and an article template with the long-form serif, the related service line, the audit and the checklist beside it. (UX-09, WEB-06, SEO-08)
+- Social cards: one 1200×630 card per business page in `public/og/` (32–54 KB each), rendered by `scripts/og/render-og.mjs`; the site default `og.png` drops from 1.37 MB to 54 KB. (SEO-02, WEB-08)
+- The contact form's type select is grouped (a business system / something else / working with Stephen). (LEAD-03)
+- The page builder shows a notice on pages whose layout and copy are now code-owned (Home, About, Solutions, Insights, Contact and the retired Process page), so nobody edits copy that no longer shows. The usage notes for Projects and the Service Catalog say where each now appears. (CMS)
+- Tests: a redesign acceptance suite (one h1, distinct h2s, BR.9 word budgets, no stack names on Home and the Solutions index, the founder named at most once and no employment language on business pages, primary action on the first screen at 390/820/1440 px, axe with no serious or critical issues, no Google Fonts, a social card under 200 KB per page, content without JavaScript); unit tests for the Work entries, SEO title and description lengths, the merged CSP and the code-composed page list; the token grep now covers every migrated page. (TEST-03..TEST-05)
+
+### Changed
+
+- Content Security Policy (SEC-07): Astro's built-in CSP now hashes every script it renders, and the middleware merges that hashed `script-src` into the site policy, so rendered pages no longer allow `'unsafe-inline'` scripts. Google Analytics loads from `/scripts/ga.js` instead of an inline snippet, and the legacy layout's inline `onload` font handler is gone. Styles keep `'unsafe-inline'` (server-rendered style attributes need it).
+- SEO records (SEO-01): every canonical route has a title of at most 60 characters and a description of 120–160, with one separator (" · "); new records for `/products` and the four `/solutions/…` pages; `scripts/cms/updates/2026-11-12-seo-redesign.sql` brings an existing database in line (applied to preview).
+- The sitemap lists the new service-line pages, `/products` and every Work write-up, and drops `/process`. The edge HTML cache covers `/products`, `/solutions/*` and `/work/*`. (WEB-01, OPS-01)
+- The six brand scenes S1–S6 are approved and shown on public pages (`artReady: true`).
+- The header call to action carries its inquiry type (`/contact?type=business_system`).
+
+### Removed
+
+- `/process` now answers 301 to `/about#how-we-work`, and the five `/landing-sample-*` pages answer 301 to `/work`; the legacy React app that served them and `react-helmet-async` are removed. Every URL in the frozen legacy sitemap still resolves. (UX-10, WEB-07)
+- Components and data the redesign no longer uses (the old profile galleries and marquee, the block renderer, the services loader, `solutionsContent.js`). Pickleball is no longer promoted on Home and Solutions; it is in the footer and on `/products` (G.1).
+
+### Fixed
+
+- The worker e2e test for the daily log expected it in the sitemap, though it has been `noindex` and out of the sitemap since 2.3.0.
+
 ## [2.3.0] - 2026-11-12
 
 ### Added

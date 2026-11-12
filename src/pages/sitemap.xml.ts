@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro'
 import { loadArticlesContent } from '../lib/content/articles'
 import { PUBLIC_ROUTES } from '../config/publicRoutes'
+import { loadWorkEntries } from '../lib/content/work'
 
 export const prerender = false
 
@@ -8,8 +9,8 @@ export const prerender = false
  * Generated sitemap, replacing the hand-maintained public/sitemap.xml.
  *
  * The static file had drifted badly: it still listed `/resources/*` URLs that
- * are permanent redirects into `/insights/*`, and omitted `/work`, `/process`
- * and `/pickleball` entirely. A sitemap of redirects is worse than no sitemap,
+ * are permanent redirects into `/insights/*`, and omitted `/work` and `/pickleball`
+ * entirely. A sitemap of redirects is worse than no sitemap,
  * because it spends crawl budget confirming the same 301s.
  *
  * Only canonical, indexable URLs are listed here: no admin routes, no API
@@ -67,12 +68,18 @@ export const GET: APIRoute = async () => {
       lastmod: toLastmod((post as { updatedAt?: string }).updatedAt || post.publishedAt),
     }))
 
+  const workEntries: SitemapEntry[] = (await loadWorkEntries()).map((entry) => ({
+    path: `/work/${entry.slug}`,
+    changefreq: 'monthly',
+    priority: '0.7',
+  }))
+
   // Offer landing pages are noindex (SEO-06), so they are not listed.
 
   const body = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    ...[...PUBLIC_ROUTES, ...articleEntries].map(toUrlElement),
+    ...[...PUBLIC_ROUTES, ...workEntries, ...articleEntries].map(toUrlElement),
     '</urlset>',
   ].join('\n')
 

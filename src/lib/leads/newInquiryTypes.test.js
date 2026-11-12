@@ -63,3 +63,13 @@ describe('new inquiry types', () => {
     }
   })
 })
+
+describe('contact form groups (LEAD-03)', () => {
+  it('cover every contact-form type exactly once, business first', async () => {
+    const { CONTACT_FORM_INQUIRY_GROUPS } = await import('../schemas/inquiry')
+    const grouped = CONTACT_FORM_INQUIRY_GROUPS.flatMap((group) => group.types)
+    expect([...grouped].sort()).toEqual([...CONTACT_FORM_INQUIRY_TYPES].sort())
+    expect(new Set(grouped).size).toBe(grouped.length)
+    expect(CONTACT_FORM_INQUIRY_GROUPS[0].types).toContain('business_system')
+  })
+})

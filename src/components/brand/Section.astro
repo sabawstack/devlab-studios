@@ -1,0 +1,24 @@
+---
+/**
+ * One page section on the redesigned pages (audit BR.10 / UX-05): the section
+ * rhythm, a mono eyebrow as a <p>, one h2 and an optional intro. `ink` turns it
+ * into an inverted band.
+ */
+interface Props {
+  id: string
+  eyebrow?: string
+  heading: string
+  intro?: string
+  ink?: boolean
+  class?: string
+}
+const { id, eyebrow, heading, intro, ink = false, class: className = '' } = Astro.props
+---
+<section id={id} aria-labelledby={`${id}-heading`} class={`${ink ? 'ink-panel' : ''} ${className}`}>
+  <div class="mx-auto max-w-container px-[var(--gutter)] py-[calc(var(--section-rhythm)*0.75)]">
+    {eyebrow && <p class="label text-dl-ink-3">{eyebrow}</p>}
+    <h2 id={`${id}-heading`} class="mt-2 max-w-3xl text-step-3">{heading}</h2>
+    {intro && <p class="mt-4 text-step-1 text-dl-ink-2">{intro}</p>}
+    <slot />
+  </div>
+</section>

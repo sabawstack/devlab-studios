@@ -33,7 +33,7 @@ export const SCENES = [
     alt: 'Inquiries arriving through four channels into four disconnected tools with no owner',
     aspect: { wide: [3, 2], tall: [4, 5] },
     byteBudget: 24 * 1024,
-    artReady: false,
+    artReady: true,
   },
   {
     id: 'connected-system',
@@ -43,7 +43,7 @@ export const SCENES = [
     alt: 'The same inquiries recorded once, with a status and an owner',
     aspect: { wide: [3, 2], tall: [4, 5] },
     byteBudget: 28 * 1024,
-    artReady: false,
+    artReady: true,
   },
   {
     id: 'persist-before-deliver',
@@ -53,7 +53,7 @@ export const SCENES = [
     alt: 'The submission is saved first; the failed delivery is marked and can be retried',
     aspect: { wide: [16, 9], tall: [4, 5] },
     byteBudget: 24 * 1024,
-    artReady: false,
+    artReady: true,
   },
   {
     id: 'handoff-to-person',
@@ -63,7 +63,7 @@ export const SCENES = [
     alt: 'An ambiguous case routed to a named person for approval',
     aspect: { wide: [1, 1], tall: [1, 1] },
     byteBudget: 16 * 1024,
-    artReady: false,
+    artReady: true,
   },
   {
     id: 'build-in-layers',
@@ -73,7 +73,7 @@ export const SCENES = [
     alt: 'A system drawn as its layers: interface, services, data, automation and the people who operate it',
     aspect: { wide: [16, 9], tall: [4, 5] },
     byteBudget: 20 * 1024,
-    artReady: false,
+    artReady: true,
   },
   {
     id: 'workflow-audit',
@@ -83,7 +83,7 @@ export const SCENES = [
     alt: 'A workflow reviewed and marked up, with a prioritised recommendation',
     aspect: { wide: [3, 2], tall: [4, 5] },
     byteBudget: 24 * 1024,
-    artReady: false,
+    artReady: true,
   },
 ] as const satisfies readonly SceneDefinition[]
 

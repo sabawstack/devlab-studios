@@ -1,292 +1,134 @@
 ---
+/**
+ * Article template (audit UX-09 / WEB-06 / BR.9): problem tag, title, summary,
+ * byline, optional scene header, the body in the long-form serif, and beside it
+ * the related service line, the audit and the checklist. Draft preview works
+ * through a signed link (CMS-04). Unknown slugs return the site's 404.
+ */
+import BrandLayout from '../../layouts/BrandLayout.astro'
+import SceneFrame from '../../components/brand/SceneFrame.astro'
 import { draftPreviewFor } from '../../lib/content/preview'
-import Layout from '../../layouts/Layout.astro'
-import PrimaryButton from '../../components/PrimaryButton.jsx'
-import * as Icons from '../../components/icons/icons.js'
-import { ArrowLeft, Calendar, CheckCircle2, Clock } from '../../components/icons/icons.js'
-import { loadArticlesContent, parseArticleBody, formatArticleDate } from '../../lib/content/articles'
+import { loadArticlesContent, parseArticleBody, formatArticleDate, type ArticlePost } from '../../lib/content/articles'
 import { getArticleSchema, getBreadcrumbSchema } from '../../config/schema.js'
 import { getLeadMagnet } from '../../config/offers.js'
-import { solutionCategories } from '../../data/solutionsContent.js'
-import { topicLabel } from '../../config/insightTopics.js'
+import { getScene } from '../../config/scenes'
+import { PROBLEM_TAGS } from '../../config/problemTags.js'
 import type { SeoData } from '../../lib/content/seo'
+import { OFFER_AUDIT, serviceLineForProblemTag } from '../../data/site/content.js'
 
-function resolveIcon(name: string) {
-  return (Icons as Record<string, typeof Icons.Lightbulb>)[name] || Icons.Lightbulb
-}
+type Post = ArticlePost & { problemTag?: string; heroVisualId?: string; seoTitle?: string; seoDescription?: string; updatedAt?: string }
 
 const { slug } = Astro.params
-// CMS-04: a verified preview link shows this one article's draft; nothing else changes.
 const isPreview = await draftPreviewFor(Astro, { type: 'article', id: String(slug) })
 const { posts } = await loadArticlesContent({ includeDrafts: isPreview })
-const publishedPosts = posts.filter((post) => post.status === 'published' || (post.status !== 'draft' && post.status !== 'archived'))
-const activePost = publishedPosts.find((post) => post.slug === slug || post.id === slug)
-  || (isPreview ? posts.find((post) => post.slug === slug) : null)
+const all = posts as Post[]
+const published = all.filter((post) => post.status !== 'draft' && post.status !== 'archived')
+const post = published.find((candidate) => candidate.slug === slug || candidate.id === slug)
+  || (isPreview ? all.find((candidate) => candidate.slug === slug) : undefined)
   || null
 
-if (!activePost) {
-  Astro.response.status = 404
+if (!post) {
+  return Astro.rewrite('/404')
 }
 
-const relatedPosts = activePost
-  ? publishedPosts.filter((post) => post.id !== activePost.id).slice(0, 3)
-  : []
-
-const seo: SeoData | null = activePost
-  ? {
-      metaTitle: `${activePost.title} | DevLab Studios Insights`,
-      metaDescription: activePost.summary,
-      canonicalUrl: `https://www.devlabstudios.com/insights/${activePost.slug}`,
-      ogTitle: activePost.title,
-      ogDescription: activePost.summary,
-      ogImage: activePost.coverImageUrl || 'https://www.devlabstudios.com/devlabstudios-logo-only.png',
-      twitterTitle: activePost.title,
-      twitterDescription: activePost.summary,
-      twitterImage: activePost.coverImageUrl || 'https://www.devlabstudios.com/devlabstudios-logo-only.png',
-    }
-  : null
-
-const bodyBlocks = activePost ? parseArticleBody(activePost.body) : []
-const ActiveIcon = activePost ? resolveIcon(activePost.icon) : null
-
-/**
- * Contextual links, derived rather than hand-maintained per article.
- *
- * An article's own tags/category/slug decide which solution it belongs to, so
- * a new article picks up the right CTA without anyone remembering to wire it.
- * When nothing matches, the generic business CTA is used rather than a wrong
- * specific one.
- */
-const SOLUTION_KEYWORDS: Array<{ id: string; keywords: string[] }> = [
-  { id: 'lead-intake-followup', keywords: ['lead', 'intake', 'follow-up', 'crm', 'qualification'] },
-  { id: 'workflow-ai-automation', keywords: ['automation', 'workflow', 'ai', 'agent', 'n8n', 'zapier', 'make'] },
-  { id: 'custom-software-operations', keywords: ['website', 'speed', 'data', 'api', 'software', 'dashboard'] },
-]
-
-function matchSolution(post: typeof activePost) {
-  if (!post) return null
-  const haystack = [post.slug, post.title, post.category, post.contentType, ...(post.tags || [])]
-    .join(' ')
-    .toLowerCase()
-  const match = SOLUTION_KEYWORDS.find((entry) => entry.keywords.some((keyword) => haystack.includes(keyword)))
-  return match ? solutionCategories.find((category) => category.id === match.id) || null : null
+const canonical = `https://www.devlabstudios.com/insights/${post.slug}`
+const image = post.coverImageUrl || 'https://www.devlabstudios.com/og.png'
+const seo: SeoData = {
+  metaTitle: post.seoTitle || `${post.title} · DevLab Studios`,
+  metaDescription: post.seoDescription || post.summary,
+  canonicalUrl: canonical,
+  ogTitle: post.seoTitle || post.title,
+  ogDescription: post.seoDescription || post.summary,
+  ogImage: image,
+  twitterTitle: post.seoTitle || post.title,
+  twitterDescription: post.seoDescription || post.summary,
+  twitterImage: image,
 }
-
-const relatedSolution = matchSolution(activePost)
+const body = parseArticleBody(post.body)
+const tag = PROBLEM_TAGS.find((candidate) => candidate.id === post.problemTag) || null
+const scene = post.heroVisualId ? getScene(post.heroVisualId) : null
+const line = serviceLineForProblemTag(post.problemTag)
+const related = published.filter((candidate) => candidate.id !== post.id && candidate.problemTag && candidate.problemTag === post.problemTag).slice(0, 3)
 const leadMagnet = getLeadMagnet('lead-intake-checklist')
-const jsonLd = activePost
-  ? [
-      getArticleSchema(activePost),
-      getBreadcrumbSchema([
-        { name: 'Home', path: '/' },
-        { name: 'Insights', path: '/insights' },
-        { name: activePost.title, path: `/insights/${activePost.slug}` },
-      ]),
-    ]
-  : []
+const jsonLd = [
+  getArticleSchema(post),
+  getBreadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Insights', path: '/insights' }, { name: post.title, path: `/insights/${post.slug}` }]),
+]
 ---
 
-<Layout title={activePost ? activePost.title : 'Article not found'} seo={seo} jsonLd={jsonLd}>
-  {!activePost ? (
-    <div class="rounded-[28px] border border-slate-200 bg-white p-8 text-center shadow-[0_18px_45px_rgba(60,28,120,0.10)]">
-      <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">Insights</p>
-      <h1 class="mt-3 text-3xl font-semibold text-brand-ink">Article not found</h1>
-      <p class="mt-3 text-slate-600">The article you tried to open is missing or no longer published.</p>
-      <div class="mt-6 flex justify-center">
-        <PrimaryButton to="/insights">
-          <ArrowLeft size={16} aria-hidden="true" />
-          Back to Insights
-        </PrimaryButton>
+<BrandLayout title={seo.metaTitle || 'DevLab Studios'} seo={seo} jsonLd={jsonLd} longform>
+  <article data-view-event="insight_view" data-insight-id={post.slug}>
+    <header class="border-b border-dl-rule">
+      <div class="mx-auto max-w-container px-[var(--gutter)] py-[calc(var(--section-rhythm)*0.5)]">
+        <nav aria-label="Breadcrumb" class="mb-6">
+          <ol class="label flex flex-wrap gap-2 text-dl-ink-3">
+            <li><a href="/insights" class="no-underline hover:underline">Insights</a></li>
+            {tag && <li class="before:mr-2 before:content-['/']"><a href={`/insights?problem=${tag.id}`} class="no-underline hover:underline">{tag.label}</a></li>}
+          </ol>
+        </nav>
+        <h1 class="max-w-4xl text-step-4">{post.title}</h1>
+        <p class="mt-5 text-step-1 text-dl-ink-2">{post.summary}</p>
+        <p class="label mt-6 text-dl-ink-3">
+          {post.authorName || 'DevLab Studios'}
+          {post.publishedAt && <span> · <time datetime={post.publishedAt}>{formatArticleDate(post.publishedAt)}</time></span>}
+          {post.readingTimeMinutes ? <span> · {post.readingTimeMinutes} min read</span> : null}
+        </p>
+        {scene && <SceneFrame sceneId={scene.id} figure={1} class="mt-10 max-w-3xl" />}
       </div>
-    </div>
-  ) : (
-    <div class="space-y-8">
-      <nav aria-label="Breadcrumb" class="text-sm text-slate-500">
-        <ol class="flex flex-wrap items-center gap-2">
-          <li><a href="/" class="transition hover:underline">Home</a></li>
-          <li aria-hidden="true">/</li>
-          <li>
-            <a href="/insights" class="inline-flex items-center gap-2 font-semibold text-brand-teal transition hover:underline">
-              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              Insights
-            </a>
-          </li>
-          <li aria-hidden="true">/</li>
-          <li aria-current="page">{activePost.title}</li>
-        </ol>
-      </nav>
+    </header>
 
-      <section
-        class="rounded-[28px] bg-gradient-to-br from-brand-mint/55 via-white to-[#f3efff] p-6 shadow-[0_20px_44px_rgba(46,34,98,0.12)] sm:p-8 lg:p-10"
-        data-view-event="insight_view"
-        data-insight-id={activePost.slug}
-      >
-        <div class="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-          <div class="space-y-5">
-            <div class="flex flex-wrap items-center gap-2">
-              <span class="rounded-full bg-brand-mint px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-brand-teal">{activePost.category}</span>
-              <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">{topicLabel(activePost.contentType)}</span>
-            </div>
+    <div class="mx-auto grid max-w-container gap-12 px-[var(--gutter)] py-12 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <div class="brand-longform max-w-[68ch]">
+        {body.map((block) => {
+          if (block.type === 'heading') return <h2 class="mt-10 font-display text-step-2 first:mt-0">{block.text}</h2>
+          if (block.type === 'list') return (
+            <ul class="mt-5 grid gap-2 pl-5 [list-style:square]">
+              {block.items.map((item) => <li>{item}</li>)}
+            </ul>
+          )
+          return <p class="mt-5 first:mt-0">{block.text}</p>
+        })}
+      </div>
 
-            <h1 class="text-4xl font-semibold leading-tight text-brand-ink sm:text-5xl">{activePost.title}</h1>
-            <p class="max-w-3xl text-base leading-relaxed text-slate-700 sm:text-lg">{activePost.summary}</p>
-
-            <div class="flex flex-wrap items-center gap-4 text-sm text-slate-500">
-              <span>{activePost.authorName || 'DevLab Studios'}</span>
-              {activePost.publishedAt ? (
-                <span class="inline-flex items-center gap-2">
-                  <Calendar className="h-4 w-4" aria-hidden="true" />
-                  {formatArticleDate(activePost.publishedAt)}
-                </span>
-              ) : null}
-              {activePost.readingTimeMinutes ? (
-                <span class="inline-flex items-center gap-2">
-                  <Clock className="h-4 w-4" aria-hidden="true" />
-                  {activePost.readingTimeMinutes} min read
-                </span>
-              ) : null}
-            </div>
-
-            <div class="flex flex-wrap gap-2">
-              {(activePost.tags || []).map((tag) => (
-                <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">{tag}</span>
-              ))}
-            </div>
+      <aside class="grid content-start gap-6">
+        {line && (
+          <div class="rounded-dl-s border border-dl-rule p-6">
+            <p class="label text-dl-ink-3">Related service</p>
+            <p class="mt-2 font-semibold">{line.title}</p>
+            <p class="mt-2 text-step--1 text-dl-ink-2">{line.outcome}</p>
+            <a href={`/solutions/${line.slug}`} class="dl-button-quiet mt-3" data-cta-id="insight-related-solution" data-solution-id={line.solutionId} data-insight-id={post.slug}>What this includes</a>
           </div>
-
-          <div class="flex min-h-[280px] items-center justify-center rounded-[24px] bg-gradient-to-br from-brand-ink via-[#22185a] to-[#3526b5] p-8 text-white shadow-[0_16px_36px_rgba(20,13,64,0.22)]">
-            {activePost.coverImageUrl ? (
-              <img
-                src={activePost.coverImageUrl}
-                alt={activePost.title}
-                class="max-h-[380px] w-full rounded-2xl object-cover shadow-[0_16px_42px_rgba(0,0,0,0.28)]"
-              />
-            ) : (
-              <div class="flex h-full min-h-[220px] w-full flex-col items-center justify-center rounded-2xl border border-white/15 bg-white/5 px-6 text-center">
-                <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/10 text-white">
-                  {ActiveIcon ? <ActiveIcon className="h-7 w-7" aria-hidden="true" /> : null}
-                </div>
-                <p class="mt-4 text-sm font-semibold uppercase tracking-[0.16em] text-white/70">{activePost.category}</p>
-                <p class="mt-2 text-2xl font-semibold">{activePost.title}</p>
-              </div>
-            )}
-          </div>
+        )}
+        <div class="ink-panel rounded-dl-s p-6">
+          <p class="label text-dl-ink-3">Start here</p>
+          <p class="mt-2 text-step-1 font-semibold">{OFFER_AUDIT.title}</p>
+          <p class="mt-2 text-step--1 text-dl-ink-2">{OFFER_AUDIT.summary}</p>
+          <a href={`${OFFER_AUDIT.contactHref}&insight=${encodeURIComponent(post.slug)}`} class="dl-button-primary mt-5" data-cta-id="insight-audit" data-insight-id={post.slug} data-inquiry-type="workflow_audit">Request the audit</a>
         </div>
-      </section>
-
-      <div class="grid gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <article class="rounded-[28px] bg-white p-6 shadow-[0_18px_45px_rgba(60,28,120,0.10)] sm:p-8">
-          <div class="prose prose-slate max-w-none">
-            {bodyBlocks.map((block) => {
-              if (block.type === 'heading') {
-                return <h2 class="mt-8 text-2xl font-semibold text-brand-ink first:mt-0">{block.text}</h2>
-              }
-
-              if (block.type === 'list') {
-                return (
-                  <ul class="mt-4 grid gap-3 text-base leading-relaxed text-slate-700">
-                    {block.items.map((item) => (
-                      <li class="flex gap-3">
-                        <CheckCircle2 className="mt-1 h-4 w-4 flex-shrink-0 text-brand-teal" aria-hidden="true" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )
-              }
-
-              return <p class="mt-4 text-base leading-8 text-slate-700 first:mt-0">{block.text}</p>
-            })}
+        {leadMagnet && (
+          <div class="rounded-dl-s border border-dl-rule p-6">
+            <p class="label text-dl-ink-3">Free checklist</p>
+            <p class="mt-2 font-semibold">{leadMagnet.title}</p>
+            <a href={`/offers/${leadMagnet.id}`} class="dl-button-quiet mt-3" data-cta-id="insight-lead-magnet" data-offer-id={leadMagnet.id} data-insight-id={post.slug}>Get the checklist</a>
           </div>
-        </article>
-
-        <aside class="space-y-6">
-          {relatedSolution ? (
-            <section class="rounded-[24px] bg-white p-6 shadow-[0_18px_45px_rgba(60,28,120,0.10)]">
-              <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">Related solution</p>
-              <p class="mt-3 text-sm font-semibold text-brand-ink">{relatedSolution.title}</p>
-              <p class="mt-2 text-sm leading-relaxed text-slate-600">{relatedSolution.outcome}</p>
-              <a
-                href={`/solutions#${relatedSolution.id}`}
-                class="mt-3 inline-block text-sm font-semibold text-brand-teal underline-offset-2 hover:underline"
-                data-cta-id="insight-related-solution"
-                data-cta-variant="secondary"
-                data-solution-id={relatedSolution.id}
-                data-insight-id={activePost.slug}
-              >
-                What this includes
-              </a>
-            </section>
-          ) : null}
-
-          {leadMagnet ? (
-            <section class="rounded-[24px] bg-gradient-to-br from-[#fff9ff] via-[#fbf9ff] to-[#f2efff] p-6 shadow-[0_18px_38px_rgba(48,28,114,0.12)]">
-              <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">Free resource</p>
-              <p class="mt-3 text-sm font-semibold text-brand-ink">{leadMagnet.title}</p>
-              <p class="mt-2 text-sm leading-relaxed text-slate-600">{leadMagnet.summary}</p>
-              <a
-                href={`/offers/${leadMagnet.id}`}
-                class="mt-3 inline-block text-sm font-semibold text-brand-teal underline-offset-2 hover:underline"
-                data-cta-id="insight-lead-magnet"
-                data-cta-variant="secondary"
-                data-offer-id={leadMagnet.id}
-                data-insight-id={activePost.slug}
-              >
-                Get the checklist
-              </a>
-            </section>
-          ) : null}
-
-          <section class="rounded-[24px] bg-brand-ink p-6 text-white shadow-[0_18px_45px_rgba(20,13,64,0.22)]">
-            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-white/70">Next step</p>
-            <p class="mt-3 text-base font-semibold">Want this applied to your own workflow?</p>
-            <p class="mt-2 text-sm leading-relaxed text-white/75">
-              Describe where it slows down and get a straight answer about the right first move.
-            </p>
-            <div class="mt-4">
-              <PrimaryButton
-                to={`/contact?type=business_system&insight=${activePost.slug}`}
-                data-cta-id="insight-inquiry"
-                data-cta-variant="primary"
-                data-insight-id={activePost.slug}
-                data-inquiry-type="business_system"
-                showIcon
-              >
-                Discuss Your System
-              </PrimaryButton>
-            </div>
-          </section>
-
-          {(activePost.points || []).length > 0 ? (
-            <section class="rounded-[24px] bg-white p-6 shadow-[0_18px_45px_rgba(60,28,120,0.10)]">
-              <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">Key Takeaways</p>
-              <ul class="mt-4 grid gap-3 text-sm text-slate-700">
-                {activePost.points.map((point) => (
-                  <li class="flex gap-3 leading-relaxed">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-teal" aria-hidden="true" />
-                    <span>{point}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-
-          {relatedPosts.length > 0 ? (
-            <section class="rounded-[24px] bg-white p-6 shadow-[0_18px_45px_rgba(60,28,120,0.10)]">
-              <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">More insights</p>
-              <div class="mt-4 grid gap-4">
-                {relatedPosts.map((item) => (
-                  <a href={`/insights/${item.slug}`} class="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-brand-teal/30 hover:bg-white">
-                    <p class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{item.category}</p>
-                    <p class="mt-2 text-sm font-semibold text-brand-ink">{item.title}</p>
-                    <p class="mt-2 text-xs leading-relaxed text-slate-500">{item.summary}</p>
-                  </a>
-                ))}
-              </div>
-            </section>
-          ) : null}
-        </aside>
-      </div>
+        )}
+      </aside>
     </div>
+  </article>
+
+  {related.length > 0 && (
+    <section aria-labelledby="related-heading" class="border-t border-dl-rule">
+      <div class="mx-auto max-w-container px-[var(--gutter)] py-12">
+        <h2 id="related-heading" class="text-step-2">More on {tag?.label.toLowerCase()}</h2>
+        <ul class="mt-6 grid gap-6 md:grid-cols-3">
+          {related.map((item) => (
+            <li class="border-t border-dl-rule pt-4">
+              <a href={`/insights/${item.slug}`} class="font-semibold no-underline hover:underline" data-cta-id="insight-related-article">{item.title}</a>
+              <p class="mt-2 text-step--1 text-dl-ink-2">{item.summary}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
   )}
-</Layout>
+</BrandLayout>

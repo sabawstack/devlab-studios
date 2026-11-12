@@ -1,0 +1,22 @@
+---
+/**
+ * The founder portrait (audit BR.11): AVIF/WebP from the Images binding, a
+ * fixed box so nothing shifts, and real alt text.
+ */
+import { optimizeImage } from '../../lib/images/optimizeImage'
+import photo from '../../assets/recent-photo.png'
+
+interface Props { size?: number; class?: string; loading?: 'lazy' | 'eager' }
+const { size = 160, class: className = '', loading = 'lazy' } = Astro.props
+const picture = await optimizeImage(photo, { width: size, height: size, fit: 'cover' })
+const alt = 'Stephen Rey Agustinez, founder of DevLab Studios'
+---
+{picture ? (
+  <picture class={className}>
+    <source type="image/avif" srcset={picture.avifSrcSet} />
+    <source type="image/webp" srcset={picture.webpSrcSet} />
+    <img src={picture.src} width={size} height={size} alt={alt} loading={loading} decoding="async" class="rounded-dl-m border border-dl-rule object-cover" />
+  </picture>
+) : (
+  <img src={photo.src} width={size} height={size} alt={alt} loading={loading} decoding="async" class={`rounded-dl-m border border-dl-rule object-cover ${className}`} />
+)}

@@ -1,294 +1,171 @@
 ---
-import Layout from '../layouts/Layout.astro'
-import VectorField from '../components/VectorField.astro'
-import PersonalInfoCard from '../components/PersonalInfoCard.jsx'
-import PrimaryButton from '../components/PrimaryButton.jsx'
-import ToolsMarquee from '../components/ui/ToolsMarquee.jsx'
-import PortfolioGallery from '../components/islands/PortfolioGallery.jsx'
-import CertificationsGallery from '../components/islands/CertificationsGallery.jsx'
-import CertificationLogo from '../components/ui/CertificationLogo.jsx'
-import ExperienceTimeline from '../components/islands/ExperienceTimeline.jsx'
-import { ArrowRight, Briefcase, Download, Mail } from '../components/icons/icons.js'
+/**
+ * Founder profile (audit UX-12 / PROF-01..04 / BR.9): for recruiters and
+ * technical leads. Primary actions are the résumé and contact-for-role; the
+ * business CTA is never primary here (G.3). Rendered as static markup: no
+ * marquee, no gallery islands, lazy images with descriptive alt text, and only
+ * city-level personal details (toPublicAbout on the read path).
+ */
+import BrandLayout from '../layouts/BrandLayout.astro'
+import PageHeader from '../components/brand/PageHeader.astro'
+import Section from '../components/brand/Section.astro'
+import Portrait from '../components/brand/Portrait.astro'
+import Tag from '../components/brand/Tag.astro'
 import { getBreadcrumbSchema, getPersonSchema } from '../config/schema.js'
+import { COMPANY } from '../config/company.js'
 import { loadPageSeo } from '../lib/content/seo'
 import { loadProfileContent } from '../lib/content/profile'
-import { loadProjects } from '../lib/content/projects'
+import { loadWorkEntries } from '../lib/content/work'
 import { optimizeImage } from '../lib/images/optimizeImage'
 import { coreTools } from '../data/tools.js'
 import profilePhoto from '../assets/recent-photo.png'
 
 const seo = await loadPageSeo('profile')
-const profileContent = await loadProfileContent()
-const projects = await loadProjects()
-const aboutData = profileContent.about || {}
-const experiences = profileContent.experiences || []
-const certifications = profileContent.certifications || []
-const technicalSkills = profileContent.skills?.technical || []
-const optimizedPhoto = await optimizeImage(profilePhoto, { width: 320, height: 320, fit: 'cover' })
+const [profile, work] = await Promise.all([loadProfileContent(), loadWorkEntries()])
+const about = profile.about || {}
+const experiences = profile.experiences || []
+const certifications = profile.certifications || []
+const skills = profile.skills?.technical || []
+const schemaPhoto = await optimizeImage(profilePhoto, { width: 320, height: 320, fit: 'cover' })
 
-/**
- * Capability groupings for the "What Stephen builds" panel.
- *
- * Every entry is a capability the rest of this page already evidences —
- * through the experience timeline, the certifications, or the portfolio — so
- * the panel summarizes rather than asserts anything new.
- */
+/** Each area is evidenced elsewhere on this page (experience, certifications, work). */
 const capabilityAreas = [
-  {
-    title: 'Full-stack development',
-    items: ['React and Astro interfaces', 'Tailwind design systems', 'Server-rendered applications on Cloudflare Workers'],
-  },
-  {
-    title: 'Backend and APIs',
-    items: ['Java and Spring Boot services', 'Laravel applications', 'REST APIs and webhooks', 'SQL data models and migrations'],
-  },
-  {
-    title: 'AI automation architecture',
-    items: ['n8n, Make, and Zapier orchestration', 'AI-assisted classification and drafting', 'Human-in-the-loop approval steps'],
-  },
-  {
-    title: 'Operations and delivery',
-    items: ['CRM and third-party integrations', 'Dashboards and reporting workflows', 'Deployment, documentation, and handoff'],
-  },
+  { title: 'Full-stack development', items: ['React and Astro interfaces', 'Server-rendered applications on Cloudflare Workers', 'Design systems in Tailwind'] },
+  { title: 'Backend and APIs', items: ['Java and Spring Boot services', 'Laravel applications', 'REST APIs, webhooks and SQL data models'] },
+  { title: 'AI automation', items: ['n8n, Make and Zapier orchestration', 'AI-assisted classification and drafting', 'Human approval steps'] },
+  { title: 'Operations and delivery', items: ['CRM and third-party integrations', 'Dashboards and reporting', 'Deployment, documentation and handover'] },
 ]
+/** Employer names only; office addresses stay off the page. */
+const employer = (company: string) => company.split(' — ')[0]
 
 const jsonLd = [
   getPersonSchema({
-    // Absolute URL of the portrait the page shows; the logo stays the fallback.
-    image: optimizedPhoto?.src ? new URL(optimizedPhoto.src, Astro.url).toString() : undefined,
-    credentials: certifications.map((cert: { name?: string }) => cert.name).filter(Boolean) as string[],
+    image: schemaPhoto?.src ? new URL(schemaPhoto.src, Astro.url).toString() : undefined,
+    credentials: certifications.map((cert) => cert.name).filter(Boolean),
   }),
-  getBreadcrumbSchema([
-    { name: 'Home', path: '/' },
-    { name: 'Founder Profile', path: '/profile' },
-  ]),
+  getBreadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Founder Profile', path: '/profile' }]),
 ]
 ---
 
-<Layout title="Stephen Rey Agustinez — Founder Profile | DevLab Studios" seo={seo} jsonLd={jsonLd}>
-  <div class="space-y-10">
-    <nav aria-label="Breadcrumb" class="text-sm text-slate-400">
-      <ol class="flex flex-wrap items-center gap-2">
-        <li><a href="/" class="transition hover:text-white hover:underline">Home</a></li>
-        <li aria-hidden="true">/</li>
-        <li aria-current="page" class="text-slate-200">Founder Profile</li>
-      </ol>
-    </nav>
+<BrandLayout title="Stephen Rey Agustinez · Founder Profile" seo={seo} jsonLd={jsonLd}>
+  <PageHeader eyebrow="Founder profile" heading="Stephen Rey Agustinez">
+    <p class="w-full text-step-1 font-semibold text-dl-ink" data-profile-role>Founder, Full-Stack Developer, and AI Automation Architect</p>
+    <p class="w-full max-w-[68ch] text-dl-ink-2">Stephen designs and builds the systems delivered through {COMPANY.name}: interfaces, backend services, APIs, databases, AI workflows and operational automation. He is also open to suitable remote employment, contract and collaboration work.</p>
+    <a href="/resume.pdf" target="_blank" rel="noopener" class="dl-button-primary" data-cta-id="profile-hero-resume" data-cta-variant="primary">View Resume</a>
+    <a href="/contact?type=employment_opportunity" class="dl-button-quiet" data-cta-id="profile-hero-contact" data-inquiry-type="employment_opportunity">Contact Stephen</a>
+    <a href="#portfolio" class="dl-button-quiet" data-cta-id="profile-hero-work">View Selected Work</a>
+    <div slot="aside" class="flex flex-col gap-6">
+      <Portrait size={200} loading="eager" />
+      <dl class="grid gap-3 border-t border-dl-rule pt-5">
+        <div><dt class="label text-dl-ink-3">Based in</dt><dd>{about.location || COMPANY.locationLabel}</dd></div>
+        <div><dt class="label text-dl-ink-3">Email</dt><dd><a href={`mailto:${about.email || COMPANY.publicEmail}`}>{about.email || COMPANY.publicEmail}</a></dd></div>
+        <div><dt class="label text-dl-ink-3">Elsewhere</dt><dd class="flex gap-4"><a href="https://www.linkedin.com/in/stephen-rey-agustinez-8b86041b3" rel="noopener" target="_blank">LinkedIn</a><a href="https://github.com/stpn-dev" rel="noopener" target="_blank">GitHub</a></dd></div>
+      </dl>
+    </div>
+  </PageHeader>
 
-    <section class="cinematic-panel relative overflow-hidden rounded-[2rem] p-6 text-white sm:p-8 lg:p-10">
-      <VectorField motif="fullstack" />
-      <div class="relative z-10 max-w-3xl space-y-4">
-        <p class="tech-kicker">Founder Profile</p>
-        <h1 class="text-4xl font-semibold tracking-[-0.03em] sm:text-5xl">Stephen Rey Agustinez</h1>
-        <p class="text-lg font-semibold text-violet-200 sm:text-xl">
-          Founder, Full-Stack Developer, and AI Automation Architect
-        </p>
-        <p class="max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
-          Stephen designs and builds the technical systems delivered through DevLab Studios — from customer-facing
-          interfaces and backend services to APIs, databases, AI workflows, and operational automation.
-        </p>
-        <p class="max-w-2xl text-base leading-relaxed text-slate-400">
-          He is also open to suitable remote employment, contract, and technical collaboration opportunities.
-        </p>
+  {about.about && (
+    <Section id="about" eyebrow="About" heading="Background">
+      <p class="mt-4 text-step-1 text-dl-ink-2">{about.about}</p>
+    </Section>
+  )}
 
-        <div class="flex flex-wrap gap-3 pt-2">
-          <PrimaryButton to="#portfolio" data-cta-id="profile-hero-work" data-cta-variant="primary">
-            <Briefcase size={16} aria-hidden="true" />
-            View Selected Work
-          </PrimaryButton>
-          <PrimaryButton
-            href="/resume.pdf"
-            variant="secondary"
-            data-cta-id="profile-hero-resume"
-            data-cta-variant="secondary"
-          >
-            <Download size={16} aria-hidden="true" />
-            Download Résumé
-          </PrimaryButton>
-          <PrimaryButton
-            to="/contact?type=employment_opportunity"
-            variant="secondary"
-            data-cta-id="profile-hero-contact"
-            data-cta-variant="secondary"
-            data-inquiry-type="employment_opportunity"
-          >
-            <Mail size={16} aria-hidden="true" />
-            Contact Stephen
-          </PrimaryButton>
+  <Section id="capabilities" eyebrow="Capabilities" heading="What Stephen builds" class="border-t border-dl-rule">
+    <div class="mt-8 grid gap-px overflow-hidden rounded-dl-s border border-dl-rule bg-dl-rule sm:grid-cols-2 lg:grid-cols-4">
+      {capabilityAreas.map((area) => (
+        <div class="bg-dl-paper p-5">
+          <h3 class="text-step-1">{area.title}</h3>
+          <ul class="mt-3 grid gap-1.5 text-step--1 text-dl-ink-2">{area.items.map((item) => <li>{item}</li>)}</ul>
         </div>
-      </div>
-    </section>
+      ))}
+    </div>
+    {skills.length > 0 && (
+      <ul class="mt-8 flex flex-wrap gap-2" aria-label="Technical skills">{skills.map((skill) => <li><Tag>{skill}</Tag></li>)}</ul>
+    )}
+  </Section>
 
-    <div class="page-spotlight" data-page-spotlight aria-hidden="true"></div>
-
-    <div class="grid gap-10 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start">
-      <div class="lg:sticky lg:top-24">
-        <PersonalInfoCard aboutData={aboutData} photo={optimizedPhoto} />
-      </div>
-
-      <div class="min-w-0 space-y-12 lg:border-l lg:border-slate-200 lg:pl-10">
-        <section id="about">
-          <h2 class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">About</h2>
-          <p class="mt-3 text-base leading-relaxed text-slate-700 sm:text-lg">{aboutData.about}</p>
-        </section>
-
-        <section id="capabilities" class="border-t border-slate-200 pt-8">
-          <h2 class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">What Stephen builds</h2>
-          <div class="mt-4 grid gap-4 sm:grid-cols-2">
-            {capabilityAreas.map((area) => (
-              <article class="light-artifact rounded-2xl bg-white/[0.94] p-5 shadow-[0_12px_28px_rgba(60,28,120,0.08)] ring-1 ring-slate-200">
-                <h3 class="font-semibold text-brand-ink">{area.title}</h3>
-                <ul class="mt-3 space-y-2 text-sm text-slate-700">
-                  {area.items.map((item) => (
-                    <li class="flex gap-2 leading-relaxed">
-                      <ArrowRight className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-brand-teal" aria-hidden="true" />
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </article>
-            ))}
+  <Section id="experience" eyebrow="Experience" heading="Where the work has been" class="border-t border-dl-rule">
+    <ol class="mt-8 divide-y divide-dl-rule border-y border-dl-rule">
+      {experiences.map((item) => (
+        <li class="grid gap-3 py-6 md:grid-cols-[14rem_minmax(0,1fr)]">
+          <p class="label text-dl-ink-3">{item.dates}</p>
+          <div>
+            <h3 class="text-step-1">{item.role}</h3>
+            <p class="text-dl-ink-2">{employer(item.company)}</p>
+            <ul class="mt-3 grid list-[square] gap-1.5 pl-5 text-step--1 text-dl-ink-2">{item.bullets.slice(0, 4).map((bullet) => <li>{bullet}</li>)}</ul>
           </div>
+        </li>
+      ))}
+    </ol>
+  </Section>
 
-          {technicalSkills.length > 0 ? (
-            <div class="mt-5">
-              <h3 class="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-teal">Technical skills</h3>
-              <ul class="mt-3 flex flex-wrap gap-2">
-                {technicalSkills.map((skill: string) => (
-                  <li class="rounded-full border border-slate-200 bg-[#faf8ff] px-3 py-1 text-xs font-semibold text-slate-600">
-                    {skill}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </section>
+  <Section id="education" eyebrow="Education" heading="Education and responsibilities" class="border-t border-dl-rule">
+    <ul class="mt-8 grid gap-6 md:grid-cols-2">
+      {(about.education || []).map((item) => (
+        <li><p class="font-semibold">{item.program}</p><p class="text-dl-ink-2">{item.school}</p><p class="label mt-1 text-dl-ink-3">{item.years}</p></li>
+      ))}
+      {(about.achievementsAndResponsibilities || []).map((item) => (
+        <li><p class="font-semibold">{item.title}</p><p class="text-dl-ink-2">{item.details}</p></li>
+      ))}
+    </ul>
+  </Section>
 
-        <section id="education" class="border-t border-slate-200 pt-8">
-          <h2 class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Education</h2>
-          <ul class="mt-4 space-y-4">
-            {(aboutData.education || []).map((item) => (
-              <li>
-                <p class="font-semibold text-brand-ink">{item.program}</p>
-                <p class="text-slate-700">{item.school}</p>
-                <p class="text-sm text-slate-500">{item.years}</p>
-              </li>
-            ))}
-          </ul>
+  <Section id="certifications" eyebrow="Credentials" heading="Certifications" class="border-t border-dl-rule">
+    {(about.certificatesAndLicenses || []).length > 0 && (
+      <ul class="mt-8 grid gap-3 sm:grid-cols-2">
+        {(about.certificatesAndLicenses || []).map((cert) => (
+          <li class="border-l border-dl-rule pl-4"><p>{cert.name}</p><p class="label mt-1 text-dl-ink-3">{[cert.issuer, cert.date].filter(Boolean).join(' · ')}</p></li>
+        ))}
+      </ul>
+    )}
+    {certifications.length > 0 && (
+      <ul class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4" aria-label="Platform training certificates">
+        {certifications.map((cert) => {
+          const full = cert.badgeImageFull?.src || cert.credentialUrl
+          return (
+            <li>
+              {cert.badgeImage ? (
+                <a href={full || undefined} target="_blank" rel="noopener" class="block rounded-dl-s border border-dl-rule bg-dl-paper p-2" aria-label={`View ${cert.name} certificate full size`}>
+                  <picture>
+                    <source type="image/avif" srcset={cert.badgeImage.avifSrcSet} />
+                    <source type="image/webp" srcset={cert.badgeImage.webpSrcSet} />
+                    <img src={cert.badgeImage.src} width={cert.badgeImage.width} height={cert.badgeImage.height} alt={`${cert.name} certificate issued by ${cert.issuer}`} loading="lazy" decoding="async" class="h-auto w-full" />
+                  </picture>
+                </a>
+              ) : null}
+              <p class="mt-2 text-step--1">{cert.name}</p>
+              <p class="label text-dl-ink-3">{[cert.issuer, cert.issuedDate].filter(Boolean).join(' · ')}</p>
+            </li>
+          )
+        })}
+      </ul>
+    )}
+  </Section>
 
-          {(aboutData.achievementsAndResponsibilities || []).length > 0 ? (
-            <div class="mt-6">
-              <h3 class="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-teal">
-                Achievements &amp; Responsibilities
-              </h3>
-              <ul class="mt-3 space-y-4">
-                {(aboutData.achievementsAndResponsibilities || []).map((item) => (
-                  <li>
-                    <p class="font-semibold text-brand-ink">{item.title}</p>
-                    <p class="text-slate-700">{item.details}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </section>
+  <Section id="tools" eyebrow="Tools" heading="Tools and platforms" class="border-t border-dl-rule">
+    <ul class="mt-8 flex flex-wrap gap-2" aria-label="Tools and platforms in regular use">{coreTools.map((tool) => <li><Tag>{tool.label}</Tag></li>)}</ul>
+  </Section>
 
-        <section id="certifications" class="border-t border-slate-200 pt-8">
-          <h2 class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Certifications</h2>
-          <h3 class="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-teal">Professional</h3>
-          <ul class="mt-3 grid gap-4 sm:grid-cols-2">
-            {(aboutData.certificatesAndLicenses || []).map((cert) => (
-              <li class="flex items-start gap-3">
-                <CertificationLogo issuer={cert.issuer} />
-                <div>
-                  <p class="text-sm text-brand-ink">{cert.name}</p>
-                  {cert.date ? <p class="text-xs text-slate-500">{cert.date}</p> : null}
-                </div>
-              </li>
-            ))}
-          </ul>
+  <Section id="portfolio" eyebrow="Selected work" heading="Systems written up in full" class="scroll-mt-24 border-t border-dl-rule">
+    <ul class="mt-8 divide-y divide-dl-rule border-y border-dl-rule">
+      {work.map((entry) => (
+        <li class="flex flex-wrap items-baseline justify-between gap-3 py-4">
+          <a href={`/work/${entry.slug}`} class="font-semibold" data-cta-id="profile-work-item">{entry.project.title}</a>
+          <span class="label text-dl-ink-3">{entry.project.type}</span>
+        </li>
+      ))}
+    </ul>
+    <p class="mt-6 text-dl-ink-2">More builds and the products Stephen runs are on <a href="/work">Work</a> and <a href="/products">Products</a>.</p>
+  </Section>
 
-          {certifications.length > 0 ? (
-            <div class="mt-6">
-              <h3 class="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand-teal">Platform Training</h3>
-              <div class="mt-3">
-                <CertificationsGallery client:load certifications={certifications} />
-              </div>
-            </div>
-          ) : null}
-        </section>
-
-        <section id="experience" class="border-t border-slate-200 pt-8">
-          <h2 class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Experience</h2>
-          <ExperienceTimeline client:visible experiences={experiences} />
-        </section>
-
-        <section id="tools" class="border-t border-slate-200 pt-8">
-          <h2 class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Tools &amp; Platforms</h2>
-          <ToolsMarquee tools={coreTools} />
-        </section>
-
-        <section id="portfolio" class="border-t border-slate-200 pt-8 scroll-mt-28">
-          <h2 class="mb-6 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Selected technical projects</h2>
-          <PortfolioGallery client:visible projects={projects} />
-          <p class="mt-6 text-sm text-slate-600">
-            The same projects are written up as business systems — problem, architecture, and operating behavior — on the
-            <a href="/work" class="font-semibold text-brand-teal underline-offset-2 hover:underline"> Work page</a>.
-          </p>
-        </section>
-
-        <section id="availability" class="border-t border-slate-200 pt-8">
-          <div class="light-artifact rounded-[1.5rem] bg-gradient-to-br from-[#fff9ff] via-[#fbf9ff] to-[#f2efff] p-6 shadow-[0_18px_38px_rgba(48,28,114,0.12)] sm:p-7">
-            <h2 class="text-xl font-semibold text-brand-ink">Employment and collaboration</h2>
-            <p class="mt-2 text-sm leading-relaxed text-slate-700">
-              Stephen is open to suitable remote full-time, part-time, and contract roles, as well as technical
-              collaboration. Recruiters and hiring managers reach him directly — the form is a short employment inquiry,
-              not the business qualification process.
-            </p>
-            <div class="mt-5 flex flex-wrap gap-3">
-              <PrimaryButton
-                to="/contact?type=employment_opportunity"
-                data-cta-id="profile-availability-contact"
-                data-cta-variant="primary"
-                data-inquiry-type="employment_opportunity"
-                showIcon
-              >
-                Contact Stephen about a role
-              </PrimaryButton>
-              <PrimaryButton
-                to="/contact?type=contract_collaboration"
-                variant="secondary"
-                data-cta-id="profile-availability-contract"
-                data-cta-variant="secondary"
-                data-inquiry-type="contract_collaboration"
-              >
-                Discuss a contract or collaboration
-              </PrimaryButton>
-            </div>
-            <div class="mt-5 flex flex-wrap gap-4 text-sm font-semibold text-brand-teal">
-              <a href="https://github.com/stpn-dev" target="_blank" rel="noreferrer" class="inline-flex items-center gap-1.5 hover:underline">
-                GitHub <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-              </a>
-              <a
-                href="https://www.linkedin.com/in/stephen-rey-agustinez-8b86041b3"
-                target="_blank"
-                rel="noreferrer"
-                class="inline-flex items-center gap-1.5 hover:underline"
-              >
-                LinkedIn <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-              </a>
-              <a href="/resume.pdf" target="_blank" rel="noreferrer" class="inline-flex items-center gap-1.5 hover:underline">
-                Résumé <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-              </a>
-            </div>
-          </div>
-        </section>
+  <section id="availability" aria-labelledby="availability-heading" class="ink-panel">
+    <div class="mx-auto max-w-container px-[var(--gutter)] py-[calc(var(--section-rhythm)*0.6)]">
+      <h2 id="availability-heading" class="text-step-3">Employment and collaboration</h2>
+      <p class="mt-4 text-step-1 text-dl-ink-2">Open to suitable remote full-time, part-time and contract roles, and technical collaboration. This goes straight to Stephen, not through the business questions.</p>
+      <div class="mt-8 flex flex-wrap gap-x-6 gap-y-3">
+        <a href="/contact?type=employment_opportunity" class="dl-button-primary" data-cta-id="profile-availability-contact" data-inquiry-type="employment_opportunity">Contact Stephen about a role</a>
+        <a href="/contact?type=contract_collaboration" class="dl-button-quiet" data-cta-id="profile-availability-contract" data-inquiry-type="contract_collaboration">Discuss a contract or collaboration</a>
       </div>
     </div>
-  </div>
-
-  <script>
-    import { initProfileSideNav } from '../lib/profileSideNav'
-    initProfileSideNav()
-  </script>
-</Layout>
+  </section>
+</BrandLayout>

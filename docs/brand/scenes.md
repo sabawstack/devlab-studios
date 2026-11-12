@@ -50,12 +50,12 @@ shows only the frame and caption. To approve:
 
 | Scene | Status |
 |---|---|
-| S1 Fragmented intake | pending approval |
-| S2 The connected system | pending approval |
-| S3 Persist before deliver | pending approval |
-| S4 Handoff to a person | pending approval |
-| S5 Build in layers | pending approval |
-| S6 Workflow audit | pending approval |
+| S1 Fragmented intake | approved 2026-11-12 |
+| S2 The connected system | approved 2026-11-12 |
+| S3 Persist before deliver | approved 2026-11-12 |
+| S4 Handoff to a person | approved 2026-11-12 |
+| S5 Build in layers | approved 2026-11-12 |
+| S6 Workflow audit | approved 2026-11-12 |
 
 ## Known limits (for the reviewer)
 

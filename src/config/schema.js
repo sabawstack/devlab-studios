@@ -206,7 +206,7 @@ export const getServiceSchema = (service) => ({
     url: 'https://www.devlabstudios.com',
   },
   areaServed: 'Worldwide',
-  url: `https://www.devlabstudios.com/solutions#${service.id}`,
+  url: `https://www.devlabstudios.com${service.path || `/solutions#${service.id}`}`,
   ...(service.capabilities?.length
     ? {
         hasOfferCatalog: {

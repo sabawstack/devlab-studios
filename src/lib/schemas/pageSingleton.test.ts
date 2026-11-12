@@ -30,3 +30,10 @@ describe('pageSingletonSchema (CMS-01)', () => {
     expect(pageSingletonSchema.safeParse(minimalPage('home', 'archived')).success).toBe(false)
   })
 })
+
+describe('code-composed pages (2.4.0)', () => {
+  it('flags every page whose public copy no longer comes from its blocks, and only those', () => {
+    const composed = PUBLIC_SURFACES.filter((surface) => surface.codeComposed).map((surface) => surface.key).sort()
+    expect(composed).toEqual(['about', 'contact', 'home', 'insights', 'process', 'solutions'])
+  })
+})

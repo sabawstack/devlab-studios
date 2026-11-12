@@ -165,6 +165,10 @@ body.brand::before {
   text-decoration-thickness: 1px;
   text-underline-offset: 0.2em;
 }
+.brand :where(p, li, dd) :where(a) {
+  /* Links in running text are underlined, so colour is never the only cue (BR.12). */
+  text-decoration-line: underline;
+}
 .brand :where(a:hover) {
   text-decoration-color: var(--redline);
 }
@@ -195,3 +199,125 @@ body.brand::before {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---- Global action styles (for plain links; Button.astro wraps the same rules) ---- */
+.dl-button-primary,
+.dl-button-quiet {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-label);
+  font-size: var(--step--1);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  transition: background-color var(--duration-ui) var(--ease-draw), text-decoration-color var(--duration-ui) var(--ease-draw);
+}
+.dl-button-primary {
+  padding: 0 1.25rem;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-s);
+  background: var(--ink);
+  color: var(--paper);
+}
+.dl-button-primary:hover { background: var(--ink-2); color: var(--paper); }
+.dl-button-quiet {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.3em;
+}
+.dl-button-quiet:hover { text-decoration-color: var(--redline); }
+.dl-button-primary:focus-visible,
+.dl-button-quiet:focus-visible { outline: 2px solid var(--redline); outline-offset: 2px; }
+.dl-skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  z-index: 60;
+  padding: 0.5rem 1rem;
+  background: var(--ink);
+  color: var(--paper);
+}
+.dl-skip-link:focus { top: 1rem; }
+
+/* ---- The inquiry form island on brand pages (audit UX-11 / BR.10 form fields) ----
+   The React form keeps its markup and behaviour; inside `.dl-form` its surface,
+   fields, labels and buttons take the brand tokens. Selectors are scoped and a
+   step more specific than the utilities they replace, so no !important. */
+.dl-form .form-surface {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-s);
+  background: var(--paper);
+  box-shadow: none;
+}
+.dl-form .form-surface h2 { font-family: var(--font-display); color: var(--ink); }
+.dl-form .form-surface .text-brand-teal,
+.dl-form .form-surface .text-brand-ink { color: var(--ink); }
+.dl-form .form-surface :is(.text-slate-500, .text-slate-600, .text-slate-700) { color: var(--ink-3); }
+.dl-form .form-surface .flex.flex-col.gap-2 > label {
+  font-family: var(--font-label);
+  font-size: var(--step--1);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.dl-form .form-surface .form-control {
+  min-height: 48px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-xs);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-display);
+  box-shadow: none;
+}
+.dl-form .form-surface .form-control::placeholder { color: var(--ink-3); }
+.dl-form .form-surface .form-control:hover { border-color: var(--ink-3); }
+.dl-form .form-surface .form-control:focus {
+  border-color: var(--ink);
+  box-shadow: none;
+  outline: 2px solid var(--redline);
+  outline-offset: 2px;
+}
+.dl-form .form-surface .form-control[aria-invalid='true'] { border-color: var(--redline); }
+.dl-form .form-surface .text-rose-700 { color: var(--redline); }
+.dl-form .form-surface .turnstile-shell {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-s);
+  background: var(--paper-2);
+}
+.dl-form .form-surface button[class*='rounded-full'] {
+  min-height: 44px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-s);
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: none;
+  font-family: var(--font-label);
+  font-size: var(--step--1);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.dl-form .form-surface button[class*='rounded-full']:hover:not(:disabled) {
+  background: var(--ink-2);
+  filter: none;
+  transform: none;
+  box-shadow: none;
+}
+.dl-form .form-surface button[class*='rounded-full'][class*='bg-white'] {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--rule);
+}
+.dl-form .form-surface button[class*='rounded-full'][class*='bg-white']:hover:not(:disabled) { background: var(--paper-2); }
+.dl-form .form-surface button[class*='rounded-full']:disabled {
+  /* Solid and still legible (ink-3 on paper-2 is above 4.5:1), not faded. */
+  opacity: 1;
+  background: var(--paper-2);
+  border-color: var(--rule);
+  color: var(--ink-3);
+}
+.dl-form .form-surface button:focus-visible { outline: 2px solid var(--redline); outline-offset: 2px; }
+.dl-form .form-surface [role='status'] { border-radius: var(--radius-s); }

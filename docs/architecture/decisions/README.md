@@ -18,5 +18,6 @@ have to re-derive from git archaeology.
 9. [Renaming /services to /solutions, and why the redirect is in code](./0009-solutions-route-rename.md)
 11. [Edge HTML cache with generation-based invalidation](./0011-edge-html-cache.md)
 12. ["Working Drawings" brand system and a code-owned scene registry](./0012-brand-system-and-scene-registry.md)
+13. [Code-composed marketing pages; the CMS keeps the content that changes](./0013-code-composed-marketing-pages.md)
 
 (0010 is reserved for the product-Worker split, written with that change.)

@@ -99,6 +99,12 @@ function PageBuilderPage() {
         publicPath={surface?.publicPath || `/${slug}`}
         description={surface?.description || 'Controls the corresponding public page.'}
       />
+      {surface?.codeComposed ? (
+        <div role="note" className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900" data-code-composed-notice>
+          <p className="font-semibold">This page is composed in code.</p>
+          <p className="mt-1">Since the 2.4.0 redesign its layout and copy live in the codebase, so changes saved here are kept in history but do not appear on the public site. Navigation, SEO, articles, projects, Work narratives and the profile are still edited in the CMS.</p>
+        </div>
+      ) : null}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-slate-900">Page: {page.title || slug}</h1>
         <div className="flex gap-2">

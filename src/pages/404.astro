@@ -1,99 +1,28 @@
 ---
-import Layout from '../layouts/Layout.astro'
-import GlassCard from '../components/GlassCard.jsx'
-import SectionHeader from '../components/SectionHeader.jsx'
-import PrimaryButton from '../components/PrimaryButton.jsx'
-import AnimatedIcon from '../components/icons/AnimatedIcon.jsx'
-import { AlertTriangle, Home, ArrowLeft, MessageSquare, User, Briefcase } from '../components/icons/icons.js'
+/** Not found (brand layout). Always 404 and noindex; offers the main routes. */
+import BrandLayout from '../layouts/BrandLayout.astro'
+import PageHeader from '../components/brand/PageHeader.astro'
 import { ERROR_MESSAGES } from '../config/errorMessages.js'
 
 Astro.response.status = 404
 const { title, message } = ERROR_MESSAGES.NOT_FOUND
+const routes = [
+  { href: '/solutions', label: 'Solutions', text: 'What we build' },
+  { href: '/work', label: 'Work', text: 'Systems already running' },
+  { href: '/insights', label: 'Insights', text: 'Notes on operations problems' },
+  { href: '/contact', label: 'Contact', text: 'Tell us what you need' },
+]
 ---
 
-<Layout title={`${title} — DevLab Studios`} robots="noindex, follow">
-  <div class="space-y-8">
-    <SectionHeader title={title} subtitle={message} align="center" />
-
-    <GlassCard className="p-8">
-      <div class="space-y-6 text-center">
-        <div class="flex justify-center">
-          <AnimatedIcon
-            icon={AlertTriangle}
-            size={64}
-            color="text-navy-300"
-            animationType="float"
-            ariaLabel="404 Error"
-          />
-        </div>
-
-        <div class="text-6xl font-bold text-navy-300">404</div>
-
-        <div class="space-y-2">
-          <p class="text-lg text-slate-200/85">
-            The page you're looking for isn't here. It might have been moved or deleted.
-          </p>
-        </div>
-
-        <div class="flex flex-wrap justify-center gap-3">
-          <PrimaryButton to="/">
-            <Home size={16} />
-            Go Home
-          </PrimaryButton>
-          <a
-            href="#"
-            id="notfound-back"
-            class="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-brand-ink transition duration-200 hover:border-brand-teal/50 hover:text-brand-teal hover:bg-slate-50"
-          >
-            <ArrowLeft size={16} />
-            Go Back
-          </a>
-          <PrimaryButton to="/contact" variant="ghost">
-            <MessageSquare size={16} />
-            Contact Support
-          </PrimaryButton>
-        </div>
-      </div>
-    </GlassCard>
-
-    <div class="space-y-4">
-      <h3 class="text-center text-lg font-semibold text-white">Quick Links</h3>
-      <div class="grid gap-4 sm:grid-cols-3">
-        <a href="/about" class="block group">
-          <GlassCard className="h-full p-5 transition-all group-hover:border-navy-300/50">
-            <div class="flex items-center gap-2">
-              <AnimatedIcon icon={User} size={18} color="text-navy-300" animationType="none" />
-              <p class="text-sm font-semibold text-navy-300">About</p>
-            </div>
-            <p class="mt-1 text-sm text-slate-200/85">Learn about DevLab Studios</p>
-          </GlassCard>
-        </a>
-        <a href="/profile" class="block group">
-          <GlassCard className="h-full p-5 transition-all group-hover:border-navy-300/50">
-            <div class="flex items-center gap-2">
-              <AnimatedIcon icon={Briefcase} size={18} color="text-navy-300" animationType="none" />
-              <p class="text-sm font-semibold text-navy-300">Profile</p>
-            </div>
-            <p class="mt-1 text-sm text-slate-200/85">View founder profile and work</p>
-          </GlassCard>
-        </a>
-        <a href="/contact" class="block group">
-          <GlassCard className="h-full p-5 transition-all group-hover:border-navy-300/50">
-            <div class="flex items-center gap-2">
-              <AnimatedIcon icon={MessageSquare} size={18} color="text-navy-300" animationType="none" />
-              <p class="text-sm font-semibold text-navy-300">Contact</p>
-            </div>
-            <p class="mt-1 text-sm text-slate-200/85">Get in touch</p>
-          </GlassCard>
-        </a>
-      </div>
-    </div>
-  </div>
-</Layout>
-
-<script>
-  document.getElementById('notfound-back')?.addEventListener('click', (event) => {
-    event.preventDefault()
-    window.history.back()
-  })
-</script>
+<BrandLayout title={`${title} · DevLab Studios`} robots="noindex, follow">
+  <PageHeader eyebrow="404" heading={title} lead={message}>
+    <a href="/" class="dl-button-primary">Go to the home page</a>
+  </PageHeader>
+  <nav aria-label="Main sections" class="mx-auto max-w-container px-[var(--gutter)] py-12">
+    <ul class="grid gap-px overflow-hidden rounded-dl-s border border-dl-rule bg-dl-rule sm:grid-cols-2 lg:grid-cols-4">
+      {routes.map((route) => (
+        <li class="bg-dl-paper"><a href={route.href} class="block p-6 no-underline hover:bg-dl-paper-2"><span class="label text-dl-ink-3">{route.label}</span><span class="mt-2 block text-dl-ink">{route.text}</span></a></li>
+      ))}
+    </ul>
+  </nav>
+</BrandLayout>

@@ -21,7 +21,7 @@ test('tracking parameters share one cached copy', async ({ request }) => {
 
 test('a preview link is never served from or stored in the cache', async ({ request }) => {
   for (let i = 0; i < 2; i += 1) {
-    const response = await request.get('/process?preview=p1.not.valid')
+    const response = await request.get('/terms?preview=p1.not.valid')
     expect(response.headers()['x-devlab-cache']).toBeUndefined()
     expect(response.headers()['cache-control']).toMatch(/no-store/)
   }

@@ -1,0 +1,16 @@
+---
+/** Questions and answers as native disclosures (audit BR.10); pair with getFaqSchema for rich results. */
+interface Props { items: { question: string; answer: string }[]; class?: string }
+const { items, class: className = '' } = Astro.props
+---
+<div class={`divide-y divide-dl-rule border-y border-dl-rule ${className}`}>
+  {items.map((item) => (
+    <details class="group">
+      <summary class="flex min-h-14 cursor-pointer items-center justify-between gap-4 py-3 text-step-1 font-semibold">
+        {item.question}
+        <span aria-hidden="true" class="label text-dl-ink-3 group-open:rotate-45">+</span>
+      </summary>
+      <p class="pb-5 text-dl-ink-2">{item.answer}</p>
+    </details>
+  ))}
+</div>

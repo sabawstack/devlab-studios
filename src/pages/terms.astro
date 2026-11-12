@@ -1,7 +1,6 @@
 ---
+import LegalPage from '../components/brand/LegalPage.astro'
 import { draftPreviewFor } from '../lib/content/preview'
-import Layout from '../layouts/Layout.astro'
-import BlockRenderer from '../components/blocks/BlockRenderer.astro'
 import { loadPage } from '../lib/content/pages'
 import { loadPageSeo } from '../lib/content/seo'
 
@@ -9,6 +8,4 @@ const seo = await loadPageSeo('terms')
 const page = await loadPage('terms', { includeDrafts: await draftPreviewFor(Astro, { type: 'page', id: 'terms' }) })
 ---
 
-<Layout title={`${page?.title || 'Terms of Service'} — DevLab Studios`} seo={seo}>
-  {page ? <BlockRenderer blocks={page.blocks} /> : <p class="text-slate-600">This page is not available right now.</p>}
-</Layout>
+<LegalPage page={page} fallbackTitle="Terms of Service" seo={seo} />

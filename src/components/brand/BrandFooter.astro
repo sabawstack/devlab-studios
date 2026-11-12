@@ -1,0 +1,55 @@
+---
+/**
+ * Footer for the redesigned pages (audit G.2 / BUS-05 / LEAD-03): ink panel,
+ * company identity, Explore (CMS quick links), Products, Connect, legal, and
+ * the employment path ("Hiring? Contact Stephen") that business pages never
+ * show inline.
+ */
+import type { SiteSettingsData } from '../../lib/content/siteSettings'
+import { safeHref } from '../../lib/safeHref'
+import { COMPANY, publicContactEmail } from '../../config/company.js'
+
+interface Props { siteSettings: SiteSettingsData }
+const { siteSettings } = Astro.props
+const footer = siteSettings.footer || {}
+const withSafe = (links: Array<{ label: string; href: string }> = []) => links.map((link) => ({ ...link, href: safeHref(link.href) }))
+const explore = withSafe(footer.quickLinks).filter((link) => link.href !== '/' && link.href !== '/profile')
+const connect = withSafe(footer.socialLinks).filter((link) => !link.href.startsWith('mailto:'))
+const legal = footer.legalLinks?.length ? withSafe(footer.legalLinks) : [{ label: 'Privacy', href: '/privacy' }, { label: 'Terms', href: '/terms' }]
+const email = publicContactEmail(footer.email)
+const year = new Date().getUTCFullYear()
+---
+<footer class="ink-panel border-t border-dl-rule">
+  <div class="mx-auto grid max-w-container gap-10 px-[var(--gutter)] py-16 md:grid-cols-12">
+    <div class="md:col-span-5">
+      <p class="text-step-1 font-semibold">{COMPANY.name}</p>
+      <p class="mt-2 max-w-sm text-dl-ink-2">{footer.tagline || COMPANY.description}</p>
+      <p class="mt-4"><a href={`mailto:${email}`}>{email}</a></p>
+      <p class="label mt-2 text-dl-ink-3">{COMPANY.locationLabel} · remote-first</p>
+    </div>
+    <nav class="md:col-span-2" aria-label="Explore">
+      <p class="label text-dl-ink-3">Explore</p>
+      <ul class="mt-3 space-y-2">{explore.map((link) => <li><a href={link.href} class="no-underline hover:underline">{link.label}</a></li>)}</ul>
+    </nav>
+    <nav class="md:col-span-2" aria-label="Products">
+      <p class="label text-dl-ink-3">Products</p>
+      <ul class="mt-3 space-y-2">
+        <li><a href="/products" class="no-underline hover:underline">All products</a></li>
+        <li><a href="/pickleball?ref=footer" class="no-underline hover:underline">Devlab Pickleball</a></li>
+      </ul>
+    </nav>
+    <nav class="md:col-span-3" aria-label="Connect">
+      <p class="label text-dl-ink-3">Connect</p>
+      <ul class="mt-3 space-y-2">
+        {connect.map((link) => <li><a href={link.href} rel="noopener" class="no-underline hover:underline">{link.label}</a></li>)}
+        <li><a href="/profile" class="no-underline hover:underline">Hiring? Contact Stephen</a></li>
+      </ul>
+    </nav>
+  </div>
+  <div class="border-t border-dl-rule">
+    <div class="mx-auto flex max-w-container flex-wrap items-center justify-between gap-3 px-[var(--gutter)] py-5 text-step--1 text-dl-ink-3">
+      <p>© {year} {COMPANY.name}</p>
+      <ul class="flex gap-5">{legal.map((link) => <li><a href={link.href} class="no-underline hover:underline">{link.label}</a></li>)}</ul>
+    </div>
+  </div>
+</footer>

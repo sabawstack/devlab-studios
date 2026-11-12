@@ -137,7 +137,7 @@ const sceneFigures = SCENES.map((scene) => ({ scene, number: figures.next() }))
       <section aria-labelledby="form-heading">
         <p class="label text-dl-ink-3">§6 Forms</p>
         <h2 id="form-heading" class="mt-2 text-step-3">Field states</h2>
-        <form class="mt-8 grid max-w-xl gap-6" onsubmit="return false">
+        <form class="mt-8 grid max-w-xl gap-6">
           <Field id="demo-name" label="Full name" help="As you would like to be addressed.">
             <input id="demo-name" class="dl-control" autocomplete="name" aria-describedby="demo-name-help" />
           </Field>
@@ -147,7 +147,7 @@ const sceneFigures = SCENES.map((scene) => ({ scene, number: figures.next() }))
           <Field id="demo-message" label="What needs improvement">
             <textarea id="demo-message" class="dl-control"></textarea>
           </Field>
-          <div><Button type="submit">Send inquiry</Button></div>
+          <div><Button>Send inquiry</Button></div>
         </form>
       </section>
     </main>

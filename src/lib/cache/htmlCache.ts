@@ -24,12 +24,15 @@ const GENERATION_MEMO_MS = 2_000
 const DEFAULT_TTL_SECONDS = 300
 
 /** Business pages and articles. Pickleball, the daily digest and operator surfaces are excluded. */
-const CACHEABLE_EXACT = new Set(['/', '/solutions', '/work', '/insights', '/about', '/profile', '/process', '/contact', '/privacy', '/terms'])
+const CACHEABLE_EXACT = new Set(['/', '/solutions', '/work', '/insights', '/about', '/profile', '/products', '/contact', '/privacy', '/terms'])
+/** Detail pages under these prefixes (service lines, write-ups, articles). */
+const CACHEABLE_UNDER = ['/solutions/', '/work/', '/insights/']
 const NEVER_UNDER = ['/insights/daily']
 
 export function isCacheablePath(path: string): boolean {
   if (CACHEABLE_EXACT.has(path)) return true
-  if (path.startsWith('/insights/') && !NEVER_UNDER.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))) return true
+  if (NEVER_UNDER.some((prefix) => path === prefix || path.startsWith(`${prefix}/`))) return false
+  if (CACHEABLE_UNDER.some((prefix) => path.startsWith(prefix) && path.length > prefix.length)) return true
   return false
 }
 

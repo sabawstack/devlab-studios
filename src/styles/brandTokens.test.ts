@@ -37,9 +37,15 @@ describe.each([':root', '.ink-panel'])('colour contrast in %s', (scope) => {
 })
 
 // TEST-03: the generic "AI template" patterns never enter the brand system.
-// Extends to every public component as pages migrate (UX-04).
+// Covers the brand system and every page migrated to BrandLayout (UX-04).
 const FORBIDDEN = [/backdrop-filter/, /linear-gradient/, /radial-gradient/, /blur\(/, /animation:\s*float/, /\brounded-(?:2xl|3xl)\b/, /fonts\.googleapis\.com/, /bg-gradient-to-/, /backdrop-blur/]
-const BRAND_SOURCES = ['src/styles/brand.css', 'src/components/brand', 'src/assets/scenes', 'src/assets/symbols']
+const BRAND_PAGES = [
+  'src/layouts/BrandLayout.astro', 'src/data/site', 'src/pages/index.astro', 'src/pages/solutions.astro', 'src/pages/solutions',
+  'src/pages/work.astro', 'src/pages/work', 'src/pages/insights.astro', 'src/pages/insights/[slug].astro', 'src/pages/about.astro',
+  'src/pages/profile.astro', 'src/pages/products.astro', 'src/pages/contact.astro', 'src/pages/privacy.astro', 'src/pages/terms.astro',
+  'src/pages/404.astro',
+]
+const BRAND_SOURCES = ['src/styles/brand.css', 'src/components/brand', 'src/assets/scenes', 'src/assets/symbols', ...BRAND_PAGES]
 
 function files(path: string): string[] {
   if (!existsSync(path)) return []
@@ -71,5 +77,13 @@ describe('fonts (UX-01)', () => {
     for (const family of ['Bricolage Fallback', 'Martian Fallback', 'Newsreader Fallback']) {
       expect(css).toMatch(new RegExp(`font-family: '${family}';[^}]*size-adjust:[^}]*ascent-override`))
     }
+  })
+})
+
+describe('migrated pages use the brand layout (UX-04)', () => {
+  it.each(BRAND_PAGES.filter((path) => path.startsWith('src/pages/')).flatMap(files))('%s', (path) => {
+    const text = readFileSync(path, 'utf8')
+    expect(text).not.toMatch(/layouts\/Layout\.astro/)
+    expect(text).toMatch(/BrandLayout|LegalPage/)
   })
 })

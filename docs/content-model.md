@@ -204,17 +204,29 @@ database. Inspect current rows, apply a targeted idempotent update, and verify
 the destination afterward.
 
 
-## Solutions presentation vs. the Services catalogue
+## Code-composed pages vs. CMS content (2.4.0)
 
-The public Solutions page (`/services` — the route is deliberately unchanged)
-presents four business-outcome categories defined in
-`src/data/solutionsContent.js`. Each maps to one or more existing
-`service_groups` records via `serviceGroupIds`.
+Since the 2.4.0 redesign (ADR 0013), Home, Solutions (the index and
+`/solutions/<line>`), About, Products, Contact and the Insights frame are
+composed in code. Their copy lives in `src/data/site/content.js` and their
+rules (word budgets, headings, founder mentions) are enforced by
+`tests/e2e/redesign.spec.js`. The page builder marks these pages
+(`codeComposed` in `src/config/publicSurfaces.js`): edits are kept in history
+but not shown.
 
-This is a presentation layer, not a replacement. The CMS catalogue still owns
-the detailed capabilities and their project relationships, and a service group
-that no category claims still renders, under "Also delivered" — so adding a
-service in Admin can never make it silently invisible.
+The CMS still owns:
+
+- **Work narratives + projects.** Each published narrative on the Work page,
+  joined to its project, is a write-up at `/work/<slug>` (the project's slug,
+  else its id without the `pN-` prefix) and may appear on Home, a service-line
+  page and the profile (`src/lib/content/work.ts`). Starter templates
+  (`clientType: template` or a `/landing-sample-*` address) never appear.
+- **Articles**, with their problem tag, audience and header scene.
+- **SEO records**, one per route (titles ≤ 60 characters, descriptions 120–160).
+- **Navigation, footer, profile, certifications and the legal pages.**
+
+The Service Catalog content type is no longer shown publicly; it is kept for
+reference and history.
 
 ## Entry offers and lead magnets
 

@@ -115,12 +115,13 @@ test.describe('the public daily log', () => {
     await expect(empty.or(editions)).toBeVisible()
   })
 
-  test('is listed in the sitemap exactly once', async ({ request, baseURL }) => {
+  // SEO-06 (2.3.0): the generated log is noindex, so it is not in the sitemap.
+  test('is not listed in the sitemap', async ({ request, baseURL }) => {
     const response = await request.get(`${baseURL}/sitemap.xml`)
     expect(response.ok()).toBeTruthy()
 
     const xml = await response.text()
     const matches = xml.match(/<loc>https:\/\/www\.devlabstudios\.com\/insights\/daily<\/loc>/g) || []
-    expect(matches).toHaveLength(1)
+    expect(matches).toHaveLength(0)
   })
 })

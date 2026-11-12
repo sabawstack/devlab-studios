@@ -25,6 +25,15 @@ describe('SEO coverage', () => {
     },
   )
 
+  // SEO-01: no truncated titles or snippets on any canonical route.
+  it.each(PUBLIC_ROUTES.map((entry) => entry.path))('title and description fit search results: %s', (path) => {
+    const record = seoContent.pages.find((page: { pageSlug: string }) => page.pageSlug === seoSlugForPath(path)) as { metaTitle: string; metaDescription: string }
+    expect(record.metaTitle.length).toBeLessThanOrEqual(60)
+    expect(record.metaDescription.length).toBeGreaterThanOrEqual(120)
+    expect(record.metaDescription.length).toBeLessThanOrEqual(160)
+    expect(record.metaTitle).not.toMatch(/ [|-] /)
+  })
+
   it('keys the homepage as "home" rather than an empty string', () => {
     expect(seoSlugForPath('/')).toBe('home')
   })

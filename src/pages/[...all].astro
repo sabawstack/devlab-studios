@@ -1,26 +1,6 @@
 ---
-import LegacyAppShell from '../layouts/shells/LegacyAppShell.astro'
-
-// Paths served by the wrapped legacy React SPA. All real content pages
-// and /admin have been converted to real .astro routes (see git history
-// for that migration) — what's left here is meant to stay this way: the 5
-// landing-sample-* demo pages, indefinitely (they're intentionally
-// excluded from conversion). Anything not listed falls through to the
-// real 404 page below.
-const LEGACY_EXACT_PATHS = new Set([
-  '/landing-sample-react',
-  '/landing-sample-html',
-  '/landing-sample-fullstack',
-  '/landing-sample-local-service',
-  '/landing-sample-ecommerce',
-])
-
-const pathname = Astro.url.pathname
-const isLegacyRoute = LEGACY_EXACT_PATHS.has(pathname)
-
-if (!isLegacyRoute) {
-  return Astro.rewrite('/404')
-}
+// Anything no route matches renders the real 404 page. The legacy React SPA
+// that used to answer the five /landing-sample-* paths was retired in 2.4.0
+// (audit WEB-07); those paths now 301 to /work in src/middleware.ts.
+return Astro.rewrite('/404')
 ---
-
-<LegacyAppShell />

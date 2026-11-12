@@ -1,219 +1,62 @@
 ---
-import { draftPreviewFor } from '../lib/content/preview'
-import Layout from '../layouts/Layout.astro'
-import SectionHeader from '../components/SectionHeader.jsx'
-import PrimaryButton from '../components/PrimaryButton.jsx'
-import WorkProjectGallery from '../components/islands/WorkProjectGallery.jsx'
-import VectorField from '../components/VectorField.astro'
-import { MessageSquare, Briefcase, ArrowRight, Robot, Code2, ShieldCheck } from '../components/icons/icons.js'
+/**
+ * Work index (audit UX-08 / BR.9): real systems, honestly described. Each
+ * entry is a numbered figure with the problem, the system and a link to its
+ * own write-up. Starter templates are not shown (WEB-07 / BUS-F04).
+ */
+import BrandLayout from '../layouts/BrandLayout.astro'
+import PageHeader from '../components/brand/PageHeader.astro'
+import Figure from '../components/brand/Figure.astro'
+import { createFigureCounter } from '../components/brand/figures'
 import { getBreadcrumbSchema } from '../config/schema.js'
 import { loadPageSeo } from '../lib/content/seo'
-import { loadProjects } from '../lib/content/projects'
-import { loadPage } from '../lib/content/pages'
+import { draftPreviewFor } from '../lib/content/preview'
+import { loadWorkEntries } from '../lib/content/work'
+import { WORK_INDEX } from '../data/site/content.js'
 
 const seo = await loadPageSeo('work')
-const projects = await loadProjects()
-const workPage = await loadPage('work', { includeDrafts: await draftPreviewFor(Astro, { type: 'page', id: 'work' }) })
-const hero = workPage?.blocks.find((block) => block.type === 'hero')?.props || {}
-const showcase = workPage?.blocks.find((block) => block.type === 'workProjectShowcase')?.props || {}
-const cta = workPage?.blocks.find((block) => block.type === 'cta')?.props || {}
-const projectsById = new Map(projects.map((project) => [project.id, project]))
-
-/**
- * Only published Work entries whose referenced Project still exists render —
- * the same rule the Work API enforces on save. Nothing is synthesized here:
- * every sentence shown comes from an editor-approved Work narrative, so the
- * page can never claim an outcome nobody wrote down.
- */
-const selectedProjects = (Array.isArray(showcase.items) ? showcase.items : []).flatMap((item: Record<string, unknown>) => {
-  if (item.status !== 'published') return []
-  const project = projectsById.get(String(item.projectId || ''))
-  return project ? [{ project, narrative: item }] : []
-})
-
-const primaryCta = hero.primaryCta as { label?: string; href?: string } | undefined
-const secondaryCta = hero.secondaryCta as { label?: string; href?: string } | undefined
-const finalCta = cta.primaryCta as { label?: string; href?: string } | undefined
-
-const jsonLd = [
-  getBreadcrumbSchema([
-    { name: 'Home', path: '/' },
-    { name: 'Work', path: '/work' },
-  ]),
-]
+const entries = await loadWorkEntries({ includeDrafts: await draftPreviewFor(Astro, { type: 'page', id: 'work' }) })
+const figures = createFigureCounter()
+const jsonLd = [getBreadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Work', path: '/work' }])]
 ---
 
-<Layout title="Work — DevLab Studios" seo={seo} jsonLd={jsonLd}>
-  <div class="space-y-16">
-    <nav aria-label="Breadcrumb" class="text-sm text-slate-400">
-      <ol class="flex flex-wrap items-center gap-2">
-        <li><a href="/" class="transition hover:text-white hover:underline">Home</a></li>
-        <li aria-hidden="true">/</li>
-        <li aria-current="page" class="text-slate-200">Work</li>
-      </ol>
-    </nav>
+<BrandLayout title="Work · DevLab Studios" seo={seo} jsonLd={jsonLd}>
+  <PageHeader eyebrow={WORK_INDEX.eyebrow} heading={WORK_INDEX.heading} lead={WORK_INDEX.lead} />
 
-    <section class="cinematic-panel relative overflow-hidden rounded-[2rem] p-6 text-white sm:p-8 lg:p-10">
-      <VectorField motif="automation" />
-      <div class="relative z-10 max-w-4xl space-y-5">
-        <p class="tech-kicker">{String(hero.eyebrow || 'Selected Work')}</p>
-        <h1 class="text-4xl font-semibold leading-tight text-white sm:text-5xl">
-          {String(hero.heading || 'Business systems, with the decisions, data flow, and handoff explained.')}
-        </h1>
-        <p class="max-w-3xl text-base leading-relaxed text-slate-300 sm:text-lg">
-          {String(
-            hero.subheading ||
-              'Each write-up states the business problem, the system designed for it, and what that system verifiably does. Where a client result is not something we can evidence, it is not claimed.',
-          )}
-        </p>
-        <div class="flex flex-wrap gap-3">
-          <PrimaryButton
-            to={primaryCta?.href || '#selected-systems'}
-            data-cta-id="work-hero-primary"
-            data-cta-variant="primary"
-          >
-            <Briefcase size={16} aria-hidden="true" />
-            {primaryCta?.label || 'Explore Selected Systems'}
-          </PrimaryButton>
-          <PrimaryButton
-            to={secondaryCta?.href || '/contact?type=business_system'}
-            variant="secondary"
-            data-cta-id="work-hero-secondary"
-            data-cta-variant="secondary"
-            data-inquiry-type="business_system"
-          >
-            <MessageSquare size={16} aria-hidden="true" />
-            {secondaryCta?.label || 'Discuss Your System'}
-          </PrimaryButton>
-        </div>
-      </div>
-    </section>
-
-    <section class="light-artifact flex items-start gap-3 rounded-2xl bg-white/[0.94] p-5 text-sm leading-relaxed text-slate-600 shadow-[0_12px_28px_rgba(60,28,120,0.08)] ring-1 ring-slate-200">
-      <ShieldCheck className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand-teal" aria-hidden="true" />
-      <p>
-        <span class="font-semibold text-brand-ink">About these write-ups.</span> They describe system behavior that can be
-        demonstrated — what gets captured, where it is stored, how it is routed, and who it reaches. Client names, revenue
-        figures, and percentage improvements are only shown where the client has approved them, which is why you will not
-        see invented numbers here.
-      </p>
-    </section>
-
-    <section id="selected-systems" class="space-y-7 scroll-mt-28">
-      <SectionHeader
-        title={String(showcase.heading || 'Selected systems')}
-        subtitle={String(showcase.subheading || '')}
-      />
-
-      {selectedProjects.length === 0 ? (
-        <div class="light-artifact rounded-2xl bg-white/[0.94] p-8 text-center shadow-[0_12px_28px_rgba(60,28,120,0.08)] ring-1 ring-slate-200">
-          <p class="font-semibold text-brand-ink">No work is published yet.</p>
-          <p class="mt-2 text-sm text-slate-600">
-            Published entries appear here once a project write-up is approved in the CMS.
-          </p>
-          <div class="mt-5 flex justify-center">
-            <PrimaryButton to="/solutions" variant="secondary">See the solutions</PrimaryButton>
-          </div>
-        </div>
-      ) : null}
-
-      <div class="space-y-7">
-        {selectedProjects.map(({ project, narrative }) => {
-          const ProjectIcon = project.type === 'Website' ? Code2 : Robot
-          return (
-            <article class="work-project" data-view-event="case_study_view" data-case-study-id={project.id}>
-              <div class="flex flex-col">
-                <WorkProjectGallery project={project} client:visible />
-
-                <div class="grid gap-8 p-6 sm:p-8 lg:grid-cols-[0.72fr_1.28fr] lg:p-10">
-                  <div>
-                    <div class="flex flex-wrap items-center gap-3">
-                      <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#e9edff] text-[#2f3cff]">
-                        <ProjectIcon size={20} aria-hidden="true" />
-                      </span>
-                      <p class="text-xs font-bold uppercase tracking-[0.16em] text-[#2f3cff]">{project.type} system</p>
-                    </div>
-
-                    <h2 class="mt-5 text-2xl font-semibold leading-tight text-brand-ink sm:text-3xl">{project.title}</h2>
-                    <p class="mt-3 text-sm leading-relaxed text-slate-600">{String(narrative.description || '')}</p>
-
-                    <div class="mt-7 flex flex-wrap gap-2">
-                      {(project.techStack || []).map((technology: string) => (
-                        <span class="rounded-full border border-[#d9def5] bg-[#f7f8fc] px-3 py-1 text-xs font-semibold text-[#344064]">
-                          {technology}
-                        </span>
-                      ))}
-                    </div>
-
-                    {project.liveUrl !== '#' || project.sourceUrl !== '#' ? (
-                      <div class="mt-6 flex flex-wrap gap-4 text-sm font-semibold text-[#2f3cff]">
-                        {project.liveUrl && project.liveUrl !== '#' ? (
-                          <a href={project.liveUrl} target="_blank" rel="noreferrer" class="inline-flex items-center gap-1.5 hover:underline">
-                            View live project <ArrowRight size={14} aria-hidden="true" />
-                          </a>
-                        ) : null}
-                        {project.sourceUrl && project.sourceUrl !== '#' ? (
-                          <a href={project.sourceUrl} target="_blank" rel="noreferrer" class="inline-flex items-center gap-1.5 hover:underline">
-                            View source <ArrowRight size={14} aria-hidden="true" />
-                          </a>
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                    <div class="mt-7">
-                      <PrimaryButton
-                        to={`/contact?type=business_system&case=${project.id}`}
-                        data-cta-id={`work-${project.id}-cta`}
-                        data-cta-variant="primary"
-                        data-case-study-id={project.id}
-                        data-inquiry-type="business_system"
-                        showIcon
-                      >
-                        Discuss something like this
-                      </PrimaryButton>
-                    </div>
-                  </div>
-
-                  <dl class="grid gap-5 border-t border-slate-200 pt-7 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
-                    <div class="border-l-2 border-[#2f3cff] pl-4">
-                      <dt class="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">The business problem</dt>
-                      <dd class="mt-1 text-sm leading-relaxed text-slate-700">{String(narrative.challenge || '')}</dd>
-                    </div>
-                    <div class="border-l-2 border-[#55d8ff] pl-4">
-                      <dt class="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">The system designed</dt>
-                      <dd class="mt-1 text-sm leading-relaxed text-slate-700">{String(narrative.systemArchitecture || '')}</dd>
-                    </div>
-                    <div class="border-l-2 border-[#8b96c8] pl-4">
-                      <dt class="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">What it does in operation</dt>
-                      <dd class="mt-1 text-sm leading-relaxed text-slate-700">{String(narrative.deliveryValue || '')}</dd>
-                    </div>
-                  </dl>
-                </div>
+  <section aria-labelledby="work-list-heading">
+    <h2 id="work-list-heading" class="sr-only">Selected systems</h2>
+    <ol class="mx-auto max-w-container px-[var(--gutter)]">
+      {entries.map((entry, index) => {
+        const picture = entry.project.optimizedImage
+        return (
+          <li class="grid gap-8 border-b border-dl-rule py-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-center" data-work-entry={entry.slug}>
+            <div>
+              <p class="label text-dl-ink-3">{String(index + 1).padStart(2, '0')} · {entry.project.type}</p>
+              <h3 class="mt-2 text-step-2"><a href={`/work/${entry.slug}`} class="no-underline hover:underline">{entry.project.title}</a></h3>
+              <dl class="mt-5 grid gap-4">
+                <div><dt class="label text-dl-ink-3">The problem</dt><dd class="mt-1 text-dl-ink-2">{entry.problem}</dd></div>
+                <div><dt class="label text-dl-ink-3">What it does</dt><dd class="mt-1 text-dl-ink-2">{entry.value}</dd></div>
+              </dl>
+              <div class="mt-6 flex flex-wrap gap-x-6 gap-y-3">
+                <a href={`/work/${entry.slug}`} class="dl-button-primary" data-cta-id="work-read">Read the write-up<span class="sr-only">: {entry.project.title}</span></a>
+                <a href={`/contact?type=business_system&case=${encodeURIComponent(entry.project.id)}`} class="dl-button-quiet" data-cta-id="work-similar" data-case-study-id={entry.project.id}>Discuss something similar</a>
               </div>
-            </article>
-          )
-        })}
-      </div>
-    </section>
-
-    <section class="cinematic-panel rounded-[28px] p-7 text-white sm:p-9">
-      <div class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-        <div class="max-w-2xl">
-          <p class="tech-kicker">From proof to delivery</p>
-          <h2 class="mt-3 text-3xl font-semibold">
-            {String(cta.heading || 'Have a workflow that should operate like a system?')}
-          </h2>
-          <p class="mt-3 text-slate-300">{String(cta.body || '')}</p>
-        </div>
-        <PrimaryButton
-          to={finalCta?.href || '/contact?type=business_system'}
-          data-cta-id="work-final-primary"
-          data-cta-variant="primary"
-          data-inquiry-type="business_system"
-        >
-          {finalCta?.label || 'Discuss Your System'} <ArrowRight size={16} aria-hidden="true" />
-        </PrimaryButton>
-      </div>
-    </section>
-  </div>
-</Layout>
+            </div>
+            <Figure number={figures.next()} caption={`${entry.project.title}: the workflow as built.`}>
+              {picture ? (
+                <picture>
+                  <source type="image/avif" srcset={picture.avifSrcSet} />
+                  <source type="image/webp" srcset={picture.webpSrcSet} />
+                  <img src={picture.src} width={picture.width} height={picture.height} alt={`Screenshot of ${entry.project.title}`} loading={index ? 'lazy' : 'eager'} decoding="async" class="aspect-[4/3] w-full object-cover" />
+                </picture>
+              ) : <div class="aspect-[4/3]" />}
+            </Figure>
+          </li>
+        )
+      })}
+    </ol>
+    <p class="mx-auto max-w-container px-[var(--gutter)] py-10 text-step--1 text-dl-ink-3" data-evidence-standard>
+      Client names, revenue figures and percentage improvements appear only where the client has agreed and the figure can be evidenced.
+    </p>
+  </section>
+</BrandLayout>

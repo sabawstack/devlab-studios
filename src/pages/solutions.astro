@@ -1,412 +1,77 @@
 ---
-import { draftPreviewFor } from '../lib/content/preview'
-import Layout from '../layouts/Layout.astro'
-import SectionHeader from '../components/SectionHeader.jsx'
-import PrimaryButton from '../components/PrimaryButton.jsx'
-import VectorField from '../components/VectorField.astro'
-import {
-  PaddleQueueIcon, BracketIcon, TvBoardIcon, UploadFileIcon,
-} from '../components/pickleball/art/FeatureIcons.jsx'
-import * as Icons from '../components/icons/icons.js'
-import { ArrowRight, CheckCircle2 } from '../components/icons/icons.js'
-import { getBreadcrumbSchema, getFaqSchema, getServiceSchema } from '../config/schema.js'
+/**
+ * Solutions index (audit UX-07 / G.1 / BR.9): three service lines and one way
+ * to start. Each line links to its own page under /solutions/<slug>; the old
+ * in-page anchors (#lead-intake-followup, …) still land on the matching item.
+ */
+import BrandLayout from '../layouts/BrandLayout.astro'
+import PageHeader from '../components/brand/PageHeader.astro'
+import Section from '../components/brand/Section.astro'
+import SceneFrame from '../components/brand/SceneFrame.astro'
+import { createFigureCounter } from '../components/brand/figures'
+import { getBreadcrumbSchema, getServiceSchema } from '../config/schema.js'
 import { loadPageSeo } from '../lib/content/seo'
-import { loadServicesContent } from '../lib/content/services'
-import { loadProjects } from '../lib/content/projects'
-import { loadPage } from '../lib/content/pages'
-import { solutionCategories } from '../data/solutionsContent.js'
-import { ENTRY_OFFERS } from '../config/offers.js'
-// Animation keyframes for the pickleball icons below; animation-only rules,
-// scoped to .pb-anim, so nothing else on this page is restyled.
-import '../styles/pickleball-open.css'
-
-function resolveIcon(name: string) {
-  return (Icons as Record<string, typeof Icons.Lightbulb>)[name] || Icons.Lightbulb
-}
+import { DELIVERY_STEPS, OFFER_AUDIT, SERVICE_LINES, SOLUTIONS_INDEX, serviceLineContactHref } from '../data/site/content.js'
 
 const seo = await loadPageSeo('solutions')
-const servicesPage = await loadPage('solutions', { includeDrafts: await draftPreviewFor(Astro, { type: 'page', id: 'solutions' }) })
-const { solutionGroups, faqs } = await loadServicesContent()
-const projectItems = await loadProjects()
-
-const pageHero = servicesPage?.blocks.find((block) => block.type === 'hero')?.props || {}
-const sectionCopy = servicesPage?.blocks.filter((block) => block.type === 'richText') || []
-const pageCta = servicesPage?.blocks.find((block) => block.type === 'cta')?.props || {}
-const pageFaq = servicesPage?.blocks.find((block) => block.type === 'faq')?.props || {}
-// Block props are `Record<string, unknown>`; narrow once here rather than at
-// each of the three places the list is used.
-const cmsFaqItems = pageFaq.items as Array<{ question: string; answer: string }> | undefined
-const faqItems = cmsFaqItems?.length ? cmsFaqItems : faqs
-
-/**
- * The CMS `service_groups` catalogue is the source of truth for detailed
- * capabilities and their project relationships; `solutionCategories` is the
- * business-facing grouping over it. Nothing is dropped: a group that no
- * category claims still renders in "Also delivered" below, so adding a
- * service in the CMS can never make it silently invisible.
- */
-const groupsById = new Map(solutionGroups.map((group) => [group.id, group]))
-const claimedGroupIds = new Set(solutionCategories.flatMap((category) => category.serviceGroupIds))
-const unmappedGroups = solutionGroups.filter((group) => !claimedGroupIds.has(group.id))
-
-const projectsById = new Map(projectItems.map((project) => [project.id, project]))
-
-function categoryDetail(category: (typeof solutionCategories)[number]) {
-  const groups = category.serviceGroupIds.map((id) => groupsById.get(id)).filter(Boolean)
-  const projectIds = [...new Set(groups.flatMap((group) => group?.projectIds || []))]
-  const projects = projectIds.map((id) => projectsById.get(id)).filter(Boolean).slice(0, 4)
-  return { groups, projects }
-}
-
-const auditOffer = ENTRY_OFFERS['workflow-systems-audit']
-
-// Copy claims only shipped behaviour of /pickleball (see its landing page).
-const pickleballFeatures = [
-  { Icon: PaddleQueueIcon, title: 'Fair rotation', body: 'Paddle stack, winners play winners, by standing or balanced teams. Keep pairs together or apart.' },
-  { Icon: BracketIcon, title: 'Tournaments', body: 'Round robin, pools then a bracket, or single or double elimination.' },
-  { Icon: TvBoardIcon, title: 'QR board and TV mode', body: 'Players follow every court by QR and check themselves in; a TV board shows the hall.' },
-  { Icon: UploadFileIcon, title: 'DUPR export', body: 'Email yourself a CSV of the games to upload to DUPR. Google sign-in is asked for this alone.' },
-]
-
+const figures = createFigureCounter()
 const jsonLd = [
-  getBreadcrumbSchema([
-    { name: 'Home', path: '/' },
-    { name: 'Solutions', path: '/solutions' },
-  ]),
-  ...solutionCategories.map((category) => getServiceSchema(category)),
-  getFaqSchema(faqItems),
+  getBreadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Solutions', path: '/solutions' }]),
+  ...SERVICE_LINES.map((line) => getServiceSchema({ id: line.slug, title: line.title, description: line.outcome, capabilities: line.includes, path: `/solutions/${line.slug}` })),
 ]
 ---
 
-<Layout title="Solutions — DevLab Studios" seo={seo} jsonLd={jsonLd}>
-  <div class="space-y-10">
-    <nav aria-label="Breadcrumb" class="text-sm text-slate-400">
-      <ol class="flex flex-wrap items-center gap-2">
-        <li><a href="/" class="transition hover:text-white hover:underline">Home</a></li>
-        <li aria-hidden="true">/</li>
-        <li aria-current="page" class="text-slate-200">Solutions</li>
-      </ol>
-    </nav>
+<BrandLayout title="Solutions · DevLab Studios" seo={seo} jsonLd={jsonLd}>
+  <PageHeader eyebrow={SOLUTIONS_INDEX.eyebrow} heading={SOLUTIONS_INDEX.heading} lead={SOLUTIONS_INDEX.lead}>
+    <a href={OFFER_AUDIT.path} class="dl-button-primary" data-cta-id="solutions-hero-audit">Start with the audit</a>
+    <a href="/contact?type=business_system" class="dl-button-quiet" data-cta-id="solutions-hero-contact">Discuss your system</a>
+  </PageHeader>
 
-    <section class="cinematic-panel relative overflow-hidden rounded-[2rem] p-6 text-white sm:p-8 lg:p-10">
-      <VectorField motif="automation" />
-      <div class="relative z-10 grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-        <div class="space-y-5">
-          <p class="tech-kicker">{String(pageHero.eyebrow || 'Solutions')}</p>
-          <h1 class="text-4xl font-semibold leading-tight text-white sm:text-5xl">
-            {String(pageHero.heading || 'Four ways a business system gets built here.')}
-          </h1>
-          <p class="max-w-3xl text-base leading-relaxed text-slate-300 sm:text-lg">
-            {String(
-              pageHero.subheading ||
-                'Each one covers the whole path: what the customer sees, what happens behind it, where the data lives, which tools it connects, and who picks it up when a person is needed.',
-            )}
-          </p>
-          <div class="flex flex-wrap gap-3">
-            <PrimaryButton
-              to="/contact?type=business_system"
-              data-cta-id="solutions-hero-primary"
-              data-cta-variant="primary"
-              data-inquiry-type="business_system"
-              showIcon
-            >
-              Discuss Your System
-            </PrimaryButton>
-            <PrimaryButton to="/work" variant="secondary" data-cta-id="solutions-hero-secondary" data-cta-variant="secondary">
-              View Our Work
-            </PrimaryButton>
+  {SERVICE_LINES.map((line, index) => (
+    <section id={line.solutionId} aria-labelledby={`${line.slug}-heading`} class="scroll-mt-24 border-b border-dl-rule" data-solution-id={line.solutionId}>
+      <div class="mx-auto grid max-w-container gap-10 px-[var(--gutter)] py-[calc(var(--section-rhythm)*0.6)] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-center">
+        <div>
+          <p class="label text-dl-ink-3">{String(index + 1).padStart(2, '0')} · Service line</p>
+          <h2 id={`${line.slug}-heading`} class="mt-2 text-step-3">{line.title}</h2>
+          <p class="mt-4 text-step-1 text-dl-ink-2">{line.problem}</p>
+          <p class="mt-3 text-dl-ink">{line.outcome}</p>
+          <ul class="mt-6 grid gap-2 text-dl-ink-2">
+            {line.includes.slice(0, 3).map((item) => <li class="flex gap-3"><span aria-hidden="true" class="label pt-1 text-dl-ink-3">—</span>{item}</li>)}
+          </ul>
+          <div class="mt-8 flex flex-wrap gap-x-6 gap-y-3">
+            <a href={serviceLineContactHref(line)} class="dl-button-primary" data-cta-id={`solutions-${line.slug}-contact`} data-inquiry-type={line.inquiryType}>{line.ctaLabel}</a>
+            <a href={`/solutions/${line.slug}`} class="dl-button-quiet" data-cta-id={`solutions-${line.slug}-details`}>What this includes<span class="sr-only">: {line.title}</span></a>
           </div>
         </div>
-
-        <ul class="grid gap-3">
-          {solutionCategories.map((category) => {
-            const Icon = resolveIcon(category.icon)
-            return (
-              <li>
-                <a
-                  href={`#${category.id}`}
-                  class="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.07] p-4 backdrop-blur-md transition hover:border-violet-400/40 hover:bg-white/[0.12]"
-                >
-                  <span class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-brand-mint text-brand-teal">
-                    <Icon className="h-5 w-5" aria-hidden="true" />
-                  </span>
-                  <span>
-                    <span class="block font-semibold text-white">{category.title}</span>
-                    <span class="mt-0.5 block text-sm text-slate-300">{category.problem}</span>
-                  </span>
-                </a>
-              </li>
-            )
-          })}
-        </ul>
+        <SceneFrame sceneId={line.sceneId} figure={figures.next()} />
       </div>
     </section>
+  ))}
 
-    <section class="space-y-6">
-      <SectionHeader
-        title={String(sectionCopy[0]?.props?.heading || 'Solution categories')}
-        subtitle={String(
-          sectionCopy[0]?.props?.body ||
-            'Every capability listed below maps to work already delivered. The related projects under each category are real builds, not illustrative examples.',
-        )}
-      />
-
-      <div class="space-y-6">
-        {solutionCategories.map((category, index) => {
-          const Icon = resolveIcon(category.icon)
-          const { groups, projects } = categoryDetail(category)
-          const isReversed = index % 2 === 1
-
-          return (
-            <article
-              id={category.id}
-              class="light-artifact scroll-mt-28 overflow-hidden rounded-[28px] bg-gradient-to-br from-[#fff9ff]/95 via-[#f8f6ff]/90 to-[#f2f0ff]/90 shadow-[0_18px_45px_rgba(60,28,120,0.14)]"
-              data-view-event="solution_view"
-              data-solution-id={category.id}
-            >
-              <div class="grid gap-0 lg:grid-cols-[0.95fr_1.05fr] lg:items-stretch">
-                <div class={['space-y-5 p-6 sm:p-8', isReversed ? 'lg:order-2' : 'lg:order-1'].join(' ')}>
-                  <div class="flex items-center gap-3">
-                    <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-mint text-brand-teal">
-                      <Icon className="h-5 w-5" aria-hidden="true" />
-                    </span>
-                    <div>
-                      <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">{category.eyebrow}</p>
-                      <h2 class="text-2xl font-semibold text-brand-ink">{category.title}</h2>
-                    </div>
-                  </div>
-
-                  <p class="rounded-2xl bg-white/70 p-4 text-sm font-medium leading-relaxed text-brand-ink ring-1 ring-slate-200">
-                    <span class="mb-1 block text-xs font-bold uppercase tracking-[0.14em] text-slate-500">The problem</span>
-                    {category.problem}
-                  </p>
-
-                  <p class="text-slate-700">{category.description}</p>
-
-                  <p class="flex items-start gap-2 text-sm font-semibold text-brand-ink">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-teal" aria-hidden="true" />
-                    <span>{category.outcome}</span>
-                  </p>
-
-                  <ul class="grid gap-2 text-sm text-slate-700 sm:grid-cols-2">
-                    {category.capabilities.map((capability) => (
-                      <li class="flex gap-2 leading-relaxed">
-                        <ArrowRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-teal" aria-hidden="true" />
-                        <span>{capability}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <PrimaryButton
-                    to={`/contact?type=${category.inquiryType}&solution=${category.id}`}
-                    data-cta-id={`solution-${category.id}-cta`}
-                    data-cta-variant="primary"
-                    data-solution-id={category.id}
-                    data-inquiry-type={category.inquiryType}
-                    showIcon
-                  >
-                    {category.ctaLabel}
-                  </PrimaryButton>
-                </div>
-
-                <div class={['bg-white/55 p-6 sm:p-8', isReversed ? 'lg:order-1' : 'lg:order-2'].join(' ')}>
-                  {category.isEntryOffer ? (
-                    <div class="space-y-4">
-                      <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">What the audit covers</p>
-                      <ul class="grid gap-2 text-sm text-slate-700">
-                        {auditOffer.includes.map((item: string) => (
-                          <li class="flex gap-2 leading-relaxed">
-                            <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-teal" aria-hidden="true" />
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      <p class="rounded-2xl bg-white/90 p-4 text-sm leading-relaxed text-slate-600 ring-1 ring-slate-200">
-                        The audit produces a written recommendation and a roadmap. It is useful on its own — there is no
-                        requirement to build anything here afterwards.
-                      </p>
-                    </div>
-                  ) : (
-                    <div class="space-y-5">
-                      {groups.length ? (
-                        <div>
-                          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">Included service areas</p>
-                          <ul class="mt-3 space-y-3">
-                            {groups.map((group) => (
-                              <li class="rounded-2xl bg-white/95 p-4 shadow-sm ring-1 ring-slate-200">
-                                <p class="font-semibold text-brand-ink">{group!.title}</p>
-                                <p class="mt-1 text-sm leading-relaxed text-slate-600">{group!.description}</p>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ) : null}
-
-                      {projects.length ? (
-                        <div>
-                          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">Built before</p>
-                          <div class="mt-3 grid gap-3">
-                            {projects.map((project) => (
-                              <div class="rounded-2xl bg-white/95 p-4 shadow-sm ring-1 ring-slate-200">
-                                <div class="flex items-start justify-between gap-3">
-                                  <div>
-                                    <h3 class="font-semibold text-brand-ink">{project!.title}</h3>
-                                    <p class="mt-1 line-clamp-2 text-sm text-slate-600">{project!.description}</p>
-                                  </div>
-                                  <span class="rounded-full bg-brand-mint px-3 py-1 text-xs font-semibold text-brand-teal">
-                                    {project!.type}
-                                  </span>
-                                </div>
-                                <div class="mt-3 flex flex-wrap gap-2">
-                                  {(project!.techStack || []).slice(0, 4).map((tech: string) => (
-                                    <span class="rounded-full border border-slate-200 bg-[#faf8ff] px-2.5 py-1 text-[0.7rem] font-semibold text-slate-600">
-                                      {tech}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </article>
-          )
-        })}
-      </div>
-    </section>
-
-    {unmappedGroups.length ? (
-      <section class="space-y-5">
-        <SectionHeader
-          title="Also delivered"
-          subtitle="Service areas in the catalogue that sit outside the four categories above."
-        />
-        <div class="grid gap-4 md:grid-cols-2">
-          {unmappedGroups.map((group) => (
-            <article class="light-artifact rounded-2xl bg-white/[0.94] p-5 shadow-[0_12px_28px_rgba(60,28,120,0.08)] ring-1 ring-slate-200">
-              <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">{group.eyebrow}</p>
-              <h3 class="mt-1 font-semibold text-brand-ink">{group.title}</h3>
-              <p class="mt-2 text-sm leading-relaxed text-slate-600">{group.description}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-    ) : null}
-
-    <section class="rounded-[28px] bg-gradient-to-r from-brand-ink via-[#22185a] to-[#3120a3] p-6 text-white shadow-[0_22px_50px_rgba(20,13,64,0.22)] sm:p-8">
-      <div class="grid gap-6 lg:grid-cols-[1fr_0.8fr] lg:items-center">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">
-            {String(pageCta.eyebrow || 'Not sure where to start?')}
-          </p>
-          <h2 class="mt-2 text-3xl font-semibold">
-            {String(pageCta.heading || 'Start with the workflow that loses the most time or opportunities.')}
-          </h2>
-          <p class="mt-3 text-white/75">
-            {String(
-              pageCta.body ||
-                'A short workflow review is enough to tell whether the right first move is a website, an automation, an AI-assisted step, an internal tool, or a backend integration.',
-            )}
-          </p>
-        </div>
-        <div class="flex flex-wrap gap-3 lg:justify-end">
-          <PrimaryButton
-            to={String((pageCta.primaryCta as { href?: string })?.href || '/contact?type=workflow_audit')}
-            data-cta-id="solutions-final-primary"
-            data-cta-variant="primary"
-            data-inquiry-type="workflow_audit"
-            showIcon
-          >
-            {String((pageCta.primaryCta as { label?: string })?.label || 'Request a Workflow Audit')}
-          </PrimaryButton>
-          <PrimaryButton
-            to={String((pageCta.secondaryCta as { href?: string })?.href || '/insights')}
-            variant="secondary"
-            data-cta-id="solutions-final-secondary"
-            data-cta-variant="secondary"
-          >
-            {String((pageCta.secondaryCta as { label?: string })?.label || 'Read Insights')}
-          </PrimaryButton>
+  <section id={OFFER_AUDIT.slug} aria-labelledby="audit-heading" class="ink-panel scroll-mt-24">
+    <div class="mx-auto grid max-w-container gap-10 px-[var(--gutter)] py-[calc(var(--section-rhythm)*0.6)] lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-center">
+      <div>
+        <p class="label text-dl-ink-3">Start here</p>
+        <h2 id="audit-heading" class="mt-2 text-step-3">{OFFER_AUDIT.title}</h2>
+        <p class="mt-4 text-step-1 text-dl-ink-2">{OFFER_AUDIT.summary}</p>
+        <div class="mt-8 flex flex-wrap gap-x-6 gap-y-3">
+          <a href={OFFER_AUDIT.contactHref} class="dl-button-primary" data-cta-id="solutions-audit-contact" data-inquiry-type="workflow_audit">Request the audit</a>
+          <a href={OFFER_AUDIT.path} class="dl-button-quiet" data-cta-id="solutions-audit-details">What you receive</a>
         </div>
       </div>
-    </section>
+      <SceneFrame sceneId="workflow-audit" figure={figures.next()} />
+    </div>
+  </section>
 
-    <section class="space-y-5">
-      <SectionHeader
-        title={String(pageFaq.heading || 'FAQ')}
-        subtitle={String(pageFaq.subheading || 'Common questions about how these engagements work.')}
-      />
-      <div class="grid gap-4 lg:grid-cols-2">
-        {faqItems.map((faq: { question: string; answer: string }) => (
-          <article class="light-artifact rounded-2xl bg-white/[0.92] p-5 shadow-[0_12px_28px_rgba(60,28,120,0.08)] ring-1 ring-slate-200">
-            <h3 class="font-semibold text-brand-ink">{faq.question}</h3>
-            <p class="mt-2 text-sm leading-relaxed text-slate-600">{faq.answer}</p>
-          </article>
-        ))}
-      </div>
-    </section>
-
-    <section class="space-y-5" aria-labelledby="solutions-pickleball" data-testid="pickleball-promo">
-      <SectionHeader
-        title="Devlab Pickleball: free open play and tournaments"
-        subtitle="Run open play or a casual tournament from one phone. Fair rotation, a live board by QR and a TV mode. Free, no sign-up."
-      />
-      <h2 id="solutions-pickleball" class="sr-only">Devlab Pickleball</h2>
-      <div class="light-artifact rounded-[28px] bg-gradient-to-br from-[#fff9ff]/95 via-[#f8f6ff]/90 to-[#f2f0ff]/90 p-6 shadow-[0_18px_45px_rgba(60,28,120,0.14)] sm:p-8">
-        <p class="max-w-3xl text-slate-700">
-          Built and run by DevLab Studios. Neither the host nor the players need an account, and a session is deleted 7 days
-          after its last change.
-        </p>
-        <ul class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {pickleballFeatures.map(({ Icon, title, body }) => (
-            <li class="flex gap-4 rounded-2xl bg-white/90 p-4 ring-1 ring-slate-200 sm:flex-col">
-              <div class="pb-anim flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#0f1d47]" data-testid="pb-artwork">
-                <Icon className="h-8 w-8" />
-              </div>
-              <div>
-                <h3 class="font-semibold text-brand-ink">{title}</h3>
-                <p class="mt-1 text-sm leading-relaxed text-slate-600">{body}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-        <div class="mt-6 flex flex-wrap items-center gap-3">
-          <PrimaryButton to="/pickleball/new?ref=solutions" data-cta-id="solutions-pickleball-primary" data-cta-variant="primary" showIcon>
-            Start a free session
-          </PrimaryButton>
-          <PrimaryButton to="/pickleball/how-it-works?ref=solutions" variant="secondary" data-cta-id="solutions-pickleball-secondary" data-cta-variant="secondary">
-            See how it works
-          </PrimaryButton>
-        </div>
-        <p class="mt-5 text-sm text-slate-600">
-          <a href="/contact" class="font-semibold text-brand-teal underline-offset-4 transition hover:text-brand-orange hover:underline" data-cta-id="solutions-pickleball-club">
-            Run a club or league? Talk to us about a custom setup
-          </a>
-        </p>
-      </div>
-    </section>
-
-    <section class="space-y-4">
-      <h2 class="text-center text-lg font-semibold text-brand-ink">Keep exploring</h2>
-      <div class="grid gap-4 sm:grid-cols-3">
-        <a href="/work" class="block rounded-2xl bg-white/90 p-5 text-center shadow-[0_10px_28px_rgba(60,28,120,0.08)] ring-1 ring-slate-200 transition hover:ring-brand-orange/35">
-          <p class="text-sm font-semibold text-brand-ink">Work</p>
-          <p class="mt-1 text-sm text-slate-600">Systems already built, with the architecture explained</p>
-        </a>
-        <a href="/profile" class="block rounded-2xl bg-white/90 p-5 text-center shadow-[0_10px_28px_rgba(60,28,120,0.08)] ring-1 ring-slate-200 transition hover:ring-brand-orange/35">
-          <p class="text-sm font-semibold text-brand-ink">Founder Profile</p>
-          <p class="mt-1 text-sm text-slate-600">The engineer behind the systems, and his technical background</p>
-        </a>
-        <a href="/contact" class="block rounded-2xl bg-white/90 p-5 text-center shadow-[0_10px_28px_rgba(60,28,120,0.08)] ring-1 ring-slate-200 transition hover:ring-brand-orange/35">
-          <p class="text-sm font-semibold text-brand-ink">Contact</p>
-          <p class="mt-1 text-sm text-slate-600">Start an inquiry about your system</p>
-        </a>
-      </div>
-    </section>
-  </div>
-
-</Layout>
+  <Section id="solutions-delivery" eyebrow="Delivery" heading={SOLUTIONS_INDEX.deliveryHeading}>
+    <ol class="mt-10 grid gap-px overflow-hidden rounded-dl-s border border-dl-rule bg-dl-rule sm:grid-cols-2 lg:grid-cols-4">
+      {DELIVERY_STEPS.map((step, index) => (
+        <li class="bg-dl-paper p-6">
+          <p class="label text-dl-ink-3">{String(index + 1).padStart(2, '0')}</p>
+          <h3 class="mt-3 text-step-1">{step.title}</h3>
+          <p class="mt-2 text-dl-ink-2">{step.text}</p>
+        </li>
+      ))}
+    </ol>
+  </Section>
+</BrandLayout>

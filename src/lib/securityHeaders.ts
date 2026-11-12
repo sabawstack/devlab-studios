@@ -1,4 +1,5 @@
 import { isNoindexPath } from '../config/robots'
+import { SCRIPT_SOURCES } from '../config/cspSources.js'
 const LOCALHOST_HOSTNAMES = new Set(['localhost', '127.0.0.1'])
 
 // Features the site never uses are switched off for every page and frame.
@@ -13,9 +14,10 @@ export const PERMISSIONS_POLICY = [
 function buildContentSecurityPolicy(isLocalhost: boolean): string {
   const directives = [
     "default-src 'self'",
-    // static.cloudflareinsights.com: Cloudflare Web Analytics, injected by the
-    // zone; without it the beacon is blocked and every page logs a CSP error.
-    "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://challenges.cloudflare.com https://static.cloudflareinsights.com",
+    // Every page also carries Astro's CSP <meta> (astro.config.mjs) whose
+    // script-src lists a hash per rendered script and no 'unsafe-inline'; a
+    // browser enforces both, so only Astro-rendered inline scripts run.
+    `script-src 'self' 'unsafe-inline' ${SCRIPT_SOURCES.filter((source) => source !== "'self'").join(' ')}`,
     "connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.google.com https://www.googletagmanager.com https://challenges.cloudflare.com https://cloudflareinsights.com",
     "img-src 'self' data: https:",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
@@ -41,6 +43,25 @@ function buildContentSecurityPolicy(isLocalhost: boolean): string {
   }
 
   return directives.join('; ')
+}
+
+/**
+ * Astro's per-page CSP (security.csp in astro.config.mjs) arrives as a header
+ * whose script-src lists a hash for each inline script it rendered and no
+ * 'unsafe-inline'. That script-src replaces ours (plus any of our sources it
+ * lacks); every other directive stays ours. Without a page CSP, ours stands.
+ */
+export function mergePageCsp(ours: string, page: string | null): string {
+  const pageScriptSrc = (page || '').split(';').map((part) => part.trim()).find((part) => part.startsWith('script-src '))
+  if (!pageScriptSrc || !/'sha(256|384|512)-/.test(pageScriptSrc)) return ours
+  const sources = new Set(pageScriptSrc.split(/\s+/).slice(1))
+  for (const source of SCRIPT_SOURCES) sources.add(source)
+  sources.delete("'unsafe-inline'")
+  return ours
+    .split(';')
+    .map((part) => part.trim())
+    .map((part) => (part.startsWith('script-src ') ? `script-src ${[...sources].join(' ')}` : part))
+    .join('; ')
 }
 
 function buildSecurityHeaders(isLocalhost: boolean): Record<string, string> {
@@ -101,8 +122,9 @@ export function applySecurityHeaders(response: Response, pathname: string, hostn
   const headers = new Headers(response.headers)
   const isLocalhost = LOCALHOST_HOSTNAMES.has(hostname)
 
+  const pageCsp = response.headers.get('Content-Security-Policy')
   for (const [name, value] of Object.entries(buildSecurityHeaders(isLocalhost))) {
-    headers.set(name, value)
+    headers.set(name, name === 'Content-Security-Policy' ? mergePageCsp(value, pageCsp) : value)
   }
 
   // The #HaoSweetItIs wedding invitation embeds Jason Derulo's official YouTube player.

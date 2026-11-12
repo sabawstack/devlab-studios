@@ -1,0 +1,51 @@
+---
+/**
+ * Products (audit BUS-04 / G.1 / BR.9): what DevLab builds and runs itself.
+ * Pickleball is live; the "in exploration" list captures interest through the
+ * normal inquiry path (type product_interest) and promises nothing.
+ */
+import BrandLayout from '../layouts/BrandLayout.astro'
+import PageHeader from '../components/brand/PageHeader.astro'
+import Section from '../components/brand/Section.astro'
+import FactList from '../components/brand/FactList.astro'
+import { getBreadcrumbSchema } from '../config/schema.js'
+import { loadPageSeo, type SeoData } from '../lib/content/seo'
+import { PRODUCTS } from '../data/site/content.js'
+const fallbackSeo: SeoData = {
+  metaTitle: 'Products · DevLab Studios',
+  metaDescription: 'Software DevLab Studios builds and runs itself: Devlab Pickleball, live and free, and product ideas being explored with the businesses that need them.',
+  canonicalUrl: 'https://www.devlabstudios.com/products',
+  ogTitle: 'Products · DevLab Studios',
+  ogDescription: 'Software DevLab Studios builds and runs itself.',
+}
+const seo: SeoData = (await loadPageSeo('products')) || fallbackSeo
+const jsonLd = [getBreadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Products', path: '/products' }])]
+---
+
+<BrandLayout title={seo.metaTitle || 'DevLab Studios'} seo={seo} jsonLd={jsonLd}>
+  <PageHeader eyebrow={PRODUCTS.eyebrow} heading={PRODUCTS.heading} lead={PRODUCTS.lead} />
+
+  <Section id="products-live" eyebrow={PRODUCTS.live.status} heading={PRODUCTS.live.title}>
+    <div class="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)] lg:items-start">
+      <div>
+        <p class="text-step-1 text-dl-ink-2">{PRODUCTS.live.text}</p>
+        <a href={PRODUCTS.live.href} class="dl-button-primary mt-8" data-cta-id="products-pickleball">{PRODUCTS.live.ctaLabel}</a>
+      </div>
+      <FactList facts={PRODUCTS.live.facts.map((text) => ({ text }))} />
+    </div>
+  </Section>
+
+  <Section id="products-exploring" eyebrow="In exploration" heading="Ideas we are testing with businesses." intro={PRODUCTS.exploringNote} class="border-t border-dl-rule">
+    <ul class="mt-10 grid gap-px overflow-hidden rounded-dl-s border border-dl-rule bg-dl-rule md:grid-cols-3">
+      {PRODUCTS.exploring.map((idea) => (
+        <li class="flex flex-col bg-dl-paper p-6" data-product-idea={idea.id}>
+          <h3 class="text-step-1">{idea.title}</h3>
+          <p class="mt-2 text-dl-ink-2">{idea.text}</p>
+          <a href={`/contact?type=product_interest&solution=${idea.id}`} class="dl-button-quiet mt-auto self-start pt-6" data-cta-id={`products-interest-${idea.id}`}>
+            Register interest<span class="sr-only">: {idea.title}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </Section>
+</BrandLayout>

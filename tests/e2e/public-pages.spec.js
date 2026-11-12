@@ -1,22 +1,21 @@
 import { test, expect } from '@playwright/test'
 
 const pages = [
-  { path: '/', heading: 'Build the systems your business needs' },
-  { path: '/about', heading: 'Systems for clearer offers' },
-  { path: '/solutions', heading: 'Four ways a business system gets built here' },
+  { path: '/', heading: 'We build and run the systems behind' },
+  { path: '/about', heading: 'A small studio that builds operational software' },
+  { path: '/solutions', heading: 'Operational software, built to be run' },
+  { path: '/solutions/lead-intake-and-follow-up', heading: 'Lead intake and follow-up' },
+  { path: '/solutions/workflow-and-ai-automation', heading: 'Workflow and AI automation' },
+  { path: '/solutions/custom-software-and-operations', heading: 'Custom software and operations systems' },
+  { path: '/solutions/workflow-systems-audit', heading: 'Workflow Systems Audit' },
+  { path: '/products', heading: 'What we build and run ourselves' },
   { path: '/profile', heading: 'Stephen Rey Agustinez' },
-  { path: '/insights', heading: 'Guides, AI updates, and operational notes' },
-  { path: '/process', heading: 'A four-phase delivery model' },
+  { path: '/insights', heading: 'Notes on the problems behind operations work' },
   { path: '/privacy', heading: 'Privacy Policy' },
   { path: '/terms', heading: 'Terms of Service' },
-  { path: '/work', heading: 'Business systems, with the decisions' },
-  { path: '/contact', heading: 'Tell us where the workflow slows down' },
+  { path: '/work', heading: 'Real systems, honestly described' },
+  { path: '/contact', heading: 'Describe the problem. A person reads it.' },
   { path: '/offers/lead-intake-checklist', heading: 'Lead Intake and Follow-up Systems Checklist' },
-  { path: '/landing-sample-react', heading: 'A Different Look' },
-  { path: '/landing-sample-html', heading: 'Editorial Minimal Landing Page' },
-  { path: '/landing-sample-fullstack', heading: 'Operations Dashboard Website' },
-  { path: '/landing-sample-local-service', heading: 'Phone-First Layout for' },
-  { path: '/landing-sample-ecommerce', heading: 'Catalog-First Shopping Flow' },
 ]
 
 for (const { path, heading } of pages) {
@@ -34,6 +33,25 @@ test('legacy redirects still work', async ({ page }) => {
   await expect(page).toHaveURL(/\/profile$/)
   await page.goto('/resources')
   await expect(page).toHaveURL(/\/insights$/)
+})
+
+// UX-10 / WEB-07: the delivery approach moved to About; the starter templates
+// are no longer presented as work.
+test('retired routes redirect permanently to the page that replaced them', async ({ request }) => {
+  for (const [from, to] of [
+    ['/process', '/about#how-we-work'],
+    ['/landing-sample-react', '/work'],
+    ['/landing-sample-html', '/work'],
+    ['/landing-sample-fullstack', '/work'],
+    ['/landing-sample-local-service', '/work'],
+    ['/landing-sample-ecommerce', '/work'],
+  ]) {
+    const response = await request.get(from, { maxRedirects: 0 })
+    expect(response.status(), from).toBe(301)
+    expect(new URL(response.headers()['location']).pathname + new URL(response.headers()['location']).hash, from).toBe(to)
+  }
+  const withQuery = await request.get('/process?utm_source=x', { maxRedirects: 0 })
+  expect(withQuery.headers()['location']).toMatch(/\/about\?utm_source=x#how-we-work$/)
 })
 
 test('a specific insights article loads via the old /resources/:slug redirect', async ({ page, request }) => {
@@ -55,7 +73,9 @@ test('unknown route shows 404 page', async ({ page }) => {
 test('unknown case study slug returns a real 404 status', async ({ page }) => {
   const response = await page.goto('/work/this-case-study-does-not-exist')
   expect(response.status()).toBe(404)
-  await expect(page.getByRole('heading', { name: 'Case study not found' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Page Not Found' })).toBeVisible()
+  const solution = await page.goto('/solutions/not-a-service-line')
+  expect(solution.status()).toBe(404)
 })
 
 test('footer has real links to Privacy and Terms', async ({ page }) => {
@@ -89,7 +109,7 @@ async function headerNav(page) {
 
   if (await desktop.isVisible()) return desktop
 
-  await banner.getByRole('button', { name: /open navigation/i }).click()
+  await banner.getByRole('button', { name: /^menu$|open navigation/i }).click()
   const mobile = banner.getByRole('navigation').first()
   await mobile.waitFor({ state: 'visible' })
   return mobile
@@ -103,11 +123,13 @@ test('primary navigation is business-first and does not promote Process', async 
   // it. Dropping it by its exact label keeps this assertion strict about the
   // navigation items themselves on both viewports, instead of loosening to a
   // partial match that would stop noticing an unexpected extra link.
-  const labels = (await navigation.getByRole('link').allInnerTexts())
+  // textContent, not innerText: the labels are uppercased by CSS only.
+  const labels = (await navigation.getByRole('link').allTextContents())
     .map((text) => text.trim())
-    .filter((text) => text !== 'Discuss Your System')
+    .filter((text) => !/^discuss your system$/i.test(text))
 
-  expect(labels).toEqual(['Home', 'Solutions', 'Work', 'Insights', 'About', 'Profile'])
+  // G.2: "Home" is the logo, not a nav item.
+  expect(labels).toEqual(['Solutions', 'Work', 'Insights', 'About', 'Profile'])
   await expect(navigation.getByRole('link', { name: 'Process' })).toHaveCount(0)
 })
 
@@ -123,7 +145,7 @@ test('the header CTA is a single business call to action', async ({ page }) => {
   // The CTA sits beside the nav on desktop and inside the panel on mobile, so
   // the menu has to be open before it can be found on a phone viewport.
   await headerNav(page)
-  const headerCta = page.getByRole('banner').getByRole('link', { name: 'Discuss Your System' }).first()
+  const headerCta = page.getByRole('banner').getByRole('link', { name: /^discuss your system$/i }).first()
   await expect(headerCta).toHaveAttribute('href', '/contact?type=business_system')
 })
 
@@ -139,9 +161,9 @@ test('the homepage does not ask visitors to classify themselves', async ({ page 
 
 test('the homepage hero leads with business outcomes, not an employment pitch', async ({ page }) => {
   await page.goto('/')
-  const hero = page.locator('.home-landing')
-  await expect(hero.getByRole('link', { name: 'Discuss Your System' })).toBeVisible()
-  await expect(hero.getByRole('link', { name: 'View Our Work' })).toBeVisible()
+  const hero = page.locator('main > header').first()
+  await expect(hero.getByRole('link', { name: 'Discuss your system' })).toBeVisible()
+  await expect(hero.getByRole('link', { name: 'See the work' })).toBeVisible()
   await expect(hero).not.toContainText(/available for (?:full-time|part-time) employment/i)
   await expect(hero.getByRole('link', { name: /resume|résumé/i })).toHaveCount(0)
 })
@@ -149,7 +171,8 @@ test('the homepage hero leads with business outcomes, not an employment pitch', 
 test('the homepage follows the business conversion order', async ({ page }) => {
   await page.goto('/')
   const positions = await page.evaluate(() => {
-    const idsInOrder = ['home-problems', 'home-solutions', 'home-approach', 'home-principles', 'home-faq', 'home-cta']
+    // BR.14: problems, what we build, proof, how we build, how to start, then the final CTA.
+    const idsInOrder = ['home-problems', 'home-solutions', 'home-work', 'home-reliability', 'home-start', 'home-cta']
     return idsInOrder.map((id) => {
       const element = document.getElementById(id)
       return element ? element.getBoundingClientRect().top + window.scrollY : -1
@@ -165,7 +188,7 @@ test('the Profile page is a first-class technical page with its own CTAs', async
   await expect(page.getByRole('heading', { level: 1, name: 'Stephen Rey Agustinez' })).toBeVisible()
   await expect(page.getByText('Founder, Full-Stack Developer, and AI Automation Architect')).toBeVisible()
   await expect(page.getByRole('link', { name: 'View Selected Work' })).toBeVisible()
-  await expect(page.getByRole('link', { name: /Download Résumé/ })).toHaveAttribute('href', '/resume.pdf')
+  await expect(page.getByRole('link', { name: 'View Resume' })).toHaveAttribute('href', '/resume.pdf')
   await expect(page.getByRole('link', { name: 'Contact Stephen', exact: true })).toHaveAttribute(
     'href',
     '/contact?type=employment_opportunity',
@@ -190,7 +213,7 @@ test('every internal link on the primary pages resolves', async ({ page, request
   // article that must actually be published for the offer to make sense.
   const seen = new Set()
 
-  for (const path of ['/', '/solutions', '/work', '/insights', '/about', '/profile', '/contact', '/offers/lead-intake-checklist']) {
+  for (const path of ['/', '/solutions', '/solutions/lead-intake-and-follow-up', '/solutions/workflow-systems-audit', '/work', '/work/automated-lead-qualification', '/insights', '/about', '/profile', '/products', '/contact', '/offers/lead-intake-checklist']) {
     await page.goto(path)
     const hrefs = await page.evaluate(() =>
       Array.from(document.querySelectorAll('a[href]'))
@@ -224,9 +247,10 @@ test('the sitemap lists canonical routes and no redirect sources', async ({ requ
   expect(response.headers()['content-type']).toContain('xml')
 
   const body = await response.text()
-  for (const path of ['/', '/solutions', '/work', '/insights', '/about', '/profile', '/contact']) {
+  for (const path of ['/', '/solutions', '/solutions/lead-intake-and-follow-up', '/solutions/workflow-systems-audit', '/work', '/work/automated-lead-qualification', '/insights', '/about', '/profile', '/products', '/contact']) {
     expect(body, path).toContain(`<loc>https://www.devlabstudios.com${path}</loc>`)
   }
+  expect(body).not.toContain('devlabstudios.com/process<')
   // /resources/* is a permanent redirect into /insights — listing it would
   // spend crawl budget re-confirming 301s.
   expect(body).not.toContain('devlabstudios.com/resources')
@@ -238,73 +262,57 @@ test('homepage presents DevLab Studios as a business and routes visitors to Work
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/')
   await expect(
-    page.getByRole('heading', {
-      level: 1,
-      name: 'Build the systems your business needs to capture opportunities and operate reliably.',
-    }),
+    page.getByRole('heading', { level: 1, name: 'We build and run the systems behind your inquiries, handoffs and reports.' }),
   ).toBeVisible()
-  await expect(page.getByText('Software and automation studio', { exact: true })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'View Our Work' })).toHaveAttribute('href', '/work')
-  const heroBox = await page.locator('.home-landing').boundingBox()
+  await expect(page.getByRole('link', { name: 'See the work' })).toHaveAttribute('href', '/work')
+  const heroBox = await page.locator('main > header').first().boundingBox()
   expect(Math.abs(heroBox.x)).toBeLessThanOrEqual(1)
   expect(Math.abs(heroBox.width - 1440)).toBeLessThanOrEqual(1)
 })
 
-test('homepage names the operational problems it solves', async ({ page }) => {
+test('homepage shows the problem as drawings: fragmented intake, then the connected system', async ({ page }) => {
   await page.goto('/')
   const problems = page.locator('#home-problems')
-  await expect(problems).toBeAttached()
-  await expect(page.getByRole('heading', { name: 'Leads wait too long for a reply' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Follow-up depends on someone remembering' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Automations fail without telling anyone' })).toBeVisible()
+  await expect(problems.locator('[data-scene-frame="fragmented-intake"] svg')).toBeVisible()
+  await expect(problems.locator('[data-scene-frame="connected-system"] svg')).toBeVisible()
+  await expect(problems.getByText(/^Fig\. 01$/)).toBeVisible()
 })
 
-test('homepage presents the four solution categories with links into Solutions', async ({ page }) => {
+test('homepage presents the three service lines with links to their own pages', async ({ page }) => {
   await page.goto('/')
-  for (const [title, id] of [
-    ['Lead Intake and Follow-up Systems', 'lead-intake-followup'],
-    ['Workflow and AI Automation', 'workflow-ai-automation'],
-    ['Custom Software and Operations Systems', 'custom-software-operations'],
-    ['Workflow Systems Audit', 'workflow-systems-audit'],
+  for (const [title, id, slug] of [
+    ['Lead intake and follow-up', 'lead-intake-followup', 'lead-intake-and-follow-up'],
+    ['Workflow and AI automation', 'workflow-ai-automation', 'workflow-and-ai-automation'],
+    ['Custom software and operations systems', 'custom-software-operations', 'custom-software-and-operations'],
   ]) {
     const card = page.locator(`[data-solution-id="${id}"]`).first()
     await expect(card).toContainText(title)
-    await expect(card.getByRole('link', { name: 'What this includes' })).toHaveAttribute('href', `/solutions#${id}`)
+    await expect(card.getByRole('link', { name: /What this includes/ })).toHaveAttribute('href', `/solutions/${slug}`)
   }
+  await expect(page.locator('#home-solutions').getByRole('link', { name: /Workflow Systems Audit/ })).toHaveAttribute('href', '/solutions/workflow-systems-audit')
 })
 
-test('public pages use one document backdrop and an integrated sticky navbar', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 })
+test('old Solutions anchors still land on the matching service line', async ({ page }) => {
+  await page.goto('/solutions#workflow-ai-automation')
+  await expect(page.locator('#workflow-ai-automation')).toBeInViewport()
+  await page.goto('/solutions#workflow-systems-audit')
+  await expect(page.locator('#workflow-systems-audit')).toBeInViewport()
+})
+
+test('redesigned pages use the brand shell with a working skip link', async ({ page }) => {
   await page.goto('/')
-
-  const geometry = await page.evaluate(() => {
-    const shell = document.querySelector('.public-shell')?.getBoundingClientRect()
-    const backdrop = document.querySelector('.public-backdrop')?.getBoundingClientRect()
-    const hero = document.querySelector('.home-landing')
-    const navbar = document.querySelector('.site-navbar')
-    return {
-      shellHeight: shell?.height || 0,
-      backdropTop: backdrop?.top || 0,
-      backdropHeight: backdrop?.height || 0,
-      heroBackground: hero ? getComputedStyle(hero).backgroundColor : '',
-      navbarBackground: navbar ? getComputedStyle(navbar).backgroundColor : '',
-    }
-  })
-
-  expect(Math.abs(geometry.backdropTop)).toBeLessThanOrEqual(1)
-  expect(Math.abs(geometry.backdropHeight - geometry.shellHeight)).toBeLessThanOrEqual(1)
-  expect(geometry.heroBackground).toBe('rgba(0, 0, 0, 0)')
-  expect(geometry.navbarBackground).toBe('rgba(0, 0, 0, 0)')
-
-  await page.evaluate(() => window.scrollTo(0, 500))
-  await expect(page.locator('#site-header')).toHaveClass(/site-header--scrolled/)
-  await expect(page.locator('.site-navbar')).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await expect(page.locator('body')).toHaveClass(/\bbrand\b/)
+  await page.keyboard.press('Tab')
+  const skip = page.getByRole('link', { name: 'Skip to content' })
+  await expect(skip).toBeFocused()
+  await skip.press('Enter')
+  await expect(page).toHaveURL(/#main$/)
 })
 
 test('core public compositions avoid horizontal overflow at target breakpoints', async ({ page }) => {
   for (const width of [1440, 1280, 1024, 768, 430, 390]) {
     await page.setViewportSize({ width, height: width <= 430 ? 844 : 900 })
-    for (const path of ['/', '/work']) {
+    for (const path of ['/', '/solutions', '/solutions/workflow-systems-audit', '/work', '/work/automated-lead-qualification', '/insights', '/about', '/profile', '/products', '/contact']) {
       await page.goto(path)
       const dimensions = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }))
       expect(dimensions.content, `${path} overflows at ${width}px`).toBeLessThanOrEqual(dimensions.viewport)
@@ -312,24 +320,28 @@ test('core public compositions avoid horizontal overflow at target breakpoints',
   }
 })
 
-test('Work publishes selected systems as business proof', async ({ page }) => {
+test('Work publishes selected systems as business proof, each with its own write-up', async ({ page }) => {
   await page.goto('/work')
-  await expect(page.getByRole('heading', { name: 'Selected systems' })).toBeVisible()
-  await expect(page.getByText('The business problem', { exact: true })).toHaveCount(3)
-  await expect(page.getByText('The system designed', { exact: true })).toHaveCount(3)
-  await expect(page.getByText('What it does in operation', { exact: true })).toHaveCount(3)
-  await expect(page.getByRole('button', { name: /^Enlarge .* image 1$/ })).toHaveCount(3)
-  await expect(page.getByText('View full image', { exact: true })).toHaveCount(3)
+  const entries = page.locator('[data-work-entry]')
+  await expect(entries).toHaveCount(3)
+  await expect(page.getByText('The problem', { exact: true })).toHaveCount(3)
+  await expect(page.getByText('What it does', { exact: true })).toHaveCount(3)
+  // Starter templates are not presented as work (BUS-F04).
+  await expect(page.getByText(/landing page/i)).toHaveCount(0)
+  await entries.first().getByRole('link', { name: /Read the write-up/ }).click()
+  await expect(page).toHaveURL(/\/work\/[a-z0-9-]+$/)
+  await expect(page.getByRole('heading', { level: 2, name: 'What it verifiably does in operation' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Founder profile' })).toHaveAttribute('href', '/profile')
 })
 
 test('Work states its evidence standard instead of showing invented metrics', async ({ page }) => {
   await page.goto('/work')
-  await expect(page.getByText(/Client names, revenue figures, and percentage improvements/i)).toBeVisible()
+  await expect(page.getByText(/Client names, revenue figures and percentage improvements/i)).toBeVisible()
 })
 
 test('each Work entry offers a business next step carrying its own context', async ({ page }) => {
   await page.goto('/work')
-  const cta = page.getByRole('link', { name: 'Discuss something like this' }).first()
+  const cta = page.getByRole('link', { name: 'Discuss something similar' }).first()
   await expect(cta).toHaveAttribute('href', /\/contact\?type=business_system&case=/)
 })
 
@@ -349,36 +361,18 @@ test('resume is available from Profile only and opens inline', async ({ page, re
   expect(response.headers()['content-disposition'] || '').not.toContain('attachment')
 })
 
-test('Profile hover actions stay legible and large previews remain below navigation', async ({ page, isMobile }) => {
-  // A desktop-layout check (hover, a forced 1440x900 viewport), so it does not
-  // run on the iPhone profile: there that viewport is painted at 3x by WebKit's
-  // software renderer on Windows, ~2 s per frame, and actionability checks ran
-  // out the clock. desktop-safari covers WebKit at this size.
-  test.skip(isMobile, 'desktop layout check; covered by desktop-safari')
-  test.setTimeout(45_000)
-  await page.setViewportSize({ width: 1440, height: 900 })
+// PROF-03: informative images carry real alt text and load lazily.
+test('profile certificates have descriptive alt text and load lazily', async ({ page }) => {
   await page.goto('/profile')
-
-  const detailsAction = page.getByRole('button', { name: 'View details' }).first()
-  await detailsAction.hover()
-  await expect(detailsAction).toHaveCSS('color', 'rgb(255, 255, 255)')
-
-  const certificateButton = page.getByRole('button', { name: 'View No Code Automation with Zapier certificate full size' })
-  // The gallery is a client:load island: its buttons are server-rendered
-  // before React attaches onClick, and a click in that window does nothing,
-  // so the dialog never opens. Astro drops `ssr` from the island once it
-  // has hydrated.
-  await expect(page.locator('astro-island', { has: certificateButton })).not.toHaveAttribute('ssr')
-  await certificateButton.click()
-  const dialog = page.getByRole('dialog')
-  await expect(dialog).toBeVisible()
-  const backdropBox = await dialog.boundingBox()
-  const panelBox = await dialog.locator('.modal-viewport-panel').boundingBox()
-  const navbarBox = await page.locator('.site-navbar').boundingBox()
-  expect(backdropBox.y).toBe(0)
-  expect(backdropBox.height).toBe(900)
-  expect(panelBox.y).toBeGreaterThanOrEqual(navbarBox.y + navbarBox.height)
-  expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(900)
+  const images = page.locator('#certifications img')
+  const count = await images.count()
+  expect(count).toBeGreaterThan(0)
+  for (let index = 0; index < count; index += 1) {
+    await expect(images.nth(index)).toHaveAttribute('alt', /certificate issued by/)
+    await expect(images.nth(index)).toHaveAttribute('loading', 'lazy')
+  }
+  // The profile shows city-level location only (PROF-02).
+  await expect(page.getByText('Cebu, Philippines').first()).toBeVisible()
 })
 
 test('CMS decorative vector fields remain behind content and outside the accessibility tree', async ({ page }) => {
@@ -387,12 +381,6 @@ test('CMS decorative vector fields remain behind content and outside the accessi
   await expect(field).toHaveCount(1)
   await expect(field).toHaveAttribute('aria-hidden', 'true')
   await expect(field.locator('.admin-vector-field__icon')).toHaveCount(6)
-})
-
-test('decorative vector motifs stay out of the accessibility tree', async ({ page }) => {
-  await page.goto('/')
-  const fields = page.locator('.vector-field')
-  await expect(fields.first()).toHaveAttribute('aria-hidden', 'true')
 })
 
 test('security headers apply to real, server-rendered responses, not just static assets', async ({ request }) => {
@@ -415,8 +403,10 @@ test('security headers apply to real, server-rendered responses, not just static
   const adminResponse = await request.get('/admin')
   expect(adminResponse.headers()['x-robots-tag']).toBe('noindex, nofollow')
 
-  const landingSampleResponse = await request.get('/landing-sample-react')
-  expect(landingSampleResponse.headers()['x-robots-tag']).toBe('noindex, follow')
+  // SEC-07: rendered pages carry hashed inline scripts and no 'unsafe-inline' for scripts.
+  const scriptSrc = (pageHeaders['content-security-policy'].split(';').find((part) => part.trim().startsWith('script-src')) || '')
+  expect(scriptSrc).toMatch(/'sha256-/)
+  expect(scriptSrc).not.toContain("'unsafe-inline'")
 })
 
 test('the contact form CSP allows Turnstile to actually load', async ({ page }) => {

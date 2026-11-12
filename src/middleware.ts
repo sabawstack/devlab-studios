@@ -39,6 +39,14 @@ const PERMANENT_PATH_REDIRECTS = new Map([
   // "Solutions" while the route said "services"; the CMS SEO record even
   // carried a canonical pointing at /solutions, which was a 404.
   ['/services', '/solutions'],
+  // The delivery approach now lives on About (audit UX-10 / G.1).
+  ['/process', '/about#how-we-work'],
+  // Starter templates are no longer presented as work (audit WEB-07 / BUS-F04).
+  ['/landing-sample-react', '/work'],
+  ['/landing-sample-html', '/work'],
+  ['/landing-sample-fullstack', '/work'],
+  ['/landing-sample-local-service', '/work'],
+  ['/landing-sample-ecommerce', '/work'],
 ])
 
 function isMaintenanceGated(pathname: string): boolean {
@@ -59,7 +67,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const renamedTo = PERMANENT_PATH_REDIRECTS.get(url.pathname.replace(/\/+$/, '') || '/')
   if (renamedTo) {
-    const destination = new URL(renamedTo + url.search, url)
+    // The query string goes before any fragment in the target (`/about#how-we-work`).
+    const destination = new URL(renamedTo, url)
+    destination.search = url.search
     return applySecurityHeaders(Response.redirect(destination.toString(), 301), url.pathname, url.hostname)
   }
 

@@ -1,6 +1,6 @@
 # 12. "Working Drawings" brand system and a code-owned scene registry
 
-**Status:** Accepted (B2B rebuild, Phase 4, 2026-11-12); scenes pending owner approval
+**Status:** Accepted (B2B rebuild, Phase 4, 2026-11-12); all six scenes approved by the owner on 2026-11-12
 
 ## Context
 

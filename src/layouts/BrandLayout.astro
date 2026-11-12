@@ -1,0 +1,64 @@
+---
+/**
+ * Page shell for the redesigned public pages ("Working Drawings", audit
+ * UX-06...UX-12): brand fonts only (self-hosted; no Google Fonts request), the
+ * paper ground, the brand navigation and footer, a skip link, and the same
+ * head (SEO, robots, JSON-LD, analytics) as the legacy Layout.
+ */
+import '../index.css'
+import '../styles/brand.css'
+import SeoHead from '../components/SeoHead.astro'
+import BrandNav from '../components/brand/BrandNav.astro'
+import BrandFooter from '../components/brand/BrandFooter.astro'
+import { loadSiteSettings } from '../lib/content/siteSettings'
+import type { SeoData } from '../lib/content/seo'
+import { resolveGaMeasurementId } from '../config/analytics.js'
+import { robotsDirectiveFor } from '../config/robots'
+
+interface Props {
+  title: string
+  seo?: SeoData | null
+  jsonLd?: Record<string, unknown> | null | (Record<string, unknown> | null)[]
+  robots?: string
+  /** Long-form pages (articles, write-ups) also preload the serif. */
+  longform?: boolean
+}
+
+const { title, seo = null, jsonLd, robots, longform = false } = Astro.props
+const siteSettings = await loadSiteSettings()
+const gaMeasurementId = siteSettings.gaMeasurementId ?? resolveGaMeasurementId(undefined)
+const currentPath = new URL(Astro.request.url).pathname
+const jsonLdBlocks = (jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : []).filter(Boolean)
+const safeJsonLd = (value: unknown) => JSON.stringify(value).replace(/</g, '\\u003c')
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f6f3ec" />
+    <meta name="robots" content={robots ?? robotsDirectiveFor(currentPath)} />
+    <SeoHead fallbackTitle={title} seo={seo} />
+    {jsonLdBlocks.map((block) => <script type="application/ld+json" set:html={safeJsonLd(block)} />)}
+    <link rel="preload" href="/fonts/bricolage-grotesque-latin-opsz.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/martian-mono-latin-wght.woff2" as="font" type="font/woff2" crossorigin />
+    {longform && <link rel="preload" href="/fonts/newsreader-latin-wght.woff2" as="font" type="font/woff2" crossorigin />}
+    <link rel="icon" type="image/png" href="/devlabstudios-logo-only.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    {gaMeasurementId && <script is:inline src="/scripts/ga.js" data-ga-id={gaMeasurementId} defer></script>}
+  </head>
+  <body class="brand min-h-screen">
+    <a href="#main" class="dl-skip-link">Skip to content</a>
+    <BrandNav siteSettings={siteSettings} currentPath={currentPath} />
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
+    <BrandFooter siteSettings={siteSettings} />
+    <script>
+      import { initAnalytics, initViewTracking } from '../lib/analyticsBootstrap'
+      initAnalytics()
+      initViewTracking()
+    </script>
+  </body>
+</html>

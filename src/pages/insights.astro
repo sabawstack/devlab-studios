@@ -1,391 +1,102 @@
 ---
-import { draftPreviewFor } from '../lib/content/preview'
-import Layout from '../layouts/Layout.astro'
-import SectionHeader from '../components/SectionHeader.jsx'
-import PrimaryButton from '../components/PrimaryButton.jsx'
-import VectorField from '../components/VectorField.astro'
-import * as Icons from '../components/icons/icons.js'
-import { ArrowRight, Calendar, CheckCircle2, Clock, Code2, MessageSquare } from '../components/icons/icons.js'
+/**
+ * Insights hub (audit UX-09 / SEO-08 / BR.9): articles organised by the
+ * problem they address, with mono problem tags and a filter that works
+ * without JavaScript (?problem=<tag>). The audit is the offer beside the list;
+ * the generated daily notes are linked, not promoted.
+ */
+import BrandLayout from '../layouts/BrandLayout.astro'
+import PageHeader from '../components/brand/PageHeader.astro'
+import { getBreadcrumbSchema } from '../config/schema.js'
+import { PROBLEM_TAGS } from '../config/problemTags.js'
+import { getLeadMagnet } from '../config/offers.js'
 import { loadPageSeo } from '../lib/content/seo'
 import { loadArticlesContent, formatArticleDate, type ArticlePost } from '../lib/content/articles'
-import { INSIGHT_TOPICS, topicLabel } from '../config/insightTopics.js'
-import { loadPage } from '../lib/content/pages'
-import { loadDigests, formatDigestDate } from '../lib/content/digests'
-import { getBreadcrumbSchema } from '../config/schema.js'
-import { getLeadMagnet } from '../config/offers.js'
+import { INSIGHTS_INDEX, OFFER_AUDIT } from '../data/site/content.js'
 
-function resolveIcon(name: string) {
-  return (Icons as Record<string, typeof Icons.Lightbulb>)[name] || Icons.Lightbulb
-}
+type Post = ArticlePost & { problemTag?: string; audience?: string }
 
 const seo = await loadPageSeo('insights')
-const insightsPage = await loadPage('insights', { includeDrafts: await draftPreviewFor(Astro, { type: 'page', id: 'insights' }) })
-const pageHero = insightsPage?.blocks.find((block) => block.type === 'hero')?.props || {}
-const pageSections = insightsPage?.blocks.filter((block) => block.type === 'richText') || []
-const pageCta = insightsPage?.blocks.find((block) => block.type === 'cta')?.props || {}
-const { posts, playbook } = await loadArticlesContent()
+const { posts } = await loadArticlesContent()
+const published = (posts as Post[])
+  .filter((post) => post.status !== 'draft' && post.status !== 'archived')
+  .sort((left, right) => new Date(right.publishedAt || 0).getTime() - new Date(left.publishedAt || 0).getTime() || (left.sortOrder || 0) - (right.sortOrder || 0))
 
-const publishedPosts = posts.filter((post) => post.status !== 'draft')
-const sortedPosts = [...publishedPosts].sort((left, right) => {
-  const leftTime = new Date(left.publishedAt || 0).getTime()
-  const rightTime = new Date(right.publishedAt || 0).getTime()
-  if (leftTime !== rightTime) return rightTime - leftTime
-  return (left.sortOrder || 0) - (right.sortOrder || 0)
-})
-
-const featuredPost: ArticlePost | null = sortedPosts.find((post) => post.isFeatured) || sortedPosts[0] || null
-const FeaturedIcon = featuredPost ? resolveIcon(featuredPost.icon) : null
-// Chips come from the named taxonomy rather than from whatever strings happen
-// to be stored, so 'ai-update' renders as "AI Updates" and not "Ai-update".
-// A topic with nothing published in it is dropped rather than shown empty.
-const filterOptions = [
-  { id: 'all', label: 'All articles' },
-  ...INSIGHT_TOPICS.filter((topic) => sortedPosts.some((post) => post.contentType === topic.id)).map((topic) => ({
-    id: topic.id,
-    label: topic.label,
-  })),
-]
-const feedPosts = sortedPosts.filter((post) => post.id !== featuredPost?.id)
-// Only the latest edition, and only its first few items: this is a pointer to
-// /insights/daily, not a second copy of it.
-const [latestDigest] = await loadDigests(1)
-const digestPreviewItems = latestDigest?.items.slice(0, 4) || []
+const tags = PROBLEM_TAGS.filter((tag) => published.some((post) => post.problemTag === tag.id))
+const requested = Astro.url.searchParams.get('problem') || ''
+const activeTag = tags.find((tag) => tag.id === requested) || null
+const shown = activeTag ? published.filter((post) => post.problemTag === activeTag.id) : published
+const tagLabel = (id?: string) => PROBLEM_TAGS.find((tag) => tag.id === id)?.label || ''
 const leadMagnet = getLeadMagnet('lead-intake-checklist')
-const jsonLd = [
-  getBreadcrumbSchema([
-    { name: 'Home', path: '/' },
-    { name: 'Insights', path: '/insights' },
-  ]),
-]
+const jsonLd = [getBreadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Insights', path: '/insights' }])]
 ---
 
-<Layout title="Insights — DevLab Studios" seo={seo} jsonLd={jsonLd}>
-  <div class="space-y-10">
-    <section class="cinematic-panel relative overflow-hidden rounded-[2rem] p-6 text-white sm:p-8 lg:p-10">
-      <VectorField motif="editorial" />
-      <div class="relative z-10 grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-        <div class="space-y-5">
-          <p class="tech-kicker">{String(pageHero.eyebrow || 'Engineering Notes')}</p>
-          <h1 class="text-4xl font-semibold leading-tight text-white sm:text-5xl">
-            {String(pageHero.heading || 'Guides, AI updates, and operational notes for modern workflows.')}
-          </h1>
-          <p class="max-w-3xl text-base leading-relaxed text-slate-300 sm:text-lg">
-            {String(pageHero.subheading || 'A CMS-managed feed of practical implementation notes across AI automation, websites, systems design, delivery workflows, and business operations.')}
-          </p>
-          <div class="flex flex-wrap gap-3">
-            <PrimaryButton to="/solutions">
-              <Code2 size={16} />
-              Explore Solutions
-            </PrimaryButton>
-            <PrimaryButton
-              to="/contact?type=business_system"
-              variant="secondary"
-              data-cta-id="insights-hero-secondary"
-              data-cta-variant="secondary"
-              data-inquiry-type="business_system"
-            >
-              <MessageSquare size={16} aria-hidden="true" />
-              Ask About a Workflow
-            </PrimaryButton>
-          </div>
-        </div>
+<BrandLayout title="Insights · DevLab Studios" seo={seo} jsonLd={jsonLd}>
+  <PageHeader eyebrow={INSIGHTS_INDEX.eyebrow} heading={INSIGHTS_INDEX.heading} lead={INSIGHTS_INDEX.lead} />
 
-        <div class="rounded-[24px] border border-white/10 bg-white/[0.07] p-6 shadow-[0_16px_34px_rgba(4,8,24,0.18)] backdrop-blur-md">
-          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">Automation Readiness</p>
-          <h2 class="mt-2 text-2xl font-semibold text-white">Start with workflow clarity.</h2>
-          <ul class="mt-4 space-y-3 text-sm text-slate-300">
-            {playbook.map((item) => (
-              <li class="flex gap-3 leading-relaxed">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-teal" aria-hidden="true" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    {featuredPost ? (
-      <section class="space-y-6">
-      <SectionHeader
-        title={String(pageSections[0]?.props?.heading || 'Featured Insight')}
-        subtitle={String(pageSections[0]?.props?.body || 'Longer-form guidance and implementation notes with enough detail to read, not just skim.')}
-        />
-        <article class="overflow-hidden rounded-[28px] border border-slate-200 bg-white/95 shadow-[0_18px_45px_rgba(60,28,120,0.10)]">
-          <div class="grid gap-0 lg:grid-cols-[1.05fr_0.95fr]">
-            <div class="flex min-h-[260px] items-center justify-center bg-gradient-to-br from-brand-ink via-[#22185a] to-[#3526b5] p-8 text-white">
-              {featuredPost.coverImageUrl ? (
-                <img
-                  src={featuredPost.coverImageUrl}
-                  alt={featuredPost.title}
-                  class="max-h-[360px] w-full rounded-2xl object-cover shadow-[0_16px_42px_rgba(0,0,0,0.28)]"
-                  loading="eager"
-                />
-              ) : (
-                <div class="flex h-full min-h-[220px] w-full flex-col items-center justify-center rounded-2xl border border-white/15 bg-white/5 px-6 text-center">
-                  <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-white">
-                    {FeaturedIcon ? <FeaturedIcon className="h-6 w-6" aria-hidden="true" /> : null}
-                  </div>
-                  <p class="mt-4 text-sm font-semibold uppercase tracking-[0.16em] text-white/70">{featuredPost.category}</p>
-                  <p class="mt-2 text-2xl font-semibold">{featuredPost.title}</p>
-                </div>
-              )}
-            </div>
-
-            <div class="p-6 sm:p-8">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="rounded-full bg-brand-mint px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-brand-teal">Featured</span>
-                <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">{featuredPost.category}</span>
-                <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">{topicLabel(featuredPost.contentType)}</span>
-              </div>
-
-              <h2 class="mt-4 text-3xl font-semibold text-brand-ink">{featuredPost.title}</h2>
-              <p class="mt-3 text-base leading-relaxed text-slate-600">{featuredPost.summary}</p>
-
-              <div class="mt-5 flex flex-wrap items-center gap-4 text-sm text-slate-500">
-                <span class="inline-flex items-center gap-2">
-                  <Calendar className="h-4 w-4" aria-hidden="true" />
-                  {formatArticleDate(featuredPost.publishedAt)}
-                </span>
-                {featuredPost.readingTimeMinutes ? (
-                  <span class="inline-flex items-center gap-2">
-                    <Clock className="h-4 w-4" aria-hidden="true" />
-                    {featuredPost.readingTimeMinutes} min read
-                  </span>
-                ) : null}
-              </div>
-
-              <div class="mt-5 flex flex-wrap gap-2">
-                {(featuredPost.tags || []).map((tag) => (
-                  <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">{tag}</span>
-                ))}
-              </div>
-
-              <div class="mt-6">
-                <PrimaryButton to={`/insights/${featuredPost.slug}`} showIcon>
-                  Read Article
-                </PrimaryButton>
-              </div>
-            </div>
-          </div>
-        </article>
-      </section>
-    ) : null}
-
-    {latestDigest && digestPreviewItems.length > 0 ? (
-      <section class="rounded-[28px] border border-slate-200 bg-white/95 p-6 shadow-[0_18px_45px_rgba(60,28,120,0.10)] sm:p-8">
-        <div class="flex flex-wrap items-baseline justify-between gap-3">
-          <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">Updated daily</p>
-            <h2 class="mt-2 text-2xl font-semibold text-brand-ink sm:text-3xl">AI &amp; Automation Daily</h2>
-            <p class="mt-2 text-sm text-slate-500">{formatDigestDate(latestDigest.digestDate)}</p>
-          </div>
-          <a
-            href="/insights/daily"
-            class="inline-flex items-center gap-2 text-sm font-semibold text-brand-teal transition hover:text-brand-tealDark"
-            data-cta-id="insights-digest-link"
-            data-cta-variant="link"
-          >
-            Read the full log
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </a>
-        </div>
-
-        <ul class="mt-5 space-y-3">
-          {digestPreviewItems.map((item) => (
-            <li class="flex gap-3 text-sm leading-relaxed text-slate-600">
-              <span class="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand-teal" aria-hidden="true"></span>
-              <span>
-                <a
-                  href={item.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer nofollow"
-                  class="font-semibold text-brand-ink transition hover:text-brand-teal"
-                >
-                  {item.title}
-                </a>
-                <span class="ml-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">{item.sourceName}</span>
-              </span>
-            </li>
+  <div class="mx-auto grid max-w-container gap-12 px-[var(--gutter)] py-12 lg:grid-cols-[minmax(0,1fr)_18rem]">
+    <section aria-labelledby="insights-list-heading">
+      <h2 id="insights-list-heading" class="sr-only">{activeTag ? `Articles about ${activeTag.label.toLowerCase()}` : 'All articles'}</h2>
+      <nav aria-label="Filter by problem">
+        <ul class="flex flex-wrap gap-2">
+          <li><a href="/insights" class={`dl-tag-link ${activeTag ? '' : 'is-active'}`} aria-current={activeTag ? undefined : 'page'}>All</a></li>
+          {tags.map((tag) => (
+            <li><a href={`/insights?problem=${tag.id}`} class={`dl-tag-link ${activeTag?.id === tag.id ? 'is-active' : ''}`} aria-current={activeTag?.id === tag.id ? 'page' : undefined}>{tag.label}</a></li>
           ))}
         </ul>
-      </section>
-    ) : null}
+      </nav>
 
-    <section class="space-y-6">
-      <SectionHeader
-        title={String(pageSections[1]?.props?.heading || 'All articles')}
-        subtitle={String(pageSections[1]?.props?.body || 'Guides, AI updates, and operational notes for modern workflows. Filter by what you need.')}
-      />
-
-      <div id="insights-filters" class="flex flex-wrap gap-2">
-        {filterOptions.map((option, index) => (
-          <button
-            type="button"
-            data-filter={option.id}
-            aria-pressed={index === 0 ? 'true' : 'false'}
-            class={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-              index === 0
-                ? 'border-brand-teal bg-brand-teal text-white'
-                : 'border-slate-200 bg-white text-slate-600 hover:border-brand-teal/40 hover:text-brand-teal'
-            }`}
-          >
-            {option.label}
-          </button>
+      <ul class="mt-8 divide-y divide-dl-rule border-y border-dl-rule">
+        {shown.map((post) => (
+          <li class="py-6" data-insight-card={post.slug}>
+            <p class="label text-dl-ink-3">
+              {post.problemTag ? tagLabel(post.problemTag) : post.category}
+              {post.publishedAt && <span> · <time datetime={post.publishedAt}>{formatArticleDate(post.publishedAt)}</time></span>}
+              {post.readingTimeMinutes ? <span> · {post.readingTimeMinutes} min</span> : null}
+            </p>
+            <h3 class="mt-2 text-step-2"><a href={`/insights/${post.slug}`} class="no-underline hover:underline" data-cta-id="insights-article">{post.title}</a></h3>
+            <p class="mt-2 text-dl-ink-2">{post.summary}</p>
+          </li>
         ))}
-      </div>
-
-      <div id="insights-feed" class="grid gap-5">
-        {feedPosts.map((post) => {
-          const Icon = resolveIcon(post.icon)
-          return (
-          <article data-content-type={post.contentType} class="rounded-[28px] border border-slate-200 bg-white/95 p-6 shadow-[0_18px_45px_rgba(60,28,120,0.10)] sm:p-7">
-            <div class="flex items-start gap-4">
-              <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-mint text-brand-teal">
-                <Icon className="h-5 w-5" aria-hidden="true" />
-              </div>
-              <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center gap-2">
-                  <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">{post.category}</span>
-                  <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">{topicLabel(post.contentType)}</span>
-                </div>
-                <h2 class="mt-3 text-2xl font-semibold text-brand-ink">{post.title}</h2>
-                <p class="mt-2 text-sm leading-relaxed text-slate-600">{post.summary}</p>
-              </div>
-            </div>
-
-            <div class="mt-5 flex flex-wrap items-center gap-4 text-sm text-slate-500">
-              {post.publishedAt ? (
-                <span class="inline-flex items-center gap-2">
-                  <Calendar className="h-4 w-4" aria-hidden="true" />
-                  {formatArticleDate(post.publishedAt)}
-                </span>
-              ) : null}
-              {post.readingTimeMinutes ? (
-                <span class="inline-flex items-center gap-2">
-                  <Clock className="h-4 w-4" aria-hidden="true" />
-                  {post.readingTimeMinutes} min read
-                </span>
-              ) : null}
-              <span>{post.authorName || 'DevLab Studios'}</span>
-            </div>
-
-            {(post.points || []).length > 0 ? (
-              <div class="mt-5 flex flex-wrap gap-2">
-                {post.points.map((point) => (
-                  <span class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">{point}</span>
-                ))}
-              </div>
-            ) : null}
-
-            <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
-              <div class="flex flex-wrap gap-2">
-                {(post.tags || []).map((tag) => (
-                  <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-500">{tag}</span>
-                ))}
-              </div>
-
-              <a href={`/insights/${post.slug}`} class="inline-flex items-center gap-2 text-sm font-semibold text-brand-teal transition hover:text-brand-tealDark">
-                Read full article
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </a>
-            </div>
-          </article>
-          )
-        })}
-      </div>
+      </ul>
+      <p class="mt-8 text-step--1 text-dl-ink-3">
+        Looking for the generated AI news notes? <a href="/insights/daily">Daily notes</a> are kept separately.
+      </p>
     </section>
 
-    {leadMagnet ? (
-      <section
-        class="light-artifact grid gap-5 rounded-[28px] bg-gradient-to-br from-[#fff9ff] via-[#fbf9ff] to-[#f2efff] p-6 shadow-[0_18px_38px_rgba(48,28,114,0.12)] sm:p-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-center"
-        data-view-event="lead_magnet_view"
-        data-offer-id={leadMagnet.id}
-      >
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">Free resource</p>
-          <h2 class="mt-2 text-2xl font-semibold text-brand-ink sm:text-3xl">{leadMagnet.title}</h2>
-          <p class="mt-3 text-sm leading-relaxed text-slate-600 sm:text-base">{leadMagnet.summary}</p>
-        </div>
-        <div class="flex flex-wrap gap-3 lg:justify-end">
-          <PrimaryButton
-            to={`/offers/${leadMagnet.id}`}
-            data-cta-id="insights-lead-magnet"
-            data-cta-variant="primary"
-            data-offer-id={leadMagnet.id}
-            showIcon
-          >
-            Get the checklist
-          </PrimaryButton>
-          <PrimaryButton
-            to={leadMagnet.path}
-            variant="secondary"
-            data-cta-id="insights-lead-magnet-read"
-            data-cta-variant="secondary"
-          >
-            Read it here
-          </PrimaryButton>
-        </div>
-      </section>
-    ) : null}
-
-    <section class="rounded-[28px] bg-gradient-to-r from-brand-ink via-[#22185a] to-[#3120a3] p-6 text-white shadow-[0_22px_50px_rgba(20,13,64,0.22)] sm:p-8">
-      <div class="grid gap-6 lg:grid-cols-[1fr_0.8fr] lg:items-center">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">{String(pageCta.eyebrow || 'Need implementation?')}</p>
-          <h2 class="mt-2 text-3xl font-semibold">{String(pageCta.heading || 'Turn the article into a working system.')}</h2>
-          <p class="mt-3 text-white/75">
-            {String(pageCta.body || 'DevLab Studios can map the process, choose the stack, and build the website, automation, or internal workflow around your current tools.')}
-          </p>
-        </div>
-        <div class="flex flex-wrap gap-3 lg:justify-end">
-          <PrimaryButton
-            to="/contact?type=business_system"
-            data-cta-id="insights-final-primary"
-            data-cta-variant="primary"
-            data-inquiry-type="business_system"
-          >
-            <MessageSquare size={16} aria-hidden="true" />
-            Discuss Your System
-          </PrimaryButton>
-          <PrimaryButton
-            to="/solutions"
-            variant="secondary"
-            data-cta-id="insights-final-secondary"
-            data-cta-variant="secondary"
-          >
-            <ArrowRight size={16} aria-hidden="true" />
-            View Solutions
-          </PrimaryButton>
-        </div>
+    <aside class="grid content-start gap-6">
+      <div class="ink-panel rounded-dl-s p-6">
+        <p class="label text-dl-ink-3">Start here</p>
+        <p class="mt-2 text-step-1 font-semibold">{OFFER_AUDIT.title}</p>
+        <p class="mt-2 text-step--1 text-dl-ink-2">{OFFER_AUDIT.summary}</p>
+        <a href={OFFER_AUDIT.path} class="dl-button-primary mt-5" data-cta-id="insights-audit">Request the audit</a>
       </div>
-    </section>
+      {leadMagnet && (
+        <div class="rounded-dl-s border border-dl-rule p-6">
+          <p class="label text-dl-ink-3">Free checklist</p>
+          <p class="mt-2 font-semibold">{leadMagnet.title}</p>
+          <a href={`/offers/${leadMagnet.id}`} class="dl-button-quiet mt-3" data-cta-id="insights-lead-magnet" data-offer-id={leadMagnet.id}>Get the checklist</a>
+        </div>
+      )}
+    </aside>
   </div>
-</Layout>
+</BrandLayout>
 
-<script>
-  const filterBar = document.getElementById('insights-filters')
-  const feed = document.getElementById('insights-feed')
-
-  filterBar?.addEventListener('click', (event) => {
-    const button = (event.target as HTMLElement)?.closest<HTMLButtonElement>('button[data-filter]')
-    if (!button) return
-
-    const filter = button.dataset.filter
-    filterBar.querySelectorAll('button[data-filter]').forEach((btn) => {
-      const isActive = btn === button
-      btn.setAttribute('aria-pressed', String(isActive))
-      btn.classList.toggle('border-brand-teal', isActive)
-      btn.classList.toggle('bg-brand-teal', isActive)
-      btn.classList.toggle('text-white', isActive)
-      btn.classList.toggle('border-slate-200', !isActive)
-      btn.classList.toggle('bg-white', !isActive)
-      btn.classList.toggle('text-slate-600', !isActive)
-    })
-
-    feed?.querySelectorAll<HTMLElement>('article[data-content-type]').forEach((card) => {
-      const matches = filter === 'all' || card.dataset.contentType === filter
-      card.classList.toggle('hidden', !matches)
-    })
-  })
-</script>
+<style>
+  .dl-tag-link {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    padding: 0 0.75rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius-xs);
+    font-family: var(--font-label);
+    font-size: var(--step--1);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--ink-2);
+  }
+  .dl-tag-link:hover { border-color: var(--ink-3); color: var(--ink); }
+  .dl-tag-link.is-active { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+</style>

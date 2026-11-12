@@ -1,223 +1,74 @@
 ---
-import { draftPreviewFor } from '../lib/content/preview'
-import Layout from '../layouts/Layout.astro'
-import SectionHeader from '../components/SectionHeader.jsx'
-import PrimaryButton from '../components/PrimaryButton.jsx'
-import VectorField from '../components/VectorField.astro'
-import { ArrowRight, BadgeCheck, Briefcase, CheckCircle2, Code2, Lightbulb, Settings, Zap } from '../components/icons/icons.js'
+/**
+ * About (audit UX-10 / BR.9): who we are, where we are, what we hold to and
+ * how a project runs. /process redirects to #how-we-work here.
+ */
+import BrandLayout from '../layouts/BrandLayout.astro'
+import PageHeader from '../components/brand/PageHeader.astro'
+import Section from '../components/brand/Section.astro'
+import SceneFrame from '../components/brand/SceneFrame.astro'
+import Portrait from '../components/brand/Portrait.astro'
+import { createFigureCounter } from '../components/brand/figures'
+import { getBreadcrumbSchema, getOrganizationSchema } from '../config/schema.js'
+import { COMPANY } from '../config/company.js'
 import { loadPageSeo } from '../lib/content/seo'
-import { loadPage } from '../lib/content/pages'
-import { loadServicesContent } from '../lib/content/services'
-import { getBreadcrumbSchema, getFaqSchema, getOrganizationSchema } from '../config/schema.js'
+import { ABOUT, DELIVERY_STEPS, RELIABILITY_PRINCIPLES } from '../data/site/content.js'
 
 const seo = await loadPageSeo('about')
-const aboutPage = await loadPage('about', { includeDrafts: await draftPreviewFor(Astro, { type: 'page', id: 'about' }) })
-const servicesContent = await loadServicesContent()
-const cmsHero = aboutPage?.blocks.find((block) => block.type === 'hero')?.props || {}
-const heroHeading = String(cmsHero.heading || 'Systems for clearer offers, faster operations, and cleaner handoffs.')
-const heroSubheading = String(cmsHero.subheading || 'DevLab Studios helps businesses turn messy workflows into complete digital systems—customer-facing interfaces, dependable services, structured data, and automation that keeps work moving.')
-
-const defaultBuildAreas = [
-  {
-    title: 'Conversion-focused websites',
-    description: 'Landing pages and business websites that explain an offer clearly, load quickly, and move visitors toward inquiry, booking, or purchase.',
-    icon: Code2,
-  },
-  {
-    title: 'Business automation systems',
-    description: 'Workflows that connect CRMs, forms, inboxes, calendars, spreadsheets, and task systems so operations move with less manual effort.',
-    icon: Zap,
-  },
-  {
-    title: 'Full-stack product systems',
-    description: 'Customer-facing interfaces connected to API services, structured data, integrations, and deployment-ready implementation.',
-    icon: Settings,
-  },
-]
-
-const defaultPrinciples = [
-  'Start with the real workflow before choosing tools.',
-  'Build small enough to ship, but structured enough to maintain.',
-  'Keep data flow, handoff, and reliability visible.',
-  'Use automation where it removes repeat work or response delays.',
-]
-
-const defaultFaqs = [
-  {
-    question: 'When was DevLab Studios founded?',
-    answer: 'DevLab Studios was founded on March 2, 2026 as a focused software engineering and AI automation studio for practical business systems.',
-  },
-  {
-    question: 'What kind of businesses does DevLab Studios help?',
-    answer: 'The studio helps service businesses, operators, founders, and small teams that need better websites, cleaner intake, faster follow-up, or connected internal workflows.',
-  },
-  {
-    question: 'Is DevLab Studios only an automation provider?',
-    answer: 'No. Automation is one part of the work. DevLab Studios also builds websites, backend integrations, internal tools, and workflow-focused interfaces.',
-  },
-  {
-    question: 'How does a project usually start?',
-    answer: 'Projects start with a practical workflow review. The goal is to understand the business problem, map the current process, and then define the smallest reliable system that can solve it.',
-  },
-]
-
-const statsBlocks = aboutPage?.blocks.filter((block) => block.type === 'stats') || []
-const richTextBlocks = aboutPage?.blocks.filter((block) => block.type === 'richText') || []
-const servicesBlock = aboutPage?.blocks.find((block) => block.type === 'servicesGrid')?.props || {}
-const faqBlock = aboutPage?.blocks.find((block) => block.type === 'faq')?.props || {}
-const ctaBlock = aboutPage?.blocks.find((block) => block.type === 'cta')?.props || {}
-const aboutCta = (ctaBlock.primaryCta as { label?: string; href?: string } | undefined) || {}
-const heroFacts = Array.isArray(statsBlocks[0]?.props?.items) && statsBlocks[0].props.items.length ? statsBlocks[0].props.items : [
-  { label: 'Focus', value: 'Full-stack + AI automation' }, { label: 'Approach', value: 'Workflow-first delivery' },
-  { label: 'Founder', value: 'Stephen Rey Agustinez' }, { label: 'Availability', value: 'Remote-first worldwide' },
-]
-const principleItems = Array.isArray(statsBlocks[1]?.props?.items) ? statsBlocks[1].props.items : []
-const principles = principleItems.length ? principleItems.map((item) => String(item.value || item.label)) : defaultPrinciples
-const selectedServiceIds = Array.isArray(servicesBlock.serviceIds) ? servicesBlock.serviceIds : []
-const selectedServices = selectedServiceIds.length ? selectedServiceIds.flatMap((id) => servicesContent.solutionGroups.filter((group) => group.id === id)) : []
-const buildAreas = defaultBuildAreas.map((area, index) => selectedServices[index] ? { ...area, title: selectedServices[index].title, description: selectedServices[index].description } : area)
-const missionCopy = richTextBlocks[0]?.props || {}
-const founderCopy = richTextBlocks[1]?.props || {}
-const faqs = Array.isArray(faqBlock.items) && faqBlock.items.length ? faqBlock.items : defaultFaqs
-const jsonLd = [
-  getOrganizationSchema(),
-  getBreadcrumbSchema([
-    { name: 'Home', path: '/' },
-    { name: 'About', path: '/about' },
-  ]),
-  // Only the questions rendered below are emitted — FAQ structured data whose
-  // answers are not visible on the page is a policy violation, not a shortcut.
-  getFaqSchema(faqs),
-]
+const figures = createFigureCounter()
+const jsonLd = [getOrganizationSchema(), getBreadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'About', path: '/about' }])]
 ---
 
-<Layout title="About DevLab Studios" seo={seo} jsonLd={jsonLd}>
-  <div class="space-y-10">
-    <section class="cinematic-panel relative overflow-hidden rounded-[2rem] p-6 text-white sm:p-8 lg:p-12">
-      <VectorField motif="fullstack" />
-      <div class="relative z-10 grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-        <div class="space-y-5">
-          <p class="tech-kicker text-white/70">Studio Overview · Founded March 2, 2026</p>
-          <h1 class="max-w-3xl text-4xl font-semibold leading-[1.08] tracking-[-0.035em] sm:text-5xl">
-            {heroHeading}
-          </h1>
-          <p class="max-w-2xl text-base leading-relaxed text-white/75 sm:text-lg">
-            {heroSubheading}
-          </p>
-          <div class="flex flex-wrap gap-3">
-            <PrimaryButton to="/solutions" data-cta-id="about-hero-primary" data-cta-variant="primary">
-              <Briefcase size={16} aria-hidden="true" />
-              View Solutions
-            </PrimaryButton>
-            <PrimaryButton
-              to="/profile"
-              variant="secondary"
-              data-cta-id="about-hero-secondary"
-              data-cta-variant="secondary"
-            >
-              <BadgeCheck size={16} aria-hidden="true" />
-              Founder Profile
-            </PrimaryButton>
-          </div>
-        </div>
-
-        <dl class="grid gap-3 sm:grid-cols-2">
-          {heroFacts.map((item) => (
-            <div class="rounded-2xl border border-white/10 bg-white/[0.07] p-5">
-              <dt class="text-xs font-semibold uppercase tracking-[0.14em] text-white/60">{item.label}</dt>
-              <dd class="mt-2 text-base font-semibold leading-snug sm:text-lg">{item.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-    </section>
-
-    <section class="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
-      <div class="space-y-4">
-        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-brand-teal">{String(missionCopy.eyebrow || 'Mission')}</p>
-        <h2 class="text-3xl font-semibold tracking-tight text-brand-ink sm:text-4xl">
-          {String(missionCopy.heading || 'Make business systems easier to launch, connect, and operate.')}
-        </h2>
-        <p class="text-slate-700">
-          {String(missionCopy.body || 'DevLab Studios exists to help businesses reduce operational friction with practical software. The mission is to build systems that clarify the customer journey, connect the tools behind the work, and make repeated processes easier to manage.')}
-        </p>
-      </div>
-
-      <div class="grid gap-4 sm:grid-cols-2">
-        {principles.map((principle) => (
-          <div class="surface-card p-5">
-            <CheckCircle2 className="h-5 w-5 text-brand-teal" aria-hidden="true" />
-            <p class="mt-3 text-sm font-semibold leading-relaxed text-brand-ink">{principle}</p>
+<BrandLayout title="About · DevLab Studios" seo={seo} jsonLd={jsonLd}>
+  <PageHeader eyebrow={ABOUT.eyebrow} heading={ABOUT.heading} lead={ABOUT.lead}>
+    <a href="/contact?type=business_system" class="dl-button-primary" data-cta-id="about-hero-primary" data-inquiry-type="business_system">Discuss your system</a>
+    <a href={COMPANY.founder.profilePath} class="dl-button-quiet" data-cta-id="about-hero-profile">Founder profile</a>
+    <div slot="aside" class="flex flex-col gap-6">
+      <Portrait size={160} loading="eager" />
+      <dl class="grid grid-cols-2 gap-x-6 gap-y-4 border-t border-dl-rule pt-6">
+        {ABOUT.facts.map((fact) => (
+          <div>
+            <dt class="label text-dl-ink-3">{fact.label}</dt>
+            <dd class="mt-1">{fact.value}</dd>
           </div>
         ))}
-      </div>
-    </section>
+      </dl>
+    </div>
+  </PageHeader>
 
-    <section class="space-y-6">
-      <SectionHeader
-        title={String(servicesBlock.heading || 'What DevLab Studios Builds')}
-        subtitle={String(servicesBlock.subheading || 'The work sits between front-end delivery, backend implementation, and automation logic.')}
-      />
-      <div class="grid gap-5 lg:grid-cols-3">
-        {buildAreas.map((area) => (
-          <article class="surface-card p-6">
-            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-mint text-brand-teal">
-              <area.icon className="h-5 w-5" aria-hidden="true" />
-            </div>
-            <h3 class="mt-4 text-xl font-semibold text-brand-ink">{area.title}</h3>
-            <p class="mt-2 text-sm leading-relaxed text-slate-600">{area.description}</p>
-          </article>
+  <Section id="about-principles" eyebrow="Principles" heading={ABOUT.principlesHeading}>
+    <div class="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-start">
+      <ol class="divide-y divide-dl-rule border-y border-dl-rule">
+        {RELIABILITY_PRINCIPLES.map((principle, index) => (
+          <li class="flex gap-4 py-4">
+            <span class="label shrink-0 pt-1 text-dl-ink-3">{String(index + 1).padStart(2, '0')}</span>
+            <span><strong class="block font-semibold">{principle.title}</strong><span class="text-dl-ink-2">{principle.text}</span></span>
+          </li>
         ))}
-      </div>
-    </section>
+      </ol>
+      <SceneFrame sceneId="build-in-layers" figure={figures.next()} />
+    </div>
+  </Section>
 
-    <section class="surface-card p-6 sm:p-8">
-      <div class="grid gap-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-brand-teal">{String(founderCopy.eyebrow || 'Founder Note')}</p>
-          <h2 class="mt-2 text-3xl font-semibold text-brand-ink">{String(founderCopy.heading || 'Built from hands-on software and operations experience.')}</h2>
-        </div>
-        <p class="text-slate-700">
-          {String(founderCopy.body || 'DevLab Studios is led by Stephen Rey Agustinez, a full-stack developer and AI automation specialist with experience across React, Astro, Java, Spring Boot, Laravel, REST APIs, SQL, Zapier, Make, n8n, and operational process improvement. The studio is designed for clients who need implementation that understands every layer and the workflow around it.')}
-        </p>
-      </div>
-    </section>
+  <Section id="how-we-work" eyebrow="Delivery" heading={ABOUT.howHeading} class="scroll-mt-24 border-t border-dl-rule">
+    <ol class="mt-10 grid gap-px overflow-hidden rounded-dl-s border border-dl-rule bg-dl-rule sm:grid-cols-2 lg:grid-cols-4">
+      {DELIVERY_STEPS.map((step, index) => (
+        <li class="bg-dl-paper p-6">
+          <p class="label text-dl-ink-3">{String(index + 1).padStart(2, '0')}</p>
+          <h3 class="mt-3 text-step-1">{step.title}</h3>
+          <p class="mt-2 text-dl-ink-2">{step.text}</p>
+        </li>
+      ))}
+    </ol>
+    <p class="mt-8 text-dl-ink-2">
+      We also build and run our own products. <a href="/products" data-cta-id="about-products">See what is live</a>.
+    </p>
+  </Section>
 
-    <section class="space-y-5">
-      <SectionHeader title={String(faqBlock.heading || 'FAQ')} subtitle={String(faqBlock.subheading || 'Common questions about DevLab Studios delivery.')} />
-      <div class="grid gap-4 lg:grid-cols-2">
-        {faqs.map((faq) => (
-          <article class="surface-card p-5">
-            <div class="flex items-start gap-3">
-              <Lightbulb className="mt-1 h-5 w-5 flex-shrink-0 text-brand-teal" aria-hidden="true" />
-              <div>
-                <h3 class="font-semibold text-brand-ink">{faq.question}</h3>
-                <p class="mt-2 text-sm leading-relaxed text-slate-600">{faq.answer}</p>
-              </div>
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
-
-    <section class="surface-card bg-[linear-gradient(120deg,#eeefff_0%,#fcfcff_62%)] p-6 sm:p-8">
-      <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-brand-teal">Next Step</p>
-          <h2 class="mt-2 text-2xl font-semibold text-brand-ink">{String(ctaBlock.heading || 'Need a system designed around your workflow?')}</h2>
-        </div>
-        <a
-          href={String(aboutCta.href || '/contact?type=business_system')}
-          class="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-brand-teal transition hover:text-brand-orange"
-          data-cta-id="about-final-primary"
-          data-cta-variant="primary"
-          data-inquiry-type="business_system"
-        >
-          {String(aboutCta.label || 'Discuss Your System')}
-          <ArrowRight className="h-4 w-4" aria-hidden="true" />
-        </a>
-      </div>
-    </section>
-
-  </div>
-</Layout>
+  <section id="about-cta" aria-labelledby="about-cta-heading" class="ink-panel">
+    <div class="mx-auto max-w-container px-[var(--gutter)] py-[calc(var(--section-rhythm)*0.6)]">
+      <h2 id="about-cta-heading" class="max-w-3xl text-step-3">Tell us about the system you need.</h2>
+      <a href="/contact?type=business_system" class="dl-button-primary mt-8" data-cta-id="about-final-primary" data-inquiry-type="business_system">Discuss your system</a>
+    </div>
+  </section>
+</BrandLayout>

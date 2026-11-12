@@ -5,7 +5,7 @@ const get = (url: string, headers: Record<string, string> = {}) => new Request(u
 
 describe('which requests may be served from the HTML cache (OPS-01)', () => {
   it('caches the business pages and articles', () => {
-    for (const path of ['/', '/solutions', '/work', '/insights', '/insights/the-cost-of-a-silent-failure', '/about', '/profile', '/process', '/contact', '/privacy', '/terms']) {
+    for (const path of ['/', '/solutions', '/work', '/insights', '/insights/the-cost-of-a-silent-failure', '/about', '/profile', '/products', '/contact', '/privacy', '/terms', '/solutions/workflow-systems-audit', '/work/messenger-ai-agent']) {
       expect(isCacheablePath(path), path).toBe(true)
     }
   })
@@ -19,7 +19,7 @@ describe('which requests may be served from the HTML cache (OPS-01)', () => {
   it('refuses non-GET, preview links and authorised requests', () => {
     expect(isCacheableRequest(get('https://www.devlabstudios.com/'), '/')).toBe(true)
     expect(isCacheableRequest(new Request('https://www.devlabstudios.com/', { method: 'POST' }), '/')).toBe(false)
-    expect(isCacheableRequest(get('https://www.devlabstudios.com/process?preview=p1.x.y'), '/process')).toBe(false)
+    expect(isCacheableRequest(get('https://www.devlabstudios.com/terms?preview=p1.x.y'), '/terms')).toBe(false)
     expect(isCacheableRequest(get('https://www.devlabstudios.com/', { Authorization: 'Bearer x' }), '/')).toBe(false)
   })
 })
