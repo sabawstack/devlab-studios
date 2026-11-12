@@ -363,6 +363,28 @@ test('a draft page is visible only through its preview link', async ({ page, bas
   }
 })
 
+// OPS-01: a CMS save moves the HTML cache to a new generation, so the public
+// page shows the change on the next request instead of after the TTL.
+test('a saved page shows on the public site immediately despite the HTML cache', async ({ page, baseURL }) => {
+  await login(page)
+  const original = await (await page.request.get(`${baseURL}/api/admin/pages/process`)).json()
+  const marker = `Cache purge marker ${Date.now()}`
+  try {
+    await page.request.get(`${baseURL}/process`)
+    const warm = await page.request.get(`${baseURL}/process`)
+    expect(warm.headers()['x-devlab-cache']).toBe('HIT')
+
+    const saved = await page.request.put(`${baseURL}/api/admin/pages/process`, {
+      data: { slug: 'process', title: 'Process', status: 'published', blocks: [{ type: 'richText', props: { heading: marker, body: 'Published body.' } }] },
+    })
+    expect(saved.ok(), await saved.text()).toBeTruthy()
+
+    await expect.poll(async () => (await (await page.request.get(`${baseURL}/process`)).text()).includes(marker), { timeout: 5_000 }).toBe(true)
+  } finally {
+    if (original?.blocks?.length) await page.request.put(`${baseURL}/api/admin/pages/process`, { data: original })
+  }
+})
+
 test('creating a project through the bespoke Projects editor still records a version', async ({ page, baseURL }) => {
   // ProjectsManager keeps its own bespoke UI (image upload, gallery
   // reordering) rather than being rewritten onto SchemaForm, but its

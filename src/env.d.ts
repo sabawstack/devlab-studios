@@ -20,6 +20,10 @@ interface Env {
   PROJECTS_STATIC_MERGE?: string
   /** "true" serves the brand review page (/brand); preview only. */
   BRAND_REVIEW_ENABLED?: string
+  /** "false" turns the edge HTML cache off (OPS-01); anything else leaves it on. */
+  CACHE_HTML?: string
+  /** Seconds a cached page is served before re-rendering (10-86400, default 300). */
+  HTML_CACHE_TTL_SECONDS?: string
   RESEND_API_KEY?: string
   RESEND_FROM_EMAIL?: string
   LEAD_NOTIFICATION_EMAIL?: string

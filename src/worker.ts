@@ -27,6 +27,7 @@ import { handleQueueBatch } from './lead-engine/queues/consumer.js'
 import { handleEmail } from './mailbox/inbound/handler.js'
 import { recordJobRun, sendFailedJobsSummary } from './worker/jobs/jobRuns.js'
 import { sendUnansweredInquiryReminder } from './worker/leads/funnel.js'
+import { bumpGeneration } from './lib/cache/htmlCache'
 import { createResendProvider } from './worker/delivery/providers.js'
 import { getSiteSetting } from './worker/repositories/content.js'
 import {
@@ -70,7 +71,13 @@ export default {
     // but never rethrown -- a scheduled handler that throws is retried, and a
     // retry would re-run the digest; nor may one job block or delay another.
 
-    ctx.waitUntil(recordJobRun(env, 'digest', () => runDailyDigest(env, { now, trigger: 'cron' })))
+    // The digest changes /insights/daily and the Insights hub: new HTML cache
+    // generation once it has published (OPS-01).
+    ctx.waitUntil(recordJobRun(env, 'digest', async () => {
+      const result = await runDailyDigest(env, { now, trigger: 'cron' })
+      await bumpGeneration(env.DB)
+      return result
+    }))
 
     // The Lead Intelligence Engine's tick, on the same cron as the digest.
     // With the feature flags at their shipped defaults this returns

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { readMaintenanceMode, findRedirectSafely } from './publicGates'
+import { readMaintenanceMode, findRedirectSafely, resetMaintenanceMemo } from './publicGates'
+import { beforeEach } from 'vitest'
 
 function dbReturning(row: unknown) {
   return {
@@ -20,12 +21,15 @@ function dbThrowing(message = 'D1_ERROR: no such table: site_settings') {
 }
 
 describe('readMaintenanceMode', () => {
+  beforeEach(() => resetMaintenanceMemo())
+
   it('is off when there is no database binding', async () => {
     expect(await readMaintenanceMode(undefined)).toBe(false)
   })
 
   it('reads the stored flag', async () => {
     expect(await readMaintenanceMode(dbReturning({ value_json: 'true' }))).toBe(true)
+    resetMaintenanceMemo()
     expect(await readMaintenanceMode(dbReturning({ value_json: 'false' }))).toBe(false)
   })
 
@@ -52,5 +56,18 @@ describe('findRedirectSafely', () => {
     const row = { id: 'r1', from_path: '/old', to_path: '/new', status_code: 301, note: '', created_at: '', updated_at: '' }
     const redirect = await findRedirectSafely(dbReturning(row), '/old')
     expect(redirect).toMatchObject({ toPath: '/new', statusCode: 301 })
+  })
+})
+
+describe('readMaintenanceMode memo (OPS-01)', () => {
+  it('reads D1 once per minute per isolate', async () => {
+    resetMaintenanceMemo()
+    let reads = 0
+    const db = { prepare: () => ({ bind: () => ({ first: async () => { reads += 1; return { value_json: 'false' } } }) }) } as unknown as D1Database
+    await readMaintenanceMode(db, 0)
+    await readMaintenanceMode(db, 59_000)
+    expect(reads).toBe(1)
+    await readMaintenanceMode(db, 61_000)
+    expect(reads).toBe(2)
   })
 })

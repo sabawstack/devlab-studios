@@ -3,6 +3,17 @@ import { requireAdmin } from './worker/middleware/adminAuth.js'
 import { createHonoLikeContext } from './lib/honoShim.js'
 import { getEnv } from './lib/env'
 import { findRedirectSafely, readMaintenanceMode } from './lib/publicGates'
+import {
+  asServed,
+  bumpGeneration,
+  cacheKeyUrl,
+  forStorage,
+  isCacheableRequest,
+  isCacheEnabled,
+  isStorableResponse,
+  readGeneration,
+  ttlSeconds,
+} from './lib/cache/htmlCache'
 import { applySecurityHeaders } from './lib/securityHeaders'
 import { drainRequestBody } from './lib/http'
 import { isAdminApiPath, routePath } from './lib/routePath'
@@ -82,7 +93,36 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
+  // OPS-01: serve the business pages from the edge HTML cache when we can.
+  // After the admin gate and the maintenance check, so neither is bypassed.
+  const env = getEnv()
+  const edgeCache = (globalThis as unknown as { caches?: { default?: Cache } }).caches?.default
+  let cacheKey: Request | null = null
+  if (edgeCache && isCacheEnabled(env) && isCacheableRequest(context.request, path)) {
+    const generation = await readGeneration(env.DB)
+    if (generation !== null) {
+      cacheKey = new Request(cacheKeyUrl(url, generation))
+      const hit = await edgeCache.match(cacheKey).catch(() => undefined)
+      if (hit) return applySecurityHeaders(asServed(hit, 'HIT'), url.pathname, url.hostname)
+    }
+  }
+
   const response = await next()
+
+  // Any successful admin write may change what a public page shows: move the
+  // HTML cache to a new generation so the next request renders afresh.
+  if (isAdminApiPath(path) && !ADMIN_PUBLIC_ROUTES.has(path) && !['GET', 'HEAD'].includes(context.request.method) && response.ok) {
+    const bump = bumpGeneration(env.DB).catch((error) => console.error('html cache generation bump failed', error))
+    if (context.locals.cfContext) context.locals.cfContext.waitUntil(bump)
+    else await bump
+  }
+
+  if (cacheKey && edgeCache && isStorableResponse(response)) {
+    const store = edgeCache.put(cacheKey, forStorage(response.clone(), ttlSeconds(env))).catch((error) => console.error('html cache put failed', error))
+    if (context.locals.cfContext) context.locals.cfContext.waitUntil(store)
+    else await store
+    return applySecurityHeaders(asServed(response, 'MISS'), url.pathname, url.hostname)
+  }
 
   // The admin's Redirects screen (D1 `redirects` table) only needs to be
   // consulted for paths nothing else already handled — so this only ever
