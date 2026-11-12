@@ -181,6 +181,19 @@ See [ADR 0008](architecture/decisions/0008-insights-daily-digest.md).
   inherited by an environment, and `checkRateLimit()` fails open when the
   binding is absent, so preview had been enforcing no rate limits at all.
 
+## D1 migration state (checked 2026-11-12)
+
+| Database | Applied through | How checked |
+|---|---|---|
+| `devlab-studios-cms-preview` | `0018_editorial_fields` (all) | `wrangler d1 migrations list … --remote --env preview` |
+| `devlab-pickleball-preview` | `0020_drop_legacy_pickleball` (all) | same |
+| `devlab-studios-cms` (production) | **unverified from the implementation session**; `0018_editorial_fields` known pending | needs the owner's token: `npx wrangler d1 migrations list devlab-studios-cms --remote` |
+| `devlab-pickleball` (production) | unverified (confirm `0020`) | `npx wrangler d1 migrations list devlab-pickleball --remote` |
+
+The preview deploy workflow now fails if either preview database has an
+unapplied migration (OPS-06). Production migrations stay a manual, token-gated
+step: list, apply, then read back.
+
 ## Known limitations and follow-ups
 
 - The `site settings save round-trip` admin e2e test races with the versioning

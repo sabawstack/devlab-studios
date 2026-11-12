@@ -40,6 +40,33 @@ jobs:
         env:
           CLOUDFLARE_ENV: preview
 
+      # OPS-06: preview D1 must already have every migration the code ships
+      # with. Migrations are applied by hand (docs/operations.md), so a pending
+      # one stops the deploy here instead of surfacing as a broken preview.
+      # Reports the state in the log either way; a token without D1 read
+      # access only warns, so this check can never block a deploy by itself.
+      - name: Check preview D1 migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: db49443cea6f0725d848254f17bcdab5
+        run: |
+          pending=0
+          for db in devlab-studios-cms-preview devlab-pickleball-preview; do
+            echo "::group::$db"
+            if output=$(npx wrangler d1 migrations list "$db" --remote --env preview 2>&1); then
+              echo "$output"
+              if echo "$output" | grep -q "Migrations to be applied"; then
+                echo "::error::$db has unapplied migrations. Apply them first: npx wrangler d1 migrations apply $db --remote --env preview"
+                pending=1
+              fi
+            else
+              echo "$output"
+              echo "::warning::Could not read the migration state of $db (token scope?); not blocking."
+            fi
+            echo "::endgroup::"
+          done
+          exit $pending
+
       - name: Deploy to preview
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3.15.0
         with:
