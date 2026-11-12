@@ -1,0 +1,35 @@
+# Every URL in https://www.devlabstudios.com/sitemap.xml on 2026-11-12, before
+# the B2B rebuild (audit TEST-07 / Section L rule 9). Each must keep answering
+# 200, or 301 to a page that answers 200. Do not edit this list to make a test
+# pass: add a redirect instead.
+/
+/about
+/contact
+/insights
+/insights/ai-agents-vs-workflow-automations
+/insights/ai-automation-small-business-workflows
+/insights/choosing-what-not-to-automate
+/insights/daily
+/insights/inference-at-the-edge-what-it-changes
+/insights/lead-intake-automation-checklist
+/insights/preparing-business-data-for-automation
+/insights/retrieval-is-plumbing-not-a-feature
+/insights/small-models-are-often-the-right-call
+/insights/structured-output-changed-integration-work
+/insights/the-cost-of-a-silent-failure
+/insights/what-better-ai-models-change-for-ops
+/insights/what-breaks-first-in-an-automation
+/insights/why-website-speed-and-automation-now-overlap
+/insights/writing-automation-runbooks
+/insights/zapier-make-n8n-comparison
+/offers/lead-intake-checklist
+/pickleball
+/pickleball/how-it-works
+/pickleball/new
+/pickleball/rotation
+/privacy
+/process
+/profile
+/solutions
+/terms
+/work
