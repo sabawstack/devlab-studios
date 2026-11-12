@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import MarkdownPreview from './MarkdownPreview'
 
 const inputClass = 'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-500'
 
@@ -121,7 +122,15 @@ function Field({ field, fieldId, value, onChange }) {
   }
 
   if (field.type === 'textarea') {
-    return <textarea {...commonProps} rows={4} value={value ?? ''} onChange={(e) => onChange(e.target.value)} />
+    const textarea = <textarea {...commonProps} rows={field.name === 'body' ? 8 : 4} value={value ?? ''} onChange={(e) => onChange(e.target.value)} />
+    // Body fields use the CMS body format (## headings, - lists); show it rendered beside the source.
+    if (field.name !== 'body') return textarea
+    return (
+      <div className="grid gap-3 lg:grid-cols-2">
+        {textarea}
+        <MarkdownPreview value={value} />
+      </div>
+    )
   }
 
   if (field.type === 'boolean') {

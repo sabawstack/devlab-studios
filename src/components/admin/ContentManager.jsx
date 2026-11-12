@@ -14,6 +14,7 @@ import { getStaticProfileContent } from '../../data/profileContent'
 import { validateAndConvertToWebP } from '../../utils/imageUpload'
 import ArticleEditorialFields from './ArticleEditorialFields'
 import PreviewDraftButton from '../../admin-app/components/PreviewDraftButton'
+import MarkdownPreview from '../../admin-app/components/MarkdownPreview'
 
 function deepClone(value) {
   return JSON.parse(JSON.stringify(value))
@@ -1069,6 +1070,10 @@ function ResourcesEditor({ value, onChange, onSave, onStatusChange, isSaving, is
                       className="rounded-md border border-slate-300 px-3 py-2 font-mono text-sm font-normal text-slate-800 outline-none transition focus:border-slate-500"
                     />
                   </label>
+                  <div className="grid gap-1.5 text-sm font-semibold text-slate-800">
+                    Rendered preview
+                    <MarkdownPreview value={selectedPost.body} />
+                  </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <ArrayTextArea
