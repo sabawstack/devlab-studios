@@ -59,6 +59,7 @@ decided against that surface specifically:
 ### Fixed
 
 - The lead engine's "unanswered replies" list now orders messages by when they were sent or received instead of when their rows were inserted, so a reply recorded in the same millisecond as the inbound message (an import or a retry) is no longer listed as unanswered, and an outbound message sent before the inbound one no longer hides it.
+- The static end-to-end suite now runs from a fresh checkout and in CI: the test server applies the CMS migrations to its local database first, starts with remote bindings off (Workers AI no longer needs a Cloudflare login or bills a test run), and stays in the foreground when Astro detects an AI coding agent.
 
 ## [2.2.0] - 2026-10-13
 

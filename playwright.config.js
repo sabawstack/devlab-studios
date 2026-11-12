@@ -40,7 +40,18 @@ export default defineConfig({
       // D1 files intermittently failed with "internal error" and hung a page.
       // See scripts/e2e/snapshot-static-state.mjs. DRAIN_UNREAD_BODIES for
       // this server comes from .dev.vars (astro preview takes no --var).
-      command: `npm run build && node scripts/e2e/snapshot-static-state.mjs ${STATIC_E2E_STATE} && npm run preview -- --port 4173`,
+      //
+      // The CMS migrations are applied to the local D1 first so a fresh
+      // checkout (and CI) has the tables the pages and the inquiry route read;
+      // re-applying is a no-op. Playwright starts web servers one at a time, so
+      // wrangler dev below has not opened the database yet.
+      //
+      // --ignore-lock keeps the preview in the foreground: Astro otherwise
+      // detaches it into a background process when it detects an AI coding
+      // agent, and Playwright reads the exiting npm process as a crash.
+      command:
+        'npm run build && npx wrangler d1 migrations apply devlab-studios-cms --local && ' +
+        `node scripts/e2e/snapshot-static-state.mjs ${STATIC_E2E_STATE} && npm run preview -- --port 4173 --ignore-lock`,
       env: { E2E_STATIC_PERSIST: STATIC_E2E_STATE },
       port: 4173,
       reuseExistingServer: !process.env.CI,
