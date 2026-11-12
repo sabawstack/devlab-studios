@@ -24,7 +24,7 @@ money, legal wording or a real data deletion are skipped and listed under
 | 10 | Data-touching jobs | done (PR #52, production at `8d17eca`); going live needs owner setup (Blockers 10–12) |
 | 11 | Product Worker split | not started: the redesign has shipped, so this is next once the Workers Paid plan decision (N7) is made |
 | 12 | Docs + release | v2.3.0 (PR #53) and **v2.4.0 released 2026-11-12** (PR #55); ADRs 0011–0013; full docs refresh (OPS-08) still open |
-| 13 | Blueprint rebrand | in progress on `feat/blueprint-rebrand` (target v2.5.0) |
+| 13 | Blueprint rebrand | done (PR #57, production at `3874835`, v2.5.0 tagged; GitHub Release entry pending, see Phase 13 Open) |
 
 ## Blockers (owner)
 
@@ -216,7 +216,7 @@ PR #55 (`06501a8`, `37d736d`, release `033505f`); v2.4.0 tag and GitHub Release 
   - OPS-08 docs refresh.
   - Phase 11 (N7).
 
-## Phase 13 — Blueprint rebrand (target 2.5.0)
+## Phase 13 — Blueprint rebrand (release 2.5.0, 2026-11-12)
 
 **Plan.** Owner-approved "Blueprint" plan (2026-11-12): dark navy palette with
 the logo gradient, self-hosted Space Grotesk + JetBrains Mono, sticky glass
@@ -242,7 +242,7 @@ are unchanged. Decision record: ADR 0014.
 | 12 | Full verification, visual capture, Lighthouse | done | — | lint 0 errors (1 pre-existing warning in pickleball), typecheck 0, unit 2,756 passed / 1 skipped, build OK, static e2e 225 passed / 1 skipped. `capture.mjs` at 390/820/1440 for 12 routes. Lighthouse mobile on `/` (local preview, warm): performance 93 / 93 vs `origin/main` 93 / 91 under the same conditions; accessibility 100, best practices 100, CLS 0, LCP 2.9 s. Production 2.4.0 baseline: 92, LCP 3.1 s |
 | 12b | Whole-branch review (fresh reviewer) and fix pass | done | this commit | Critical: the header's backdrop-filter clipped the fixed phone menu to 60 px on every page below 1024 px; the blur moved to `::before` (phone-menu e2e RED → GREEN). Important: endless animations (WCAG 2.2.2) now stop within 5 s (guard test RED → GREEN); the schema privacy test checks address shape instead of naming real address values. Static e2e 226 passed / 1 skipped |
 | 13a | PR #57, CI, preview | done | `551fe7e` | CI `validate` green. `development` fast-forwarded, preview deployed. On the preview URL: h1 and primary CTA on the first screen at 390/820/1440 with no horizontal scroll; phone menu full height and navigates; outage toggle makes 0 `/api/` requests; JS off shows 4 panels and no toggle; reduced motion pauses all 12 animated SVGs; `/brand` 200 with 4 Node states; hashed `script-src`; no Google Fonts request; `og.png` 200. Lighthouse mobile on the preview: performance 97 / 97, accessibility 100, best practices 100, LCP 2.3 s, CLS 0. Visual capture: production before (Actions run 43188083910), preview after (run 43191020317) |
-| 13b | Release 2.5.0, production smoke | in progress | | |
+| 13b | Release 2.5.0, production smoke | done | `3874835` | Release commit (`package.json` and the two root `package-lock.json` fields only; `text-extensions@2.4.0` untouched). PR #57 checks green on the release commit, then `main` and `development` were fast-forwarded together. CI `validate` green; Workers Builds deployed. CI pushed tag `v2.5.0`, but `gh release create` got a GitHub 503, so the Release entry is missing (see Open). Production (www): all 31 frozen legacy URLs resolve (200, or 301 to a 200); `/` has the new h1 at 390/820/1440 with no horizontal scroll; the phone menu is full height and navigates; the outage toggle makes 0 `/api/` requests; JS off and reduced motion both pass; hashed `script-src` CSP; no Google Fonts request; `og.png` and `og/home.png` 200 (52 KB); `/api/health` 200; `/brand` 404 (by design). Personal-data scan of `/`, `/about`, `/profile`, `/contact`, `/work`, `/privacy` and `/terms`: 0 hits |
 
 **Deviations (rulings).**
 
@@ -259,5 +259,10 @@ are unchanged. Decision record: ADR 0014.
 
 - The About page's "Based in" fact and the profile's static fallback hard-coded "Cebu, Philippines"; both now read `COMPANY.locationLabel` (guarded by `company.test.js`). `/profile` shows the CMS profile row's own location, which was not changed (no D1 writes).
 
-**Open.** Filled in at steps 12–13.
+**Open.**
+
+- **GitHub Release v2.5.0**: the tag exists, but CI's `gh release create` hit a GitHub 503 and the publish was not retried from this session. To publish it from the CHANGELOG section: `gh release create v2.5.0 --verify-tag --title v2.5.0 --notes-file <(awk -v ver=2.5.0 'BEGIN{h="## [" ver "]"} index($0,h)==1{f=1;next} f&&index($0,"## [")==1{exit} f{print}' CHANGELOG.md)`.
+- Review minors (deferred): no visible pressed state on the outage toggle; the hero eyebrow's brackets and capitals are read aloud by screen readers; the schematic's small labels are about 9.5 px on a 390 px phone; with JS off the console panels keep `role="tabpanel"` and `tabindex`; NodeMascot's fallback id counter (every current call site passes `id`).
+- Owner decisions: `COMPANY.operatorStatement` (privacy and terms legal text) still says "Cebu, Philippines" while the footer says Lapu-Lapu City. The home SEO title in the SEO record still reads "Operations software that holds up".
+- **Pre-existing privacy issue (not from this branch):** `scripts/cms/seed/cms-content-seed.sql` in this public repository contains real personal data (phone, date of birth, personal mailbox, barangay/postal address), as noted by the reviewer. It needs its own ticket. Removing it from the files is simple; purging it from git history needs a rewrite and force-push, which is the owner's decision.
 
