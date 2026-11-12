@@ -239,7 +239,7 @@ are unchanged. Decision record: ADR 0014.
 | 9 | Contact success state | done | `817f28b` | Assertions RED then contact-form 15/15 |
 | 10 | Social cards, icons, manifest | done | `6a61fd5` | 12 cards 45–59 KB; redesign + brand specs 33/33 |
 | 11 | Docs + changelog | done | this commit | ADR 0014, audit amendment, ADR 0012 status, scenes note, CHANGELOG `[Unreleased]` |
-| 12 | Full verification, visual capture, Lighthouse | pending | | |
+| 12 | Full verification, visual capture, Lighthouse | done | — | lint 0 errors (1 pre-existing warning in pickleball), typecheck 0, unit 2,756 passed / 1 skipped, build OK, static e2e 225 passed / 1 skipped. `capture.mjs` at 390/820/1440 for 12 routes. Lighthouse mobile on `/` (local preview, warm): performance 93 / 93 vs `origin/main` 93 / 91 under the same conditions; accessibility 100, best practices 100, CLS 0, LCP 2.9 s. Production 2.4.0 baseline: 92, LCP 3.1 s |
 | 13 | PR, preview, release 2.5.0, production smoke | pending | | |
 
 **Deviations (rulings).**
