@@ -14,8 +14,8 @@ money, legal wording or a real data deletion are skipped and listed under
 |---|---|---|
 | 1 | Guard rails | done (PR #44, production 2026-11-12 at `64c516d`) |
 | 2 | CMS correctness + content model | done (PR #46, production at `a80df26`); production data steps blocked (Blockers 1–2) |
-| 3 | Identity + personal data | done in code (PR pending promotion) |
-| 4 | Brand foundation | not started |
+| 3 | Identity + personal data | done (PR #47, production at `0b0a2ab`) |
+| 4 | Brand foundation | done in code; **scene approval needed before Phases 5–6** |
 | 5 | Pages I | not started |
 | 6 | Pages II | not started |
 | 7 | Routes + SEO | not started |
@@ -33,7 +33,8 @@ money, legal wording or a real data deletion are skipped and listed under
 3. **Branch protection** (OPS-02): enable "Require status checks" with the `validate` check on `main` and `development` (GitHub settings; see docs/testing.md).
 4. **Production identity data cleanup** (Phase 3, optional): `scripts/cms/updates/2026-11-12-business-identity.sql` (applied to preview). Not urgent: public pages already enforce the rules on the read path.
 5. **Owner inputs for Phase 3 defaults**: legal operator name for privacy/terms (N5; operator wording used now), and the Facebook page / LinkedIn company URL for `sameAs` (only the existing LinkedIn profile and GitHub are listed). Also check `public/resume.pdf` for personal details you no longer want public; it was not changed.
-6. Observed, not changed: `/haosweetitis/` returns 404 on production and preview; only `/haosweetitis/index.html` loads. Share that URL, or ask for a route fix.
+6. **Scene approval (gate for Phases 5–6):** review S1–S6 at `<preview>/brand`, then set `artReady: true` per approved scene (docs/brand/scenes.md), or send replacement art. Also confirm the "Working Drawings" direction (N1, default approve).
+7. Observed, not changed: `/haosweetitis/` returns 404 on production and preview; only `/haosweetitis/index.html` loads. Share that URL, or ask for a route fix.
 
 ## Phase 1 — Guard rails
 
@@ -101,3 +102,19 @@ Promotion: CI green on `a80df26` → `development` → preview deploy green, all
 | SEO-04 | done | Organization (`@id`, email, foundingDate, city address, founder `@id`), Person (`@id`, /profile, portrait, alumniOf, hasCredential, worksFor `@id`, no alternateName), WebSite without SearchAction. 7 unit tests |
 | SEC-06 | done | HMAC-SHA256 of `timestamp.body`, `X-DevLab-Timestamp`; receivers documented. 3 unit tests |
 | TEST-01 (no personal mailbox) | done | e2e over every legacy URL + `/maintenance`: no personal mailbox, no `tel:` link |
+
+Promotion: CI green on `0b0a2ab` → `development` → preview: 0 personal-data hits across all frozen URLs, footer identity and Person `@id` verified → `main`.
+
+## Phase 4 — Brand foundation
+
+Decision: this phase adds the brand system without switching any live page (each phase ships to production; a half-converted look is worse than either). Pages switch in Phase 5 after scene approval, which is also when Google Fonts is removed and the CSP tightened (UX-01's "no request to fonts.googleapis.com" lands then).
+
+| Req | Status | Evidence |
+|---|---|---|
+| UX-01 | done (tokens + fonts; page switch in Phase 5) | 101 KB business-page fonts, OFL licences, measured fallback metrics; contrast tests on paper and ink (ink-3 adjusted to #65615A: plan value was 4.42:1 on paper-2) |
+| UX-02 | done, pending approval | 16 symbols, S1–S6 in code, all under byte budget (e2e); one wide crop per scene (tall crops deferred; noted in docs/brand/scenes.md); OG template is WEB-08 (Phase 6) |
+| UX-03 | done | Button, Panel, Figure (+counter), FactList, ProofStrip, Disclosure, Tag, Table, Field; NavBar/Footer redesign is WEB-03 (Phase 5) |
+| UX-13 | done for scenes | One-time draw-in, reduced-motion end state (e2e) |
+| TEST-03 | partial | Grep test over brand sources; extends to all public components with UX-04 |
+| TEST-05 | partial | axe (serious/critical = 0) on `/brand`; canonical routes added as pages migrate |
+| TEST-04 | partial | `/brand` screenshots at 3 viewports attached to the e2e run |
