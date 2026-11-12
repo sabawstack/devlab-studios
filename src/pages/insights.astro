@@ -1,4 +1,5 @@
 ---
+import { draftPreviewFor } from '../lib/content/preview'
 import Layout from '../layouts/Layout.astro'
 import SectionHeader from '../components/SectionHeader.jsx'
 import PrimaryButton from '../components/PrimaryButton.jsx'
@@ -18,7 +19,7 @@ function resolveIcon(name: string) {
 }
 
 const seo = await loadPageSeo('insights')
-const insightsPage = await loadPage('insights')
+const insightsPage = await loadPage('insights', { includeDrafts: await draftPreviewFor(Astro, { type: 'page', id: 'insights' }) })
 const pageHero = insightsPage?.blocks.find((block) => block.type === 'hero')?.props || {}
 const pageSections = insightsPage?.blocks.filter((block) => block.type === 'richText') || []
 const pageCta = insightsPage?.blocks.find((block) => block.type === 'cta')?.props || {}

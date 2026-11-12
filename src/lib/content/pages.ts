@@ -32,14 +32,18 @@ const STATIC_PAGES: Record<string, PageData> = {
  * D1 first, falling back to bundled static content so these pages render
  * correctly before an editor has ever saved them through the admin.
  */
-export async function loadPage(slug: string): Promise<PageData | null> {
+/**
+ * `includeDrafts` is set only by a verified draft-preview request
+ * (./preview.ts draftPreviewFor); every other render reads published content.
+ */
+export async function loadPage(slug: string, { includeDrafts = false }: { includeDrafts?: boolean } = {}): Promise<PageData | null> {
   const fallback = STATIC_PAGES[slug] || null
   const env = getEnv()
   if (!env.DB) return fallback
 
   try {
     // Block CTA hrefs re-checked at read time; see src/lib/safeHref.ts.
-    const data = sanitizeLinkFields(await getPage(env.DB, slug, { includeDrafts: false }))
+    const data = sanitizeLinkFields(await getPage(env.DB, slug, { includeDrafts }))
     if (!data?.blocks?.length) return fallback
     // No personal mailbox on a public page, whatever older content stored (BUS-05).
     return scrubPersonalContacts(data)

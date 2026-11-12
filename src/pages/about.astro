@@ -1,4 +1,5 @@
 ---
+import { draftPreviewFor } from '../lib/content/preview'
 import Layout from '../layouts/Layout.astro'
 import SectionHeader from '../components/SectionHeader.jsx'
 import PrimaryButton from '../components/PrimaryButton.jsx'
@@ -10,7 +11,7 @@ import { loadServicesContent } from '../lib/content/services'
 import { getBreadcrumbSchema, getFaqSchema, getOrganizationSchema } from '../config/schema.js'
 
 const seo = await loadPageSeo('about')
-const aboutPage = await loadPage('about')
+const aboutPage = await loadPage('about', { includeDrafts: await draftPreviewFor(Astro, { type: 'page', id: 'about' }) })
 const servicesContent = await loadServicesContent()
 const cmsHero = aboutPage?.blocks.find((block) => block.type === 'hero')?.props || {}
 const heroHeading = String(cmsHero.heading || 'Systems for clearer offers, faster operations, and cleaner handoffs.')

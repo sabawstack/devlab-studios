@@ -36,12 +36,13 @@ export interface ArticlesContentData {
  * Articles/Resources split); the underlying repository function keeps its
  * original name since it also powers the not-yet-renamed admin editor.
  */
-export async function loadArticlesContent(): Promise<ArticlesContentData> {
+export async function loadArticlesContent({ includeDrafts = false }: { includeDrafts?: boolean } = {}): Promise<ArticlesContentData> {
   const env = getEnv()
   if (!env.DB) return resourcesContent
 
   try {
-    const data = await getResourcesContent(env.DB)
+    // includeDrafts only for a verified draft-preview request (./preview.ts).
+    const data = await getResourcesContent(env.DB, { includeDrafts })
     if (!data?.posts?.length) return resourcesContent
     return { posts: data.posts.map(normalizePost), playbook: data.playbook || [] }
   } catch {

@@ -1,4 +1,5 @@
 ---
+import { draftPreviewFor } from '../lib/content/preview'
 import Layout from '../layouts/Layout.astro'
 import SectionHeader from '../components/SectionHeader.jsx'
 import PrimaryButton from '../components/PrimaryButton.jsx'
@@ -12,7 +13,7 @@ import { loadPage } from '../lib/content/pages'
 
 const seo = await loadPageSeo('work')
 const projects = await loadProjects()
-const workPage = await loadPage('work')
+const workPage = await loadPage('work', { includeDrafts: await draftPreviewFor(Astro, { type: 'page', id: 'work' }) })
 const hero = workPage?.blocks.find((block) => block.type === 'hero')?.props || {}
 const showcase = workPage?.blocks.find((block) => block.type === 'workProjectShowcase')?.props || {}
 const cta = workPage?.blocks.find((block) => block.type === 'cta')?.props || {}

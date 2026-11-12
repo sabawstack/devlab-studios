@@ -99,6 +99,19 @@ describe('withAdmin refuses unauthenticated requests on its own', () => {
     }
   })
 
+  // CMS-04: preview links are signed with a key derived from the session
+  // secret; one must never be accepted as an admin session.
+  it('refuses a draft-preview token presented as the session cookie', async () => {
+    const { createPreviewToken } = await import('./previewToken')
+    const token = await createPreviewToken(SESSION_SECRET, { type: 'page', id: 'home' })
+    const handler = vi.fn(async () => new Response('ran'))
+    const response = await withAdmin(handler)(context(new Request('https://example.com/api/admin/leads', {
+      headers: { Cookie: `devlab_admin_session=${token}` },
+    })))
+    expect(handler).not.toHaveBeenCalled()
+    expect(response.status).toBe(401)
+  })
+
   it('returns 401 without running the handler when there is no session (gate bypassed)', async () => {
     const handler = vi.fn(async () => new Response('ran'))
     const guarded = withAdmin(handler)

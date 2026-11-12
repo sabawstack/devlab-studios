@@ -5,6 +5,7 @@ import { BLOCK_FIELDS, BLOCK_LABELS, PAGE_BLOCK_TYPES, createEmptyBlockProps } f
 import SchemaForm from '../components/SchemaForm'
 import VersionHistoryPanel from './VersionHistoryPanel'
 import PublicUsageNotice from '../components/PublicUsageNotice'
+import PreviewDraftButton from '../components/PreviewDraftButton'
 import { PUBLIC_SURFACES } from '../../config/publicSurfaces'
 import { PAGE_STATUSES } from '../../lib/schemas/singletons'
 
@@ -105,6 +106,7 @@ function PageBuilderPage() {
           <button type="button" onClick={() => setShowHistory((v) => !v)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
             {showHistory ? 'Hide History' : 'Version History'}
           </button>
+          <PreviewDraftButton type="page" id={slug} />
           <button type="button" onClick={handleSave} className="rounded-lg bg-brand-teal px-4 py-2 text-sm font-semibold text-white hover:brightness-95">
             Save Page
           </button>

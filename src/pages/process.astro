@@ -1,11 +1,12 @@
 ---
+import { draftPreviewFor } from '../lib/content/preview'
 import Layout from '../layouts/Layout.astro'
 import BlockRenderer from '../components/blocks/BlockRenderer.astro'
 import { loadPage } from '../lib/content/pages'
 import { loadPageSeo } from '../lib/content/seo'
 
 const seo = await loadPageSeo('process')
-const page = await loadPage('process')
+const page = await loadPage('process', { includeDrafts: await draftPreviewFor(Astro, { type: 'page', id: 'process' }) })
 ---
 
 <Layout title={`${page?.title || 'Process'} — DevLab Studios`} seo={seo}>

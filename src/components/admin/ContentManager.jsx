@@ -13,6 +13,7 @@ import { resourcesContent } from '../../data/resourcesContent'
 import { getStaticProfileContent } from '../../data/profileContent'
 import { validateAndConvertToWebP } from '../../utils/imageUpload'
 import ArticleEditorialFields from './ArticleEditorialFields'
+import PreviewDraftButton from '../../admin-app/components/PreviewDraftButton'
 
 function deepClone(value) {
   return JSON.parse(JSON.stringify(value))
@@ -957,8 +958,9 @@ function ResourcesEditor({ value, onChange, onSave, onStatusChange, isSaving, is
                     {selectedPost.title || 'Untitled draft'}
                   </h3>
                   <p className="mt-1 text-sm text-slate-500">
-                    Public path: <span className="font-mono text-slate-700">/resources/{selectedPost.slug || 'set-a-slug'}</span>
+                    Public path: <span className="font-mono text-slate-700">/insights/{selectedPost.slug || 'set-a-slug'}</span>
                   </p>
+                  {selectedPost.slug ? <div className="mt-2"><PreviewDraftButton type="article" id={selectedPost.slug} /></div> : null}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">

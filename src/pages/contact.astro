@@ -1,4 +1,5 @@
 ---
+import { draftPreviewFor } from '../lib/content/preview'
 import Layout from '../layouts/Layout.astro'
 import InquiryForm from '../components/islands/InquiryForm.jsx'
 import VectorField from '../components/VectorField.astro'
@@ -10,7 +11,7 @@ import { loadPage } from '../lib/content/pages'
 import { CONTACT_FORM_INQUIRY_TYPES, isEmploymentInquiry } from '../lib/schemas/inquiry'
 
 const seo = await loadPageSeo('contact')
-const contactPage = await loadPage('contact')
+const contactPage = await loadPage('contact', { includeDrafts: await draftPreviewFor(Astro, { type: 'page', id: 'contact' }) })
 const pageHero = contactPage?.blocks.find((block) => block.type === 'hero')?.props || {}
 const turnstileSiteKey = resolveTurnstileSiteKey(Astro.request.url)
 

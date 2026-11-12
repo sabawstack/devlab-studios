@@ -1,4 +1,5 @@
 ---
+import { draftPreviewFor } from '../../lib/content/preview'
 import Layout from '../../layouts/Layout.astro'
 import PrimaryButton from '../../components/PrimaryButton.jsx'
 import * as Icons from '../../components/icons/icons.js'
@@ -15,9 +16,13 @@ function resolveIcon(name: string) {
 }
 
 const { slug } = Astro.params
-const { posts } = await loadArticlesContent()
-const publishedPosts = posts.filter((post) => post.status !== 'draft')
-const activePost = publishedPosts.find((post) => post.slug === slug || post.id === slug) || null
+// CMS-04: a verified preview link shows this one article's draft; nothing else changes.
+const isPreview = await draftPreviewFor(Astro, { type: 'article', id: String(slug) })
+const { posts } = await loadArticlesContent({ includeDrafts: isPreview })
+const publishedPosts = posts.filter((post) => post.status === 'published' || (post.status !== 'draft' && post.status !== 'archived'))
+const activePost = publishedPosts.find((post) => post.slug === slug || post.id === slug)
+  || (isPreview ? posts.find((post) => post.slug === slug) : null)
+  || null
 
 if (!activePost) {
   Astro.response.status = 404

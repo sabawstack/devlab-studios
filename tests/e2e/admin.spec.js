@@ -332,6 +332,37 @@ test('a page version can be restored', async ({ page, baseURL }) => {
   expect(reset.ok()).toBeTruthy()
 })
 
+// CMS-04: a signed preview link shows one page's draft, uncached and unindexed;
+// without it (or with a tampered one) the public page shows published content.
+test('a draft page is visible only through its preview link', async ({ page, baseURL }) => {
+  await login(page)
+  const original = await (await page.request.get(`${baseURL}/api/admin/pages/process`)).json()
+  const marker = `Draft preview marker ${Date.now()}`
+  try {
+    const saved = await page.request.put(`${baseURL}/api/admin/pages/process`, {
+      data: { slug: 'process', title: 'Process', status: 'draft', blocks: [{ type: 'richText', props: { heading: marker, body: 'Draft body.' } }] },
+    })
+    expect(saved.ok(), await saved.text()).toBeTruthy()
+
+    const publicHtml = await (await page.request.get(`${baseURL}/process`)).text()
+    expect(publicHtml).not.toContain(marker)
+
+    const { url } = await (await page.request.get(`${baseURL}/api/admin/preview-token?type=page&id=process`)).json()
+    const preview = await page.request.get(`${baseURL}${url}`)
+    expect(await preview.text()).toContain(marker)
+    expect(preview.headers()['cache-control']).toMatch(/no-store/)
+    expect(preview.headers()['x-robots-tag']).toMatch(/noindex/)
+
+    const tampered = await page.request.get(`${baseURL}${url.slice(0, -3)}abc`)
+    expect(await tampered.text()).not.toContain(marker)
+
+    const wrongPage = url.replace('/process?', '/about?')
+    expect(await (await page.request.get(`${baseURL}${wrongPage}`)).text()).not.toContain(marker)
+  } finally {
+    if (original?.blocks?.length) await page.request.put(`${baseURL}/api/admin/pages/process`, { data: original })
+  }
+})
+
 test('creating a project through the bespoke Projects editor still records a version', async ({ page, baseURL }) => {
   // ProjectsManager keeps its own bespoke UI (image upload, gallery
   // reordering) rather than being rewritten onto SchemaForm, but its
