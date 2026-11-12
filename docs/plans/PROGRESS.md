@@ -12,8 +12,8 @@ money, legal wording or a real data deletion are skipped and listed under
 
 | # | Phase | Status |
 |---|---|---|
-| 1 | Guard rails | in progress |
-| 2 | CMS correctness + content model | not started |
+| 1 | Guard rails | done (PR #44, production 2026-11-12 at `64c516d`) |
+| 2 | CMS correctness + content model | done in code; production data steps blocked (see Blockers) |
 | 3 | Identity + personal data | not started |
 | 4 | Brand foundation | not started |
 | 5 | Pages I | not started |
@@ -27,7 +27,11 @@ money, legal wording or a real data deletion are skipped and listed under
 
 ## Blockers (owner)
 
-_None yet._
+1. **Production D1 migration `0018_editorial_fields`** (Phase 2, CMS-03). Additive columns only, already applied and verified on preview. The deployed code works without it, but the new project/article/SEO fields cannot be saved in production until it runs:
+   `CLOUDFLARE_API_TOKEN=<fresh token> npx wrangler d1 migrations apply devlab-studios-cms --remote`
+2. **Production project reconciliation** (Phase 2, CMS-02). Production reads were not permitted in this session, so production keeps `PROJECTS_STATIC_MERGE=true` (today's behaviour). Run `node scripts/cms/static-projects-missing-from-d1.mjs --env production`, seed any project that should stay, then set the var to `"false"` in `wrangler.jsonc`. Preview: 0 static projects missing (checked).
+3. **Branch protection** (OPS-02): enable "Require status checks" with the `validate` check on `main` and `development` (GitHub settings; see docs/testing.md).
+4. Observed, not changed: `/haosweetitis/` returns 404 on production and preview; only `/haosweetitis/index.html` loads. Share that URL, or ask for a route fix.
 
 ## Phase 1 — Guard rails
 
@@ -67,3 +71,19 @@ _None yet._
 | TEST-01 | partial (by design) | `9122627` | Strict limiter on open-play writes, outbox bearer checks. Remaining guards land with their features: cache (OPS-01), preview token (CMS-04), nonce (SEC-07), no gmail (Phase 3), no gradients (TEST-03) |
 | TEST-07 fixture | done | `783c590` | 31 live sitemap paths frozen; e2e checks each resolves (32 passed) |
 | TEST-04 baseline | done (tooling) | `01dbf78` | Capture script + **Visual capture** workflow. Local production capture: 36 images OK. Screenshots NOT committed (profile shows personal data; public repo). Production baseline artifact to be run after merge, before Phase 4 |
+
+Promotion: CI green on `64c516d` (merge of `main`'s #HaoSweetItIs commits, which had bypassed `development`) → `development` → preview deploy green; preview smoke 200 on all canonical routes → `main` → Workers Builds success; production smoke: 31/31 legacy URLs 200, `/admin` noindex + no-store, admin API 401 unauthenticated. Visual baseline workflow dispatched against production (run 43140161150).
+
+## Phase 2 — CMS correctness + content model
+
+**Plan.** CMS-01 (schema slugs, archived status, page restore) → CMS-02 (D1 source of truth, gated per environment) → LEAD-02 (new inquiry types) → LEAD-04 (qualification settings) → CMS-03 in two parts (registries + blocks; migration 0018 + editorial fields with column-aware repositories). Migration: preview applied by me; production needs the owner's token. Rollback: revert commits; 0018 columns are additive and unused if the code is reverted.
+
+| Req | Status | Evidence |
+|---|---|---|
+| e2e worker suites on a fresh checkout | done | `scripts/e2e/write-dev-vars.mjs`; admin suite 48/49 locally (the SEO-editor test needs seeded local content; pre-existing) |
+| CMS-01 | done | Solutions/Insights save; page restore incl. Work reference checks; archived removed from page UI; projects/services/etc. stored "archived" as published, now draft. 46 unit + 6 e2e |
+| CMS-02 | done (code) | D1 is the source of truth; preview `PROJECTS_STATIC_MERGE=false` (0 missing), production `true` until reconciled (Blocker 2). Read-only reconciliation script |
+| LEAD-02 | done | operations_care (business), product_interest/support (unscored, not in contact select). No DB CHECK on inquiry_type, so no migration |
+| LEAD-04 | done | Settings panel + API, audited, invalid/non-descending refused, read failure falls back to defaults. 18 unit + 1 e2e |
+| CMS-03 | done (code), preview migrated | Registries (scenes S1–S6, problem tags, audiences, OG variants, client types); blocks scene/proofStrip/offerCard; hero visualId/density; cta tone; migration 0018 applied to preview and verified (5/6/1 columns, data intact); production pending (Blocker 1) |
+| Found along the way | fixed | CTA inquiry-type list was a stale copy; lead-engine schemaParity test assumed migration numbering |

@@ -7,7 +7,7 @@
 -- a database this has not reached yet.
 --
 -- Apply to preview first, verify, then production with the owner's token:
---   npx wrangler d1 migrations apply devlab-studios-cms --remote --env preview
+--   npx wrangler d1 migrations apply devlab-studios-cms-preview --remote --env preview
 --   npx wrangler d1 migrations apply devlab-studios-cms --remote
 
 -- Projects: write-up depth without invented numbers.
