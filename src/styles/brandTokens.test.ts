@@ -114,6 +114,18 @@ describe('brand sources stay free of generic visual patterns (TEST-03)', () => {
     expect(text).not.toMatch(/(?<![\w&/-])#(?:[0-9a-fA-F]{3}){1,2}(?![\w-])(?=["';\s,)])/)
   })
 
+  // WCAG 2.2.2 (Level A): motion that starts by itself stops within five seconds.
+  it.each(sources)('%s has no endless animation', (path) => {
+    const text = stripComments(readFileSync(path, 'utf8'))
+    expect(text, 'CSS animation set to infinite').not.toMatch(/animation(?:-iteration-count)?:[^;}]*\binfinite\b/)
+    for (const tag of text.match(/<animate[A-Za-z]*\b[^>]*>/g) ?? []) {
+      if (!/repeatCount="indefinite"/.test(tag)) continue
+      const end = /\bend="(\d+(?:\.\d+)?)s"/.exec(tag)
+      expect(end, `${tag} repeats forever`).not.toBeNull()
+      expect(Number(end?.[1])).toBeLessThanOrEqual(5)
+    }
+  })
+
   it('the brand gradient is never applied to text', () => {
     expect(css).not.toMatch(/background-clip:\s*text/)
   })

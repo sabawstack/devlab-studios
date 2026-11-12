@@ -8,8 +8,9 @@
  * "Simulate outage" flips the root's data-state between nominal and outage;
  * CSS does all the state styling and the status line is announced politely.
  * The toggle is client-side only and never calls the network. With JS off the
- * nominal diagram renders and the toggle stays hidden. Data packets are SMIL:
- * hidden under reduced motion and paused by src/lib/motion.ts.
+ * nominal diagram renders and the toggle stays hidden. Data packets are SMIL,
+ * run for 4.8 s and then rest (WCAG 2.2.2), and are hidden under reduced
+ * motion and paused by src/lib/motion.ts.
  */
 import NodeMascot from './NodeMascot.jsx'
 import { HOME } from '../../data/site/content.js'
@@ -60,10 +61,10 @@ const ROUTE = 2
 
     <g class="pl-packets">
       <circle class="pl-packet" r="3" cx="36" cy={Y[0]}>
-        <animateMotion dur="3.2s" repeatCount="indefinite" path={`M0 0V${Y[3] - Y[0]}`} />
+        <animateMotion dur="2.4s" repeatCount="indefinite" end="4.8s" path={`M0 0V${Y[3] - Y[0]}`} />
       </circle>
       <circle class="pl-packet pl-packet--branch" r="3" cx="60" cy={Y[ROUTE]}>
-        <animateMotion dur="1.6s" repeatCount="indefinite" path="M0 0H158" />
+        <animateMotion dur="1.6s" repeatCount="indefinite" end="4.8s" path="M0 0H158" />
       </circle>
     </g>
 

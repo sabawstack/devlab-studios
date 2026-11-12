@@ -240,6 +240,7 @@ are unchanged. Decision record: ADR 0014.
 | 10 | Social cards, icons, manifest | done | `6a61fd5` | 12 cards 45–59 KB; redesign + brand specs 33/33 |
 | 11 | Docs + changelog | done | this commit | ADR 0014, audit amendment, ADR 0012 status, scenes note, CHANGELOG `[Unreleased]` |
 | 12 | Full verification, visual capture, Lighthouse | done | — | lint 0 errors (1 pre-existing warning in pickleball), typecheck 0, unit 2,756 passed / 1 skipped, build OK, static e2e 225 passed / 1 skipped. `capture.mjs` at 390/820/1440 for 12 routes. Lighthouse mobile on `/` (local preview, warm): performance 93 / 93 vs `origin/main` 93 / 91 under the same conditions; accessibility 100, best practices 100, CLS 0, LCP 2.9 s. Production 2.4.0 baseline: 92, LCP 3.1 s |
+| 12b | Whole-branch review (fresh reviewer) and fix pass | done | this commit | Critical: the header's backdrop-filter clipped the fixed phone menu to 60 px on every page below 1024 px; the blur moved to `::before` (phone-menu e2e RED → GREEN). Important: endless animations (WCAG 2.2.2) now stop within 5 s (guard test RED → GREEN); the schema privacy test checks address shape instead of naming real address values. Static e2e 226 passed / 1 skipped |
 | 13 | PR, preview, release 2.5.0, production smoke | pending | | |
 
 **Deviations (rulings).**

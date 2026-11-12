@@ -50,8 +50,15 @@ describe('WebSite schema', () => {
 describe('no personal data in any schema', () => {
   it('has no personal mailbox, phone or street address', () => {
     const all = JSON.stringify([getOrganizationSchema(), getPersonSchema(), getWebsiteSchema()])
-    // City-level is allowed (PROF-02; the city is Lapu-Lapu City since ADR 0014); barangay and postal code never are.
-    expect(all).not.toMatch(/@gmail\.com|telephone|streetAddress|postalCode|Pusok|\b6015\b/i)
+    expect(all).not.toMatch(/@gmail\.com|telephone|streetAddress|postalCode/i)
+  })
+
+  // PROF-02: city-level only, checked by shape rather than by listing real values.
+  it('gives every address exactly city, region and country, with no numbers', () => {
+    for (const schema of [getOrganizationSchema(), getPersonSchema()]) {
+      expect(Object.keys(schema.address).sort()).toEqual(['@type', 'addressCountry', 'addressLocality', 'addressRegion'])
+      for (const value of Object.values(schema.address)) expect(String(value)).not.toMatch(/\d/)
+    }
   })
 })
 

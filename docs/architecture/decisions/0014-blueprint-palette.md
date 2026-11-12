@@ -46,14 +46,21 @@ the shared shell were restructured.
   own React root, where `useId` would repeat). Node is secondary: the router
   in the hero schematic, beside the failure vectors and the audit card, and
   in the form's success state; never the hero's subject.
-- **Motion exception.** ADR 0012's "nothing loops" gives way in two places
-  only: Node's visor pulse and the data packets in Node and the hero
-  schematic. Both stop under `prefers-reduced-motion` (CSS for the pulse and
-  packet visibility; `src/lib/motion.ts` pauses SVG animation, re-applied at
-  the load event because the SVG timeline starts there).
-- **Header glass.** The sticky header uses `backdrop-filter: blur(12px)` over
-  80 % navy, behind an `@supports` guard with a solid 96 % fallback. It is the
-  only blur on the site.
+- **Motion.** ADR 0012's "nothing loops" gives way in two places only: Node's
+  visor pulse and the data packets in Node and the hero schematic. Both stop
+  by themselves within five seconds (three 1.6 s pulses; SMIL packets end at
+  4.8 s), which WCAG 2.2.2 requires for motion that starts on its own;
+  `brandTokens.test.ts` fails on any `infinite` CSS animation or endless SVG
+  animation in brand sources. Under `prefers-reduced-motion` they do not run
+  at all (CSS for the pulse and packet visibility; `src/lib/motion.ts` pauses
+  SVG animation, re-applied at the load event because the SVG timeline
+  starts there).
+- **Header glass.** The sticky header's `::before` carries `backdrop-filter:
+  blur(12px)` over 80 % navy, behind an `@supports` guard with a solid 96 %
+  fallback. It is the only blur on the site. The blur is never on the header
+  element itself: that would make the header the containing block for the
+  fixed mobile menu inside it and clip the menu to the bar (caught in review;
+  guarded by the phone-menu test in `redesign.spec.js`).
 
 ## Consequences
 

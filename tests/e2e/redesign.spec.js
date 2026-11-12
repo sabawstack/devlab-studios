@@ -70,6 +70,22 @@ for (const width of [320, 390, 820, 1440]) {
   })
 }
 
+// The menu sheet must cover the screen and its links must take clicks: a
+// containing block on the sticky header once clipped it to 60 px while
+// isVisible() still passed.
+test('the phone menu opens full-screen and its links navigate', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/about')
+  await page.locator('[data-menu-open]').click()
+  const sheet = page.locator('#dl-mobile-menu')
+  const box = await sheet.boundingBox()
+  expect(box.height).toBeGreaterThanOrEqual(844 - 1)
+  const links = sheet.getByRole('link')
+  await expect(links.last()).toBeInViewport()
+  await sheet.getByRole('link', { name: 'Work', exact: true }).click()
+  await expect(page).toHaveURL(/\/work$/)
+})
+
 test('axe finds no serious or critical issues on the redesigned pages', async ({ page }) => {
   test.setTimeout(120_000)
   for (const { path } of PAGES) {

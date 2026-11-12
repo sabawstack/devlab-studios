@@ -14,9 +14,9 @@
  * two instances on a page never collide; pass `id` where the markup must be
  * stable between server and client.
  *
- * Motion: the visor pulse is a CSS animation (stopped by the global
- * reduced-motion rule); the packets are SMIL and are hidden under reduced
- * motion, and paused by src/lib/motion.ts when a page script runs.
+ * Motion: everything stops within 5 s (WCAG 2.2.2): three visor pulses (CSS,
+ * also stopped by the global reduced-motion rule) and packets that end at
+ * 4.8 s (SMIL; hidden under reduced motion and paused by src/lib/motion.ts).
  */
 
 const STATES = new Set(['idle', 'active', 'diagnostic'])
@@ -101,15 +101,16 @@ export default function NodeMascot({ state = 'idle', size = 96, title = 'Node, t
 
       {mode === 'active' && (
         <g className="node-packets">
-          {/* Each packet starts at its plate's top terminal; the motion paths are relative to it. */}
+          {/* Each packet starts at its plate's top terminal; the motion paths are relative to it.
+              All motion ends at 4.8 s and the packets rest at the terminals (WCAG 2.2.2). */}
           <circle className="node-packet" r="2" cx="30" cy="28">
-            <animateMotion dur="2.4s" repeatCount="indefinite" path="M0 0L-14 28L0 56" />
+            <animateMotion dur="2.4s" repeatCount="indefinite" end="4.8s" path="M0 0L-14 28L0 56" />
           </circle>
           <circle className="node-packet" r="2" cx="48" cy="24">
-            <animateMotion dur="2.4s" begin="0.8s" repeatCount="indefinite" path="M0 0V64" />
+            <animateMotion dur="2.4s" begin="0.8s" repeatCount="indefinite" end="4.8s" path="M0 0V64" />
           </circle>
           <circle className="node-packet" r="2" cx="66" cy="28">
-            <animateMotion dur="2.4s" begin="1.6s" repeatCount="indefinite" path="M0 0L14 28L0 56" />
+            <animateMotion dur="2.4s" begin="1.6s" repeatCount="indefinite" end="4.8s" path="M0 0L14 28L0 56" />
           </circle>
         </g>
       )}

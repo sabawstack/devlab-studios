@@ -288,15 +288,24 @@ body.brand {
   background: linear-gradient(var(--paper-2), var(--paper-2)) padding-box, var(--brand-gradient) border-box;
 }
 
-/* The sticky glass header. Phones without backdrop-filter get a solid bar. */
+/* The sticky glass header. The blur sits on a pseudo-element, not the header:
+   a backdrop-filter on the header would make it the containing block for the
+   fixed mobile menu inside it and clip the menu to the bar's height. Browsers
+   without backdrop-filter get a solid bar. */
 .dl-nav {
   position: sticky;
   top: 0;
   z-index: 40;
+}
+.dl-nav::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   background: rgba(5, 11, 20, 0.96);
 }
 @supports ((backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px))) {
-  .dl-nav {
+  .dl-nav::before {
     background: rgba(5, 11, 20, 0.8);
     -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
@@ -437,7 +446,8 @@ body.brand {
 @keyframes node-pulse {
   50% { opacity: 0.55; }
 }
-.node-mascot[data-state='active'] .node-visor { animation: node-pulse 1.6s ease-in-out infinite; }
+/* Three pulses (4.8 s), then still: WCAG 2.2.2 allows motion that stops within 5 s. */
+.node-mascot[data-state='active'] .node-visor { animation: node-pulse 1.6s ease-in-out 3; }
 @media (prefers-reduced-motion: reduce) {
   .node-packets { display: none; }
 }
