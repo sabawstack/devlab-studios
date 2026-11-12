@@ -25,6 +25,9 @@ import { runScheduledTick } from './lead-engine/jobs/scheduler.js'
 import { runHostLoginPurge, runOpenSessionPurge } from './worker/pickleball/open/purge'
 import { handleQueueBatch } from './lead-engine/queues/consumer.js'
 import { handleEmail } from './mailbox/inbound/handler.js'
+import { recordJobRun, sendFailedJobsSummary } from './worker/jobs/jobRuns.js'
+import { createResendProvider } from './worker/delivery/providers.js'
+import { getSiteSetting } from './worker/repositories/content.js'
 import {
   CampaignDiscoveryWorkflow,
   LeadResearchWorkflow,
@@ -60,62 +63,31 @@ export default {
   // digest run would re-summarize items that already published. `runDailyDigest`
   // contains its own failures and logs the outcome.
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(
-      runDailyDigest(env, { now: new Date(event.scheduledTime), trigger: 'cron' }).catch((error) => {
-        console.log(
-          JSON.stringify({
-            event: 'digest_run',
-            outcome: 'crashed',
-            error: error instanceof Error ? error.message : 'unknown',
-          }),
-        )
-      }),
-    )
+    const now = new Date(event.scheduledTime)
+    // Every cron task runs in its own waitUntil, through recordJobRun (OPS-03):
+    // each run is written to job_runs, and a failure is logged and recorded
+    // but never rethrown -- a scheduled handler that throws is retried, and a
+    // retry would re-run the digest; nor may one job block or delay another.
+
+    ctx.waitUntil(recordJobRun(env, 'digest', () => runDailyDigest(env, { now, trigger: 'cron' })))
 
     // The Lead Intelligence Engine's tick, on the same cron as the digest.
-    //
-    // A SEPARATE waitUntil, not chained onto the digest's: the two are
-    // unrelated jobs and one must not be able to prevent or delay the other.
-    // `runScheduledTick` contains its own failures for the same reason the
-    // digest does — a scheduled handler that throws is retried, and a retried
-    // invocation would re-run the digest, which must not happen.
-    //
     // With the feature flags at their shipped defaults this returns
     // immediately, having done nothing.
-    ctx.waitUntil(
-      runScheduledTick(env, { now: new Date(event.scheduledTime), trigger: 'cron' }).catch((error) => {
-        console.log(
-          JSON.stringify({
-            event: 'lead_engine.scheduled_tick',
-            result: 'crashed',
-            error: error instanceof Error ? error.message : 'unknown',
-          }),
-        )
-      }),
-    )
+    ctx.waitUntil(recordJobRun(env, 'lead_engine_tick', () => runScheduledTick(env, { now, trigger: 'cron' })))
 
-    // Free open play retention (spec §8): its own waitUntil so it can neither
-    // block nor be blocked by the digest or the lead engine.
-    ctx.waitUntil(
-      runOpenSessionPurge(env, { now: new Date(event.scheduledTime) })
-        .then((purged) => {
-          console.log(JSON.stringify({ event: 'pickleball_open.purge', outcome: 'ok', purged }))
-        })
-        .catch((error) => {
-          console.log(JSON.stringify({ event: 'pickleball_open.purge', outcome: 'crashed', error: error instanceof Error ? error.message : 'unknown' }))
-        }),
-    )
-    // Expired host logins (spec §9.1): separate again, so a failed session
-    // purge never leaves expired logins behind, nor the other way round.
-    ctx.waitUntil(
-      runHostLoginPurge(env, { now: new Date(event.scheduledTime) })
-        .then((logins) => {
-          console.log(JSON.stringify({ event: 'pickleball_open.host_login_purge', outcome: 'ok', logins }))
-        })
-        .catch((error) => {
-          console.log(JSON.stringify({ event: 'pickleball_open.host_login_purge', outcome: 'crashed', error: error instanceof Error ? error.message : 'unknown' }))
-        }),
-    )
+    // Free open play retention (spec §8) and expired host logins (spec §9.1),
+    // separately, so a failed session purge never leaves logins behind.
+    ctx.waitUntil(recordJobRun(env, 'pickleball_session_purge', async () => `purged ${JSON.stringify(await runOpenSessionPurge(env, { now }))}`))
+    ctx.waitUntil(recordJobRun(env, 'pickleball_login_purge', async () => `purged ${JSON.stringify(await runHostLoginPurge(env, { now }))}`))
+
+    // The owner's daily list of failed runs from the last 24 hours (internal
+    // address only; nothing is sent when nothing failed).
+    ctx.waitUntil(recordJobRun(env, 'job_failure_summary', () => sendFailedJobsSummary(env, {
+      now,
+      provider: createResendProvider(env, { name: 'resend-job-summary' }),
+      getSetting: (key) => (env.DB ? getSiteSetting(env.DB, key, null) : Promise.resolve(null)),
+    })))
   },
 
   // Inbound mail for devlabconnect.com.

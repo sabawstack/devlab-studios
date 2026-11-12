@@ -185,9 +185,9 @@ See [ADR 0008](architecture/decisions/0008-insights-daily-digest.md).
 
 | Database | Applied through | How checked |
 |---|---|---|
-| `devlab-studios-cms-preview` | `0018_editorial_fields` (all) | `wrangler d1 migrations list … --remote --env preview` |
+| `devlab-studios-cms-preview` | `0019_job_runs` (all) | `wrangler d1 migrations list … --remote --env preview` |
 | `devlab-pickleball-preview` | `0020_drop_legacy_pickleball` (all) | same |
-| `devlab-studios-cms` (production) | **unverified from the implementation session**; `0018_editorial_fields` known pending | needs the owner's token: `npx wrangler d1 migrations list devlab-studios-cms --remote` |
+| `devlab-studios-cms` (production) | **unverified from the implementation session**; `0018_editorial_fields` and `0019_job_runs` known pending | needs the owner's token: `npx wrangler d1 migrations list devlab-studios-cms --remote` |
 | `devlab-pickleball` (production) | unverified (confirm `0020`) | `npx wrangler d1 migrations list devlab-pickleball --remote` |
 
 The preview deploy workflow now fails if either preview database has an

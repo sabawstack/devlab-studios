@@ -403,3 +403,21 @@ delivery attempt): `ADMIN_SESSION_SECRET`, `ADMIN_EMAIL`/`ADMIN_PASSWORD_HASH`,
 `TURNSTILE_SECRET_KEY` — set with `wrangler secret
 put <NAME> --env preview`, never copied from production. Turnstile must use a
 separate Preview widget and secret, not the Production pair.
+
+## Health, job runs and alerting (OPS-03)
+
+- **`GET /api/health`** checks the CMS and pickleball databases (`SELECT 1`),
+  the media bucket binding and one Rate Limiter Durable Object round-trip on a
+  dedicated key. It answers `200 {"ok":true,"status":"ok",…}` or
+  `503 {"ok":false,"status":"degraded","checks":{…}}`, each check `ok`,
+  `missing` or `error`, with no error text. Never cached.
+- **External uptime monitor (owner action, audit N8):** point a free-tier
+  monitor at `https://www.devlabstudios.com/` and `/api/health` every 5 minutes
+  from two regions, alerting the owner's email. Any non-200 is an incident.
+- **`job_runs` table** (migration `0019`): every cron task (digest, lead-engine
+  tick, the two pickleball purges, the failure summary) writes one row per run
+  with `outcome` `ok` or `failed` and a short detail. A job never stops another.
+- **Daily failure summary:** after the cron run, if any job failed in the last
+  24 hours, one email goes to `LEAD_NOTIFICATION_EMAIL`. Turn it off with
+  `site_settings` key `job_failure_summary` = `{"enabled": false}`.
+- **Workers Logs** are enabled (`observability` in `wrangler.jsonc`).

@@ -13,6 +13,13 @@
   // there is deliberately no per-environment `main` override below. See
   // docs/architecture/decisions/0006-pickleball-durable-objects.md.
   "main": "./src/worker.ts",
+  // Workers Logs (OPS-03): structured console output and invocation traces are
+  // kept and searchable in the dashboard. Inheritable, so preview gets it too.
+  // Lower head_sampling_rate if log volume ever approaches the plan's limit.
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

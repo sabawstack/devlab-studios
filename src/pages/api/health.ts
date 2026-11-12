@@ -1,14 +1,13 @@
 import type { APIRoute } from 'astro'
 import { getEnv } from '../../lib/env'
+import { checkHealth } from '../../lib/health'
 
-export const GET: APIRoute = () => {
-  const env = getEnv()
+export const prerender = false
 
-  return new Response(JSON.stringify({
-    ok: true,
-    hasDb: Boolean(env.DB),
-    hasMediaBucket: Boolean(env.MEDIA_BUCKET),
-  }), {
-    headers: { 'Content-Type': 'application/json' },
+export const GET: APIRoute = async () => {
+  const { status, body } = await checkHealth(getEnv())
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
   })
 }
