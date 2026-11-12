@@ -18,7 +18,8 @@ import {
   isBusinessInquiry,
   isEmploymentInquiry,
 } from '../../lib/schemas/inquiry'
-import { AlertCircle, ArrowLeft, ArrowRight, Check, Loader2, Send, ShieldCheck } from '../icons/icons'
+import { AlertCircle, ArrowLeft, ArrowRight, Loader2, Send, ShieldCheck } from '../icons/icons'
+import NodeMascot from '../brand/NodeMascot.jsx'
 
 /**
  * The structured inquiry form.
@@ -635,12 +636,14 @@ function InquiryForm({
           <div
             role="status"
             aria-live="polite"
+            data-status={status.type}
             className={`flex items-start gap-3 rounded-xl px-4 py-3 text-sm font-semibold ${
               status.type === 'success' ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900'
             }`}
           >
             {status.type === 'success' ? (
-              <Check size={18} className="mt-0.5 flex-shrink-0" aria-hidden="true" />
+              // Node confirms the save (ADR 0014); decorative, the message carries the meaning.
+              <NodeMascot state="active" size={40} decorative id="inquiry-success-node" className="flex-shrink-0" />
             ) : (
               <AlertCircle size={18} className="mt-0.5 flex-shrink-0" aria-hidden="true" />
             )}

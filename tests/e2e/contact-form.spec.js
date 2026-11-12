@@ -80,6 +80,11 @@ test('a complete business inquiry submits and reports that it was saved', async 
 
   await page.getByRole('button', { name: 'Send inquiry' }).click()
   await expect(page.getByRole('status')).toContainText(/received and saved/i)
+  // ADR 0014: Node confirms the save, decoratively, and the error state never shows it.
+  const node = page.getByRole('status').locator('svg.node-mascot')
+  await expect(node).toHaveAttribute('data-state', 'active')
+  await expect(node).toHaveAttribute('aria-hidden', 'true')
+  await expect(page.getByRole('status')).toHaveAttribute('data-status', 'success')
 })
 
 test('a duplicate resubmission is reported as already received, not as a new inquiry', async ({ page }) => {
@@ -121,6 +126,7 @@ test('a server failure surfaces an error and does not claim success', async ({ p
   await page.getByRole('button', { name: 'Send inquiry' }).click()
   await expect(page.getByRole('status')).toContainText(/could not save/i)
   await expect(page.getByRole('status')).not.toContainText(/received and saved/i)
+  await expect(page.getByRole('status').locator('svg.node-mascot')).toHaveCount(0)
 })
 
 /**
