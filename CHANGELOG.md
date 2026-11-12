@@ -51,6 +51,8 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-11-12
+
 ### Added
 
 - The redesigned business site (audit Phases 5–6, "Working Drawings"): Home, Solutions, About, Work, Insights, Profile, Contact, Privacy, Terms and the 404 page now run on a new brand layout (paper and ink, self-hosted fonts, skip link, a header at most 64 px tall whose call to action stays visible on phones as "Contact us", accessible navigation sheet, ink footer with Products and "Hiring? Contact Stephen"). Home is six sections under 800 words with the problem drawn as S1 → S2, the three service lines, Work figures, the reliability rules with S3, and the audit with S6; the founder is named once. (UX-04..UX-12, WEB-03, BR.9, BR.14)
