@@ -8,6 +8,8 @@ import { loadServicesContent } from '../../lib/content/services'
 import { loadProjects } from '../../lib/content/projects'
 import { loadCaseStudies } from '../../lib/content/caseStudies'
 import { loadArticlesContent } from '../../lib/content/articles'
+import { getScene } from '../../config/scenes'
+import { getEntryOffer } from '../../config/offers.js'
 
 interface CtaLink {
   label: string
@@ -31,6 +33,18 @@ interface BlockProps {
   limit?: number
   context?: string
   images?: Array<{ url: string; alt: string }>
+  sceneId?: string
+  caption?: string
+  offerId?: string
+  priceLabel?: string
+  ctaLabel?: string
+}
+
+interface ProofItem {
+  label: string
+  value: string
+  kind: string
+  evidenceUrl?: string
 }
 
 interface Block {
@@ -278,6 +292,15 @@ const articles = blockTypes.has('resourceCards') ? (await loadArticlesContent())
 
     if (block.type === 'cta') {
       const { heading, body, primaryCta } = block.props
+      if ((block.props as { tone?: string }).tone === 'quiet') {
+        return (
+          <section data-block="cta" data-tone="quiet" class="border-t border-slate-300 pt-6">
+            <h2 class="text-xl font-semibold text-slate-900">{heading}</h2>
+            {body ? <p class="mt-2 max-w-xl text-slate-600">{body}</p> : null}
+            {primaryCta ? <a href={primaryCta.href} class="mt-3 inline-flex min-h-11 items-center font-semibold text-slate-900 underline">{primaryCta.label}</a> : null}
+          </section>
+        )
+      }
       return (
         <section class="rounded-[28px] bg-gradient-to-r from-brand-ink via-[#22185a] to-[#3120a3] p-6 text-white shadow-[0_22px_50px_rgba(20,13,64,0.22)] sm:p-8">
           <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -291,6 +314,62 @@ const articles = blockTypes.has('resourceCards') ? (await loadArticlesContent())
               </PrimaryButton>
             ) : null}
           </div>
+        </section>
+      )
+    }
+
+    // CMS-03 blocks. Deliberately plain markup: the redesign's styled versions
+    // (SceneFrame, ProofStrip, OfferCard) replace these in WEB-04. Scene art is
+    // code-owned; until a scene's SVG is approved only its frame and caption show.
+    if (block.type === 'scene') {
+      const scene = getScene(block.props.sceneId || '')
+      if (!scene) return null
+      const [w, h] = scene.aspect.wide
+      return (
+        <section data-block="scene" data-scene-id={scene.id}>
+          {block.props.eyebrow ? <p class="text-sm font-semibold uppercase tracking-wide text-slate-500">{block.props.eyebrow}</p> : null}
+          <h2 class="text-2xl font-semibold text-slate-900 sm:text-3xl">{block.props.heading}</h2>
+          {block.props.body ? <p class="mt-3 max-w-2xl text-slate-600">{block.props.body}</p> : null}
+          <figure class="mt-6">
+            <div class="w-full border border-slate-300" style={`aspect-ratio: ${w} / ${h}`} role="img" aria-label={scene.alt}></div>
+            <figcaption class="mt-2 text-sm text-slate-600">{block.props.caption || scene.caption}</figcaption>
+          </figure>
+        </section>
+      )
+    }
+
+    if (block.type === 'proofStrip') {
+      const items = ((block.props as { items?: ProofItem[] }).items || [])
+      return (
+        <section data-block="proofStrip">
+          {block.props.heading ? <h2 class="text-2xl font-semibold text-slate-900">{block.props.heading}</h2> : null}
+          <dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {items.map((item) => (
+              <div class="border-t border-slate-300 pt-3">
+                <dt class="text-sm text-slate-600">{item.label}</dt>
+                <dd class="mt-1 font-semibold text-slate-900">
+                  {item.evidenceUrl ? <a href={item.evidenceUrl} class="underline">{item.value}</a> : item.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )
+    }
+
+    if (block.type === 'offerCard') {
+      const offer = getEntryOffer(block.props.offerId || '')
+      if (!offer) return null
+      const href = `/contact?type=${encodeURIComponent(offer.inquiryType)}&offer=${encodeURIComponent(offer.id)}`
+      return (
+        <section data-block="offerCard" class="border border-slate-300 p-6">
+          <h2 class="text-2xl font-semibold text-slate-900">{block.props.heading || offer.title}</h2>
+          <p class="mt-2 text-slate-600">{offer.summary}</p>
+          <ul class="mt-4 list-disc space-y-1 pl-5 text-slate-700">
+            {offer.includes.map((item: string) => <li>{item}</li>)}
+          </ul>
+          {block.props.priceLabel ? <p class="mt-4 text-sm text-slate-600">{block.props.priceLabel}</p> : null}
+          <a href={href} class="mt-5 inline-flex min-h-11 items-center font-semibold text-slate-900 underline">{block.props.ctaLabel}</a>
         </section>
       )
     }

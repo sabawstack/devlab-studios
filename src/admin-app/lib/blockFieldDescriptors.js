@@ -6,6 +6,23 @@
 // promoting any of these to a dedicated array-of-object editor is a
 // reasonable follow-up once real page content shows which ones need it.
 
+import { HERO_VISUAL_IDS, SCENES } from '../../config/scenes'
+import { ENTRY_OFFERS } from '../../config/offers.js'
+import { CONTACT_FORM_INQUIRY_TYPES, INQUIRY_TYPE_LABELS } from '../../lib/schemas/inquiry'
+
+// Registry-backed selects: options come from the server-owned registries, so
+// an editor can only choose values the public site knows how to render.
+const SCENE_OPTIONS = SCENES.map((scene) => ({ value: scene.id, label: `${scene.code} · ${scene.title}` }))
+const HERO_VISUAL_OPTIONS = HERO_VISUAL_IDS.map((id) => ({
+  value: id,
+  label: id === '' ? 'Keep current behaviour' : id === 'none' ? 'No visual' : id === 'system-canvas' ? 'Living-system canvas (legacy)' : `Scene: ${SCENES.find((scene) => `scene:${scene.id}` === id)?.title ?? id}`,
+}))
+const OFFER_OPTIONS = Object.values(ENTRY_OFFERS).map((offer) => ({ value: offer.id, label: offer.title }))
+const INQUIRY_TYPE_OPTIONS = [
+  { value: '', label: 'Do not preselect' },
+  ...CONTACT_FORM_INQUIRY_TYPES.map((type) => ({ value: type, label: INQUIRY_TYPE_LABELS[type] })),
+]
+
 export const BLOCK_LABELS = {
   hero: 'Hero',
   richText: 'Rich Text',
@@ -22,6 +39,9 @@ export const BLOCK_LABELS = {
   resourceCards: 'Resource Cards',
   imageGallery: 'Image Gallery',
   cta: 'Call to Action',
+  scene: 'Scene (illustration)',
+  proofStrip: 'Proof Strip',
+  offerCard: 'Offer Card',
 }
 
 export const BLOCK_FIELDS = {
@@ -40,6 +60,8 @@ export const BLOCK_FIELDS = {
     { name: 'imageUrl', label: 'Image URL', type: 'url' },
     { name: 'primaryCta', label: 'Primary CTA', type: 'cta' },
     { name: 'secondaryCta', label: 'Secondary CTA', type: 'cta' },
+    { name: 'visualId', label: 'Hero visual', type: 'select', options: HERO_VISUAL_OPTIONS, help: 'A scene from the brand scene library, or none.' },
+    { name: 'density', label: 'Hero density', type: 'select', options: [{ value: 'standard', label: 'Standard' }, { value: 'compact', label: 'Compact' }] },
   ],
   richText: [
     { name: 'eyebrow', label: 'Eyebrow', type: 'text' },
@@ -111,17 +133,34 @@ export const BLOCK_FIELDS = {
     { name: 'body', label: 'Body', type: 'textarea' },
     { name: 'primaryCta', label: 'Primary CTA', type: 'cta', required: true },
     { name: 'secondaryCta', label: 'Secondary CTA', type: 'cta' },
-    { name: 'inquiryType', label: 'Preselected inquiry type', type: 'select', options: [
-      { value: '', label: 'Do not preselect' },
-      { value: 'business_system', label: 'Business system or automation' },
-      { value: 'software_project', label: 'Website or software project' },
-      { value: 'workflow_audit', label: 'Workflow systems audit' },
-      { value: 'partnership', label: 'Partnership' },
-      { value: 'general', label: 'General inquiry' },
-    ], help: 'Carried into the contact form so the visitor does not have to classify themselves.' },
+    { name: 'inquiryType', label: 'Preselected inquiry type', type: 'select', options: INQUIRY_TYPE_OPTIONS, help: 'Carried into the contact form so the visitor does not have to classify themselves.' },
+    { name: 'tone', label: 'Tone', type: 'select', options: [{ value: 'primary', label: 'Primary band' }, { value: 'quiet', label: 'Quiet link row' }] },
     { name: 'formId', label: 'Attribution form ID', type: 'text' },
     { name: 'offerId', label: 'Attribution offer ID', type: 'text' },
     { name: 'solutionId', label: 'Attribution solution ID', type: 'text' },
+  ],
+  scene: [
+    { name: 'sceneId', label: 'Scene', type: 'select', options: SCENE_OPTIONS, required: true, help: 'Art is drawn in code; choose which scene, then write the words around it.' },
+    { name: 'eyebrow', label: 'Eyebrow', type: 'text' },
+    { name: 'heading', label: 'Heading', type: 'text', required: true },
+    { name: 'body', label: 'Body', type: 'textarea' },
+    { name: 'caption', label: 'Caption override', type: 'text', help: 'Leave blank to use the scene\'s standard caption.' },
+    { name: 'variant', label: 'Crop', type: 'select', options: [{ value: 'auto', label: 'Automatic (wide on desktop, tall on phones)' }, { value: 'wide', label: 'Always wide' }, { value: 'tall', label: 'Always tall' }] },
+  ],
+  proofStrip: [
+    { name: 'heading', label: 'Heading', type: 'text' },
+    { name: 'items', label: 'Proof items (up to 4, each verifiable)', type: 'objectList', fields: [
+      { name: 'label', label: 'Statement', type: 'text' },
+      { name: 'value', label: 'Short value', type: 'text' },
+      { name: 'kind', label: 'Kind (credential, system or principle)', type: 'text' },
+      { name: 'evidenceUrl', label: 'Evidence link (optional)', type: 'text' },
+    ] },
+  ],
+  offerCard: [
+    { name: 'offerId', label: 'Offer', type: 'select', options: OFFER_OPTIONS, required: true },
+    { name: 'heading', label: 'Heading override', type: 'text' },
+    { name: 'priceLabel', label: 'Price wording (optional text)', type: 'text', help: 'Words, not a number, e.g. "Fixed scope, quoted after a call". Leave blank to show no price.' },
+    { name: 'ctaLabel', label: 'Button label', type: 'text', required: true },
   ],
 }
 

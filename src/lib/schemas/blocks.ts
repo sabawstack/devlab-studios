@@ -1,5 +1,8 @@
 import { z } from 'zod'
 import { linkHrefSchema } from './shared'
+import { inquiryTypeSchema } from './inquiry'
+import { HERO_VISUAL_IDS, SCENE_IDS } from '../../config/scenes'
+import { ENTRY_OFFERS } from '../../config/offers.js'
 
 export const iconMotifSchema = z.enum(['fullstack', 'automation', 'data', 'editorial'])
 export const ICON_MOTIFS = iconMotifSchema.options
@@ -32,6 +35,12 @@ const heroBlockSchema = z.object({
       note: z.string(),
     })).max(7).optional().default([]),
     statusLabel: z.string().optional().default(''),
+    /**
+     * The hero's visual (CMS-03): a registered scene, the legacy node canvas,
+     * or none. '' keeps the behaviour the hero had before this field existed.
+     */
+    visualId: z.enum(HERO_VISUAL_IDS).optional().default(''),
+    density: z.enum(['compact', 'standard']).optional().default('standard'),
   }),
 })
 
@@ -202,15 +211,9 @@ const ctaBlockSchema = z.object({
      * classify themselves; the rest are attribution ids, never displayed.
      */
     inquiryType: z.union([
-      z.enum([
-        'business_system',
-        'software_project',
-        'workflow_audit',
-        'employment_opportunity',
-        'contract_collaboration',
-        'partnership',
-        'general',
-      ]),
+      // The same list the inquiry form and route use, so a new type is never
+      // missing here.
+      inquiryTypeSchema,
       // The admin's select offers an explicit "do not preselect" option, which
       // posts an empty string — it has to validate, not be a save error.
       z.literal(''),
@@ -218,6 +221,58 @@ const ctaBlockSchema = z.object({
     formId: z.string().max(80).optional().default(''),
     offerId: z.string().max(80).optional().default(''),
     solutionId: z.string().max(80).optional().default(''),
+    /** Two-tier CTA pattern: a filled primary band, or a quiet text link row. */
+    tone: z.enum(['primary', 'quiet']).optional().default('primary'),
+  }),
+})
+
+/**
+ * An illustrated scene from the code-owned registry (src/config/scenes.ts).
+ * The CMS chooses which scene and writes the words around it; it never
+ * uploads art, so nothing arbitrary can be rendered.
+ */
+const sceneBlockSchema = z.object({
+  type: z.literal('scene'),
+  props: z.object({
+    sceneId: z.enum(SCENE_IDS),
+    eyebrow: z.string().optional().default(''),
+    heading: z.string().min(1),
+    body: z.string().optional().default(''),
+    /** Overrides the registry's default caption when set. */
+    caption: z.string().max(240).optional().default(''),
+    variant: z.enum(['auto', 'wide', 'tall']).optional().default('auto'),
+  }),
+})
+
+/**
+ * Up to four verifiable proof statements -- a credential, a property of the
+ * system, or a working principle -- in place of invented metrics.
+ */
+const proofStripBlockSchema = z.object({
+  type: z.literal('proofStrip'),
+  props: z.object({
+    heading: z.string().optional().default(''),
+    items: z.array(z.object({
+      label: z.string().min(1).max(120),
+      value: z.string().min(1).max(60),
+      kind: z.enum(['credential', 'system', 'principle']),
+      evidenceUrl: linkHrefSchema.optional(),
+    })).min(1).max(4),
+  }),
+})
+
+/**
+ * An entry offer from src/config/offers.js. The price is optional free text
+ * ("Fixed scope, quoted after a call"), never a number: pricing is the owner's
+ * decision and is not stored as data the page could compute with.
+ */
+const offerCardBlockSchema = z.object({
+  type: z.literal('offerCard'),
+  props: z.object({
+    offerId: z.enum(Object.keys(ENTRY_OFFERS) as [string, ...string[]]),
+    heading: z.string().optional().default(''),
+    priceLabel: z.string().max(80).optional().default(''),
+    ctaLabel: z.string().min(1).max(60),
   }),
 })
 
@@ -273,6 +328,9 @@ export const pageBlockSchema = z.discriminatedUnion('type', [
   resourceCardsBlockSchema,
   imageGalleryBlockSchema,
   ctaBlockSchema,
+  sceneBlockSchema,
+  proofStripBlockSchema,
+  offerCardBlockSchema,
 ])
 export type PageBlock = z.infer<typeof pageBlockSchema>
 export type PageBlockType = PageBlock['type']
@@ -294,4 +352,7 @@ export const PAGE_BLOCK_TYPES: PageBlockType[] = [
   'resourceCards',
   'imageGallery',
   'cta',
+  'scene',
+  'proofStrip',
+  'offerCard',
 ]
