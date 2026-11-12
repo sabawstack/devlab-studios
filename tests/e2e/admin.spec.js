@@ -332,57 +332,60 @@ test('a page version can be restored', async ({ page, baseURL }) => {
   expect(reset.ok()).toBeTruthy()
 })
 
-// CMS-04: a signed preview link shows one page's draft, uncached and unindexed;
-// without it (or with a tampered one) the public page shows published content.
-test('a draft page is visible only through its preview link', async ({ page, baseURL }) => {
-  await login(page)
-  const original = await (await page.request.get(`${baseURL}/api/admin/pages/process`)).json()
-  const marker = `Draft preview marker ${Date.now()}`
-  try {
-    const saved = await page.request.put(`${baseURL}/api/admin/pages/process`, {
-      data: { slug: 'process', title: 'Process', status: 'draft', blocks: [{ type: 'richText', props: { heading: marker, body: 'Draft body.' } }] },
-    })
-    expect(saved.ok(), await saved.text()).toBeTruthy()
+// Both tests below edit the /process page, so they run one after the other.
+test.describe.serial('the /process page', () => {
+  // CMS-04: a signed preview link shows one page's draft, uncached and unindexed;
+  // without it (or with a tampered one) the public page shows published content.
+  test('a draft page is visible only through its preview link', async ({ page, baseURL }) => {
+    await login(page)
+    const original = await (await page.request.get(`${baseURL}/api/admin/pages/process`)).json()
+    const marker = `Draft preview marker ${Date.now()}`
+    try {
+      const saved = await page.request.put(`${baseURL}/api/admin/pages/process`, {
+        data: { slug: 'process', title: 'Process', status: 'draft', blocks: [{ type: 'richText', props: { heading: marker, body: 'Draft body.' } }] },
+      })
+      expect(saved.ok(), await saved.text()).toBeTruthy()
 
-    const publicHtml = await (await page.request.get(`${baseURL}/process`)).text()
-    expect(publicHtml).not.toContain(marker)
+      const publicHtml = await (await page.request.get(`${baseURL}/process`)).text()
+      expect(publicHtml).not.toContain(marker)
 
-    const { url } = await (await page.request.get(`${baseURL}/api/admin/preview-token?type=page&id=process`)).json()
-    const preview = await page.request.get(`${baseURL}${url}`)
-    expect(await preview.text()).toContain(marker)
-    expect(preview.headers()['cache-control']).toMatch(/no-store/)
-    expect(preview.headers()['x-robots-tag']).toMatch(/noindex/)
+      const { url } = await (await page.request.get(`${baseURL}/api/admin/preview-token?type=page&id=process`)).json()
+      const preview = await page.request.get(`${baseURL}${url}`)
+      expect(await preview.text()).toContain(marker)
+      expect(preview.headers()['cache-control']).toMatch(/no-store/)
+      expect(preview.headers()['x-robots-tag']).toMatch(/noindex/)
 
-    const tampered = await page.request.get(`${baseURL}${url.slice(0, -3)}abc`)
-    expect(await tampered.text()).not.toContain(marker)
+      const tampered = await page.request.get(`${baseURL}${url.slice(0, -3)}abc`)
+      expect(await tampered.text()).not.toContain(marker)
 
-    const wrongPage = url.replace('/process?', '/about?')
-    expect(await (await page.request.get(`${baseURL}${wrongPage}`)).text()).not.toContain(marker)
-  } finally {
-    if (original?.blocks?.length) await page.request.put(`${baseURL}/api/admin/pages/process`, { data: original })
-  }
-})
+      const wrongPage = url.replace('/process?', '/about?')
+      expect(await (await page.request.get(`${baseURL}${wrongPage}`)).text()).not.toContain(marker)
+    } finally {
+      if (original?.blocks?.length) await page.request.put(`${baseURL}/api/admin/pages/process`, { data: original })
+    }
+  })
 
-// OPS-01: a CMS save moves the HTML cache to a new generation, so the public
-// page shows the change on the next request instead of after the TTL.
-test('a saved page shows on the public site immediately despite the HTML cache', async ({ page, baseURL }) => {
-  await login(page)
-  const original = await (await page.request.get(`${baseURL}/api/admin/pages/process`)).json()
-  const marker = `Cache purge marker ${Date.now()}`
-  try {
-    // Other tests save content in parallel, which (correctly) starts a new
-    // cache generation; poll until this page is warm in the current one.
-    await expect.poll(async () => (await page.request.get(`${baseURL}/process`)).headers()['x-devlab-cache'], { timeout: 10_000 }).toBe('HIT')
+  // OPS-01: a CMS save moves the HTML cache to a new generation, so the public
+  // page shows the change on the next request instead of after the TTL.
+  test('a saved page shows on the public site immediately despite the HTML cache', async ({ page, baseURL }) => {
+    await login(page)
+    const original = await (await page.request.get(`${baseURL}/api/admin/pages/process`)).json()
+    const marker = `Cache purge marker ${Date.now()}`
+    try {
+      // Other tests save content in parallel, which (correctly) starts a new
+      // cache generation; poll until this page is warm in the current one.
+      await expect.poll(async () => (await page.request.get(`${baseURL}/process`)).headers()['x-devlab-cache'], { timeout: 10_000 }).toBe('HIT')
 
-    const saved = await page.request.put(`${baseURL}/api/admin/pages/process`, {
-      data: { slug: 'process', title: 'Process', status: 'published', blocks: [{ type: 'richText', props: { heading: marker, body: 'Published body.' } }] },
-    })
-    expect(saved.ok(), await saved.text()).toBeTruthy()
+      const saved = await page.request.put(`${baseURL}/api/admin/pages/process`, {
+        data: { slug: 'process', title: 'Process', status: 'published', blocks: [{ type: 'richText', props: { heading: marker, body: 'Published body.' } }] },
+      })
+      expect(saved.ok(), await saved.text()).toBeTruthy()
 
-    await expect.poll(async () => (await (await page.request.get(`${baseURL}/process`)).text()).includes(marker), { timeout: 5_000 }).toBe(true)
-  } finally {
-    if (original?.blocks?.length) await page.request.put(`${baseURL}/api/admin/pages/process`, { data: original })
-  }
+      await expect.poll(async () => (await (await page.request.get(`${baseURL}/process`)).text()).includes(marker), { timeout: 5_000 }).toBe(true)
+    } finally {
+      if (original?.blocks?.length) await page.request.put(`${baseURL}/api/admin/pages/process`, { data: original })
+    }
+  })
 })
 
 test('creating a project through the bespoke Projects editor still records a version', async ({ page, baseURL }) => {
