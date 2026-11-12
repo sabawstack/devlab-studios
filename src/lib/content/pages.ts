@@ -5,6 +5,7 @@ import { termsPage } from '../../data/pages/terms'
 import { processPage } from '../../data/pages/process'
 import { workPage } from '../../data/pages/work'
 import { sanitizeLinkFields } from '../safeHref'
+import { scrubPersonalContacts } from '../../config/company.js'
 
 export interface PageBlock {
   type: string
@@ -40,7 +41,8 @@ export async function loadPage(slug: string): Promise<PageData | null> {
     // Block CTA hrefs re-checked at read time; see src/lib/safeHref.ts.
     const data = sanitizeLinkFields(await getPage(env.DB, slug, { includeDrafts: false }))
     if (!data?.blocks?.length) return fallback
-    return data
+    // No personal mailbox on a public page, whatever older content stored (BUS-05).
+    return scrubPersonalContacts(data)
   } catch {
     return fallback
   }

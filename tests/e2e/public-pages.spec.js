@@ -63,7 +63,12 @@ test('footer has real links to Privacy and Terms', async ({ page }) => {
   const footer = page.getByRole('contentinfo')
   await expect(footer.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy')
   await expect(footer.getByRole('link', { name: 'Terms of Service' })).toHaveAttribute('href', '/terms')
-  await expect(footer).toContainText('Your Vision, Digitally Crafted — one solution at a time, always evolving.')
+  // BUS-05: one business identity -- the business address, city-level
+  // location and description; the portfolio-era tagline is gone.
+  await expect(footer).toContainText('hello@devlabstudios.com')
+  await expect(footer).toContainText('Cebu, Philippines')
+  await expect(footer).toContainText('Software, integrations and workflow automation')
+  await expect(footer).not.toContainText('Your Vision, Digitally Crafted')
   await expect(footer).not.toContainText(/(?:version history|smoke test) tagline/i)
 })
 

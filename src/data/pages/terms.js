@@ -18,7 +18,11 @@ export const termsPage = {
     {
       type: 'richText',
       props: {
-        body: `## Acceptance of terms
+        body: `## Who we are
+
+This site is run by DevLab Studios, operated by Stephen Rey Agustinez, Cebu, Philippines. Contact: hello@devlabstudios.com.
+
+## Acceptance of terms
 
 By using this website, you agree to these terms. If you do not agree, please do not use the site.
 
@@ -56,7 +60,7 @@ We may update these terms from time to time. The "last updated" date above refle
 
 ## Contact us
 
-Questions about these terms can be sent to stpnrey.agustinez@gmail.com.`,
+Questions about these terms can be sent to hello@devlabstudios.com.`,
       },
     },
   ],

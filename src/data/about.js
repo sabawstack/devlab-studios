@@ -4,10 +4,8 @@
 const aboutData = {
   name: "Stephen Rey G. Agustinez",
   role: "Founder, Full-Stack Developer & AI Automation Architect",
-  location: "Pusok, Lapu-Lapu City, Cebu, 6015",
-  email: "stpnrey.agustinez@gmail.com",
-  phone: "+63 926 237 2965",
-  dateOfBirth: "December 4, 2000",
+  location: "Cebu, Philippines",
+  email: "hello@devlabstudios.com",
   resumeLink: "/resume.pdf",
   about:
     "Full-stack developer and AI automation specialist building end-to-end systems across React and Astro interfaces, Java and Laravel services, REST APIs, SQL-backed data flows, n8n workflows, and AI agents. I connect every layer from customer experience to operational handoff so systems remain useful, reliable, and maintainable.",

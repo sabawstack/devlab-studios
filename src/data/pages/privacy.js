@@ -18,7 +18,11 @@ export const privacyPage = {
     {
       type: 'richText',
       props: {
-        body: `## Information we collect
+        body: `## Who we are
+
+This site is run by DevLab Studios, operated by Stephen Rey Agustinez, Cebu, Philippines. Contact: hello@devlabstudios.com.
+
+## Information we collect
 
 DevLab Studios collects information you voluntarily provide through the contact form on this site: your name, email address, subject, and message. We do not require an account to browse this site, and we do not knowingly collect information from children.
 
@@ -52,7 +56,7 @@ We may update this policy from time to time. The "last updated" date above refle
 
 ## Contact us
 
-Questions about this policy can be sent to stpnrey.agustinez@gmail.com.`,
+Questions about this policy can be sent to hello@devlabstudios.com.`,
       },
     },
   ],

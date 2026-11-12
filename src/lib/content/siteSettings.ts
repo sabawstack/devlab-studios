@@ -2,13 +2,16 @@ import { getSiteSettingsContent } from '../../worker/repositories/content.js'
 import { siteSettingsContent } from '../../data/siteSettingsContent.js'
 import { getEnv } from '../env'
 import { sanitizeLinkFields } from '../safeHref'
+import { COMPANY, scrubPersonalContacts } from '../../config/company.js'
 
-const canonicalTagline = 'Your Vision, Digitally Crafted — one solution at a time, always evolving.'
-
+/**
+ * '' when there is no real tagline: unset, a test placeholder, or the retired
+ * portfolio-era tagline. The footer then shows the business description.
+ */
 function sanitizeFooterTagline(tagline?: string): string {
-  const value = String(tagline || '').trim()
-  if (!value || /^(?:smoke test|version history) tagline\b/i.test(value)) return canonicalTagline
-  return value.replace(' - ', ' — ')
+  const value = String(tagline || '').trim().replace(' - ', ' — ')
+  if (!value || /^(?:smoke test|version history) tagline\b/i.test(value) || value === COMPANY.legacyTagline) return ''
+  return value
 }
 
 export interface SiteSettingsData {
@@ -39,7 +42,8 @@ export async function loadSiteSettings(): Promise<SiteSettingsData> {
   try {
     // D1 content is sanitised again here, not only validated on save: a row
     // that predates the link-scheme rule must still render inert.
-    const data = sanitizeLinkFields(await getSiteSettingsContent(env.DB))
+    // ...and scrubbed of personal mailboxes, which never belong on a public page (BUS-05).
+    const data = scrubPersonalContacts(sanitizeLinkFields(await getSiteSettingsContent(env.DB)))
     if (!data) return siteSettingsContent
 
     const footer = (data.footer || {}) as SiteSettingsData['footer']

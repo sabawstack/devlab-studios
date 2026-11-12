@@ -3,7 +3,8 @@ import Layout from '../layouts/Layout.astro'
 import GlassCard from '../components/GlassCard.jsx'
 import SectionHeader from '../components/SectionHeader.jsx'
 import AnimatedIcon from '../components/icons/AnimatedIcon.jsx'
-import { Wrench, Mail, Phone } from '../components/icons/icons.js'
+import { Wrench, Mail } from '../components/icons/icons.js'
+import { COMPANY } from '../config/company.js'
 import { ERROR_MESSAGES } from '../config/errorMessages.js'
 
 const { title, message, details } = ERROR_MESSAGES.MAINTENANCE_MODE
@@ -56,7 +57,7 @@ const { title, message, details } = ERROR_MESSAGES.MAINTENANCE_MODE
       </p>
       <div class="inline-flex gap-2">
         <a
-          href="mailto:stpnrey.agustinez@gmail.com"
+          href={`mailto:${COMPANY.publicEmail}`}
           class="group inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/15 hover:border-navy-300/50"
         >
           <AnimatedIcon
@@ -67,19 +68,6 @@ const { title, message, details } = ERROR_MESSAGES.MAINTENANCE_MODE
             ariaLabel={null}
           />
           Email
-        </a>
-        <a
-          href="tel:+639262372965"
-          class="group inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/15 hover:border-navy-300/50"
-        >
-          <AnimatedIcon
-            icon={Phone}
-            size={16}
-            color="text-white group-hover:text-navy-300"
-            animationType="none"
-            ariaLabel={null}
-          />
-          Call
         </a>
       </div>
     </div>

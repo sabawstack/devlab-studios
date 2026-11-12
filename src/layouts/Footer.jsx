@@ -1,5 +1,6 @@
 import { brandingAssets } from '../config/branding'
 import { useSiteSettingsContent } from '../hooks/useSiteSettingsContent'
+import { COMPANY, publicContactEmail } from '../config/company.js'
 
 function Footer() {
   const siteSettings = useSiteSettingsContent()
@@ -23,10 +24,10 @@ function Footer() {
             />
             <p className="mb-1 text-lg font-semibold text-brand-ink">{footer.companyName || 'DevLab Studios'}</p>
             <p className="mb-3 whitespace-normal text-slate-500 md:whitespace-nowrap">
-              {String(footer.tagline || 'Your Vision, Digitally Crafted — one solution at a time, always evolving.').replace(' - ', ' — ')}
+              {String(footer.tagline || COMPANY.description).replace(' - ', ' — ')}
             </p>
-            <a href={`mailto:${footer.email || 'stpnrey.agustinez@gmail.com'}`} className="mb-1 block text-slate-700 hover:text-brand-teal hover:underline">
-              {footer.email || 'stpnrey.agustinez@gmail.com'}
+            <a href={`mailto:${publicContactEmail(footer.email)}`} className="mb-1 block text-slate-700 hover:text-brand-teal hover:underline">
+              {publicContactEmail(footer.email)}
             </a>
             <span className="block text-slate-500">{footer.location || 'Lapu-Lapu City, Cebu, PH'}</span>
           </div>

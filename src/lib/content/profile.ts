@@ -8,6 +8,7 @@ import makeBadge from '../../assets/certificates/Make_Certificate.png'
 import n8nBadge from '../../assets/certificates/N8N_Certificate.png'
 import highLevelBadge from '../../assets/certificates/HighLevelCertificate.png'
 import { sanitizeLinkFields } from '../safeHref'
+import { toPublicAbout } from './publicAbout'
 
 const BADGE_IMAGES: Record<string, ImageMetadata> = {
   'cert-zapier-no-code-automation': zapierBadge,
@@ -105,6 +106,15 @@ function hasContent(data: Partial<ProfileContentData> | null | undefined): boole
 
 /** Server-side equivalent of the old useProfileContent() client hook. */
 export async function loadProfileContent(): Promise<ProfileContentData> {
+  return withPublicAbout(await loadStoredProfileContent())
+}
+
+/** Personal details never reach a public page, whatever is stored (see ./publicAbout.ts). */
+function withPublicAbout(content: ProfileContentData): ProfileContentData {
+  return { ...content, about: toPublicAbout(content.about as Record<string, unknown>) as AboutData }
+}
+
+async function loadStoredProfileContent(): Promise<ProfileContentData> {
   const env = getEnv()
   if (!env.DB) return attachOptimizedBadges(staticProfileContent)
 

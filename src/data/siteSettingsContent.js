@@ -19,9 +19,9 @@ export const siteSettingsContent = {
   },
   footer: {
     companyName: 'DevLab Studios',
-    tagline: 'Your Vision, Digitally Crafted — one solution at a time, always evolving.',
-    email: 'stpnrey.agustinez@gmail.com',
-    location: 'Lapu-Lapu City, Cebu, PH',
+    tagline: '',
+    email: 'hello@devlabstudios.com',
+    location: 'Cebu, Philippines',
     quickLinks: [
       { label: 'Home', href: '/' },
       { label: 'Solutions', href: '/solutions' },
@@ -34,7 +34,7 @@ export const siteSettingsContent = {
     socialLinks: [
       { label: 'LinkedIn', href: 'https://www.linkedin.com/in/stephen-rey-agustinez-8b86041b3' },
       { label: 'GitHub', href: 'https://github.com/stpn-dev' },
-      { label: 'Email', href: 'mailto:stpnrey.agustinez@gmail.com' },
+      { label: 'Email', href: 'mailto:hello@devlabstudios.com' },
     ],
     legalLinks: [
       { label: 'Privacy Policy', href: '/privacy' },

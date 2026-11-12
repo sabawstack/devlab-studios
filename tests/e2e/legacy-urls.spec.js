@@ -28,3 +28,15 @@ for (const path of paths) {
     }
   })
 }
+
+// TEST-01 / BUS-05 / PROF-02: no public page carries a personal mailbox or a
+// phone link. Checked over every frozen URL plus the pages that are not in
+// the sitemap.
+for (const path of [...paths, '/maintenance']) {
+  test(`no personal contact details on ${path}`, async ({ request }) => {
+    const response = await request.get(path)
+    const html = await response.text()
+    expect(html).not.toMatch(/@(?:gmail|googlemail|yahoo|outlook|hotmail|icloud)\.com/i)
+    expect(html).not.toMatch(/href="tel:/i)
+  })
+}
