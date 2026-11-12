@@ -19,6 +19,7 @@ function schoolName(school) {
  * Organization, pointing at the profile page; `image` is the portrait and
  * `credentials` the certification names the profile page renders.
  */
+/** @param {{ image?: string, credentials?: string[] }} [options] */
 export const getPersonSchema = ({ image, credentials = [] } = {}) => ({
   '@context': 'https://schema.org',
   '@type': 'Person',
