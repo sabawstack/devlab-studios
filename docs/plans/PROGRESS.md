@@ -15,15 +15,15 @@ money, legal wording or a real data deletion are skipped and listed under
 | 1 | Guard rails | done (PR #44, production 2026-11-12 at `64c516d`) |
 | 2 | CMS correctness + content model | done (PR #46, production at `a80df26`); production data steps blocked (Blockers 1–2) |
 | 3 | Identity + personal data | done (PR #47, production at `0b0a2ab`) |
-| 4 | Brand foundation | done (PR #48, production at `1a2f663`; `/brand` 404 in production); **scene approval needed before Phases 5–6** |
-| 5 | Pages I | **waiting on scene approval** (Blocker 6) and copy review |
-| 6 | Pages II | waiting on Phase 5 |
-| 7 | Routes + SEO | part 1 done (PR #51, production at `dc6d8d2`); route work waits for Phases 5–6 |
+| 4 | Brand foundation | done (PR #48, production at `1a2f663`; `/brand` 404 in production); scenes S1–S6 approved by the owner 2026-11-12 |
+| 5 | Pages I | done (PR #55, production at `033505f`, v2.4.0) |
+| 6 | Pages II | done (PR #55, production at `033505f`, v2.4.0) |
+| 7 | Routes + SEO | done (part 1 PR #51; routes, SEO-01/02 and sitemap in PR #55); production SEO rows wait on Blocker 15 |
 | 8 | Ops + editorial | done (PR #49, production at `4183fb1`) |
-| 9 | Performance | OPS-01 done (PR #50, production at `bd559a5`, HIT verified from SIN); SEC-07 → Phase 10; TEST-06 partial |
+| 9 | Performance | OPS-01 done (PR #50); SEC-07 done in PR #55 (hashed script CSP); TEST-06 (Lighthouse report) not yet run |
 | 10 | Data-touching jobs | done (PR #52, production at `8d17eca`); going live needs owner setup (Blockers 10–12) |
-| 11 | Product Worker split | not started: scheduled after the first redesign pages ship (N10 default) and needs the Workers Paid plan decision (N7) |
-| 12 | Docs + release | **v2.3.0 released 2026-11-12** (PR #53); ADRs 0011/0012; full docs refresh (OPS-08) after the remaining phases |
+| 11 | Product Worker split | not started: the redesign has shipped, so this is next once the Workers Paid plan decision (N7) is made |
+| 12 | Docs + release | v2.3.0 (PR #53) and **v2.4.0 released 2026-11-12** (PR #55); ADRs 0011–0013; full docs refresh (OPS-08) still open |
 
 ## Blockers (owner)
 
@@ -33,13 +33,15 @@ money, legal wording or a real data deletion are skipped and listed under
 3. **Branch protection** (OPS-02): enable "Require status checks" with the `validate` check on `main` and `development` (GitHub settings; see docs/testing.md).
 4. **Production identity data cleanup** (Phase 3, optional): `scripts/cms/updates/2026-11-12-business-identity.sql` (applied to preview). Not urgent: public pages already enforce the rules on the read path.
 5. **Owner inputs for Phase 3 defaults**: legal operator name for privacy/terms (N5; operator wording used now), and the Facebook page / LinkedIn company URL for `sameAs` (only the existing LinkedIn profile and GitHub are listed). Also check `public/resume.pdf` for personal details you no longer want public; it was not changed.
-6. **Scene approval (gate for Phases 5–6):** review S1–S6 at `<preview>/brand`, then set `artReady: true` per approved scene (docs/brand/scenes.md), or send replacement art. Also confirm the "Working Drawings" direction (N1, default approve).
+6. ~~Scene approval~~: done 2026-11-12 (all six approved; shipped in 2.4.0).
 7. **Uptime monitor (N8):** point a free-tier monitor at `/` and `/api/health` (docs/operations.md).
 8. **Production article tags** (Phase 7, after migration `0018`): `scripts/cms/updates/2026-11-12-article-problem-tags.sql` (applied to preview). Until then production's home page falls back to the first non-technical article from the static data rule.
 10. **Backups (OPS-04):** create the private `devlab-backups` bucket with a 30-day lifecycle and add the `CLOUDFLARE_BACKUP_API_TOKEN` secret (D1 read + R2 edit), then run the workflow once with the drill (docs/operations.md "Backups").
 11. **Retention (SEC-08, N6):** confirm the periods; after backups run, turn retention on (dry run first, attended first real run). Mailbox erasure for a data-subject request is manual for now.
 12. **Media domain (OPS-07):** add `media.devlabstudios.com` (and a preview host) as R2 custom domains; then the rewrite script moves stored URLs (preview dry run: 41 URLs).
 13. **Privacy page (SEC-03, N5):** legal review; if production has a stored privacy page row, apply `scripts/cms/updates/2026-11-12-privacy-page.sql` (no-op otherwise).
+15. **Production SEO rows (SEO-01):** production still serves the old titles and descriptions for its existing pages (for example the home title is 61 characters, Solutions 79). Read the current rows first (an admin may have edited them), then apply `scripts/cms/updates/2026-11-12-seo-redesign.sql` with a fresh token: `CLOUDFLARE_API_TOKEN=<fresh token> npx wrangler d1 execute DB --remote --file scripts/cms/updates/2026-11-12-seo-redesign.sql`. Applied and verified on preview. New routes already use the new records.
+16. **Copy review (BUS-01):** the marketing copy in `src/data/site/content.js` is cut down from the earlier site copy. Two lines are worth checking: the three "in exploration" product ideas on `/products`, and "One accountable engineer" in the home lead.
 14. Observed, not changed: `/haosweetitis/` returns 404 on production and preview; only `/haosweetitis/index.html` loads. Share that URL, or ask for a route fix.
 
 ## Phase 1 — Guard rails
@@ -177,3 +179,38 @@ Also fixed: two e2e races (cache warm-up assumed two requests suffice; the previ
 Everything above shipped: CI created `v2.3.0` and its GitHub Release; `main` and `development` both at `c6209aa` (`0 0`); production smoke 31/31 legacy URLs 200, health ok.
 
 **Where the plan stands.** Done and live: Phases 1, 2, 3, 4 (pending scene approval), 7 part 1, 8, 9, 10 (inert until owner setup). Waiting on the owner: scene approval + copy review (Phases 5–6 and the rest of 7), the product-Worker split timing and plan (Phase 11), and the setup items in Blockers 1–13. SEC-07 follows Phase 5's font switch. OPS-08's full documentation refresh follows the remaining phases.
+
+## Phases 5–6 + Phase 7 routes/SEO + SEC-07 — release 2.4.0 (2026-11-12)
+
+PR #55 (`06501a8`, `37d736d`, release `033505f`); v2.4.0 tag and GitHub Release created by CI.
+
+- **Pages (UX-04..UX-12, BUS-01/02/04, WEB-03..WEB-07, PROF-01..03, LEAD-03):** Home, Solutions plus three service-line pages and the audit, Work and `/work/<slug>`, Insights and articles, About, Profile, Products, Contact, Privacy, Terms and the 404 now run on BrandLayout. Copy is code-owned (ADR 0013); the page builder flags code-composed pages. `/process` → 301 `/about#how-we-work`; `/landing-sample-*` → 301 `/work`; the legacy SPA and `react-helmet-async` are removed.
+- **SEO (SEO-01/02, WEB-01):** the static records meet the title and description limits, enforced by `seo.test.ts`. There is a per-page social card (32–54 KB; `og.png` went from 1.37 MB to 54 KB). The sitemap adds the service lines, `/products` and the write-ups. The update SQL was applied to preview after reading the rows (all still seeded values from 2026-09-18; 24 rows written; read back within limits).
+- **SEC-07:** Astro `security.csp` hashes are merged into the middleware CSP, so rendered pages carry no `'unsafe-inline'` in `script-src`. GA moved to an external file.
+- **Tests:**
+  - lint (0 errors), typecheck (0), unit 2,615 passed, build OK.
+  - Static e2e: 217 passed, including the new `redesign.spec.js`.
+  - Worker e2e: all pass except two data-dependent tests: SEO slug editor (known before this branch), and Lead CRM sources (the local database has "No sources registered").
+  - The `/process`-based admin preview and cache tests moved to `/work` with a synthetic project.
+  - The digest sitemap test was corrected (the page has been noindex since 2.3.0).
+- **Preview evidence:**
+  - All routes answer 200, or 301 and 404 where expected, at 0.2–0.8 s.
+  - Browser scan of 14 routes plus Contact: no site CSP violations. The only messages come from inside the Turnstile iframe, which has its own policy.
+  - Turnstile loads; write-ups resolve (including the preview-only "Memory Preview" project); header is 61 px with no overflow at 320 px.
+- **Production evidence (www, after deploy):**
+  - Every new route returns 200; `/process`, `/landing-sample-react`, `/services` and `/resources` return 301 to their targets.
+  - All 31 frozen legacy URLs resolve; the sitemap has 37 URLs; `/api/health` returns 200.
+  - `script-src` is hashed; no site CSP violations.
+  - Turnstile loads (the form was not submitted); GA loads (dataLayer present, gtag requested).
+  - Personal-data scan of `/`, `/about`, `/profile`, `/contact` and `/work`: 0 hits.
+- **Deviations:**
+  - Pickleball left the Home and Solutions journey (G.1 allows removal); it lives in the footer and on `/products`.
+  - `/products` shows the product's verified features instead of a screenshot, because no real screenshot with synthetic data exists yet (the OG card is marketing art, not a screenshot).
+  - Styles keep `'unsafe-inline'` because server-rendered `style` attributes need it.
+  - Google Fonts remain only on the legacy layout (pickleball, offers, daily log, crawler and maintenance pages).
+- **Open:**
+  - Blockers 15–16.
+  - TEST-06 Lighthouse run against preview.
+  - Pickleball shell on brand tokens (BR.16).
+  - OPS-08 docs refresh.
+  - Phase 11 (N7).
