@@ -15,11 +15,11 @@ money, legal wording or a real data deletion are skipped and listed under
 | 1 | Guard rails | done (PR #44, production 2026-11-12 at `64c516d`) |
 | 2 | CMS correctness + content model | done (PR #46, production at `a80df26`); production data steps blocked (Blockers 1–2) |
 | 3 | Identity + personal data | done (PR #47, production at `0b0a2ab`) |
-| 4 | Brand foundation | done in code; **scene approval needed before Phases 5–6** |
+| 4 | Brand foundation | done (PR #48, production at `1a2f663`; `/brand` 404 in production); **scene approval needed before Phases 5–6** |
 | 5 | Pages I | not started |
 | 6 | Pages II | not started |
 | 7 | Routes + SEO | not started |
-| 8 | Ops + editorial | not started |
+| 8 | Ops + editorial | done in code (SEC-07 moved to Phase 9) |
 | 9 | Performance | not started |
 | 10 | Data-touching jobs | not started |
 | 11 | Product Worker split | not started |
@@ -27,14 +27,15 @@ money, legal wording or a real data deletion are skipped and listed under
 
 ## Blockers (owner)
 
-1. **Production D1 migration `0018_editorial_fields`** (Phase 2, CMS-03). Additive columns only, already applied and verified on preview. The deployed code works without it, but the new project/article/SEO fields cannot be saved in production until it runs:
-   `CLOUDFLARE_API_TOKEN=<fresh token> npx wrangler d1 migrations apply devlab-studios-cms --remote`
+1. **Production D1 migrations `0018_editorial_fields` and `0019_job_runs`** (Phase 2, CMS-03). Additive columns only, already applied and verified on preview. The deployed code works without it, but the new project/article/SEO fields cannot be saved in production until it runs:
+   `CLOUDFLARE_API_TOKEN=<fresh token> npx wrangler d1 migrations apply devlab-studios-cms --remote` (applies both; both additive, both verified on preview). Until `0019` runs, job runs are only logged, not stored.
 2. **Production project reconciliation** (Phase 2, CMS-02). Production reads were not permitted in this session, so production keeps `PROJECTS_STATIC_MERGE=true` (today's behaviour). Run `node scripts/cms/static-projects-missing-from-d1.mjs --env production`, seed any project that should stay, then set the var to `"false"` in `wrangler.jsonc`. Preview: 0 static projects missing (checked).
 3. **Branch protection** (OPS-02): enable "Require status checks" with the `validate` check on `main` and `development` (GitHub settings; see docs/testing.md).
 4. **Production identity data cleanup** (Phase 3, optional): `scripts/cms/updates/2026-11-12-business-identity.sql` (applied to preview). Not urgent: public pages already enforce the rules on the read path.
 5. **Owner inputs for Phase 3 defaults**: legal operator name for privacy/terms (N5; operator wording used now), and the Facebook page / LinkedIn company URL for `sameAs` (only the existing LinkedIn profile and GitHub are listed). Also check `public/resume.pdf` for personal details you no longer want public; it was not changed.
 6. **Scene approval (gate for Phases 5–6):** review S1–S6 at `<preview>/brand`, then set `artReady: true` per approved scene (docs/brand/scenes.md), or send replacement art. Also confirm the "Working Drawings" direction (N1, default approve).
-7. Observed, not changed: `/haosweetitis/` returns 404 on production and preview; only `/haosweetitis/index.html` loads. Share that URL, or ask for a route fix.
+7. **Uptime monitor (N8):** point a free-tier monitor at `/` and `/api/health` (docs/operations.md).
+8. Observed, not changed: `/haosweetitis/` returns 404 on production and preview; only `/haosweetitis/index.html` loads. Share that URL, or ask for a route fix.
 
 ## Phase 1 — Guard rails
 
@@ -118,3 +119,16 @@ Decision: this phase adds the brand system without switching any live page (each
 | TEST-03 | partial | Grep test over brand sources; extends to all public components with UX-04 |
 | TEST-05 | partial | axe (serious/critical = 0) on `/brand`; canonical routes added as pages migrate |
 | TEST-04 | partial | `/brand` screenshots at 3 viewports attached to the e2e run |
+
+## Phase 8 — Ops + editorial
+
+| Req | Status | Evidence |
+|---|---|---|
+| OPS-06 | done | Preview deploy fails on unapplied preview migrations (warns only if the token cannot read D1); state recorded in docs/CURRENT_STATE.md (both preview DBs current) |
+| OPS-03 | done (code); monitor is an owner action | Workers Logs on; `/api/health` checks DBs, bucket, DO (503 degraded, no error text); `job_runs` (0019, applied to preview); daily failed-job email. 4 + 8 unit tests |
+| OPS-05 | done | GA4 id + off switch in Site Settings, default today's id. CF Web Analytics CSP entries kept (N12 default: enable at the zone) |
+| CMS-04 | done | Preview links (derived key, `p1.` format, bound to one item, 1 h, no-store + noindex; refused as a session: tested); multiple admin logins (account must still exist on every request); rendered markdown preview |
+| LEAD-05 | done | Funnel panel + daily unanswered-inquiry reminder (internal only, no message text). 4 unit + 1 e2e |
+| SEC-07 | moved to Phase 9 | Astro 7's built-in `security.csp` hashes its own scripts but sets its own CSP header, which our middleware overwrites; merging them belongs with the HTML cache (OPS-01), where per-request policy and cached pages interact |
+
+Admin e2e: 50 passed; the one failure is the pre-existing seed-dependent SEO-editor test.
