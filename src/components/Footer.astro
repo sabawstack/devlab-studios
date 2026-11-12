@@ -20,7 +20,9 @@ const footerTagline = !rawTagline
   || rawTagline.replace(' - ', ' — ') === COMPANY.legacyTagline
   ? COMPANY.description
   : rawTagline.replace(' - ', ' — ')
-// A personal mailbox stored in CMS content never reaches the page.
+// A personal mailbox stored in CMS content never reaches the page. The
+// location is part of the business identity (src/config/company.js), not a
+// per-page setting, so it is not read from the CMS footer row.
 const footerEmail = publicContactEmail(footer.email)
 // safeHref is the render-time half of the CMS link policy (src/lib/safeHref.ts).
 const withSafeHrefs = (links: Array<{ label: string; href: string }>) =>
@@ -61,7 +63,7 @@ const socialIcon = (label: string) => {
         <a href={`mailto:${footerEmail}`} class="mb-1 block text-slate-200 transition hover:text-white hover:underline">
           {footerEmail}
         </a>
-        <span class="block text-slate-400">{footer.location || COMPANY.locationLabel}</span>
+        <span class="block text-slate-400">{COMPANY.locationLabel}</span>
       </div>
 
       <div class="flex flex-1 flex-col items-center">
