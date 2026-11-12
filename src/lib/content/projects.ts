@@ -5,6 +5,7 @@ import { getEnv } from '../env'
 import { optimizeImage, type OptimizedPicture } from '../images/optimizeImage'
 import type { ImageMetadata } from 'astro'
 import { sanitizeLinkFields } from '../safeHref'
+import { mergeProjectSources, shouldAppendStaticProjects } from './projectSources'
 
 type ImageSource = ImageMetadata | string | undefined
 
@@ -47,29 +48,15 @@ interface RawProjectRow {
 
 const normalizedPortfolioItems: ProjectData[] = portfolioItems
 
-function mergeWithStaticImages(projects: ProjectData[]): ProjectData[] {
-  const staticById = new Map(normalizedPortfolioItems.map((project) => [project.id, project]))
-  const cmsIds = new Set(projects.map((project) => project.id))
-
-  const mergedProjects = projects.map((project) => {
-    const fallback = staticById.get(project.id)
-    const apiGallery = Array.isArray(project.galleryImages) ? project.galleryImages.filter((image) => image?.url) : []
-    const fallbackGallery = Array.isArray(fallback?.galleryImages) ? fallback.galleryImages : []
-
-    return {
-      ...project,
-      liveUrl: project.liveUrl || '#',
-      sourceUrl: project.sourceUrl || '#',
-      techStack: Array.isArray(project.techStack) ? project.techStack : [],
-      image: project.imageUrl || undefined,
-      galleryImages: apiGallery.length > 0 ? apiGallery : fallbackGallery,
-    }
-  })
-
-  return [
-    ...mergedProjects,
-    ...normalizedPortfolioItems.filter((project) => !cmsIds.has(project.id)),
-  ]
+function mergeWithStaticImages(projects: ProjectData[], appendStatic: boolean): ProjectData[] {
+  const withDefaults = projects.map((project) => ({
+    ...project,
+    liveUrl: project.liveUrl || '#',
+    sourceUrl: project.sourceUrl || '#',
+    techStack: Array.isArray(project.techStack) ? project.techStack : [],
+    image: project.imageUrl || undefined,
+  }))
+  return mergeProjectSources(withDefaults, normalizedPortfolioItems, { appendStatic })
 }
 
 const COVER_IMAGE_SIZE = { width: 640, height: 480, fit: 'cover' as const }
@@ -112,8 +99,8 @@ async function attachOptimizedImages(projects: ProjectData[]): Promise<ProjectDa
 
 /**
  * Server-side equivalent of the old useProjects() client hook — queries D1
- * directly during render and merges in the static bundled screenshots that
- * D1 doesn't store, instead of shipping static content then re-fetching.
+ * directly during render. D1 is the source of truth (see ./projectSources.ts);
+ * the static list is used whole only when D1 is unavailable or empty.
  */
 export async function loadProjects(): Promise<ProjectData[]> {
   const env = getEnv()
@@ -124,7 +111,10 @@ export async function loadProjects(): Promise<ProjectData[]> {
     const projects = sanitizeLinkFields(await listProjects(env.DB))
     if (!projects.length) return await attachOptimizedImages(normalizedPortfolioItems)
     return await attachOptimizedImages(
-      mergeWithStaticImages(projects.map((project: RawProjectRow) => normalizeProjectMedia(project, env))),
+      mergeWithStaticImages(
+        projects.map((project: RawProjectRow) => normalizeProjectMedia(project, env)),
+        shouldAppendStaticProjects(env),
+      ),
     )
   } catch {
     return attachOptimizedImages(normalizedPortfolioItems)

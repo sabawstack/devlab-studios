@@ -185,6 +185,11 @@
 
   "vars": {
     "ADMIN_AUTH_MODE": "password",
+    // "true" keeps appending static-fallback projects that production D1 lacks
+    // (the pre-2.3 behaviour) until production is reconciled: run
+    // `node scripts/cms/static-projects-missing-from-d1.mjs --env production`,
+    // seed what should stay, then set "false" so D1 is the only source.
+    "PROJECTS_STATIC_MERGE": "true",
     // Lead Intelligence Engine deployment ceilings. Runtime state starts OFF
     // in D1 and is controlled from Lead CRM > CRM Settings.
     //
@@ -245,6 +250,9 @@
       // leadDelivery.js's hardcoded defaults instead of the configured values.
       "vars": {
         "ADMIN_AUTH_MODE": "password",
+        // Preview D1 holds every static project (checked 2026-11-12), so D1 is
+        // the only source here.
+        "PROJECTS_STATIC_MERGE": "false",
         "R2_PUBLIC_BASE_URL": "https://pub-2450236b7cbf4d68aa4bc07f9b606e29.r2.dev",
         "TURNSTILE_SITE_KEY": "0x4AAAAAAEO0gy1ZeS8AbYUC",
         "RESEND_FROM_EMAIL": "hello@devlabstudios.com",

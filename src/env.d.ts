@@ -13,6 +13,11 @@ interface Env {
    */
   DRAIN_UNREAD_BODIES?: string
   R2_PUBLIC_BASE_URL?: string
+  /**
+   * "true" appends static fallback projects that D1 does not have (legacy).
+   * Anything else: D1 is the only source. See src/lib/content/projectSources.ts.
+   */
+  PROJECTS_STATIC_MERGE?: string
   RESEND_API_KEY?: string
   RESEND_FROM_EMAIL?: string
   LEAD_NOTIFICATION_EMAIL?: string
