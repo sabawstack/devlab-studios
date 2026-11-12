@@ -2,8 +2,7 @@ import { defineMiddleware } from 'astro:middleware'
 import { requireAdmin } from './worker/middleware/adminAuth.js'
 import { createHonoLikeContext } from './lib/honoShim.js'
 import { getEnv } from './lib/env'
-import { getSiteSetting } from './worker/repositories/content.js'
-import { findRedirect } from './worker/repositories/redirects.js'
+import { findRedirectSafely, readMaintenanceMode } from './lib/publicGates'
 import { applySecurityHeaders } from './lib/securityHeaders'
 import { drainRequestBody } from './lib/http'
 import { isAdminApiPath, routePath } from './lib/routePath'
@@ -78,9 +77,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   if (isMaintenanceGated(path) && path !== MAINTENANCE_PAGE) {
-    const env = getEnv()
-    const maintenanceMode = env.DB ? await getSiteSetting(env.DB, 'maintenance_mode', false) : false
-    if (maintenanceMode) {
+    if (await readMaintenanceMode(getEnv().DB)) {
       return applySecurityHeaders(await next(MAINTENANCE_PAGE), url.pathname, url.hostname)
     }
   }
@@ -92,13 +89,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // runs on an actual 404, not on every request/asset. A row matches its exact
   // path, or every path below it when its from_path ends in /* (findRedirect).
   if (context.request.method === 'GET' && response.status === 404) {
-    const env = getEnv()
-    if (env.DB) {
-      const redirect = await findRedirect(env.DB, url.pathname)
-      if (redirect) {
-        const destination = new URL(redirect.toPath, url)
-        return applySecurityHeaders(Response.redirect(destination.toString(), redirect.statusCode), url.pathname, url.hostname)
-      }
+    const redirect = await findRedirectSafely(getEnv().DB, url.pathname)
+    if (redirect) {
+      const destination = new URL(redirect.toPath, url)
+      return applySecurityHeaders(Response.redirect(destination.toString(), redirect.statusCode), url.pathname, url.hostname)
     }
   }
 
