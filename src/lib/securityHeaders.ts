@@ -102,6 +102,16 @@ export function applySecurityHeaders(response: Response, pathname: string, hostn
     headers.set(name, value)
   }
 
+  // The #HaoSweetItIs wedding invitation embeds Jason Derulo's official YouTube player.
+  // Restrict the frame allowance to this single guest page; keep the main site unchanged.
+  if (pathname === '/haosweetitis' || pathname.startsWith('/haosweetitis/')) {
+    const csp = headers.get('Content-Security-Policy') || ''
+    headers.set('Content-Security-Policy', csp.replace(
+      "frame-src 'self' https://challenges.cloudflare.com",
+      "frame-src 'self' https://challenges.cloudflare.com https://www.youtube-nocookie.com https://www.youtube.com",
+    ))
+  }
+
   const robotsTag = robotsTagFor(pathname, hostname)
   if (robotsTag) {
     headers.set('X-Robots-Tag', robotsTag)
