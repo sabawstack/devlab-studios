@@ -13,8 +13,8 @@ money, legal wording or a real data deletion are skipped and listed under
 | # | Phase | Status |
 |---|---|---|
 | 1 | Guard rails | done (PR #44, production 2026-11-12 at `64c516d`) |
-| 2 | CMS correctness + content model | done in code; production data steps blocked (see Blockers) |
-| 3 | Identity + personal data | not started |
+| 2 | CMS correctness + content model | done (PR #46, production at `a80df26`); production data steps blocked (Blockers 1–2) |
+| 3 | Identity + personal data | done in code (PR pending promotion) |
 | 4 | Brand foundation | not started |
 | 5 | Pages I | not started |
 | 6 | Pages II | not started |
@@ -31,7 +31,9 @@ money, legal wording or a real data deletion are skipped and listed under
    `CLOUDFLARE_API_TOKEN=<fresh token> npx wrangler d1 migrations apply devlab-studios-cms --remote`
 2. **Production project reconciliation** (Phase 2, CMS-02). Production reads were not permitted in this session, so production keeps `PROJECTS_STATIC_MERGE=true` (today's behaviour). Run `node scripts/cms/static-projects-missing-from-d1.mjs --env production`, seed any project that should stay, then set the var to `"false"` in `wrangler.jsonc`. Preview: 0 static projects missing (checked).
 3. **Branch protection** (OPS-02): enable "Require status checks" with the `validate` check on `main` and `development` (GitHub settings; see docs/testing.md).
-4. Observed, not changed: `/haosweetitis/` returns 404 on production and preview; only `/haosweetitis/index.html` loads. Share that URL, or ask for a route fix.
+4. **Production identity data cleanup** (Phase 3, optional): `scripts/cms/updates/2026-11-12-business-identity.sql` (applied to preview). Not urgent: public pages already enforce the rules on the read path.
+5. **Owner inputs for Phase 3 defaults**: legal operator name for privacy/terms (N5; operator wording used now), and the Facebook page / LinkedIn company URL for `sameAs` (only the existing LinkedIn profile and GitHub are listed). Also check `public/resume.pdf` for personal details you no longer want public; it was not changed.
+6. Observed, not changed: `/haosweetitis/` returns 404 on production and preview; only `/haosweetitis/index.html` loads. Share that URL, or ask for a route fix.
 
 ## Phase 1 — Guard rails
 
@@ -87,3 +89,15 @@ Promotion: CI green on `64c516d` (merge of `main`'s #HaoSweetItIs commits, which
 | LEAD-04 | done | Settings panel + API, audited, invalid/non-descending refused, read failure falls back to defaults. 18 unit + 1 e2e |
 | CMS-03 | done (code), preview migrated | Registries (scenes S1–S6, problem tags, audiences, OG variants, client types); blocks scene/proofStrip/offerCard; hero visualId/density; cta tone; migration 0018 applied to preview and verified (5/6/1 columns, data intact); production pending (Blocker 1) |
 | Found along the way | fixed | CTA inquiry-type list was a stale copy; lead-engine schemaParity test assumed migration numbering |
+
+Promotion: CI green on `a80df26` → `development` → preview deploy green, all canonical routes 200 → `main` → Workers Builds success; production smoke 31/31 legacy URLs + `/admin` 200; new admin API 401 unauthenticated.
+
+## Phase 3 — Identity + personal data
+
+| Req | Status | Evidence |
+|---|---|---|
+| BUS-05 | done | `src/config/company.js` is the single identity; footer, legal pages and maintenance use `hello@devlabstudios.com`; footer shows "Cebu, Philippines" and a one-line description (new copy, owner to review on preview); operator statement on privacy/terms |
+| PROF-02 | done | Phone, DOB and street address removed from static data; read-path guard (`toPublicAbout`, `scrubPersonalContacts`) keeps them off public pages even while production D1 still holds them; preview D1 cleaned by the dated update (read back: no gmail/phone/DOB, city-level) |
+| SEO-04 | done | Organization (`@id`, email, foundingDate, city address, founder `@id`), Person (`@id`, /profile, portrait, alumniOf, hasCredential, worksFor `@id`, no alternateName), WebSite without SearchAction. 7 unit tests |
+| SEC-06 | done | HMAC-SHA256 of `timestamp.body`, `X-DevLab-Timestamp`; receivers documented. 3 unit tests |
+| TEST-01 (no personal mailbox) | done | e2e over every legacy URL + `/maintenance`: no personal mailbox, no `tel:` link |
