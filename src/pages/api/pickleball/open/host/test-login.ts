@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro'
 import { getEnv } from '../../../../../lib/env'
 import { drainRequestBody } from '../../../../../lib/http'
+import { isLoopbackRequest } from '../../../../../lib/loopback'
 import { testLoginSchema } from '../../../../../lib/schemas/pickleball/open/host'
 import { toHostProfile, upsertHost } from '../../../../../worker/repositories/pickleball/open/hosts'
 import { beginHostLogin, signInIpLimited } from '../../../../../worker/pickleball/open/hostSession'
@@ -10,11 +11,13 @@ import { jsonResponse } from '../../../../../worker/utils/responses.js'
 
 // Test-only stand-in for Google sign-in (spec §13), so Playwright can reach a
 // signed-in host with no Google account. Answers only when
-// PICKLEBALL_TEST_AUTH_ENABLED is exactly 'true': set in .dev.vars for local
-// e2e, never in wrangler.jsonc's committed vars.
+// PICKLEBALL_TEST_AUTH_ENABLED is exactly 'true' AND the request is to a
+// loopback host: the flag is set in .dev.vars for local e2e, never in
+// wrangler.jsonc's committed vars, and the host check keeps a flag set on a
+// deployed Worker by mistake from opening a forged-login path (SEC-04).
 export const POST: APIRoute = async ({ request }) => {
   const env = getEnv()
-  if (env.PICKLEBALL_TEST_AUTH_ENABLED !== 'true') {
+  if (env.PICKLEBALL_TEST_AUTH_ENABLED !== 'true' || !isLoopbackRequest(request)) {
     await drainRequestBody(request)
     return jsonResponse({ error: 'Not found.' }, 404)
   }

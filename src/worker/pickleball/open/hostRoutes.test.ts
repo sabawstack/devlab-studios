@@ -40,12 +40,33 @@ describe('POST /api/pickleball/open/host/test-login', () => {
     })
   }
 
-  it('signs in when the flag is exactly "true"', async () => {
-    runtime.env = { ...runtime.env, PICKLEBALL_TEST_AUTH_ENABLED: 'true' }
-    const response = await call(testLogin, request('/api/pickleball/open/host/test-login', 'POST', JSON.stringify({ email: 'mo@example.com' }), { Origin: BASE }))
-    expect(response.status).toBe(200)
-    expect(response.headers.get('Set-Cookie')).toMatch(/^devlab_pb_host=/)
-  })
+  for (const local of ['http://localhost:8787', 'http://127.0.0.1:8787', 'http://[::1]:8787']) {
+    it(`signs in on ${local} when the flag is exactly "true"`, async () => {
+      runtime.env = { ...runtime.env, PICKLEBALL_TEST_AUTH_ENABLED: 'true' }
+      const response = await call(testLogin, new Request(`${local}/api/pickleball/open/host/test-login`, {
+        method: 'POST',
+        body: JSON.stringify({ email: 'mo@example.com' }),
+        headers: { 'Content-Type': 'application/json', Origin: local },
+      }))
+      expect(response.status).toBe(200)
+      expect(response.headers.get('Set-Cookie')).toMatch(/^devlab_pb_host=/)
+    })
+  }
+
+  // SEC-04: a flag set by mistake on a deployed Worker must not open a
+  // forged-login path on the real hostname or the preview hostname.
+  for (const deployed of [BASE, 'https://devlab-studios-preview.stpnrey-agustinez.workers.dev']) {
+    it(`is not found on ${deployed} even when the flag is "true"`, async () => {
+      runtime.env = { ...runtime.env, PICKLEBALL_TEST_AUTH_ENABLED: 'true' }
+      const response = await call(testLogin, new Request(`${deployed}/api/pickleball/open/host/test-login`, {
+        method: 'POST',
+        body: JSON.stringify({ email: 'mo@example.com' }),
+        headers: { 'Content-Type': 'application/json', Origin: deployed },
+      }))
+      expect(response.status).toBe(404)
+      expect(response.headers.get('Set-Cookie')).toBeNull()
+    })
+  }
 })
 
 describe('PATCH /api/pickleball/open/host/me', () => {

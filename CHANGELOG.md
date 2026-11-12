@@ -69,6 +69,7 @@ decided against that surface specifically:
 ### Security
 
 - Admin JSON bodies are capped at 256 KB (configurable per route) and refused with 413 before parsing; malformed JSON now gets a 400 instead of a 500, including in admin routes without their own error handling. (SEC-05)
+- The pickleball test login now also requires a localhost request, so `PICKLEBALL_TEST_AUTH_ENABLED=true` set on a deployed Worker by mistake cannot open a forged sign-in on the production or preview hostname. (SEC-04)
 
 ## [2.2.0] - 2026-10-13
 
