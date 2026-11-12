@@ -2,7 +2,7 @@ import type { APIContext, APIRoute } from 'astro'
 import { requireAdmin } from '../worker/middleware/adminAuth.js'
 import { createHonoLikeContext } from './honoShim.js'
 import { getEnv } from './env'
-import { drainRequestBody } from './http'
+import { HttpError, discardUnreadBody, drainRequestBody, jsonResponse } from './http'
 
 /**
  * Per-route authentication for every /api/admin/* handler, independent of
@@ -51,6 +51,16 @@ export function withAdmin(handler: APIRoute): APIRoute {
   return async (context) => {
     const refusal = await assertAdmin(context)
     if (refusal) return refusal
-    return handler(context)
+    try {
+      return await handler(context)
+    } catch (error) {
+      // readJsonBody's 413/400 in a handler without its own try/catch: answer
+      // with that status rather than an unhandled 500.
+      if (error instanceof HttpError) {
+        await discardUnreadBody(context.request, getEnv())
+        return jsonResponse({ error: error.message }, error.status)
+      }
+      throw error
+    }
   }
 }

@@ -49,8 +49,45 @@ export async function discardUnreadBody(request: Request, env: { DRAIN_UNREAD_BO
   }
 }
 
-export async function readJsonBody(request: Request): Promise<Record<string, unknown>> {
-  const body = await request.json()
+/** An error that should reach the client as this status and message. */
+export class HttpError extends Error {
+  constructor(public readonly status: number, message: string) {
+    super(message)
+    this.name = 'HttpError'
+  }
+}
+
+/**
+ * Default ceiling for admin JSON bodies. The largest content payload in this
+ * site is a few tens of KB (a page with all its blocks), so 256 KB leaves ample
+ * room while stopping an oversized body before it is parsed and validated.
+ */
+export const DEFAULT_MAX_JSON_BYTES = 256 * 1024
+
+/**
+ * Reads a JSON request body with a size cap. Throws HttpError(413) when the
+ * declared or actual size is over `maxBytes`, and HttpError(400) when the body
+ * is not JSON. adminErrorResponse and withAdmin turn either into a JSON answer
+ * with that status instead of a 500.
+ */
+export async function readJsonBody(
+  request: Request,
+  { maxBytes = DEFAULT_MAX_JSON_BYTES }: { maxBytes?: number } = {},
+): Promise<Record<string, unknown>> {
+  const declaredLength = Number(request.headers.get('content-length') || 0)
+  if (declaredLength > maxBytes) throw new HttpError(413, 'Request payload is too large.')
+
+  // Content-Length is advisory (a chunked request has none), so the bytes
+  // actually received are checked too.
+  const bytes = await request.arrayBuffer()
+  if (bytes.byteLength > maxBytes) throw new HttpError(413, 'Request payload is too large.')
+
+  let body: unknown
+  try {
+    body = JSON.parse(new TextDecoder().decode(bytes))
+  } catch {
+    throw new HttpError(400, 'Invalid JSON payload.')
+  }
   return (body ?? {}) as Record<string, unknown>
 }
 

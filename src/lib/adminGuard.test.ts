@@ -150,3 +150,33 @@ describe('withAdmin refuses unauthenticated requests on its own', () => {
     expect((await assertAdmin(context(new Request('https://example.com/api/admin/leads'))))?.status).toBe(503)
   })
 })
+
+describe('withAdmin answers a body the handler refused', () => {
+  it('turns readJsonBody\'s 413 into a JSON 413 instead of an unhandled 500', async () => {
+    const { readJsonBody } = await import('./http')
+    runtime.env = { DB: emptyDb }
+    const handler = async ({ request }: APIContext) => {
+      await readJsonBody(request)
+      return new Response('ran')
+    }
+    const request = new Request('https://example.com/api/admin/pages/home', {
+      method: 'PUT',
+      body: JSON.stringify({ blob: 'x'.repeat(300 * 1024) }),
+    })
+    const response = await withAdmin(handler)(context(request, { adminEmail: EMAIL, adminAuthMode: 'password' }))
+
+    expect(response.status).toBe(413)
+    expect(await response.json()).toEqual({ error: 'Request payload is too large.' })
+  })
+
+  it('still lets any other error propagate', async () => {
+    runtime.env = { DB: emptyDb }
+    const handler = async () => {
+      throw new Error('boom')
+    }
+    await expect(withAdmin(handler)(context(
+      new Request('https://example.com/api/admin/leads'),
+      { adminEmail: EMAIL, adminAuthMode: 'password' },
+    ))).rejects.toThrow('boom')
+  })
+})

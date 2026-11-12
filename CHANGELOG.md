@@ -62,6 +62,10 @@ decided against that surface specifically:
 - The static end-to-end suite now runs from a fresh checkout and in CI: the test server applies the CMS migrations to its local database first, starts with remote bindings off (Workers AI no longer needs a Cloudflare login or bills a test run), and stays in the foreground when Astro detects an AI coding agent.
 - A database error while checking maintenance mode or a CMS redirect no longer breaks the home, about, solutions, profile and insights pages: both checks now fail open (no maintenance, no redirect) and log the error.
 
+### Security
+
+- Admin JSON bodies are capped at 256 KB (configurable per route) and refused with 413 before parsing; malformed JSON now gets a 400 instead of a 500, including in admin routes without their own error handling. (SEC-05)
+
 ## [2.2.0] - 2026-10-13
 
 ### Security
