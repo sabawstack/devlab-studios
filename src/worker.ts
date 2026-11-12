@@ -26,6 +26,7 @@ import { runHostLoginPurge, runOpenSessionPurge } from './worker/pickleball/open
 import { handleQueueBatch } from './lead-engine/queues/consumer.js'
 import { handleEmail } from './mailbox/inbound/handler.js'
 import { recordJobRun, sendFailedJobsSummary } from './worker/jobs/jobRuns.js'
+import { sendUnansweredInquiryReminder } from './worker/leads/funnel.js'
 import { createResendProvider } from './worker/delivery/providers.js'
 import { getSiteSetting } from './worker/repositories/content.js'
 import {
@@ -80,6 +81,14 @@ export default {
     // separately, so a failed session purge never leaves logins behind.
     ctx.waitUntil(recordJobRun(env, 'pickleball_session_purge', async () => `purged ${JSON.stringify(await runOpenSessionPurge(env, { now }))}`))
     ctx.waitUntil(recordJobRun(env, 'pickleball_login_purge', async () => `purged ${JSON.stringify(await runHostLoginPurge(env, { now }))}`))
+
+    // LEAD-05: the owner's daily list of inquiries still waiting for a reply
+    // (internal address only; nothing is sent when nothing is waiting).
+    ctx.waitUntil(recordJobRun(env, 'inquiry_reminder', () => sendUnansweredInquiryReminder(env, {
+      now,
+      provider: createResendProvider(env, { name: 'resend-inquiry-reminder' }),
+      getSetting: (key) => (env.DB ? getSiteSetting(env.DB, key, null) : Promise.resolve(null)),
+    })))
 
     // The owner's daily list of failed runs from the last 24 hours (internal
     // address only; nothing is sent when nothing failed).

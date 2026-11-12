@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { adminApi } from '../lib/adminApi'
 import QualificationSettingsPanel from '../components/QualificationSettingsPanel'
+import FunnelPanel from '../components/FunnelPanel'
 import {
   INQUIRY_TYPE_LABELS,
   INQUIRY_TYPES,
@@ -226,6 +227,8 @@ function LeadsPage() {
           Export CSV
         </a>
       </div>
+
+      <FunnelPanel />
 
       <QualificationSettingsPanel />
 

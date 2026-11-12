@@ -941,6 +941,21 @@ test('changing a qualification threshold in admin changes the tier of a new inqu
   }
 })
 
+// LEAD-05: the funnel counts a new inquiry and the reminder settings round-trip.
+test('the inquiry funnel counts new inquiries and saves reminder settings', async ({ page, baseURL }) => {
+  await login(page)
+  const before = (await (await page.request.get(`${baseURL}/api/admin/leads/funnel?days=7`)).json()).funnel.total
+  await submitInquiry(page, baseURL)
+  const after = await (await page.request.get(`${baseURL}/api/admin/leads/funnel?days=7`)).json()
+  // At least: other tests submit inquiries in parallel.
+  expect(after.funnel.total).toBeGreaterThanOrEqual(before + 1)
+  expect(after.reminders).toMatchObject({ enabled: true })
+  const saved = await page.request.put(`${baseURL}/api/admin/leads/funnel`, { data: { enabled: true, hours: 12 } })
+  expect(saved.ok()).toBeTruthy()
+  expect((await (await page.request.get(`${baseURL}/api/admin/leads/funnel`)).json()).reminders.hours).toBe(12)
+  await page.request.put(`${baseURL}/api/admin/leads/funnel`, { data: after.reminders })
+})
+
 test('an employment inquiry is stored separately and is never business-qualified', async ({ page, baseURL }) => {
   const { response } = await submitInquiry(page, baseURL, {
     inquiryType: 'employment_opportunity',
