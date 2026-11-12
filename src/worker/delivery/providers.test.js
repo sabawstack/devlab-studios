@@ -36,3 +36,36 @@ describe('createResendProvider', () => {
     expect(result).toEqual({ ok: false, statusCode: 422, networkError: false, errorMessage: 'Invalid attachment' })
   })
 })
+
+// SEC-06: the webhook proves its origin with an HMAC of timestamp + body; the
+// shared secret itself never travels.
+describe('createWebhookProvider signing', async () => {
+  const { createWebhookProvider, signWebhookBody } = await import('./providers.js')
+
+  async function hmacHex(secret, message) {
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+    const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message))
+    return [...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
+  }
+
+  it('sends sha256=<hmac(timestamp.body)> and a timestamp, never the secret', async () => {
+    const fetch = stubFetch()
+    await createWebhookProvider({ LEAD_WEBHOOK_URL: 'https://hooks.example.test/in', LEAD_WEBHOOK_SECRET: 'shh-secret' })
+      .send({ payload: { id: 'lead-1' } })
+    const { headers, body } = fetch.mock.calls[0][1]
+    const timestamp = headers['X-DevLab-Timestamp']
+    expect(timestamp).toMatch(/^\d{10}$/)
+    expect(headers['X-DevLab-Signature']).toBe(`sha256=${await hmacHex('shh-secret', `${timestamp}.${body}`)}`)
+    expect(JSON.stringify(headers)).not.toContain('shh-secret')
+  })
+
+  it('signWebhookBody is deterministic for a given secret, timestamp and body', async () => {
+    expect(await signWebhookBody('k', '1700000000', '{}')).toBe(`sha256=${await hmacHex('k', '1700000000.{}')}`)
+  })
+
+  it('sends no signature headers without a secret', async () => {
+    const fetch = stubFetch()
+    await createWebhookProvider({ LEAD_WEBHOOK_URL: 'https://hooks.example.test/in' }).send({ payload: {} })
+    expect(fetch.mock.calls[0][1].headers).not.toHaveProperty('X-DevLab-Signature')
+  })
+})

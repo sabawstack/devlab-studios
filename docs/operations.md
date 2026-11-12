@@ -76,9 +76,20 @@ failure category. See
 [ADR 0007](architecture/decisions/0007-business-inquiry-pipeline.md).
 
 Optional outbound delivery is configured with `LEAD_WEBHOOK_URL` (and
-optionally `LEAD_WEBHOOK_SECRET`, sent as `X-DevLab-Signature`). Both unset is
-the default and the webhook provider is then completely inert — no third-party
-CRM dependency is required.
+optionally `LEAD_WEBHOOK_SECRET`). Both unset is the default and the webhook
+provider is then completely inert — no third-party CRM dependency is required.
+
+With a secret set, each POST carries two headers and the secret itself never
+travels:
+
+- `X-DevLab-Timestamp`: Unix seconds when the request was signed.
+- `X-DevLab-Signature`: `sha256=` + hex HMAC-SHA256, keyed by
+  `LEAD_WEBHOOK_SECRET`, of `<timestamp>.<raw request body>`.
+
+The receiver should recompute the HMAC over the exact raw body, compare it in
+constant time, and reject a timestamp more than five minutes old (replay
+protection). Receivers written for the old scheme (the header equal to the
+secret) must be updated when this ships.
 
 Idempotency is server-computed from (inquiry type, email, message, 10-minute
 bucket) and stored under a UNIQUE index, so a double-click or a replayed

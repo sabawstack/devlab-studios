@@ -1,10 +1,30 @@
 // Schema.js - JSON-LD structured data helpers
-export const getPersonSchema = () => ({
+import aboutData from '../data/about.js'
+import { COMPANY, ORGANIZATION_ID, PERSON_ID } from './company.js'
+
+/** City-level only: no street, postal code or telephone in any schema (audit PROF-02). */
+const CITY_ADDRESS = {
+  '@type': 'PostalAddress',
+  addressLocality: COMPANY.location.locality,
+  addressCountry: COMPANY.location.countryCode,
+}
+
+/** "University X, Campus, City" -> "University X". */
+function schoolName(school) {
+  return String(school || '').split(',')[0].replace(/\s+-\s+.*$/, '').trim()
+}
+
+/**
+ * The founder (SEO-04). One node with a stable @id, linked to the
+ * Organization, pointing at the profile page; `image` is the portrait and
+ * `credentials` the certification names the profile page renders.
+ */
+export const getPersonSchema = ({ image, credentials = [] } = {}) => ({
   '@context': 'https://schema.org',
   '@type': 'Person',
-  name: 'Stephen Rey G. Agustinez',
-  alternateName: 'AgustinezTechVA',
-  url: 'https://www.devlabstudios.com',
+  '@id': PERSON_ID,
+  name: COMPANY.founder.name,
+  url: `${COMPANY.url}${COMPANY.founder.profilePath}`,
   description:
     'Software engineer and AI automation specialist building backend systems, API integrations, websites, and workflow automations for modern businesses worldwide.',
   jobTitle: 'Founder, Full-Stack Developer & AI Automation Architect',
@@ -68,22 +88,17 @@ export const getPersonSchema = () => ({
     },
   ],
   areaServed: 'Worldwide',
-  worksFor: {
-    '@type': 'Organization',
-    name: 'DevLab Studios',
-    url: 'https://www.devlabstudios.com',
-  },
-  sameAs: [
-    'https://www.linkedin.com/in/stephen-rey-agustinez-8b86041b3',
-    'https://github.com/stpn-dev',
-  ],
-  image: 'https://www.devlabstudios.com/devlabstudios-logo-only.png',
-  address: {
-    '@type': 'PostalAddress',
-    addressCountry: 'PH',
-    addressRegion: 'Cebu',
-    addressLocality: 'Lapu-Lapu City',
-  },
+  worksFor: { '@id': ORGANIZATION_ID },
+  sameAs: COMPANY.sameAs,
+  image: image || COMPANY.logo,
+  address: CITY_ADDRESS,
+  alumniOf: (aboutData.education || [])
+    .map((entry) => schoolName(entry.school))
+    .filter(Boolean)
+    .map((name) => ({ '@type': /university|college/i.test(name) ? 'CollegeOrUniversity' : 'EducationalOrganization', name })),
+  ...(credentials.length
+    ? { hasCredential: credentials.map((name) => ({ '@type': 'EducationalOccupationalCredential', name })) }
+    : {}),
 })
 
 export const getPortfolioItemSchema = (project) => ({
@@ -101,20 +116,20 @@ export const getPortfolioItemSchema = (project) => ({
   datePublished: project.datePublished || '2026-03-11',
 })
 
+/** The business (SEO-04 / BUS-05): one node with a stable @id; pages reference it rather than repeat it. */
 export const getOrganizationSchema = () => ({
   '@context': 'https://schema.org',
   '@type': 'Organization',
-  name: 'DevLab Studios',
-  url: 'https://www.devlabstudios.com',
+  '@id': ORGANIZATION_ID,
+  name: COMPANY.name,
+  url: COMPANY.url,
   description:
     'DevLab Studios provides software engineering, website development, backend integration, and AI automation services for businesses worldwide.',
-  logo: 'https://www.devlabstudios.com/devlabstudios-logo-only.png',
-  founder: {
-    '@type': 'Person',
-    name: 'Stephen Rey G. Agustinez',
-    jobTitle: 'Founder, Full-Stack Developer & AI Automation Architect',
-    url: 'https://www.devlabstudios.com/profile',
-  },
+  logo: COMPANY.logo,
+  email: COMPANY.publicEmail,
+  foundingDate: COMPANY.foundingDate,
+  address: CITY_ADDRESS,
+  founder: { '@id': PERSON_ID },
   knowsAbout: [
     'Website Development',
     'Software Engineering',
@@ -129,14 +144,12 @@ export const getOrganizationSchema = () => ({
     'n8n',
   ],
   areaServed: 'Worldwide',
-  sameAs: [
-    'https://www.linkedin.com/in/stephen-rey-agustinez-8b86041b3',
-    'https://github.com/stpn-dev',
-  ],
+  sameAs: COMPANY.sameAs,
   contactPoint: {
     '@type': 'ContactPoint',
     contactType: 'Customer Support',
-    url: 'https://www.devlabstudios.com/contact',
+    email: COMPANY.publicEmail,
+    url: `${COMPANY.url}/contact`,
   },
 })
 
@@ -147,19 +160,9 @@ export const getWebsiteSchema = () => ({
   url: 'https://www.devlabstudios.com',
   description:
     'DevLab Studios builds software, web interfaces, backend integrations, and AI automation workflows for modern businesses.',
-  publisher: {
-    '@type': 'Organization',
-    name: 'DevLab Studios',
-    logo: 'https://www.devlabstudios.com/devlabstudios-logo-only.png',
-  },
-  potentialAction: {
-    '@type': 'SearchAction',
-    target: {
-      '@type': 'EntryPoint',
-      urlTemplate: 'https://www.devlabstudios.com/?q={search_term_string}',
-    },
-    'query-input': 'required name=search_term_string',
-  },
+  // No potentialAction: the site has no search, and a SearchAction pointing
+  // at one is a false claim (audit SEO-F02).
+  publisher: { '@id': ORGANIZATION_ID },
 })
 
 /**

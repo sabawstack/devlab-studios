@@ -85,21 +85,40 @@ export function createResendProvider(env, { name = 'resend', fromName = 'DevLab 
  * third-party dependency. Entirely inert unless `LEAD_WEBHOOK_URL` is set, so
  * it costs nothing when unused and never has to be "turned off".
  */
+/**
+ * `sha256=<hex HMAC-SHA256 of "<timestamp>.<body>">` keyed by the shared
+ * secret (audit SEC-06). The receiver recomputes it, compares in constant
+ * time, and rejects a timestamp older than a few minutes, so a captured
+ * request cannot be replayed and the secret itself never travels.
+ */
+export async function signWebhookBody(secret, timestamp, body) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${timestamp}.${body}`))
+  return `sha256=${[...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, '0')).join('')}`
+}
+
 export function createWebhookProvider(env) {
   return {
     name: 'webhook',
     isConfigured: Boolean(env.LEAD_WEBHOOK_URL),
     configurationHint: 'LEAD_WEBHOOK_URL is not configured.',
     async send({ payload }) {
+      const body = JSON.stringify(payload)
+      const timestamp = String(Math.floor(Date.now() / 1000))
       const { response, error } = await fetchWithTimeout(env.LEAD_WEBHOOK_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Optional shared secret so the receiving end can reject anything
-          // that did not come from this Worker.
-          ...(env.LEAD_WEBHOOK_SECRET ? { 'X-DevLab-Signature': env.LEAD_WEBHOOK_SECRET } : {}),
+          // Optional signature so the receiving end can reject anything that
+          // did not come from this Worker (see signWebhookBody).
+          ...(env.LEAD_WEBHOOK_SECRET
+            ? {
+                'X-DevLab-Timestamp': timestamp,
+                'X-DevLab-Signature': await signWebhookBody(env.LEAD_WEBHOOK_SECRET, timestamp, body),
+              }
+            : {}),
         },
-        body: JSON.stringify(payload),
+        body,
       })
 
       if (error) {

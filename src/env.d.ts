@@ -26,7 +26,7 @@ interface Env {
    * system). Entirely inert unless set — see src/worker/delivery/providers.js.
    */
   LEAD_WEBHOOK_URL?: string
-  /** Optional shared secret sent as `X-DevLab-Signature` with each webhook post. */
+  /** Optional HMAC key for the webhook signature (`X-DevLab-Signature`); never sent itself. */
   LEAD_WEBHOOK_SECRET?: string
   ADMIN_EMAIL?: string
   ADMIN_PASSWORD_HASH?: string
