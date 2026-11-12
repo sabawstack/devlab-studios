@@ -57,6 +57,8 @@ decided against that surface specifically:
 
 ### Changed
 
+- Site header is a sticky glass bar (blur only where supported, solid navy otherwise) with the vector logo mark (`/branding/logo-only.svg`) and a magenta underline on the current page; nav and footer link lists no longer pick up the running-text underline.
+- Footer closes with "Systems architected, engineered, and maintained end-to-end by Stephen Rey Agustinez." and shows the location as Lapu-Lapu City, Cebu, Philippines; Organization and Person schema gain `addressRegion: Cebu` (still city-level, no street or postal code).
 - Every brand-layout page switches to the dark palette through the global tokens; `.ink-panel` is now the raised navy card surface instead of a light inversion. Primary buttons use the brand gradient under a navy scrim (white text ≥ 4.5:1); the inquiry form's buttons, errors and status messages use the tokens.
 - Brand fonts: Space Grotesk (display and text) and JetBrains Mono (labels) replace Bricolage Grotesque and Martian Mono, still self-hosted, Latin subset, 62 KB together, with metric-matched fallbacks. Newsreader stays for long-form.
 - `brandTokens.test.ts` now checks the Blueprint values and AA contrast on navy (magenta and amber held to 4.5:1 as text), allows gradients only through `var(--brand-gradient)`, forbids gradient text and raw hex colours in brand components and pages.

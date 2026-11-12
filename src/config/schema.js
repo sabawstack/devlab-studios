@@ -6,6 +6,7 @@ import { COMPANY, ORGANIZATION_ID, PERSON_ID } from './company.js'
 const CITY_ADDRESS = {
   '@type': 'PostalAddress',
   addressLocality: COMPANY.location.locality,
+  addressRegion: COMPANY.location.region,
   addressCountry: COMPANY.location.countryCode,
 }
 

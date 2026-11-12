@@ -3,7 +3,7 @@
  * Footer for the redesigned pages (audit G.2 / BUS-05 / LEAD-03): ink panel,
  * company identity, Explore (CMS quick links), Products, Connect, legal, and
  * the employment path ("Hiring? Contact Stephen") that business pages never
- * show inline.
+ * show inline. Closes with the sign-off line from COMPANY (ADR 0014).
  */
 import type { SiteSettingsData } from '../../lib/content/siteSettings'
 import { safeHref } from '../../lib/safeHref'
@@ -48,7 +48,7 @@ const year = new Date().getUTCFullYear()
   </div>
   <div class="border-t border-dl-rule">
     <div class="mx-auto flex max-w-container flex-wrap items-center justify-between gap-3 px-[var(--gutter)] py-5 text-step--1 text-dl-ink-3">
-      <p>© {year} {COMPANY.name}</p>
+      <p>© {year} {COMPANY.name} · <span data-footer-signoff>{COMPANY.footerSignOff}</span></p>
       <ul class="flex gap-5">{legal.map((link) => <li><a href={link.href} class="no-underline hover:underline">{link.label}</a></li>)}</ul>
     </div>
   </div>

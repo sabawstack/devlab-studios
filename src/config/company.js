@@ -12,10 +12,12 @@ export const COMPANY = {
   /** The single public business address (routed by Cloudflare Email Routing). */
   publicEmail: 'hello@devlabstudios.com',
   /** City-level only. */
-  location: { locality: 'Cebu', country: 'Philippines', countryCode: 'PH' },
-  locationLabel: 'Cebu, Philippines',
+  location: { locality: 'Lapu-Lapu City', region: 'Cebu', country: 'Philippines', countryCode: 'PH' },
+  locationLabel: 'Lapu-Lapu City, Cebu, Philippines',
   /** One line for the footer identity. */
   description: 'Software, integrations and workflow automation for businesses that need their operations to hold up.',
+  /** The footer's closing line: one person accountable for the system in production. */
+  footerSignOff: 'Systems architected, engineered, and maintained end-to-end by Stephen Rey Agustinez.',
   /** Retired portfolio-era tagline: treated as unset wherever a stored copy still carries it. */
   legacyTagline: 'Your Vision, Digitally Crafted — one solution at a time, always evolving.',
   foundingDate: '2026-03-02',

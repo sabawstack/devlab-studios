@@ -2,7 +2,8 @@
 /**
  * Site navigation for the redesigned pages (audit G.2 / WEB-03): logo as home,
  * the CMS navigation items (Home is the logo, so it is not repeated), and one
- * primary CTA. Phones get a full-height sheet with 56 px targets; Escape and
+ * primary CTA. Sticky glass bar on the Blueprint canvas (ADR 0014); the
+ * current page is underlined in magenta. Phones get a full-height sheet with 56 px targets; Escape and
  * the close button return focus to the menu button.
  */
 import type { SiteSettingsData } from '../../lib/content/siteSettings'
@@ -16,10 +17,10 @@ const links = (siteSettings.navigation || [])
 const ctaLabel = siteSettings.ctas?.navbarContactLabel || 'Discuss your system'
 const isCurrent = (href: string) => currentPath === href || (href !== '/' && currentPath.startsWith(`${href}/`))
 ---
-<header class="dl-nav border-b border-dl-rule bg-dl-paper">
+<header class="dl-nav border-b border-dl-rule">
   <div class="mx-auto flex max-w-container items-center justify-between gap-3 px-[var(--gutter)] py-2 sm:gap-6">
     <a href="/" class="flex items-center gap-2.5 text-dl-ink no-underline" aria-label="DevLab Studios, home">
-      <img src="/devlabstudios-logo-only.png" alt="" width="28" height="28" class="h-7 w-7" />
+      <img src="/branding/logo-only.svg" alt="" width="28" height="28" class="h-7 w-7" />
       <span class="hidden whitespace-nowrap text-step-0 font-semibold tracking-tight sm:inline">DevLab Studios</span>
     </a>
     <nav aria-label="Primary" class="hidden lg:block">
@@ -55,7 +56,7 @@ const isCurrent = (href: string) => currentPath === href || (href !== '/' && cur
 </header>
 
 <style>
-  .dl-nav__current { text-decoration: underline; text-decoration-color: var(--redline); text-underline-offset: 0.5em; }
+  .dl-nav__current { text-decoration: underline; text-decoration-color: var(--brand-magenta); text-decoration-thickness: 2px; text-underline-offset: 0.6em; }
   .dl-menu-button {
     min-height: 44px; min-width: 44px; padding: 0 0.75rem;
     border: 1px solid var(--rule); border-radius: var(--radius-s);

@@ -10,7 +10,7 @@ describe('Organization schema', () => {
     expect(org['@id']).toBe(ORGANIZATION_ID)
     expect(org.email).toBe(COMPANY.publicEmail)
     expect(org.foundingDate).toBe('2026-03-02')
-    expect(org.address).toEqual({ '@type': 'PostalAddress', addressLocality: 'Cebu', addressCountry: 'PH' })
+    expect(org.address).toEqual({ '@type': 'PostalAddress', addressLocality: 'Lapu-Lapu City', addressRegion: 'Cebu', addressCountry: 'PH' })
   })
 
   it('references the founder by @id instead of repeating them', () => {
@@ -36,7 +36,7 @@ describe('Person schema', () => {
   })
 
   it('is city-level only', () => {
-    expect(person.address).toEqual({ '@type': 'PostalAddress', addressLocality: 'Cebu', addressCountry: 'PH' })
+    expect(person.address).toEqual({ '@type': 'PostalAddress', addressLocality: 'Lapu-Lapu City', addressRegion: 'Cebu', addressCountry: 'PH' })
   })
 })
 
@@ -50,7 +50,8 @@ describe('WebSite schema', () => {
 describe('no personal data in any schema', () => {
   it('has no personal mailbox, phone or street address', () => {
     const all = JSON.stringify([getOrganizationSchema(), getPersonSchema(), getWebsiteSchema()])
-    expect(all).not.toMatch(/@gmail\.com|telephone|streetAddress|postalCode|Lapu-Lapu/i)
+    // City-level is allowed (PROF-02; the city is Lapu-Lapu City since ADR 0014); barangay and postal code never are.
+    expect(all).not.toMatch(/@gmail\.com|telephone|streetAddress|postalCode|Pusok|\b6015\b/i)
   })
 })
 

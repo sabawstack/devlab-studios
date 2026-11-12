@@ -185,8 +185,9 @@ body.brand {
   text-decoration-thickness: 1px;
   text-underline-offset: 0.2em;
 }
-.brand :where(p, li, dd) :where(a) {
-  /* Links in running text are underlined, so colour is never the only cue (BR.12). */
+.brand :where(p, li, dd) :where(a:not(.no-underline)) {
+  /* Links in running text are underlined, so colour is never the only cue (BR.12).
+     Link lists that opt out with `no-underline` (nav, footer) keep it. */
   text-decoration-line: underline;
 }
 .brand :where(a:hover) {

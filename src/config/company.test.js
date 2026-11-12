@@ -15,6 +15,17 @@ describe('publicContactEmail (BUS-05)', () => {
   })
 })
 
+describe('COMPANY location (ADR 0014)', () => {
+  it('is city-level: Lapu-Lapu City, in Cebu province, Philippines', () => {
+    expect(COMPANY.location).toEqual({ locality: 'Lapu-Lapu City', region: 'Cebu', country: 'Philippines', countryCode: 'PH' })
+    expect(COMPANY.locationLabel).toBe('Lapu-Lapu City, Cebu, Philippines')
+  })
+
+  it('signs off the footer with the accountable architect', () => {
+    expect(COMPANY.footerSignOff).toBe('Systems architected, engineered, and maintained end-to-end by Stephen Rey Agustinez.')
+  })
+})
+
 describe('toPublicAbout (PROF-02)', () => {
   const stored = {
     name: 'Founder', role: 'Builder', email: 'founder@gmail.com', phone: '+1 555 0100', dateOfBirth: 'January 1, 2000',
