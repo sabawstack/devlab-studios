@@ -1,31 +1,35 @@
 /*
- * "Working Drawings" brand system (audit BR.10 / UX-01).
+ * "Blueprint" brand system (ADR 0014; supersedes the "Working Drawings"
+ * palette of audit BR.10, ADR 0012).
  *
- * Additive: nothing here applies until an element opts in with `.brand` (a
- * page or section) or uses a `dl-*` utility, so the current public pages, the
- * admin and pickleball keep their look until each is migrated. The legacy
- * tokens in index.css are removed once nothing references them.
+ * Dark navy canvas, the logo gradient (magenta -> violet -> blue) as the one
+ * accent surface, amber for status, a grotesk for display and text and a mono
+ * for labels. Nothing applies until an element opts in with `.brand` or a
+ * `dl-*` utility. The role names (--paper, --ink, --rule, --redline...) are
+ * kept from the previous system and remapped, so every `dl-*` class follows.
  *
- * No gradients, no glass, no blur, no box shadows beyond a 1px paper lift:
- * src/styles/brandTokens.test.ts fails if any appear in this file or the
- * brand components.
+ * Rules enforced by src/styles/brandTokens.test.ts: gradients only through
+ * var(--brand-gradient) (defined here, once), never on text; no raw hex in the
+ * brand components; the contrast pairs below hold WCAG AA on navy. Blue and
+ * violet fail text contrast on navy and are used for strokes and the gradient
+ * only; magenta and amber are text-safe.
  */
 
 /* ---- Fonts: self-hosted, Latin subset, SIL OFL 1.1 (licences in /public/fonts). ---- */
 @font-face {
-  font-family: 'Bricolage Grotesque';
-  src: url('/fonts/bricolage-grotesque-latin-opsz.woff2') format('woff2-variations'),
-    url('/fonts/bricolage-grotesque-latin-opsz.woff2') format('woff2');
-  font-weight: 200 800;
+  font-family: 'Space Grotesk';
+  src: url('/fonts/space-grotesk-latin-wght.woff2') format('woff2-variations'),
+    url('/fonts/space-grotesk-latin-wght.woff2') format('woff2');
+  font-weight: 300 700;
   font-style: normal;
   font-display: swap;
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
     U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: 'Martian Mono';
-  src: url('/fonts/martian-mono-latin-wght.woff2') format('woff2-variations'),
-    url('/fonts/martian-mono-latin-wght.woff2') format('woff2');
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/jetbrains-mono-latin-wght.woff2') format('woff2-variations'),
+    url('/fonts/jetbrains-mono-latin-wght.woff2') format('woff2');
   font-weight: 100 800;
   font-style: normal;
   font-display: swap;
@@ -49,19 +53,19 @@
  * from scripts/fonts/fallback-metrics.mjs, read from the font files.
  */
 @font-face {
-  font-family: 'Bricolage Fallback';
+  font-family: 'Space Grotesk Fallback';
   src: local('Arial'), local('Helvetica Neue'), local('Helvetica');
-  size-adjust: 112.82%;
-  ascent-override: 82.43%;
-  descent-override: 23.93%;
+  size-adjust: 126.64%;
+  ascent-override: 77.7%;
+  descent-override: 23.06%;
   line-gap-override: 0%;
 }
 @font-face {
-  font-family: 'Martian Fallback';
+  font-family: 'JetBrains Mono Fallback';
   src: local('Courier New'), local('Courier');
-  size-adjust: 116.65%;
-  ascent-override: 85.73%;
-  descent-override: 17.15%;
+  size-adjust: 100.32%;
+  ascent-override: 101.68%;
+  descent-override: 29.91%;
   line-gap-override: 0%;
 }
 @font-face {
@@ -75,22 +79,36 @@
 
 /* ---- Tokens ---- */
 :root {
-  --font-display: 'Bricolage Grotesque', 'Bricolage Fallback', system-ui, sans-serif;
-  --font-label: 'Martian Mono', 'Martian Fallback', ui-monospace, monospace;
+  --font-display: 'Space Grotesk', 'Space Grotesk Fallback', system-ui, sans-serif;
+  --font-label: 'JetBrains Mono', 'JetBrains Mono Fallback', ui-monospace, monospace;
   --font-longform: 'Newsreader', 'Newsreader Fallback', Georgia, serif;
 
-  /* Colour roles (paper). `.ink-panel` inverts the pairs. */
-  --paper: #f6f3ec;
-  --paper-2: #ece8df;
-  --ink: #14130f;
-  --ink-2: #3b3931;
-  /* BR.10 specified #6E6A5F, which is 4.42:1 on paper-2 (below AA for captions on
-     table stripes and panels); #65615A keeps the tone at 5.04:1. */
-  --ink-3: #65615a;
-  --rule: #d5d0c4;
-  --redline: #c8331b;
-  --ok: #2c6b4a;
-  --brand-legacy: #4500ff; /* logo only, until the logo is reviewed (audit N3) */
+  /* Blueprint source values (the spec's names). */
+  --bg-studio: #050b14;
+  --surface-card: #0f172a;
+  --surface-border: #1e293b;
+  --ink-primary: #f8fafc;
+  --ink-muted: #94a3b8;
+  --brand-magenta: #e100ff;
+  --brand-violet: #7b2cbf; /* stroke and gradient only: ~2.6:1 on navy */
+  --brand-blue: #0048ba; /* stroke and gradient only: ~2.5:1 on navy */
+  --brand-gradient: linear-gradient(135deg, #e100ff 0%, #7b2cbf 50%, #0048ba 100%);
+  --accent-amber: #d97706;
+  --accent-danger: #f87171;
+
+  /* Colour roles used by every dl-* class. `.ink-panel` raises the surface. */
+  --paper: #050b14;
+  --paper-2: #0f172a;
+  --ink: #f8fafc;
+  --ink-2: #cbd5e1;
+  --ink-3: #94a3b8;
+  --rule: #1e293b;
+  --redline: #e100ff; /* the accent role: focus rings, current-nav underline, links on hover */
+  --ok: #4ade80;
+
+  /* The blueprint grid on the canvas. */
+  --grid-size: 24px;
+  --grid-line: rgba(148, 163, 184, 0.07);
 
   /* Fluid type scale. */
   --step--1: clamp(0.875rem, 0.84rem + 0.2vw, 1rem);
@@ -119,41 +137,43 @@
   :root { --gutter: 3rem; }
 }
 
+/* The raised card surface (hero band, reliability band, footer, mobile sheet). */
 .ink-panel {
-  --paper: #14130f;
-  --paper-2: #1e1c17;
-  --ink: #f6f3ec;
-  --ink-2: #d9d4c7;
-  --ink-3: #a6a092;
-  --rule: #2e2b25;
-  --redline: #ff6a4d;
-  --ok: #6fbf93;
+  --paper: #0f172a;
+  --paper-2: #16213a;
+  --rule: #273449;
   background: var(--paper);
   color: var(--ink);
 }
 
 /* ---- Base for opted-in surfaces ---- */
-/* A brand page body drops the legacy dot mesh (index.css body::before). */
+/* A brand page body drops the legacy dot mesh (index.css body::before) and draws the blueprint grid. */
 body.brand::before {
   content: none;
+}
+body.brand {
+  background-color: var(--bg-studio);
+  background-image: linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: var(--grid-size) var(--grid-size);
 }
 
 .brand {
   font-family: var(--font-display);
   font-size: var(--step-0);
-  line-height: 1.5;
-  font-optical-sizing: auto;
+  line-height: 1.6;
   color: var(--ink);
-  background: var(--paper);
-  /* Opted-in surfaces drop the legacy dot mesh from index.css. */
-  background-image: none;
+  background-color: var(--paper);
   text-rendering: optimizeLegibility;
+  color-scheme: dark;
 }
+/* The body keeps its grid; nested `.brand` sections sit on their own surface. */
+.brand .brand { background-image: none; }
 .brand :where(h1, h2, h3) {
   font-family: var(--font-display);
   line-height: 1.1;
-  letter-spacing: -0.02em;
-  font-weight: 650;
+  letter-spacing: -0.03em;
+  font-weight: 600;
   text-wrap: balance;
 }
 .brand :where(p) {
@@ -184,12 +204,14 @@ body.brand::before {
 .label {
   font-family: var(--font-label);
   font-size: var(--step--1);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   font-weight: 500;
 }
 
-/* ---- Motion (BR.10): only opacity, small translate and stroke drawing; nothing loops. ---- */
+/* ---- Motion: opacity, small translate and stroke drawing. The only loops are
+   Node's visor pulse and the hero schematic's data packets (ADR 0014), and they
+   stop under reduced motion. ---- */
 @media (prefers-reduced-motion: reduce) {
   .brand *,
   .brand *::before,
@@ -202,6 +224,7 @@ body.brand::before {
 
 /* ---- Global action styles (for plain links; Button.astro wraps the same rules) ---- */
 .dl-button-primary,
+.dl-button-outline,
 .dl-button-quiet {
   display: inline-flex;
   min-height: 44px;
@@ -212,16 +235,29 @@ body.brand::before {
   font-weight: 500;
   letter-spacing: 0.04em;
   text-decoration: none;
-  transition: background-color var(--duration-ui) var(--ease-draw), text-decoration-color var(--duration-ui) var(--ease-draw);
+  transition: background-color var(--duration-ui) var(--ease-draw), border-color var(--duration-ui) var(--ease-draw),
+    text-decoration-color var(--duration-ui) var(--ease-draw);
 }
+/* The gradient button. White on bare magenta is ~3.1:1, so a navy scrim sits
+   over the gradient: 0.25 at rest (~6:1 at the magenta end), 0.12 on hover (~4.6:1). */
 .dl-button-primary {
+  --button-scrim: rgba(5, 11, 20, 0.25);
   padding: 0 1.25rem;
-  border: 1px solid var(--ink);
+  border: 0;
   border-radius: var(--radius-s);
-  background: var(--ink);
-  color: var(--paper);
+  background: linear-gradient(var(--button-scrim), var(--button-scrim)), var(--brand-gradient);
+  color: #fff;
 }
-.dl-button-primary:hover { background: var(--ink-2); color: var(--paper); }
+.dl-button-primary:hover { --button-scrim: rgba(5, 11, 20, 0.12); color: #fff; }
+/* The "technical outline" secondary action. */
+.dl-button-outline {
+  padding: 0 1.25rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--ink);
+}
+.dl-button-outline:hover { border-color: var(--ink-3); background: var(--paper-2); }
 /* The header CTA stays on one line and visible on phones (BR.12: header <= 64 px). */
 .dl-button-primary--compact { white-space: nowrap; }
 @media (max-width: 639px) {
@@ -235,7 +271,36 @@ body.brand::before {
 }
 .dl-button-quiet:hover { text-decoration-color: var(--redline); }
 .dl-button-primary:focus-visible,
+.dl-button-outline:focus-visible,
 .dl-button-quiet:focus-visible { outline: 2px solid var(--redline); outline-offset: 2px; }
+
+/* A card whose border becomes the brand gradient on hover or keyboard focus. */
+.dl-gradient-border {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-m);
+  background: var(--paper-2);
+  transition: border-color var(--duration-ui) var(--ease-draw);
+}
+.dl-gradient-border:hover,
+.dl-gradient-border:focus-within {
+  border-color: transparent;
+  background: linear-gradient(var(--paper-2), var(--paper-2)) padding-box, var(--brand-gradient) border-box;
+}
+
+/* The sticky glass header. Phones without backdrop-filter get a solid bar. */
+.dl-nav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(5, 11, 20, 0.96);
+}
+@supports ((backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px))) {
+  .dl-nav {
+    background: rgba(5, 11, 20, 0.8);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+}
 .dl-skip-link {
   position: absolute;
   left: 1rem;
@@ -286,19 +351,28 @@ body.brand::before {
   outline: 2px solid var(--redline);
   outline-offset: 2px;
 }
-.dl-form .form-surface .form-control[aria-invalid='true'] { border-color: var(--redline); }
-.dl-form .form-surface .text-rose-700 { color: var(--redline); }
+.dl-form .form-surface .form-control[aria-invalid='true'] { border-color: var(--accent-danger); }
+.dl-form .form-surface .text-rose-700,
+.dl-form .form-surface .text-rose-800 { color: var(--accent-danger); }
+/* The error summary above the form. */
+.dl-form .form-surface .bg-rose-50 {
+  border-color: var(--accent-danger);
+  border-radius: var(--radius-s);
+  background: var(--paper-2);
+}
+.dl-form .form-surface input[type='checkbox'] { accent-color: var(--brand-magenta); }
 .dl-form .form-surface .turnstile-shell {
   border: 1px solid var(--rule);
   border-radius: var(--radius-s);
   background: var(--paper-2);
 }
 .dl-form .form-surface button[class*='rounded-full'] {
+  --button-scrim: rgba(5, 11, 20, 0.25);
   min-height: 44px;
-  border: 1px solid var(--ink);
+  border: 0;
   border-radius: var(--radius-s);
-  background: var(--ink);
-  color: var(--paper);
+  background: linear-gradient(var(--button-scrim), var(--button-scrim)), var(--brand-gradient);
+  color: #fff;
   box-shadow: none;
   font-family: var(--font-label);
   font-size: var(--step--1);
@@ -306,23 +380,31 @@ body.brand::before {
   letter-spacing: 0.04em;
 }
 .dl-form .form-surface button[class*='rounded-full']:hover:not(:disabled) {
-  background: var(--ink-2);
+  --button-scrim: rgba(5, 11, 20, 0.12);
   filter: none;
   transform: none;
   box-shadow: none;
 }
 .dl-form .form-surface button[class*='rounded-full'][class*='bg-white'] {
+  border: 1px solid var(--rule);
   background: transparent;
   color: var(--ink);
-  border-color: var(--rule);
 }
 .dl-form .form-surface button[class*='rounded-full'][class*='bg-white']:hover:not(:disabled) { background: var(--paper-2); }
 .dl-form .form-surface button[class*='rounded-full']:disabled {
   /* Solid and still legible (ink-3 on paper-2 is above 4.5:1), not faded. */
   opacity: 1;
   background: var(--paper-2);
-  border-color: var(--rule);
+  border: 1px solid var(--rule);
   color: var(--ink-3);
 }
 .dl-form .form-surface button:focus-visible { outline: 2px solid var(--redline); outline-offset: 2px; }
-.dl-form .form-surface [role='status'] { border-radius: var(--radius-s); }
+.dl-form .form-surface [role='status'] {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-s);
+  background: var(--paper-2);
+}
+.dl-form .form-surface [role='status'][data-status='success'] { color: var(--ink); border-color: var(--ok); }
+.dl-form .form-surface [role='status'][data-status='success'] > svg { color: var(--ok); }
+.dl-form .form-surface [role='status'][data-status='error'] { color: var(--ink); border-color: var(--accent-danger); }
+.dl-form .form-surface [role='status'][data-status='error'] > svg { color: var(--accent-danger); }

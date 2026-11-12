@@ -6,13 +6,23 @@ const css = readFileSync('src/styles/brand.css', 'utf8')
 
 function block(selector: string): string {
   const start = css.indexOf(`${selector} {`)
+  if (start < 0) throw new Error(`${selector} block missing`)
   return css.slice(start, css.indexOf('}', start))
 }
 
 function token(scope: string, name: string): string {
   const match = new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`).exec(block(scope))
   if (!match) throw new Error(`--${name} missing in ${scope}`)
-  return match[1]
+  return match[1].toLowerCase()
+}
+
+/** A role that `.ink-panel` does not override falls back to its `:root` value. */
+function resolved(scope: string, name: string): string {
+  try {
+    return token(scope, name)
+  } catch {
+    return token(':root', name)
+  }
 }
 
 function luminance(hex: string): number {
@@ -26,19 +36,46 @@ function contrast(a: string, b: string): number {
   return (l1 + 0.05) / (l2 + 0.05)
 }
 
-// BR.10 contrast requirements, on paper and on the inverted ink panel.
-describe.each([':root', '.ink-panel'])('colour contrast in %s', (scope) => {
-  const paper = token(scope, 'paper')
-  it('body text (ink) is at least 7:1', () => expect(contrast(token(scope, 'ink'), paper)).toBeGreaterThanOrEqual(7))
-  it('secondary text (ink-2) is at least 4.5:1', () => expect(contrast(token(scope, 'ink-2'), paper)).toBeGreaterThanOrEqual(4.5))
-  it('captions (ink-3) are at least 4.5:1', () => expect(contrast(token(scope, 'ink-3'), paper)).toBeGreaterThanOrEqual(4.5))
-  it('the redline focus ring is at least 3:1', () => expect(contrast(token(scope, 'redline'), paper)).toBeGreaterThanOrEqual(3))
-  it('ink-3 also holds 4.5:1 on paper-2 surfaces', () => expect(contrast(token(scope, 'ink-3'), token(scope, 'paper-2'))).toBeGreaterThanOrEqual(4.5))
+// Blueprint palette (ADR 0014): the spec's source values, aliased by the roles below.
+describe('Blueprint source tokens match the approved palette', () => {
+  it.each([
+    ['bg-studio', '#050b14'], ['surface-card', '#0f172a'], ['surface-border', '#1e293b'],
+    ['ink-primary', '#f8fafc'], ['ink-muted', '#94a3b8'],
+    ['brand-magenta', '#e100ff'], ['brand-violet', '#7b2cbf'], ['brand-blue', '#0048ba'],
+    ['accent-amber', '#d97706'], ['accent-danger', '#f87171'],
+  ])('--%s is %s', (name, hex) => expect(token(':root', name)).toBe(hex))
+
+  it('the logo gradient runs magenta → violet → blue', () => {
+    expect(block(':root')).toMatch(/--brand-gradient:\s*linear-gradient\(135deg,\s*#e100ff 0%,\s*#7b2cbf 50%,\s*#0048ba 100%\)/i)
+  })
+
+  it('the roles alias the source values', () => {
+    expect(token(':root', 'paper')).toBe('#050b14')
+    expect(token(':root', 'paper-2')).toBe('#0f172a')
+    expect(token(':root', 'ink')).toBe('#f8fafc')
+    expect(token(':root', 'ink-3')).toBe('#94a3b8')
+    expect(token(':root', 'rule')).toBe('#1e293b')
+    expect(token(':root', 'redline')).toBe('#e100ff')
+    expect(token('.ink-panel', 'paper')).toBe('#0f172a')
+  })
 })
 
-// TEST-03: the generic "AI template" patterns never enter the brand system.
-// Covers the brand system and every page migrated to BrandLayout (UX-04).
-const FORBIDDEN = [/backdrop-filter/, /linear-gradient/, /radial-gradient/, /blur\(/, /animation:\s*float/, /\brounded-(?:2xl|3xl)\b/, /fonts\.googleapis\.com/, /bg-gradient-to-/, /backdrop-blur/]
+// WCAG AA on navy, on the canvas and on the raised `.ink-panel` surface.
+// Magenta (the redline role) is used as text, so it is held to 4.5:1, not 3:1.
+describe.each([':root', '.ink-panel'])('colour contrast in %s', (scope) => {
+  const paper = resolved(scope, 'paper')
+  it('body text (ink) is at least 7:1', () => expect(contrast(resolved(scope, 'ink'), paper)).toBeGreaterThanOrEqual(7))
+  it('secondary text (ink-2) is at least 4.5:1', () => expect(contrast(resolved(scope, 'ink-2'), paper)).toBeGreaterThanOrEqual(4.5))
+  it('captions (ink-3) are at least 4.5:1', () => expect(contrast(resolved(scope, 'ink-3'), paper)).toBeGreaterThanOrEqual(4.5))
+  it('the magenta accent is at least 4.5:1', () => expect(contrast(resolved(scope, 'redline'), paper)).toBeGreaterThanOrEqual(4.5))
+  it('ink-3 also holds 4.5:1 on paper-2 surfaces', () => expect(contrast(resolved(scope, 'ink-3'), resolved(scope, 'paper-2'))).toBeGreaterThanOrEqual(4.5))
+  it('amber status text is at least 4.5:1', () => expect(contrast(token(':root', 'accent-amber'), paper)).toBeGreaterThanOrEqual(4.5))
+  it('form errors are at least 4.5:1', () => expect(contrast(token(':root', 'accent-danger'), paper)).toBeGreaterThanOrEqual(4.5))
+})
+
+// TEST-03, revised for Blueprint: the generic "AI template" patterns stay out,
+// and the brand gradient enters only through one token.
+const FORBIDDEN = [/animation:\s*float/, /\brounded-(?:2xl|3xl)\b/, /fonts\.googleapis\.com/, /bg-gradient-to-/, /background-clip:\s*text/, /bg-clip-text/]
 const BRAND_PAGES = [
   'src/layouts/BrandLayout.astro', 'src/data/site', 'src/pages/index.astro', 'src/pages/solutions.astro', 'src/pages/solutions',
   'src/pages/work.astro', 'src/pages/work', 'src/pages/insights.astro', 'src/pages/insights/[slug].astro', 'src/pages/about.astro',
@@ -53,30 +90,53 @@ function files(path: string): string[] {
   return readdirSync(path).flatMap((name) => files(join(path, name)))
 }
 
+const stripComments = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '')
+
 describe('brand sources stay free of generic visual patterns (TEST-03)', () => {
   const sources = BRAND_SOURCES.flatMap(files).filter((path) => !/\.test\./.test(path))
 
   it('finds the brand sources', () => expect(sources.length).toBeGreaterThan(0))
 
   it.each(sources)('%s', (path) => {
-    const text = readFileSync(path, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    const text = stripComments(readFileSync(path, 'utf8'))
     for (const pattern of FORBIDDEN) expect(text, String(pattern)).not.toMatch(pattern)
+  })
+
+  // Gradients come only from var(--brand-gradient), defined once in brand.css.
+  it.each(sources.filter((path) => path !== 'src/styles/brand.css'))('%s uses no raw gradient', (path) => {
+    expect(stripComments(readFileSync(path, 'utf8'))).not.toMatch(/(?:linear|radial|conic)-gradient\(/)
+  })
+
+  // Colours come from tokens: no raw hex in the brand components and pages.
+  // The theme-color meta is the one exception: the browser reads it before CSS.
+  it.each(sources.filter((path) => !path.startsWith('src/styles/') && !path.startsWith('src/assets/')))('%s uses no raw hex colour', (path) => {
+    const text = stripComments(readFileSync(path, 'utf8')).replace(/<meta name="theme-color" content="#[0-9a-fA-F]{6}" \/>/g, '')
+    expect(text).not.toMatch(/(?<![\w&/-])#(?:[0-9a-fA-F]{3}){1,2}(?![\w-])(?=["';\s,)])/)
+  })
+
+  it('the brand gradient is never applied to text', () => {
+    expect(css).not.toMatch(/background-clip:\s*text/)
   })
 })
 
 describe('fonts (UX-01)', () => {
   it('self-hosts every face with its licence, within the 120 KB business-page budget', () => {
     const size = (file: string) => statSync(join('public/fonts', file)).size
-    expect(size('bricolage-grotesque-latin-opsz.woff2') + size('martian-mono-latin-wght.woff2')).toBeLessThanOrEqual(120 * 1024)
-    for (const licence of ['OFL-bricolage-grotesque.txt', 'OFL-martian-mono.txt', 'OFL-newsreader.txt']) {
+    expect(size('space-grotesk-latin-wght.woff2') + size('jetbrains-mono-latin-wght.woff2')).toBeLessThanOrEqual(120 * 1024)
+    for (const licence of ['OFL-space-grotesk.txt', 'OFL-jetbrains-mono.txt', 'OFL-newsreader.txt']) {
       expect(readFileSync(join('public/fonts', licence), 'utf8')).toMatch(/SIL Open Font License/)
     }
   })
 
   it('declares metric-matched fallbacks for each face', () => {
-    for (const family of ['Bricolage Fallback', 'Martian Fallback', 'Newsreader Fallback']) {
+    for (const family of ['Space Grotesk Fallback', 'JetBrains Mono Fallback', 'Newsreader Fallback']) {
       expect(css).toMatch(new RegExp(`font-family: '${family}';[^}]*size-adjust:[^}]*ascent-override`))
     }
+  })
+
+  it('the display and label roles use the Blueprint faces', () => {
+    expect(block(':root')).toMatch(/--font-display:\s*'Space Grotesk', 'Space Grotesk Fallback'/)
+    expect(block(':root')).toMatch(/--font-label:\s*'JetBrains Mono', 'JetBrains Mono Fallback'/)
   })
 })
 

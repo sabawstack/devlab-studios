@@ -5,7 +5,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
-        // "Working Drawings" brand (src/styles/brand.css); fallbacks are metric-matched there.
+        // "Blueprint" brand (src/styles/brand.css); fallbacks are metric-matched there.
         display: ['var(--font-display)'],
         label: ['var(--font-label)'],
         longform: ['var(--font-longform)'],
@@ -38,6 +38,12 @@ export default {
           rule: 'var(--rule)',
           redline: 'var(--redline)',
           ok: 'var(--ok)',
+          // Blueprint accents (ADR 0014). Blue and violet are stroke-only on navy.
+          magenta: 'var(--brand-magenta)',
+          violet: 'var(--brand-violet)',
+          blue: 'var(--brand-blue)',
+          amber: 'var(--accent-amber)',
+          danger: 'var(--accent-danger)',
         },
         brand: {
           DEFAULT: '#4500ff',

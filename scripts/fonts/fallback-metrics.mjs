@@ -97,8 +97,8 @@ function overrides(font, fallback) {
 }
 
 for (const [label, file, fallback] of [
-  ['Bricolage Grotesque vs Arial', 'public/fonts/bricolage-grotesque-latin-opsz.woff2', ARIAL],
-  ['Martian Mono vs Courier New', 'public/fonts/martian-mono-latin-wght.woff2', COURIER_NEW],
+  ['Space Grotesk vs Arial', 'public/fonts/space-grotesk-latin-wght.woff2', ARIAL],
+  ['JetBrains Mono vs Courier New', 'public/fonts/jetbrains-mono-latin-wght.woff2', COURIER_NEW],
   ['Newsreader vs Times New Roman', 'public/fonts/newsreader-latin-wght.woff2', TIMES_NEW_ROMAN],
 ]) {
   const font = metrics(file)
