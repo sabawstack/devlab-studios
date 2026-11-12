@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RotateCw, Save } from '../icons/icons'
 import seoContent from '../../data/seoContent'
+import { OG_IMAGE_VARIANTS } from '../../config/ogVariants.js'
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value))
@@ -19,6 +20,7 @@ const emptySeoPage = {
   twitterTitle: '',
   twitterDescription: '',
   twitterImage: '',
+  ogImageVariant: '',
 }
 
 export default function SeoManager() {
@@ -232,6 +234,17 @@ export default function SeoManager() {
                   )}
                 </label>
               ))}
+              <label className="grid gap-1.5 text-sm font-semibold text-slate-800">
+                Social card template
+                <select
+                  value={selectedPage.ogImageVariant || ''}
+                  onChange={(event) => updateSelected('ogImageVariant', event.target.value)}
+                  className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-800 outline-none transition focus:border-slate-500"
+                >
+                  {OG_IMAGE_VARIANTS.map((variant) => <option key={variant.id} value={variant.id}>{variant.label}</option>)}
+                </select>
+                <span className="text-xs font-normal text-slate-500">Cards are generated from the brand template; an uploaded Open Graph image above still takes precedence.</span>
+              </label>
             </div>
           </section>
         </div>

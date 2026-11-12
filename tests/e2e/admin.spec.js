@@ -359,6 +359,31 @@ test('creating a project through the bespoke Projects editor still records a ver
   await page.request.delete(`${baseURL}/api/admin/projects/${projectId}`, { headers: { Origin: baseURL } })
 })
 
+// CMS-03: a project's write-up fields round-trip through the admin API (the
+// local D1 has migrations/0018 applied by the e2e web server).
+test('a project keeps its write-up fields through the admin API', async ({ page, baseURL }) => {
+  await login(page)
+  const id = `smoke-test-editorial-${Date.now()}`
+  const slug = `smoke-editorial-${Date.now()}`
+  try {
+    const created = await page.request.post(`${baseURL}/api/admin/projects`, {
+      data: {
+        id, title: 'Editorial fields', description: 'Created by an e2e test.', type: 'Automation', status: 'draft',
+        slug, clientType: 'internal', outcomeStatements: ['Every inquiry has an owner'], systemDiagramId: 'build-in-layers',
+        evidenceNote: 'Synthetic data only.',
+      },
+    })
+    expect(created.ok(), await created.text()).toBeTruthy()
+    const saved = await (await page.request.get(`${baseURL}/api/admin/projects/${id}`)).json()
+    expect(saved).toMatchObject({ slug, clientType: 'internal', outcomeStatements: ['Every inquiry has an owner'], systemDiagramId: 'build-in-layers', evidenceNote: 'Synthetic data only.' })
+
+    const invalid = await page.request.put(`${baseURL}/api/admin/projects/${id}`, { data: { ...saved, systemDiagramId: 'uploaded.svg' } })
+    expect(invalid.status()).toBe(400)
+  } finally {
+    await page.request.delete(`${baseURL}/api/admin/projects/${id}`)
+  }
+})
+
 test('Work editor selects existing Projects and owns its narrative without owning uploads', async ({ page, baseURL }) => {
   await login(page)
 
@@ -533,7 +558,7 @@ test('staged gallery images are not uploaded until Save is clicked', async ({ pa
   const projectId = await createProject(page, baseURL)
 
   await page.goto(`/admin/content/projects?projectId=${projectId}`)
-  await expect(page.getByLabel('ID')).toHaveValue(projectId)
+  await expect(page.getByLabel('ID', { exact: true })).toHaveValue(projectId)
 
   const [fileChooser] = await Promise.all([
     page.waitForEvent('filechooser'),
@@ -554,7 +579,7 @@ test('staged gallery images are not uploaded until Save is clicked', async ({ pa
   await page.reload()
   await expect(mediaRequestPromise).resolves.toBeNull()
 
-  await expect(page.getByLabel('ID')).toHaveValue(projectId)
+  await expect(page.getByLabel('ID', { exact: true })).toHaveValue(projectId)
   await expect(page.getByText('Pending')).not.toBeVisible()
 
   await page.request.delete(`${baseURL}/api/admin/projects/${projectId}`, { headers: { Origin: baseURL } })
@@ -565,7 +590,7 @@ test('selecting a gallery image as thumbnail persists projects.imageUrl on save'
   const projectId = await createProject(page, baseURL)
 
   await page.goto(`/admin/content/projects?projectId=${projectId}`)
-  await expect(page.getByLabel('ID')).toHaveValue(projectId)
+  await expect(page.getByLabel('ID', { exact: true })).toHaveValue(projectId)
 
   const [fileChooser] = await Promise.all([
     page.waitForEvent('filechooser'),
@@ -619,7 +644,7 @@ test('removing the thumbnail-flagged gallery image is blocked', async ({ page, b
   })
 
   await page.goto(`/admin/content/projects?projectId=${projectId}`)
-  await expect(page.getByLabel('ID')).toHaveValue(projectId)
+  await expect(page.getByLabel('ID', { exact: true })).toHaveValue(projectId)
   await expect(page.getByRole('button', { name: 'Remove' }).first()).toBeDisabled()
 
   await page.request.delete(`${baseURL}/api/admin/projects/${projectId}`, { headers: { Origin: baseURL } })
@@ -630,7 +655,7 @@ test('deleting a used image shows the conflict dialog and links to the project',
   const projectId = await createProject(page, baseURL, { title: 'Smoke Test Delete Conflict' })
 
   await page.goto(`/admin/content/projects?projectId=${projectId}`)
-  await expect(page.getByLabel('ID')).toHaveValue(projectId)
+  await expect(page.getByLabel('ID', { exact: true })).toHaveValue(projectId)
 
   const [fileChooser] = await Promise.all([
     page.waitForEvent('filechooser'),
@@ -673,7 +698,7 @@ test('deleting a project cleans up its exclusive gallery image from R2', async (
   const projectId = await createProject(page, baseURL, { title: 'Smoke Test Delete Cleanup' })
 
   await page.goto(`/admin/content/projects?projectId=${projectId}`)
-  await expect(page.getByLabel('ID')).toHaveValue(projectId)
+  await expect(page.getByLabel('ID', { exact: true })).toHaveValue(projectId)
 
   const [fileChooser] = await Promise.all([
     page.waitForEvent('filechooser'),

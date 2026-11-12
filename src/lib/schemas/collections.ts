@@ -1,5 +1,36 @@
 import { z } from 'zod'
 import { baseItemSchema, linkHrefSchema, requiredLinkHrefSchema, seoSchema, slugSchema } from './shared'
+import { SCENE_IDS, SYSTEM_DIAGRAM_IDS } from '../../config/scenes'
+import { PROJECT_CLIENT_TYPE_IDS } from '../../config/projectTypes.js'
+import { ARTICLE_AUDIENCE_IDS, PROBLEM_TAG_IDS } from '../../config/problemTags.js'
+import { OG_IMAGE_VARIANT_IDS } from '../../config/ogVariants.js'
+
+/** An enum from a registry list, plus '' for "not set". */
+export function registryEnum(ids: readonly string[]) {
+  return z.enum(['', ...ids.filter((id) => id !== '')] as [string, ...string[]])
+}
+
+/**
+ * Editorial fields added for the redesign (CMS-03). All optional; stored in
+ * the columns from migrations/0018_editorial_fields.sql.
+ */
+export const projectEditorialFields = {
+  slug: z.string().max(80).regex(/^[a-z0-9-]*$/, 'Use lowercase letters, numbers and hyphens.').optional().default(''),
+  clientType: registryEnum(PROJECT_CLIENT_TYPE_IDS).optional().default(''),
+  /** Up to three short outcome statements, each one the owner can verify. No invented numbers. */
+  outcomeStatements: z.array(z.string().max(160)).max(3).optional().default([]),
+  systemDiagramId: registryEnum(SYSTEM_DIAGRAM_IDS).optional().default(''),
+  evidenceNote: z.string().max(400).optional().default(''),
+}
+
+export const articleEditorialFields = {
+  audience: registryEnum(ARTICLE_AUDIENCE_IDS).optional().default(''),
+  problemTag: registryEnum(PROBLEM_TAG_IDS).optional().default(''),
+  heroVisualId: registryEnum(SCENE_IDS).optional().default(''),
+  seoTitle: z.string().max(70).optional().default(''),
+  seoDescription: z.string().max(200).optional().default(''),
+  ogVariant: registryEnum(OG_IMAGE_VARIANT_IDS).optional().default(''),
+}
 
 export const serviceSchema = baseItemSchema.extend({
   eyebrow: z.string().optional().default(''),
@@ -19,6 +50,7 @@ export const projectSchema = baseItemSchema.extend({
   sourceUrl: linkHrefSchema.default('#'),
   imageUrl: z.string().optional().default(''),
   type: z.enum(['Automation', 'Website']),
+  ...projectEditorialFields,
 })
 export type Project = z.infer<typeof projectSchema>
 
@@ -132,6 +164,7 @@ export const articleSchema = baseItemSchema.extend({
   readingTimeMinutes: z.number().int().nullable().optional(),
   isFeatured: z.boolean().default(false),
   seo: seoSchema.optional(),
+  ...articleEditorialFields,
 })
 export type Article = z.infer<typeof articleSchema>
 

@@ -4,6 +4,7 @@
 export const projectRecords = [
   {
     id: "w1-react-modern",
+    clientType: "template",
     title: "Modern React Landing Page",
     description:
       "A modern, animated landing page built with React and Tailwind CSS. Showcases a tech-focused, responsive design.",
@@ -17,6 +18,7 @@ export const projectRecords = [
   },
   {
     id: "w2-html-minimalist",
+    clientType: "template",
     title: "Minimalist HTML/CSS/JS",
     description:
       "A clean, minimalist landing page using only HTML, CSS, and vanilla JavaScript. Fast, lightweight, and static.",
@@ -30,6 +32,7 @@ export const projectRecords = [
   },
   {
     id: "w4-laravel-fullstack",
+    clientType: "template",
     title: "Full Stack (Laravel + MariaDB)",
     description:
       "A dynamic full stack landing page with backend interaction, built using Laravel (PHP) and MariaDB. Features a contact form and dashboard UI.",
@@ -43,6 +46,7 @@ export const projectRecords = [
   },
   {
     id: "w5-local-service",
+    clientType: "template",
     title: "Local Service Business",
     description:
       "A local lead-generation website sample with strong call CTAs, booking form, trust stats, and service cards.",
@@ -56,6 +60,7 @@ export const projectRecords = [
   },
   {
     id: "w6-ecommerce",
+    clientType: "template",
     title: "E-commerce Product Landing",
     description:
       "A conversion-focused e-commerce design with featured product block, product cards, ratings, and purchase CTA flow.",

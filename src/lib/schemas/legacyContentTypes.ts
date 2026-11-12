@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import { linkHrefSchema, refineSafeLinks } from './shared'
+import { articleEditorialFields, registryEnum } from './collections'
+import { OG_IMAGE_VARIANT_IDS } from '../../config/ogVariants.js'
 
 /**
  * Schemas for the five content types that predate the schema-driven
@@ -68,6 +70,7 @@ const articleInputSchema = z.object({
   isFeatured: z.boolean().optional().default(false),
   sortOrder: z.union([z.number(), z.string()]).optional(),
   status: z.string().optional(),
+  ...articleEditorialFields,
 })
 
 export const resourcesContentSchema = z.object({
@@ -103,6 +106,7 @@ const seoPageInputSchema = z.object({
   twitterTitle: z.string().optional().default(''),
   twitterDescription: z.string().optional().default(''),
   twitterImage: z.string().optional().default(''),
+  ogImageVariant: registryEnum(OG_IMAGE_VARIANT_IDS).optional().default(''),
 })
 
 export const seoContentSchema = z.object({

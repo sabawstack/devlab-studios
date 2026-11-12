@@ -17,6 +17,7 @@ import VersionHistoryPanel from '../../admin-app/pages/VersionHistoryPanel'
 import GalleryImageRow from './projects/GalleryImageRow'
 import ThumbnailPicker from './projects/ThumbnailPicker'
 import { uploadPendingGalleryImages } from './projects/projectImageUpload'
+import ProjectEditorialFields from './projects/ProjectEditorialFields'
 
 const PAGE_SIZE = 6
 
@@ -31,6 +32,11 @@ const emptyProject = {
   type: 'Automation',
   sortOrder: 999,
   status: 'published',
+  slug: '',
+  clientType: '',
+  outcomeStatements: [],
+  systemDiagramId: '',
+  evidenceNote: '',
 }
 
 function deriveFilenameFromUrl(url) {
@@ -90,6 +96,11 @@ function toPayload(form) {
     type: form.type,
     sortOrder: Number(form.sortOrder) || 999,
     status: form.status,
+    slug: String(form.slug || '').trim(),
+    clientType: form.clientType || '',
+    outcomeStatements: (form.outcomeStatements || []).map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3),
+    systemDiagramId: form.systemDiagramId || '',
+    evidenceNote: String(form.evidenceNote || '').trim(),
   }
 }
 
@@ -736,6 +747,8 @@ export default function ProjectsManager() {
                   </select>
                 </label>
               </div>
+
+              <ProjectEditorialFields project={selectedProject} onChange={setSelectedProject} />
 
               <div className="grid gap-4 md:grid-cols-3">
                 <label className="grid gap-1.5 text-sm font-semibold text-slate-800">

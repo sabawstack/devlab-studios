@@ -1,5 +1,19 @@
 import { nowIso, parseJsonField } from '../utils/responses'
 import { deleteMediaAssetByKey, deleteMediaAssetByUrl, findMediaReferences } from './mediaAssets.js'
+import { missingMigrationError, tableColumns } from './columns.js'
+
+/**
+ * Editorial columns added by migrations/0018_editorial_fields.sql (CMS-03),
+ * with the value each holds when unset. Read and written only when the
+ * database has them; see ./columns.js.
+ */
+const EDITORIAL_COLUMNS = {
+  slug: null,
+  client_type: '',
+  outcome_statements_json: '[]',
+  system_diagram_id: '',
+  evidence_note: '',
+}
 
 function isMissingGalleryTableError(error) {
   return /no such table:\s*project_gallery_images/i.test(String(error?.message || ''))
@@ -34,9 +48,22 @@ function toProject(row, galleryImages = []) {
     type: row.type,
     sortOrder: row.sort_order,
     status: row.status,
+    slug: row.slug || '',
+    clientType: row.client_type || '',
+    outcomeStatements: parseJsonField(row.outcome_statements_json, []),
+    systemDiagramId: row.system_diagram_id || '',
+    evidenceNote: row.evidence_note || '',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
+}
+
+function normalizeSlug(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
 }
 
 export function normalizeGalleryImages(input) {
@@ -82,6 +109,16 @@ export function toDbProject(input) {
     // The projects table accepts only 'draft' and 'published'; 'archived' means
     // "not public", so it is stored as a draft, never as published.
     status: input.status === 'draft' || input.status === 'archived' ? 'draft' : 'published',
+    slug: normalizeSlug(input.slug) || null,
+    client_type: String(input.clientType || '').trim(),
+    outcome_statements_json: JSON.stringify(
+      (Array.isArray(input.outcomeStatements) ? input.outcomeStatements : [])
+        .map((statement) => String(statement || '').trim())
+        .filter(Boolean)
+        .slice(0, 3),
+    ),
+    system_diagram_id: String(input.systemDiagramId || '').trim(),
+    evidence_note: String(input.evidenceNote || '').trim(),
   }
 }
 
@@ -124,7 +161,8 @@ export async function listProjects(db, { includeDrafts = false } = {}) {
   const where = includeDrafts ? '' : "WHERE status = 'published'"
   const result = await db
     .prepare(
-      `SELECT id, title, description, tech_stack, live_url, source_url, image_url, image_filename, type, sort_order, status, created_at, updated_at
+      // SELECT * so the editorial columns are read when this database has them.
+      `SELECT *
        FROM projects
        ${where}
        ORDER BY sort_order ASC, updated_at DESC`,
@@ -143,7 +181,7 @@ export async function listProjects(db, { includeDrafts = false } = {}) {
 export async function getProject(db, id, { includeDrafts = false } = {}) {
   const row = await db
     .prepare(
-      `SELECT id, title, description, tech_stack, live_url, source_url, image_url, image_filename, type, sort_order, status, created_at, updated_at
+      `SELECT *
        FROM projects
        WHERE id = ? ${includeDrafts ? '' : "AND status = 'published'"}`,
     )
@@ -235,40 +273,36 @@ export async function upsertProject(db, input, env = {}) {
     throw error
   }
 
+  const available = await tableColumns(db, 'projects')
+  const editorial = Object.keys(EDITORIAL_COLUMNS).filter((column) => available.has(column))
+  const unsaved = Object.keys(EDITORIAL_COLUMNS).filter(
+    (column) => !available.has(column) && (project[column] ?? null) !== EDITORIAL_COLUMNS[column],
+  )
+  if (unsaved.length) throw missingMigrationError('0018_editorial_fields', unsaved)
+
+  const columns = [
+    'id', 'title', 'description', 'tech_stack', 'live_url', 'source_url', 'image_url', 'image_filename', 'type', 'sort_order', 'status',
+    ...editorial,
+  ]
+  const updates = columns.filter((column) => column !== 'id').map((column) => `${column} = excluded.${column}`)
   await db
     .prepare(
-      `INSERT INTO projects (
-        id, title, description, tech_stack, live_url, source_url, image_url, image_filename, type, sort_order, status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        title = excluded.title,
-        description = excluded.description,
-        tech_stack = excluded.tech_stack,
-        live_url = excluded.live_url,
-        source_url = excluded.source_url,
-        image_url = excluded.image_url,
-        image_filename = excluded.image_filename,
-        type = excluded.type,
-        sort_order = excluded.sort_order,
-        status = excluded.status,
-        updated_at = excluded.updated_at`,
+      `INSERT INTO projects (${columns.join(', ')}, created_at, updated_at)
+       VALUES (${columns.map(() => '?').join(', ')}, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         ${updates.join(',\n         ')},
+         updated_at = excluded.updated_at`,
     )
-    .bind(
-      project.id,
-      project.title,
-      project.description,
-      project.tech_stack,
-      project.live_url,
-      project.source_url,
-      project.image_url,
-      project.image_filename,
-      project.type,
-      project.sort_order,
-      project.status,
-      timestamp,
-      timestamp,
-    )
+    .bind(...columns.map((column) => project[column]), timestamp, timestamp)
     .run()
+    .catch((error) => {
+      if (/UNIQUE constraint failed: projects\.slug/i.test(String(error?.message || ''))) {
+        const conflict = new Error(`Another project already uses the address "${project.slug}". Choose a different slug.`)
+        conflict.status = 409
+        throw conflict
+      }
+      throw error
+    })
 
   await syncProjectGallery(db, project.id, normalizedImages)
 

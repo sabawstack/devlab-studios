@@ -21,6 +21,8 @@ export const seoSchema = z.object({
   twitterTitle: z.string().max(70).optional().default(''),
   twitterDescription: z.string().max(200).optional().default(''),
   twitterImage: z.string().optional().default(''),
+  /** Social-card template (src/config/ogVariants.js); '' means the route's default. */
+  ogImageVariant: z.string().max(20).optional().default(''),
 })
 export type Seo = z.infer<typeof seoSchema>
 

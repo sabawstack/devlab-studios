@@ -12,6 +12,7 @@ import { servicesContent } from '../../data/servicesContent'
 import { resourcesContent } from '../../data/resourcesContent'
 import { getStaticProfileContent } from '../../data/profileContent'
 import { validateAndConvertToWebP } from '../../utils/imageUpload'
+import ArticleEditorialFields from './ArticleEditorialFields'
 
 function deepClone(value) {
   return JSON.parse(JSON.stringify(value))
@@ -310,6 +311,12 @@ function createEmptyResourcePost(postCount = 0) {
     isFeatured: false,
     sortOrder: (postCount + 1) * 10,
     status: 'draft',
+    audience: '',
+    problemTag: '',
+    heroVisualId: '',
+    seoTitle: '',
+    seoDescription: '',
+    ogVariant: '',
   }
 }
 
@@ -1158,6 +1165,8 @@ function ResourcesEditor({ value, onChange, onSave, onStatusChange, isSaving, is
                       />
                     </label>
                   </div>
+
+                  <ArticleEditorialFields post={selectedPost} onChange={(changes) => updatePost(selectedPost.id, changes)} />
 
                   <div className="grid gap-4 rounded-md border border-slate-200 bg-white p-4">
                     <div className="flex items-center justify-between gap-3">

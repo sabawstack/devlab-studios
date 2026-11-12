@@ -1,5 +1,35 @@
 import { nowIso, parseJsonField } from '../utils/responses'
 import { listCertifications } from './certifications.js'
+import { missingMigrationError, tableColumns } from './columns.js'
+
+/**
+ * Editorial columns from migrations/0018_editorial_fields.sql (CMS-03), keyed
+ * by column with the payload field each is written from. Read and written only
+ * when the database has them; see ./columns.js.
+ */
+const ARTICLE_EDITORIAL_COLUMNS = {
+  audience: 'audience',
+  problem_tag: 'problemTag',
+  hero_visual_id: 'heroVisualId',
+  seo_title: 'seoTitle',
+  seo_description: 'seoDescription',
+  og_variant: 'ogVariant',
+}
+const SEO_EDITORIAL_COLUMNS = { og_image_variant: 'ogImageVariant' }
+
+/**
+ * The editorial columns this database has, after refusing any value it does
+ * not: a save that would lose what the editor typed is an error, not a no-op.
+ */
+async function editorialColumnsFor(db, table, columnMap, items) {
+  const available = await tableColumns(db, table)
+  const missing = Object.entries(columnMap).filter(([column]) => !available.has(column))
+  const unsaved = missing
+    .filter(([, field]) => items.some((item) => normalizeString(item?.[field])))
+    .map(([column]) => column)
+  if (unsaved.length) throw missingMigrationError('0018_editorial_fields', unsaved)
+  return Object.keys(columnMap).filter((column) => available.has(column))
+}
 
 // These tables accept only 'draft' and 'published'. 'archived' (valid in the
 // shared item schema for other collections) means "not public", so it is
@@ -62,6 +92,12 @@ function toResource(row) {
     isFeatured: Number(row.is_featured) === 1,
     sortOrder: Number(row.sort_order) || 999,
     status: row.status,
+    audience: row.audience || '',
+    problemTag: row.problem_tag || '',
+    heroVisualId: row.hero_visual_id || '',
+    seoTitle: row.seo_title || '',
+    seoDescription: row.seo_description || '',
+    ogVariant: row.og_variant || '',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -160,6 +196,7 @@ function toSeoMetadata(row) {
     twitterTitle: row.twitter_title || '',
     twitterDescription: row.twitter_description || '',
     twitterImage: row.twitter_image || '',
+    ogImageVariant: row.og_image_variant || '',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -256,26 +293,7 @@ export async function replaceServiceGroups(db, groups) {
 export async function listResources(db, { includeDrafts = false } = {}) {
   const rows = await listRows(
     db,
-    `SELECT
-       id,
-       slug,
-       title,
-       summary,
-       category,
-       content_type,
-       icon,
-       points,
-       body_markdown,
-       cover_image_url,
-       tags_json,
-       author_name,
-       published_at,
-       reading_time_minutes,
-       is_featured,
-       sort_order,
-       status,
-       created_at,
-       updated_at
+    `SELECT * -- includes the editorial columns when this database has them
      FROM articles
      ${buildStatusWhere(includeDrafts)}
      ORDER BY sort_order ASC, updated_at DESC`,
@@ -286,9 +304,11 @@ export async function listResources(db, { includeDrafts = false } = {}) {
 /** Runs as a single db.batch() transaction — see testimonials.js's replaceTestimonials for why. */
 export async function replaceResources(db, items) {
   const timestamp = nowIso()
+  const list = Array.isArray(items) ? items : []
+  const editorial = await editorialColumnsFor(db, 'articles', ARTICLE_EDITORIAL_COLUMNS, list)
   const statements = [db.prepare('DELETE FROM articles')]
 
-  for (const [index, item] of (Array.isArray(items) ? items : []).entries()) {
+  for (const [index, item] of list.entries()) {
     const id = normalizeString(item.id) || crypto.randomUUID()
     statements.push(
       db
@@ -296,7 +316,8 @@ export async function replaceResources(db, items) {
           `INSERT INTO articles (
             id, slug, title, summary, category, content_type, icon, points, body_markdown, cover_image_url, tags_json,
             author_name, published_at, reading_time_minutes, is_featured, sort_order, status, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ${editorial.map((column) => `, ${column}`).join('')}
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${', ?'.repeat(editorial.length)})`,
         )
         .bind(
           id,
@@ -318,6 +339,7 @@ export async function replaceResources(db, items) {
           normalizeStatus(item.status),
           timestamp,
           timestamp,
+          ...editorial.map((column) => normalizeString(item[ARTICLE_EDITORIAL_COLUMNS[column]])),
         ),
     )
   }
@@ -576,22 +598,8 @@ export async function replaceNavigationItems(db, items) {
 export async function listSeoMetadata(db) {
   const rows = await listRows(
     db,
-    `SELECT
-       id,
-       page_slug,
-       meta_title,
-       meta_description,
-       meta_keywords,
-       canonical_url,
-       og_title,
-       og_description,
-       og_image,
-       twitter_title,
-       twitter_description,
-       twitter_image,
-       created_at,
-       updated_at
-     FROM seo_metadata
+    `SELECT * -- includes og_image_variant when this database has it
+       FROM seo_metadata
      ORDER BY page_slug ASC`,
   )
   return rows.map(toSeoMetadata)
@@ -600,21 +608,7 @@ export async function listSeoMetadata(db) {
 export async function getSeoMetadata(db, pageSlug) {
   const row = await db
     .prepare(
-      `SELECT
-         id,
-         page_slug,
-         meta_title,
-         meta_description,
-         meta_keywords,
-         canonical_url,
-         og_title,
-         og_description,
-         og_image,
-         twitter_title,
-         twitter_description,
-         twitter_image,
-         created_at,
-         updated_at
+      `SELECT * -- includes og_image_variant when this database has it
        FROM seo_metadata
        WHERE page_slug = ?`,
     )
@@ -627,9 +621,11 @@ export async function getSeoMetadata(db, pageSlug) {
 /** Runs as a single db.batch() transaction — see testimonials.js's replaceTestimonials for why. */
 export async function replaceSeoMetadata(db, items) {
   const timestamp = nowIso()
+  const list = Array.isArray(items) ? items : []
+  const editorial = await editorialColumnsFor(db, 'seo_metadata', SEO_EDITORIAL_COLUMNS, list)
   const statements = [db.prepare('DELETE FROM seo_metadata')]
 
-  for (const item of Array.isArray(items) ? items : []) {
+  for (const item of list) {
     const pageSlug = normalizeString(item.pageSlug)
     if (!pageSlug) continue
 
@@ -651,7 +647,8 @@ export async function replaceSeoMetadata(db, items) {
             twitter_image,
             created_at,
             updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ${editorial.map((column) => `, ${column}`).join('')}
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${', ?'.repeat(editorial.length)})`,
         )
         .bind(
           normalizeString(item.id) || `seo-${pageSlug}`,
@@ -668,6 +665,7 @@ export async function replaceSeoMetadata(db, items) {
           normalizeString(item.twitterImage),
           timestamp,
           timestamp,
+          ...editorial.map((column) => normalizeString(item[SEO_EDITORIAL_COLUMNS[column]])),
         ),
     )
   }

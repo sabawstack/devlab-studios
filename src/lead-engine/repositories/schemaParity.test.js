@@ -31,9 +31,13 @@ import { consumeBudget } from './usage.js'
 const here = dirname(fileURLToPath(import.meta.url))
 const migrationsDir = resolve(here, '../../../migrations')
 
-/** Every lead-engine migration, in file order, as they are applied for real. */
+/**
+ * Every CMS-database migration, in file order, as they are applied for real.
+ * (Not only the lead engine's own: a later migration may alter an earlier
+ * table -- 0018 adds columns to projects -- so a subset no longer applies.)
+ */
 const leadMigrations = readdirSync(migrationsDir)
-  .filter((name) => name.endsWith('.sql') && /^001[2-9]|^00[2-9]\d/.test(name))
+  .filter((name) => name.endsWith('.sql'))
   .sort()
   .map((name) => readFileSync(resolve(migrationsDir, name), 'utf8'))
 
