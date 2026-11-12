@@ -7,7 +7,7 @@ import { getBreadcrumbSchema } from '../config/schema.js'
 import { loadPageSeo } from '../lib/content/seo'
 import { resolveTurnstileSiteKey } from '../lib/turnstileSiteKey'
 import { loadPage } from '../lib/content/pages'
-import { INQUIRY_TYPES, isEmploymentInquiry } from '../lib/schemas/inquiry'
+import { CONTACT_FORM_INQUIRY_TYPES, isEmploymentInquiry } from '../lib/schemas/inquiry'
 
 const seo = await loadPageSeo('contact')
 const contactPage = await loadPage('contact')
@@ -21,7 +21,7 @@ const turnstileSiteKey = resolveTurnstileSiteKey(Astro.request.url)
  * falls back to the default rather than reaching the form.
  */
 const requestedType = Astro.url.searchParams.get('type') || ''
-const inquiryType = (INQUIRY_TYPES as readonly string[]).includes(requestedType) ? requestedType : 'business_system'
+const inquiryType = (CONTACT_FORM_INQUIRY_TYPES as readonly string[]).includes(requestedType) ? requestedType : 'business_system'
 const solutionId = (Astro.url.searchParams.get('solution') || '').slice(0, 80)
 const caseStudyId = (Astro.url.searchParams.get('case') || '').slice(0, 80)
 const insightId = (Astro.url.searchParams.get('insight') || '').slice(0, 80)

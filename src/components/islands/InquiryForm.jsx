@@ -7,8 +7,8 @@ import {
   BUDGET_OPTIONS,
   EMPLOYMENT_TYPE_OPTIONS,
   HIRING_TIMELINE_OPTIONS,
+  CONTACT_FORM_INQUIRY_TYPES,
   INQUIRY_TYPE_LABELS,
-  INQUIRY_TYPES,
   OPTION_LABELS,
   PREFERRED_CONTACT_OPTIONS,
   TEAM_SIZE_OPTIONS,
@@ -399,7 +399,7 @@ function InquiryForm({
             {!lockInquiryType ? (
               <Field id={fieldId('inquiryType')} label="What would you like to discuss?" required error={errors.inquiryType}>
                 <select {...inputProps('inquiryType')}>
-                  {INQUIRY_TYPES.map((type) => (
+                  {CONTACT_FORM_INQUIRY_TYPES.map((type) => (
                     <option key={type} value={type}>
                       {INQUIRY_TYPE_LABELS[type]}
                     </option>

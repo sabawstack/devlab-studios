@@ -1,6 +1,7 @@
 import {
   isBusinessInquiry,
   isEmploymentInquiry,
+  isProductInquiry,
   type InquiryType,
   type QualificationResult,
 } from '../schemas/inquiry'
@@ -43,7 +44,7 @@ export interface Qualification {
   score: number
   reasons: QualificationReason[]
   /** Which internal queue the inquiry belongs to. Drives notification wording, not permissions. */
-  route: 'business' | 'employment' | 'partnership' | 'general'
+  route: 'business' | 'employment' | 'partnership' | 'product' | 'general'
   /** True when a human must look before any automated follow-up is appropriate. */
   requiresHumanReview: boolean
 }
@@ -142,6 +143,22 @@ export function qualifyInquiry(signals: QualificationSignals): Qualification {
         },
       ],
       route: 'employment',
+      requiresHumanReview: true,
+    }
+  }
+
+  if (isProductInquiry(signals.inquiryType)) {
+    return {
+      result: 'unscored',
+      score: 0,
+      reasons: [
+        {
+          code: 'product_route',
+          label: 'Product interest or support -- read by a person, not business-qualified.',
+          points: 0,
+        },
+      ],
+      route: 'product',
       requiresHumanReview: true,
     }
   }

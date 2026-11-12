@@ -17,12 +17,28 @@ export const INQUIRY_TYPES = [
   'contract_collaboration',
   'partnership',
   'general',
+  'operations_care',
+  'product_interest',
+  'product_support',
 ] as const
 export const inquiryTypeSchema = z.enum(INQUIRY_TYPES)
 export type InquiryType = z.infer<typeof inquiryTypeSchema>
 
 /** Inquiry types routed through the business qualification form. */
-export const BUSINESS_INQUIRY_TYPES: InquiryType[] = ['business_system', 'software_project', 'workflow_audit']
+export const BUSINESS_INQUIRY_TYPES: InquiryType[] = ['business_system', 'software_project', 'workflow_audit', 'operations_care']
+/** Interest in, or support for, a DevLab product. Never business-scored; a person reads them. */
+export const PRODUCT_INQUIRY_TYPES: InquiryType[] = ['product_interest', 'product_support']
+/**
+ * The types the contact form's select offers. Product inquiries come from the
+ * products page with the product named, so they are not offered here.
+ */
+export const CONTACT_FORM_INQUIRY_TYPES: InquiryType[] = INQUIRY_TYPES.filter(
+  (type) => !PRODUCT_INQUIRY_TYPES.includes(type),
+)
+
+export function isProductInquiry(type: InquiryType): boolean {
+  return PRODUCT_INQUIRY_TYPES.includes(type)
+}
 /** Inquiry types routed through the employment form -- deliberately NOT business-qualified. */
 export const EMPLOYMENT_INQUIRY_TYPES: InquiryType[] = ['employment_opportunity', 'contract_collaboration']
 
@@ -42,6 +58,9 @@ export const INQUIRY_TYPE_LABELS: Record<InquiryType, string> = {
   contract_collaboration: 'Contract or technical collaboration',
   partnership: 'Partnership',
   general: 'General inquiry',
+  operations_care: 'Operations Care (ongoing monitoring and support)',
+  product_interest: 'Product interest',
+  product_support: 'Product support',
 }
 
 export const PIPELINE_STATUSES = ['new', 'in_review', 'qualified', 'contacted', 'won', 'lost', 'archived'] as const
