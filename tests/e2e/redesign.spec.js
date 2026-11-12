@@ -54,6 +54,21 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 820, height: 1180 
   })
 }
 
+// BR.12: the sticky header is at most 64 px tall with the primary CTA visible on phones.
+for (const width of [320, 390, 820, 1440]) {
+  test(`header fits in 64 px with its CTA on one line at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 })
+    await page.goto('/')
+    const header = page.locator('header.dl-nav')
+    expect((await header.boundingBox()).height).toBeLessThanOrEqual(64)
+    // Phones get the short label so the header stays on one line at 320 px.
+    const cta = header.getByRole('link', { name: width < 640 ? 'Contact us' : /^discuss your system$/i })
+    await expect(cta).toBeInViewport()
+    expect((await cta.boundingBox()).height).toBeLessThanOrEqual(48)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)
+  })
+}
+
 test('axe finds no serious or critical issues on the redesigned pages', async ({ page }) => {
   test.setTimeout(120_000)
   for (const { path } of PAGES) {

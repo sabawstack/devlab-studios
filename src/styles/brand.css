@@ -222,6 +222,11 @@ body.brand::before {
   color: var(--paper);
 }
 .dl-button-primary:hover { background: var(--ink-2); color: var(--paper); }
+/* The header CTA stays on one line and visible on phones (BR.12: header <= 64 px). */
+.dl-button-primary--compact { white-space: nowrap; }
+@media (max-width: 639px) {
+  .dl-button-primary--compact { padding: 0 0.75rem; }
+}
 .dl-button-quiet {
   color: var(--ink);
   text-decoration: underline;
