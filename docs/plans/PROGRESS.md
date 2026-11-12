@@ -51,3 +51,19 @@ _None yet._
 10. TEST-04 baseline: screenshots of current production at three viewports.
 
 **Log.**
+
+| Req | Status | Commit | Evidence |
+|---|---|---|---|
+| Pre-existing unit failure | done | `bbfa468` | `listUnansweredReplies` compared insert times; now message times. 46/46 in the file, +1 regression test |
+| Fresh-checkout e2e | done | `176ad3b` | Static suite could not start on a clean clone (empty local D1; remote AI proxy needing a login; Astro auto-backgrounding under an agent). Now 115 passed / 1 skipped locally |
+| Fail-open public gates | done | `3be2070` | A D1 error in the maintenance/redirect reads 404'd every gated page. 6 unit tests |
+| SEC-05 | done | `0f3c287` | `readJsonBody` 256 KB cap (413), bad JSON 400, `withAdmin` maps HttpError. 9 + 2 tests |
+| OPS-02 | done | `5cdebe3` | CI on PR/push to `main` and `development`: lint, typecheck, unit, build, audit, static e2e. Deviation: ESLint for `.astro` deferred (needs `eslint-plugin-astro`, a new dependency; not blocking) |
+| CMS-05 | done | `71113d5` | Boundary test over 80 public files; no violations existed |
+| SEC-04 | done | `18eebc8` | Test login needs flag AND loopback host; 404 on prod/preview hosts tested |
+| SEC-01 | done | `6431f1b` | `.env.example` parity test (63 cases), Zoho keys dropped, `backups/` ignored. Zoho names inside lead-engine runtime flags left untouched (Section L rule 7); document as legacy in OPS-08 |
+| LEAD-01 | done | `b26ae94` | 18 unit guards + 1 e2e through the real pipeline (row + recorded failed attempt in the test D1) |
+| Dependency advisories | done | `c848ec4` | CI audit found new high advisories (undici, postal-mime, fast-xml-parser); upgraded wrangler 4.160.1, astro 7.4.11, @astrojs/cloudflare 14.4.7, postal-mime 4.2.1. 2,336 unit tests + static e2e pass |
+| TEST-01 | partial (by design) | `9122627` | Strict limiter on open-play writes, outbox bearer checks. Remaining guards land with their features: cache (OPS-01), preview token (CMS-04), nonce (SEC-07), no gmail (Phase 3), no gradients (TEST-03) |
+| TEST-07 fixture | done | `783c590` | 31 live sitemap paths frozen; e2e checks each resolves (32 passed) |
+| TEST-04 baseline | done (tooling) | `01dbf78` | Capture script + **Visual capture** workflow. Local production capture: 36 images OK. Screenshots NOT committed (profile shows personal data; public repo). Production baseline artifact to be run after merge, before Phase 4 |
