@@ -1,11 +1,11 @@
 {
   "name": "DevLab Studios",
   "short_name": "DevLab Studios",
-  "description": "Your Vision, Digitally Crafted — one solution at a time, always evolving.",
+  "description": "Software, integrations and workflow automation for businesses that need their operations to hold up.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#121739",
-  "theme_color": "#000a14",
+  "background_color": "#050b14",
+  "theme_color": "#050b14",
   "icons": [
     {
       "src": "/icon-192.png",

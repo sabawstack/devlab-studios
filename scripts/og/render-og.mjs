@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
  * Renders the social cards in public/og/ (audit SEO-02 / WEB-08): one 1200x630
- * PNG per business page, in the brand's paper/ink system with the self-hosted
- * fonts, each well under the 200 KB budget. Also writes public/og.png (the
+ * PNG per business page, in the Blueprint palette (ADR 0014: navy canvas and
+ * grid, the logo mark, a gradient rule) with the self-hosted fonts, each well
+ * under the 200 KB budget. Also writes public/og.png (the
  * site default) from the home card.
  *
  * Run after changing a page's title or adding a page:
@@ -15,11 +16,12 @@ import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
+const logo = `data:image/svg+xml;base64,${readFileSync(resolve(root, 'public/branding/logo-only.svg')).toString('base64')}`
 const font = (file) => `data:font/woff2;base64,${readFileSync(resolve(root, 'public/fonts', file)).toString('base64')}`
 const BUDGET_BYTES = 200 * 1024
 
 export const CARDS = [
-  { name: 'home', eyebrow: 'Operations software', title: 'We build and run the systems behind your inquiries, handoffs and reports.' },
+  { name: 'home', eyebrow: 'Systems architecture', title: "Systems that don't silently fail." },
   { name: 'solutions', eyebrow: 'Solutions', title: 'Operational software, built to be run.' },
   { name: 'lead-intake-and-follow-up', eyebrow: 'Service line', title: 'Lead intake and follow-up' },
   { name: 'workflow-and-ai-automation', eyebrow: 'Service line', title: 'Workflow and AI automation' },
@@ -35,21 +37,27 @@ export const CARDS = [
 
 const escape = (value) => value.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 
+// Values mirror src/styles/brand.css (Blueprint tokens); the card renders outside the site, so they are literal here.
 function html(card) {
   return `<!doctype html><html><head><meta charset="utf-8"><style>
-@font-face { font-family: 'Bricolage Grotesque'; src: url(${font('bricolage-grotesque-latin-opsz.woff2')}) format('woff2'); font-weight: 200 800; }
-@font-face { font-family: 'Martian Mono'; src: url(${font('martian-mono-latin-wght.woff2')}) format('woff2'); font-weight: 100 800; }
+@font-face { font-family: 'Space Grotesk'; src: url(${font('space-grotesk-latin-wght.woff2')}) format('woff2'); font-weight: 300 700; }
+@font-face { font-family: 'JetBrains Mono'; src: url(${font('jetbrains-mono-latin-wght.woff2')}) format('woff2'); font-weight: 100 800; }
 * { margin: 0; box-sizing: border-box; }
-body { width: 1200px; height: 630px; background: #f6f3ec; color: #14130f; font-family: 'Bricolage Grotesque'; display: flex; flex-direction: column; }
-main { flex: 1; padding: 72px 80px 0; border-bottom: 1px solid #d5d0c4; }
-.label { font-family: 'Martian Mono'; font-size: 22px; letter-spacing: 0.08em; text-transform: uppercase; color: #65615a; }
-h1 { margin-top: 28px; font-size: ${card.title.length > 48 ? 64 : 80}px; line-height: 1.05; letter-spacing: -0.02em; font-weight: 650; font-variation-settings: 'opsz' 96; max-width: 1000px; }
-footer { height: 112px; background: #14130f; color: #f6f3ec; display: flex; align-items: center; justify-content: space-between; padding: 0 80px; }
-footer strong { font-size: 30px; font-weight: 600; }
-footer span { font-family: 'Martian Mono'; font-size: 20px; letter-spacing: 0.06em; color: #a6a092; }
-.mark { position: absolute; right: 80px; top: 72px; width: 14px; height: 14px; border-radius: 50%; background: #c8331b; }
-</style></head><body><div class="mark"></div><main><p class="label">${escape(card.eyebrow)}</p><h1>${escape(card.title)}</h1></main>
-<footer><strong>DevLab Studios</strong><span>devlabstudios.com</span></footer></body></html>`
+body { position: relative; width: 1200px; height: 630px; color: #f8fafc; font-family: 'Space Grotesk'; display: flex; flex-direction: column;
+  background-color: #050b14;
+  background-image: linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-size: 32px 32px; }
+main { flex: 1; padding: 72px 80px 0; }
+.label { font-family: 'JetBrains Mono'; font-size: 22px; letter-spacing: 0.12em; text-transform: uppercase; color: #94a3b8; }
+h1 { margin-top: 28px; font-size: ${card.title.length > 48 ? 64 : 84}px; line-height: 1.05; letter-spacing: -0.03em; font-weight: 600; max-width: 980px; }
+.rule { height: 4px; background: linear-gradient(90deg, #e100ff 0%, #7b2cbf 50%, #0048ba 100%); }
+footer { height: 108px; background: #0f172a; display: flex; align-items: center; justify-content: space-between; padding: 0 80px; }
+footer strong { display: flex; align-items: center; gap: 16px; font-size: 30px; font-weight: 600; }
+footer img { width: 44px; height: 44px; }
+footer span { font-family: 'JetBrains Mono'; font-size: 20px; letter-spacing: 0.08em; color: #94a3b8; }
+.mark { position: absolute; right: 80px; top: 64px; width: 72px; height: 72px; }
+</style></head><body><img class="mark" src="${logo}" alt=""><main><p class="label">[ ${escape(card.eyebrow)} ]</p><h1>${escape(card.title)}</h1></main>
+<div class="rule"></div><footer><strong><img src="${logo}" alt="">DevLab Studios</strong><span>devlabstudios.com</span></footer></body></html>`
 }
 
 const outDir = resolve(root, 'public/og')
