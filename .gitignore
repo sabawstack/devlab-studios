@@ -56,3 +56,8 @@ _bootstrap-org-tmp.sql
 # Local-only developer launchers (machine-specific; reference a DPAPI token store
 # outside the repo). Deliberately not shared.
 scripts/dev/
+
+# Database exports contain personal data (inquiries, mailbox). They live in
+# the private backup bucket, never in git.
+backups/
+*.sqlite3

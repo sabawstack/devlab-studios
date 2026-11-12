@@ -70,6 +70,7 @@ decided against that surface specifically:
 
 - Admin JSON bodies are capped at 256 KB (configurable per route) and refused with 413 before parsing; malformed JSON now gets a 400 instead of a 500, including in admin routes without their own error handling. (SEC-05)
 - The pickleball test login now also requires a localhost request, so `PICKLEBALL_TEST_AUTH_ENABLED=true` set on a deployed Worker by mistake cannot open a forged sign-in on the production or preview hostname. (SEC-04)
+- `.env.example` now lists every variable the Worker reads (admin credentials, session secret, outbox tokens, R2 base URL, notification addresses) with empty placeholders and drops the nine unused `ZOHO_*` keys; a unit test keeps it in step with `src/env.d.ts` and `wrangler.jsonc` and refuses any secret value in it. `backups/` and `*.sqlite3` exports are git-ignored, and the `lead-engine:zoho` script that pointed at a deleted file is removed. (SEC-01)
 
 ## [2.2.0] - 2026-10-13
 
