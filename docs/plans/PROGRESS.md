@@ -25,6 +25,7 @@ money, legal wording or a real data deletion are skipped and listed under
 | 11 | Product Worker split | not started: the redesign has shipped, so this is next once the Workers Paid plan decision (N7) is made |
 | 12 | Docs + release | v2.3.0 (PR #53) and **v2.4.0 released 2026-11-12** (PR #55); ADRs 0011–0013; full docs refresh (OPS-08) still open |
 | 13 | Blueprint rebrand | done (PR #57, production at `3874835`, v2.5.0 tagged; GitHub Release entry pending, see Phase 13 Open) |
+| 14 | Brand, UX and architecture spec (`devlab-complete-b2b-brand-ux-architecture-spec.md`) | in progress: Group 1 planned, waiting for owner approval and a production token (see Phase 14) |
 
 ## Blockers (owner)
 
@@ -266,3 +267,51 @@ are unchanged. Decision record: ADR 0014.
 - Owner decisions: `COMPANY.operatorStatement` (privacy and terms legal text) still says "Cebu, Philippines" while the footer says Lapu-Lapu City. The home SEO title in the SEO record still reads "Operations software that holds up".
 - **Pre-existing privacy issue (not from this branch):** `scripts/cms/seed/cms-content-seed.sql` in this public repository contains real personal data (phone, date of birth, personal mailbox, barangay/postal address), as noted by the reviewer. It needs its own ticket. Removing it from the files is simple; purging it from git history needs a rewrite and force-push, which is the owner's decision.
 
+
+## Phase 14 — Brand, UX and architecture spec
+
+Running log for `docs/plans/devlab-complete-b2b-brand-ux-architecture-spec.md`
+(re-audit dated 2026-11-12 at `dd6b377`; owner decisions dated 2026-11-13 in
+its preamble are binding). Work runs in nine requirement groups, one PR each,
+through `development` → preview → owner sign-off → `main`.
+
+| Group | Requirement IDs | Status |
+|---|---|---|
+| 1 Gates and guards | OPS-01, TEST-01, SEC-01, OPS-02 | planned; waiting for owner approval (production migrations) and a fresh production token |
+| 2 Brand foundation | BRAND-01, BRAND-02, BRAND-03, BRAND-05, MASCOT-01, MASCOT-02, MASCOT-03 | not started |
+| 3 Review gate | `/brand` review of scenes and the Node redraw (MASCOT-04 fallback) | not started |
+| 4 Data | CMS-01, CMS-02, CMS-03 | not started |
+| 5 Pages I | UX-02, UX-01, WEB-03, CONTENT-01, CONTENT-02, CONTENT-03, CASE-01, CASE-02 | not started |
+| 6 Pages II | UX-03, UX-04, UX-05, CONTENT-04…06, CONVERT-01…04, WEB-02, BUS-01, BUS-02, BUS-05, PROFILE-01, CASE-03 | not started |
+| 7 Shell consolidation | BRAND-04, WEB-01, WEB-05, SEC-03 | not started |
+| 8 Conditional and owner items | BUS-03, BUS-04, CONVERT-05, CASE-04, WEB-04, SEO-01, SEO-04, MASCOT-05 | not started |
+| 9 Verification and release | TEST-02…05, OPS-03, OPS-04, CMS-04, release | not started |
+
+### Drift since the spec (checked 2026-11-13)
+
+- Code: none. `origin/main` and `origin/development` are both at `dd6b377` (`0 0`).
+- **Production D1 is in the Cloudflare account named "Devlab Studios Development"** (`db49…`), the same account as preview; the account named "Devlab Studios" (`023a…`) does not hold it. Wrangler needs `CLOUDFLARE_ACCOUNT_ID=db49443cea6f0725d848254f17bcdab5` in non-interactive runs. `--env preview` (or its absence) still decides the database.
+- **Production migrations confirmed behind** (read-only `SELECT` on `d1_migrations`, 2026-11-13): last applied `0017_confirmation_recipients.sql` (2026-10-13). `0018` and `0019` pending. Preview: `0019` applied.
+- **Spec N.1 scrim value fails spec N.5's own contrast rule.** White over the magenta stop under a 10 % `#15142a` scrim is 4.40:1 (< 4.5). Measured: 11 % 4.47, 12 % 4.55, 18 % 5.05. Decision for BRAND-01: 12 % at rest (smallest passing value), 18 % on hover as N.5 says; the token test asserts ≥ 4.5 at the magenta end.
+- v2.5.0 GitHub Release still missing (tag exists; `gh release view v2.5.0` → not found).
+
+### Group 1 — Gates and guards (plan)
+
+Branch `feat/brand-ux-1-gates-guards` from `main` (`dd6b377`). Order:
+
+1. **OPS-01 Production migrations `0018`, `0019`** (owner token, one command).
+   - Pre-check done (read-only): none of the 13 `0018` columns exist on production; no `job_runs` table; `projects` has 20 rows. Both migrations are additive (`ALTER TABLE … ADD COLUMN` with defaults, `CREATE … IF NOT EXISTS`).
+   - Before: record the Time Travel bookmark (`wrangler d1 time-travel info devlab-studios-cms`), snapshot `/work` and the four write-ups' HTML on production.
+   - Apply: `CLOUDFLARE_API_TOKEN=<fresh> CLOUDFLARE_ACCOUNT_ID=db49… npx wrangler d1 migrations apply devlab-studios-cms --remote` (no `--env` = production).
+   - Read back: `d1_migrations` shows 18 and 19; `pragma_table_info` shows the columns; `job_runs` exists; `projects` still 20 rows; `/work`, write-ups, `/api/health` 200 and unchanged.
+   - Risk: the column-aware project repository starts reading the new (empty) columns; Work pages could change. Rollback: the code ignores empty values (verified on preview since Phase 2); last resort `wrangler d1 time-travel restore` to the recorded bookmark.
+2. **TEST-01 Guard tests, written first.** Guards the code already meets are plain tests. Guards that later groups make true land as expected failures (`it.fails` / `test.fail()`) tagged with the requirement that fixes them: they run in CI, prove the violation exists today, and turn red the moment the fix lands, which forces the flip to a plain test in that requirement's commit. CI stays green; nothing can be forgotten.
+   - `src/data/site/contentGuards.test.js`: forbidden strings (spec C.3 + I.2) in `content.js` and the static legal data (`terms.js`, `privacy.js`) → expected failure until CONTENT-01/03; honesty labels (`VERIFIED ·`, `LIVE`, `NOMINAL`, `SYS-`) in brand components and pages → expected failure until UX-01; CTA allow-list (every `/contact` link label in `content.js`, the nav defaults in `siteSettingsContent.js`, the `BrandNav` fallback) → expected failure until CONTENT-02; eyebrows without `§`, `[`, `]`, `•` → expected failure until BRAND-02.
+   - `src/styles/brandTokens.test.ts`: `var(--brand-gradient)` only in the four allowed selectors (mark, `.dl-button-primary`, `.hero-rule`, current-nav underline); contrast for `--link` on `--paper` (≥ 7:1), `--ink-3` on `--paper` (≥ 4.5:1), white over the gradient's magenta stop under the scrim (≥ 4.5:1); amber only inside `.ink-panel` rules → expected failures until BRAND-01/02 where today's values do not meet them.
+   - `scripts/cms/seed/seedPrivacy.test.js`: scan every `scripts/cms/seed/*.sql` and `scripts/cms/updates/*.sql` for phone numbers, a `dateOfBirth` with a value, consumer mailboxes (gmail, yahoo, outlook, hotmail, icloud), barangay or postal-code addresses → expected failure in this commit, flipped by SEC-01.
+   - `tests/e2e/redesign.spec.js`: `.node-mascot` count ≤ 2 on every public route → `test.fail()` for `/` (11 today) until MASCOT-03.
+   - `src/lib/legacyUrlFixture.test.ts`: `tests/fixtures/legacy-sitemap.txt` pinned by SHA-256 and 31 entries.
+   - Rollback: revert the commit (tests only).
+3. **SEC-01 Seed file personal data** (Q-18: file only, no history rewrite). In `scripts/cms/seed/cms-content-seed.sql`, `profile_about`: drop `phone` and `dateOfBirth` (the same keys `2026-11-12-business-identity.sql` already removes from live databases), city-level location, business mailbox; `site_footer`: business mailbox. The founder's public name stays. Flip the seed scan to a plain test. Risk: a fresh environment seeded from this file shows no phone or birth date (intended). Rollback: n/a (file change only; no database touched).
+4. **OPS-02 GitHub Release v2.5.0**: `gh release create v2.5.0 --verify-tag --title v2.5.0 --notes-file <CHANGELOG 2.5.0 section>`. Check `gh release view v2.5.0` after. Rollback: `gh release delete v2.5.0` (keeps the tag).
+5. PR, CI, `development`, preview check (no visual change expected: tests and a seed file only), `main`, production smoke, PROGRESS evidence.

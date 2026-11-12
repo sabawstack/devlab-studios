@@ -51,6 +51,10 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+### Changed
+
+- Docs: the approved brand, UX and architecture specification (re-audit dated 2026-11-12, owner decisions 2026-11-13) is now in the repository at `docs/plans/devlab-complete-b2b-brand-ux-architecture-spec.md`; PROGRESS.md gains Phase 14 with the drift found since the spec and the Group 1 plan.
+
 ## [2.5.0] - 2026-11-12
 
 ### Added
