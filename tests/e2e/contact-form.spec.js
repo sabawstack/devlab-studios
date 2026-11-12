@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test'
+import { existsSync, readdirSync } from 'node:fs'
+import { join } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 
 test.describe.configure({ timeout: 90_000 })
 
@@ -118,6 +121,62 @@ test('a server failure surfaces an error and does not claim success', async ({ p
   await page.getByRole('button', { name: 'Send inquiry' }).click()
   await expect(page.getByRole('status')).toContainText(/could not save/i)
   await expect(page.getByRole('status')).not.toContainText(/received and saved/i)
+})
+
+/**
+ * Opens (read-only) the local D1 file the static preview server writes to --
+ * the copy playwright.config.js makes under .wrangler/state-static-e2e -- and
+ * returns the one that holds the CMS `leads` table.
+ */
+function openStaticCmsDatabase() {
+  const dir = join('.wrangler', 'state-static-e2e', 'v3', 'd1', 'miniflare-D1DatabaseObject')
+  if (!existsSync(dir)) return null
+  for (const name of readdirSync(dir)) {
+    if (!name.endsWith('.sqlite') || name === 'metadata.sqlite') continue
+    const db = new DatabaseSync(join(dir, name), { readOnly: true })
+    const hasLeads = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'leads'").get()
+    if (hasLeads) return db
+    db.close()
+  }
+  return null
+}
+
+// LEAD-01: the real pipeline, not a mocked route. The static server has no
+// RESEND_API_KEY (as on preview), so every notification fails -- and the
+// visitor must still be told the inquiry was saved, the row must exist, and
+// the failed delivery must be recorded for the admin's Retry.
+test('with email delivery unavailable, the inquiry is still saved and the failed attempt recorded', async ({ page }) => {
+  const email = `lead01-${Date.now()}@example.com`
+
+  await gotoForm(page)
+  await fillStepOne(page, { email })
+  await continueToStepTwo(page)
+  await page.getByLabel(/what result are you aiming for/i).fill('Every inquiry gets an owner.')
+  await page.getByLabel(/^timeline/i).selectOption('within_month')
+  await page.getByLabel(/I agree that DevLab Studios/i).check()
+
+  const responsePromise = page.waitForResponse((response) => response.url().endsWith('/api/inquiries'))
+  await page.getByRole('button', { name: 'Send inquiry' }).click()
+  const response = await responsePromise
+  expect(response.status()).toBe(200)
+  expect((await response.json()).persisted).toBe(true)
+  await expect(page.getByRole('status')).toContainText(/received and saved/i)
+
+  const db = openStaticCmsDatabase()
+  expect(db, 'static e2e D1 file not found').not.toBeNull()
+  try {
+    // Delivery runs after the response (waitUntil), so poll for its record.
+    await expect.poll(() => {
+      const lead = db.prepare('SELECT id, status FROM leads WHERE email = ?').get(email)
+      if (!lead) return 'no lead row'
+      const failed = db
+        .prepare("SELECT COUNT(*) AS count FROM delivery_attempts WHERE lead_id = ? AND status = 'failure'")
+        .get(lead.id)
+      return failed.count > 0 ? `lead ${lead.status}, failed attempt recorded` : `lead ${lead.status}, no failed attempt`
+    }, { timeout: 15_000 }).toBe('lead failed, failed attempt recorded')
+  } finally {
+    db.close()
+  }
 })
 
 test('step one blocks continuing and shows an accessible error summary', async ({ page }) => {

@@ -54,7 +54,7 @@ decided against that surface specifically:
 ### Added
 
 - A unit test enforces the content-adapter boundary: public pages, layouts and components must read content through `src/lib/content/*`, never from the D1 repositories directly, so the content store can change later without editing pages (documented in ARCHITECTURE.md). (CMS-05)
-
+- Guard tests for the inquiry guarantees: Turnstile refuses on the live and preview hosts when unconfigured, rejected, missing or issued for another hostname; every public form route verifies before it persists (and never opts out of Turnstile); the form and the route share one schema; every outbound send is recorded as a delivery attempt. An end-to-end test submits through the real pipeline with email unavailable and checks the inquiry row and the recorded failed attempt in the test database. (LEAD-01)
 ### Changed
 
 - Dependabot now updates react, react-dom and their types together, and skips the Tailwind, TypeScript, ESLint and Vitest major versions that need a hand-made migration, so it stops opening update PRs that leave the two React packages on different versions or that cannot build.
