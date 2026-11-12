@@ -859,6 +859,32 @@ test('an inquiry survives a failed delivery and stays retryable', async ({ page,
   expect(retried.activities.some((activity) => activity.activityType === 'delivery_retry')).toBe(true)
 })
 
+// LEAD-04: qualification thresholds are admin settings. Lowering the priority
+// threshold to zero makes the next comparable inquiry a priority one; resetting
+// restores the defaults.
+test('changing a qualification threshold in admin changes the tier of a new inquiry', async ({ page, baseURL }) => {
+  await login(page)
+  const settingsUrl = `${baseURL}/api/admin/leads/qualification-settings`
+  const initial = await (await page.request.get(settingsUrl)).json()
+  expect(initial.defaults.thresholds.priority).toBe(85)
+
+  try {
+    const saved = await page.request.put(settingsUrl, { data: { thresholds: { priority: 2, standard: 1, nurture: 0 } } })
+    expect(saved.status(), await saved.text()).toBe(200)
+
+    const { response } = await submitInquiry(page, baseURL)
+    const body = await response.json()
+    const detail = await (await page.request.get(`${baseURL}/api/admin/leads/${body.id}`)).json()
+    expect(detail.qualification).toBe('priority')
+
+    const refused = await page.request.put(settingsUrl, { data: { thresholds: { priority: 10, standard: 20 } } })
+    expect(refused.status()).toBe(400)
+  } finally {
+    const reset = await page.request.put(settingsUrl, { data: initial.overrides || {} })
+    expect(reset.ok()).toBeTruthy()
+  }
+})
+
 test('an employment inquiry is stored separately and is never business-qualified', async ({ page, baseURL }) => {
   const { response } = await submitInquiry(page, baseURL, {
     inquiryType: 'employment_opportunity',

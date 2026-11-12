@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { adminApi } from '../lib/adminApi'
+import QualificationSettingsPanel from '../components/QualificationSettingsPanel'
 import {
   INQUIRY_TYPE_LABELS,
   INQUIRY_TYPES,
@@ -225,6 +226,8 @@ function LeadsPage() {
           Export CSV
         </a>
       </div>
+
+      <QualificationSettingsPanel />
 
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
         <label className="sr-only" htmlFor="lead-search">

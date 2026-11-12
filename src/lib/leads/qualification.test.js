@@ -156,3 +156,38 @@ describe('qualifyInquiry — explainability', () => {
     expect(audit.reasons.some((reason) => reason.code === 'entry_offer')).toBe(true)
   })
 })
+
+// LEAD-04: thresholds and weights are admin-editable, today's values the default.
+describe('qualification settings', () => {
+  it('defaults reproduce the built-in behaviour exactly', async () => {
+    const { DEFAULT_QUALIFICATION_SETTINGS, resolveQualificationSettings } = await import('./qualification')
+    expect(resolveQualificationSettings(undefined)).toEqual(DEFAULT_QUALIFICATION_SETTINGS)
+    expect(resolveQualificationSettings({})).toEqual(DEFAULT_QUALIFICATION_SETTINGS)
+    expect(DEFAULT_QUALIFICATION_SETTINGS.thresholds).toEqual({ priority: 85, standard: 55, nurture: 25, minMessageLength: 40 })
+  })
+
+  it('a lowered threshold changes the tier of the same inquiry', async () => {
+    const { resolveQualificationSettings } = await import('./qualification')
+    const inquiry = signals({ timeline: 'within_month', budgetRange: '2k_5k', desiredOutcome: 'Every inquiry gets an owner.' })
+    const before = qualifyInquiry(inquiry)
+    expect(before.result).toBe('standard')
+    const after = qualifyInquiry(inquiry, resolveQualificationSettings({ thresholds: { priority: before.score } }))
+    expect(after.result).toBe('priority')
+    expect(after.score).toBe(before.score)
+  })
+
+  it('a changed weight changes the score and is explained in the reasons', async () => {
+    const { resolveQualificationSettings } = await import('./qualification')
+    const inquiry = signals({ timeline: 'immediate' })
+    const result = qualifyInquiry(inquiry, resolveQualificationSettings({ timelinePoints: { immediate: 50 } }))
+    expect(result.reasons.find((reason) => reason.code === 'timeline').points).toBe(50)
+  })
+
+  it('ignores a stored value that is malformed or reorders the tiers', async () => {
+    const { DEFAULT_QUALIFICATION_SETTINGS, resolveQualificationSettings } = await import('./qualification')
+    expect(resolveQualificationSettings({ thresholds: { priority: 'high' } })).toEqual(DEFAULT_QUALIFICATION_SETTINGS)
+    expect(resolveQualificationSettings({ thresholds: { standard: 90 } })).toEqual(DEFAULT_QUALIFICATION_SETTINGS)
+    expect(resolveQualificationSettings({ unknownKey: 1 })).toEqual(DEFAULT_QUALIFICATION_SETTINGS)
+    expect(resolveQualificationSettings({ timelinePoints: { someday: 5 } })).toEqual(DEFAULT_QUALIFICATION_SETTINGS)
+  })
+})

@@ -3,7 +3,8 @@ import { buildActivityStatement, buildAttributionStatement, buildConsentStatemen
 import { attemptLeadDelivery } from './leadDelivery.js'
 import { verifyTurnstileToken } from './turnstile.js'
 import { checkRateLimit, clientAddress, clientIp, rateLimitedResponse } from './rateLimit.js'
-import { qualifyInquiry } from '../lib/leads/qualification'
+import { qualifyInquiry, resolveQualificationSettings } from '../lib/leads/qualification'
+import { getSiteSetting } from './repositories/content.js'
 import { computeIdempotencyKey, normalizeInquiry } from '../lib/leads/normalize'
 import { CONSENT_TEXT_VERSION, PRIVACY_POLICY_VERSION } from '../config/consent.js'
 import { attributeInquiry } from '../lead-engine/tracking/attribution.js'
@@ -61,6 +62,27 @@ export async function readBoundedJson(request, env) {
     return { data: JSON.parse(text) }
   } catch {
     return { error: jsonResponse({ error: 'Invalid JSON payload.' }, 400) }
+  }
+}
+
+/** The site_settings key holding admin overrides for qualification (LEAD-04). */
+export const QUALIFICATION_SETTINGS_KEY = 'inquiry_qualification'
+
+/**
+ * Qualification thresholds and weights: today's defaults with any admin
+ * overrides applied. A read failure must never cost a lead, so it falls back
+ * to the defaults and is logged.
+ */
+export async function loadQualificationSettings(db) {
+  try {
+    return resolveQualificationSettings(await getSiteSetting(db, QUALIFICATION_SETTINGS_KEY, null))
+  } catch (error) {
+    console.error(JSON.stringify({
+      event: 'inquiry_submission',
+      outcome: 'qualification_settings_unavailable',
+      error: error instanceof Error ? error.message : 'unknown',
+    }))
+    return resolveQualificationSettings(null)
   }
 }
 
@@ -275,7 +297,7 @@ export async function submitInquiry(env, { input, source, consentType, locals, r
     timeline: normalized.timeline,
     budgetRange: normalized.budgetRange,
     volume: normalized.volume,
-  })
+  }, await loadQualificationSettings(env.DB))
 
   let lead
   try {
