@@ -107,7 +107,12 @@ const principles = Array.isArray(principlesBlock.items) && principlesBlock.items
 // An unknown offerId from the CMS falls back to the default rather than
 // rendering a card with no destination.
 const magnetOffer = getLeadMagnet(String(magnetBlock.offerId || '')) || getLeadMagnet('lead-intake-checklist')
-const latestInsight = posts.filter((post) => post.status !== 'draft')[0] || null
+// SEO-08: business pages promote articles written for owners, never the
+// technical AI updates; any non-technical article if no owner article exists.
+const publishedInsights = posts.filter((post) => post.status !== 'draft')
+const latestInsight = publishedInsights.find((post) => (post as { audience?: string }).audience === 'owner')
+  || publishedInsights.find((post) => (post as { audience?: string }).audience !== 'technical')
+  || null
 
 const defaultFaqs = [
   {

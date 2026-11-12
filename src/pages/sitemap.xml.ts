@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro'
 import { loadArticlesContent } from '../lib/content/articles'
-import { LEAD_MAGNETS } from '../config/offers.js'
 import { PUBLIC_ROUTES } from '../config/publicRoutes'
 
 export const prerender = false
@@ -64,19 +63,16 @@ export const GET: APIRoute = async () => {
       path: `/insights/${post.slug}`,
       changefreq: 'monthly',
       priority: '0.7',
-      lastmod: toLastmod(post.publishedAt),
+      // When the article last changed, falling back to when it was published.
+      lastmod: toLastmod((post as { updatedAt?: string }).updatedAt || post.publishedAt),
     }))
 
-  const offerEntries: SitemapEntry[] = Object.values(LEAD_MAGNETS).map((offer) => ({
-    path: `/offers/${offer.id}`,
-    changefreq: 'monthly',
-    priority: '0.6',
-  }))
+  // Offer landing pages are noindex (SEO-06), so they are not listed.
 
   const body = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    ...[...PUBLIC_ROUTES, ...articleEntries, ...offerEntries].map(toUrlElement),
+    ...[...PUBLIC_ROUTES, ...articleEntries].map(toUrlElement),
     '</urlset>',
   ].join('\n')
 

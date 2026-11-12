@@ -10,6 +10,8 @@ export const aiUpdateArticles = [
   {
     id: 'what-better-ai-models-change-for-ops',
     slug: 'what-better-ai-models-change-for-ops',
+    problemTag: 'choosing-tools',
+    audience: 'technical',
     title: 'What better AI models actually change for operations teams',
     summary:
       'Each model generation gets framed as a leap. From an operations seat, the gains that matter are narrower and more specific than the announcements suggest.',
@@ -102,6 +104,8 @@ would have been.`,
   {
     id: 'small-models-are-often-the-right-call',
     slug: 'small-models-are-often-the-right-call',
+    problemTag: 'choosing-tools',
+    audience: 'technical',
     title: 'When a small model is the right call',
     summary:
       'Reaching for the largest available model is usually wrong for production workloads. What small models handle well, and how to tell whether your task is one of them.',
@@ -205,6 +209,8 @@ the next generation lands.`,
   {
     id: 'structured-output-changed-integration-work',
     slug: 'structured-output-changed-integration-work',
+    problemTag: 'integration-maintenance',
+    audience: 'technical',
     title: 'Structured output changed what integration work looks like',
     summary:
       'Getting a model to reliably return parseable data used to be most of the work in an AI integration. That changed — and it moved the hard part somewhere less obvious.',
@@ -304,6 +310,8 @@ much better than one assembled from imagination.`,
   {
     id: 'inference-at-the-edge-what-it-changes',
     slug: 'inference-at-the-edge-what-it-changes',
+    problemTag: 'integration-maintenance',
+    audience: 'technical',
     title: 'Running inference at the edge: what it changes and what it does not',
     summary:
       'Models running next to the request remove a round trip and a vendor relationship. They also bring constraints worth understanding before you build on them.',
@@ -408,6 +416,8 @@ notice in advance rather than a thing you discover from a failure.`,
   {
     id: 'retrieval-is-plumbing-not-a-feature',
     slug: 'retrieval-is-plumbing-not-a-feature',
+    problemTag: 'data-consistency',
+    audience: 'technical',
     title: 'Retrieval is plumbing, not a feature',
     summary:
       'Most disappointing answers from a document assistant are retrieval failures, not model failures. The model never saw the right passage.',

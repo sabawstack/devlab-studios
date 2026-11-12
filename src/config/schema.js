@@ -233,29 +233,24 @@ export const getBreadcrumbSchema = (items) => ({
   })),
 })
 
-/** Article, for a published insight. */
+/**
+ * Article, for a published insight (SEO-03). Always carries an image (the
+ * cover, else the brand logo until the generated social cards exist),
+ * datePublished/dateModified, and references the founder and the business by
+ * @id rather than repeating them.
+ */
 export const getArticleSchema = (article) => ({
   '@context': 'https://schema.org',
   '@type': 'Article',
   headline: article.title,
   description: article.summary,
-  ...(article.coverImageUrl ? { image: article.coverImageUrl } : {}),
+  image: article.coverImageUrl || COMPANY.logo,
   ...(article.publishedAt ? { datePublished: article.publishedAt } : {}),
-  author: {
-    '@type': 'Person',
-    name: 'Stephen Rey G. Agustinez',
-    url: 'https://www.devlabstudios.com/profile',
-  },
-  publisher: {
-    '@type': 'Organization',
-    name: 'DevLab Studios',
-    logo: {
-      '@type': 'ImageObject',
-      url: 'https://www.devlabstudios.com/devlabstudios-logo-only.png',
-    },
-  },
+  ...(article.updatedAt || article.publishedAt ? { dateModified: article.updatedAt || article.publishedAt } : {}),
+  author: { '@type': 'Person', '@id': PERSON_ID, name: COMPANY.founder.name, url: `${COMPANY.url}${COMPANY.founder.profilePath}` },
+  publisher: { '@type': 'Organization', '@id': ORGANIZATION_ID, name: COMPANY.name, logo: { '@type': 'ImageObject', url: COMPANY.logo } },
   mainEntityOfPage: {
     '@type': 'WebPage',
-    '@id': `https://www.devlabstudios.com/insights/${article.slug}`,
+    '@id': `${COMPANY.url}/insights/${article.slug}`,
   },
 })

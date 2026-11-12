@@ -9,6 +9,8 @@ export const opsNoteArticles = [
   {
     id: 'why-website-speed-and-automation-now-overlap',
     slug: 'why-website-speed-and-automation-now-overlap',
+    problemTag: 'lead-intake',
+    audience: 'owner',
     title: 'Why website speed and automation now overlap',
     summary:
       'A slow page and a broken workflow used to be separate problems owned by separate people. They are the same pipeline now, and they fail into each other.',
@@ -111,6 +113,8 @@ CRM record. If nobody can, the gap is not in the code.`,
   {
     id: 'what-breaks-first-in-an-automation',
     slug: 'what-breaks-first-in-an-automation',
+    problemTag: 'integration-maintenance',
+    audience: 'ops',
     title: 'What breaks first in an automation, and why it is never the AI',
     summary:
       'Automations rarely fail because a model got something wrong. They fail on credentials, schema drift, volume, and assumptions about the world that quietly stopped being true.',
@@ -217,6 +221,8 @@ question "what are we exposed to" answerable, which it otherwise is not.`,
   {
     id: 'the-cost-of-a-silent-failure',
     slug: 'the-cost-of-a-silent-failure',
+    problemTag: 'silent-failures',
+    audience: 'owner',
     title: 'The cost of a silent failure',
     summary:
       'A system that breaks loudly costs an afternoon. One that breaks quietly costs however long it takes someone to notice — and the damage compounds the whole time.',
@@ -320,6 +326,8 @@ during an incident three months ago that nobody realised had been lost.`,
   {
     id: 'choosing-what-not-to-automate',
     slug: 'choosing-what-not-to-automate',
+    problemTag: 'choosing-tools',
+    audience: 'owner',
     title: 'Choosing what not to automate',
     summary:
       'Not every repetitive task should be automated. The ones that should not are identifiable in advance, and skipping them is what keeps the rest maintainable.',

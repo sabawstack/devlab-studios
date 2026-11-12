@@ -53,3 +53,21 @@ describe('no personal data in any schema', () => {
     expect(all).not.toMatch(/@gmail\.com|telephone|streetAddress|postalCode|Lapu-Lapu/i)
   })
 })
+
+describe('Article schema (SEO-03)', async () => {
+  const { getArticleSchema } = await import('./schema.js')
+  const article = { title: 'The cost of a silent failure', summary: 'S', slug: 'silent', publishedAt: '2026-09-01', updatedAt: '2026-10-02T00:00:00.000Z' }
+
+  it('always has an image, both dates, and author/publisher by @id', () => {
+    const schema = getArticleSchema(article)
+    expect(schema.image).toBe(COMPANY.logo)
+    expect(schema.datePublished).toBe('2026-09-01')
+    expect(schema.dateModified).toBe('2026-10-02T00:00:00.000Z')
+    expect(schema.author['@id']).toBe(PERSON_ID)
+    expect(schema.publisher['@id']).toBe(ORGANIZATION_ID)
+  })
+
+  it('uses the cover image when there is one', () => {
+    expect(getArticleSchema({ ...article, coverImageUrl: 'https://cdn.example/c.webp' }).image).toBe('https://cdn.example/c.webp')
+  })
+})

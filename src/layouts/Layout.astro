@@ -8,14 +8,17 @@ import PublicBackdrop from '../components/PublicBackdrop.astro'
 import { loadSiteSettings } from '../lib/content/siteSettings'
 import type { SeoData } from '../lib/content/seo'
 import { resolveGaMeasurementId } from '../config/analytics.js'
+import { robotsDirectiveFor } from '../config/robots'
 
 interface Props {
   title: string
   seo?: SeoData | null
   jsonLd?: Record<string, unknown> | null | (Record<string, unknown> | null)[]
+  /** Overrides the route's directive (src/config/robots.ts), e.g. for the 404 page. */
+  robots?: string
 }
 
-const { title, seo = null, jsonLd } = Astro.props
+const { title, seo = null, jsonLd, robots } = Astro.props
 const siteSettings = await loadSiteSettings()
 // OPS-05: the GA4 id is an admin setting; unset means today's default, '' means off.
 const gaMeasurementId = siteSettings.gaMeasurementId ?? resolveGaMeasurementId(undefined)
@@ -42,7 +45,7 @@ function safeJsonLd(value: unknown): string {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#070916" />
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content={robots ?? robotsDirectiveFor(currentPath)} />
     <SeoHead fallbackTitle={title} seo={seo} />
 
     {jsonLdBlocks.map((block) => (

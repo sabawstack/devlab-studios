@@ -1,3 +1,4 @@
+import { isNoindexPath } from '../config/robots'
 const LOCALHOST_HOSTNAMES = new Set(['localhost', '127.0.0.1'])
 
 // Features the site never uses are switched off for every page and frame.
@@ -67,7 +68,7 @@ function robotsTagFor(pathname: string, hostname: string): string | null {
   // The preview deployment must never compete with production in search.
   if (hostname.endsWith('.workers.dev')) return 'noindex, nofollow'
   if (isAdminPath(pathname)) return 'noindex, nofollow'
-  if (pathname.startsWith('/landing-sample-')) return 'noindex, follow'
+  if (isNoindexPath(pathname)) return 'noindex, follow'
   // The brand review page is for approval and tests, never for search.
   if (pathname === '/brand' || pathname.startsWith('/brand/')) return 'noindex, nofollow'
   return null

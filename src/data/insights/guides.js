@@ -12,6 +12,8 @@ export const guideArticles = [
     {
       id: 'ai-automation-small-business-workflows',
       slug: 'ai-automation-small-business-workflows',
+      problemTag: 'choosing-tools',
+      audience: 'owner',
       title: 'Where AI automation fits in small business workflows',
       summary:
         'Most small businesses do not need AI everywhere. They need it in the four or five places where the same information gets rewritten by hand. Here is how to find them.',
@@ -96,6 +98,8 @@ If yes, the automation is infrastructure. If no, it is a person's side project t
     {
       id: 'lead-intake-automation-checklist',
       slug: 'lead-intake-automation-checklist',
+      problemTag: 'lead-intake',
+      audience: 'owner',
       title: 'A checklist for automating lead intake without losing leads',
       summary:
         'Lead intake is the workflow most often automated first and most often automated badly. A checklist for the parts that decide whether an inquiry survives the trip.',
@@ -186,6 +190,8 @@ This is the control that catches everything the other items miss — the failure
     {
       id: 'zapier-make-n8n-comparison',
       slug: 'zapier-make-n8n-comparison',
+      problemTag: 'choosing-tools',
+      audience: 'ops',
       title: 'Zapier, Make, and n8n: choosing on constraints, not features',
       summary:
         'All three will connect your tools. The feature lists are not what separates them — cost shape, debuggability, and who can maintain the result are.',
@@ -276,6 +282,8 @@ The wrong answer is choosing on a feature matrix and discovering the real constr
     {
       id: 'preparing-business-data-for-automation',
       slug: 'preparing-business-data-for-automation',
+      problemTag: 'data-consistency',
+      audience: 'ops',
       title: 'Preparing business data before you automate anything',
       summary:
         'Automation does not fix messy data. It industrialises it. What to settle about your records before workflows start reading and writing them.',
@@ -362,6 +370,8 @@ Name a person per system who owns those decisions. Without one, each integration
     {
       id: 'ai-agents-vs-workflow-automations',
       slug: 'ai-agents-vs-workflow-automations',
+      problemTag: 'choosing-tools',
+      audience: 'ops',
       title: 'AI agents versus workflow automation: which problem are you solving?',
       summary:
         'An agent decides what to do next. A workflow already knows. That single difference determines cost, reliability, and how you debug it at 2am.',
@@ -451,6 +461,8 @@ That shape keeps the debuggable properties of a workflow while getting the part 
     {
       id: 'writing-automation-runbooks',
       slug: 'writing-automation-runbooks',
+      problemTag: 'handoffs',
+      audience: 'ops',
       title: 'Writing a runbook an automation can actually be handed over with',
       summary:
         'An automation only one person understands is a dependency, not an asset. What a runbook needs to contain for someone else to own it.',
