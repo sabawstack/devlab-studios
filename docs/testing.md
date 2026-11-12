@@ -34,7 +34,11 @@ git log for specifics).
    version; traces are uploaded as an artifact when it fails)
 
 The `worker`, `admin-auth` and Safari projects are not in CI yet: run them
-locally when a change touches the admin, the Worker or pickleball.
+locally when a change touches the admin, the Worker or pickleball. On a fresh
+checkout, first run `node scripts/e2e/write-dev-vars.mjs`: it writes a
+git-ignored `.dev.vars` with the synthetic smoke-test admin and the local-only
+test switches the `wrangler dev` server needs. A few admin tests (the SEO
+editor ones) also expect content already seeded in the local D1.
 
 **Branch protection (a GitHub setting, not code).** In *Settings → Branches*,
 protect `main` and `development` with "Require status checks to pass before

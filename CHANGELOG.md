@@ -58,6 +58,7 @@ decided against that surface specifically:
 - Guard tests fail if anonymous open-play writes (session creation, self check-in) stop using the fail-closed rate limiter, or if any lead or mailbox outbox route stops checking its bearer token before doing anything. (TEST-01)
 - The live sitemap's 31 URLs are frozen in `tests/fixtures/legacy-sitemap.txt`, and a static end-to-end test fails if any of them stops answering 200 (or a permanent redirect to a 200), so the rebuild cannot silently break an indexed or linked URL. (TEST-07 fixture)
 - `scripts/visual/capture.mjs` and a manual **Visual capture** workflow take full-page screenshots of the canonical routes at phone, tablet and desktop widths (with and without reduced motion) and keep them as a 90-day CI artifact, for the before/after review of every visual change; screenshots are git-ignored, never committed. (TEST-04 baseline)
+- `scripts/e2e/write-dev-vars.mjs` writes a git-ignored `.dev.vars` with the synthetic smoke-test admin and local-only test switches, so the admin, mailbox and pickleball end-to-end suites can run from a fresh checkout.
 ### Changed
 
 - Dependabot now updates react, react-dom and their types together, and skips the Tailwind, TypeScript, ESLint and Vitest major versions that need a hand-made migration, so it stops opening update PRs that leave the two React packages on different versions or that cannot build.
