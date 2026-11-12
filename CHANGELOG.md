@@ -51,6 +51,8 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-11-12
+
 ### Added
 
 - "Blueprint" brand palette (ADR 0014): navy canvas with a faint blueprint grid, the logo gradient (magenta → violet → blue) as the only accent surface, amber for status, and new token names (`--bg-studio`, `--surface-card`, `--brand-magenta`, `--brand-gradient`, `--accent-amber`…) that the existing `dl-*` roles now alias. New `dl-button-outline` (technical outline) and `dl-gradient-border` (gradient border on hover/focus) utilities; Tailwind gains `dl-magenta`, `dl-violet`, `dl-blue`, `dl-amber`, `dl-danger`.
