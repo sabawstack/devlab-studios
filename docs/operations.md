@@ -421,3 +421,57 @@ separate Preview widget and secret, not the Production pair.
   24 hours, one email goes to `LEAD_NOTIFICATION_EMAIL`. Turn it off with
   `site_settings` key `job_failure_summary` = `{"enabled": false}`.
 - **Workers Logs** are enabled (`observability` in `wrangler.jsonc`).
+
+## Backups (OPS-04)
+
+`.github/workflows/backup.yml` exports both production D1 databases every night
+(01:30 Manila), checks each export loads (`scripts/ops/restore-drill.mjs`),
+gzips it and uploads it to the private R2 bucket `devlab-backups` under
+`<date>/`. On the 1st of each month (or on demand: Actions → Backups → Run
+workflow → "restore drill") it downloads the day's CMS export and checks the
+main tables restore with rows. Exports hold personal data: they never become
+workflow artifacts and are never committed.
+
+**One-time owner setup** (until then the jobs skip with a notice):
+
+1. Create a **private** R2 bucket `devlab-backups` with a 30-day lifecycle rule
+   (`npx wrangler r2 bucket create devlab-backups` and
+   `npx wrangler r2 bucket lifecycle add devlab-backups --expire-days 30`).
+2. Create an API token limited to *D1: Read* and *R2: Edit* on this account and
+   add it as the repository secret `CLOUDFLARE_BACKUP_API_TOKEN`.
+3. Run the workflow once by hand with the drill ticked and check both jobs.
+
+## Retention and privacy requests (SEC-08)
+
+Retention is a daily cron step configured in `site_settings` key `retention`:
+
+```json
+{ "enabled": false, "dryRun": true, "inquiriesMonths": 24, "confirmationDays": 30,
+  "auditLogMonths": 24, "versionsPerEntity": 50, "batchSize": 200 }
+```
+
+It ships **off**. Off or dry run, it records each day what it *would* delete in
+`job_runs` (job `retention`). To go live: confirm the periods (audit N6), make
+sure backups run (above), set `enabled: true` and watch the dry-run counts for a
+day, then set `dryRun: false` and attend the first run. Open inquiries (new, in
+review, qualified, contacted) are never deleted; lead-engine suppression records
+are never touched.
+
+**Export / erase a person:** Inquiries → *Privacy requests*. The export is a JSON
+download of every inquiry from that address with its activities, attribution,
+consents and delivery attempts; erase deletes them and the address's
+confirmation-cap hash (type the address twice). Audit events carry a hash of the
+address. Mailbox correspondence for the same person is not covered yet: delete
+the thread in the mailbox screen and its raw message from the `devlab-mailbox`
+bucket.
+
+## Media on a custom domain (OPS-07)
+
+1. Owner: in the dashboard, add the custom domain `media.devlabstudios.com` to
+   the production media bucket (and a preview equivalent to the preview bucket).
+2. Set `R2_PUBLIC_BASE_URL` to the new host in `wrangler.jsonc` (both envs) and
+   add it to `image.remotePatterns` in `astro.config.mjs`; ship through preview.
+3. With a fresh backup, dry-run then apply the stored-URL rewrite, preview first:
+   `node scripts/cms/media-domain-rewrite.mjs --env preview --from https://pub-…r2.dev --to https://media-preview.devlabstudios.com [--apply]`
+   (production adds `CLOUDFLARE_API_TOKEN`). Swap `--from`/`--to` to undo.
+4. Keep the old `pub-*.r2.dev` host enabled until every image is verified.

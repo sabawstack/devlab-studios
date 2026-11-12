@@ -1,0 +1,120 @@
+name: Backups
+
+# OPS-04: nightly export of both production D1 databases to a private R2
+# bucket, and a monthly restore drill that proves the latest export loads.
+#
+# Inert until the owner sets it up (docs/operations.md "Backups"):
+#   - repository secret CLOUDFLARE_BACKUP_API_TOKEN: an API token limited to
+#     D1 read and R2 write on this account;
+#   - a PRIVATE R2 bucket named devlab-backups with a 30-day lifecycle rule.
+# Without the secret every job skips with a notice. Exports contain personal
+# data: they are never uploaded as workflow artifacts or committed.
+on:
+  schedule:
+    - cron: '30 17 * * *'   # 01:30 in Manila, after the day's traffic
+  workflow_dispatch:
+    inputs:
+      drill:
+        description: Also run the restore drill now
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backups
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_ACCOUNT_ID: db49443cea6f0725d848254f17bcdab5
+  BUCKET: devlab-backups
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Check configuration
+        id: config
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_BACKUP_API_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::notice::CLOUDFLARE_BACKUP_API_TOKEN is not set; backups are not configured yet (docs/operations.md)."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Node
+        if: steps.config.outputs.configured == 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.config.outputs.configured == 'true'
+        run: npm ci
+
+      - name: Export and upload
+        if: steps.config.outputs.configured == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_BACKUP_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          stamp=$(date -u +%Y-%m-%d)
+          mkdir -p "$RUNNER_TEMP/backup"
+          for db in devlab-studios-cms devlab-pickleball; do
+            npx wrangler d1 export "$db" --remote --output "$RUNNER_TEMP/backup/$db.sql"
+            node scripts/ops/restore-drill.mjs "$RUNNER_TEMP/backup/$db.sql"
+            gzip -9 "$RUNNER_TEMP/backup/$db.sql"
+            npx wrangler r2 object put "$BUCKET/$stamp/$db.sql.gz" --file "$RUNNER_TEMP/backup/$db.sql.gz" --remote
+            echo "Uploaded $BUCKET/$stamp/$db.sql.gz ($(stat -c %s "$RUNNER_TEMP/backup/$db.sql.gz") bytes)"
+          done
+          rm -rf "$RUNNER_TEMP/backup"
+
+  restore-drill:
+    needs: export
+    if: (github.event_name == 'workflow_dispatch' && inputs.drill) || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Check configuration
+        id: config
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_BACKUP_API_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then echo "configured=false" >> "$GITHUB_OUTPUT"; else echo "configured=true" >> "$GITHUB_OUTPUT"; fi
+          # The scheduled drill runs on the 1st of the month only.
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$(date -u +%d)" != "01" ]; then echo "configured=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Setup Node
+        if: steps.config.outputs.configured == 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.config.outputs.configured == 'true'
+        run: npm ci
+
+      - name: Restore the latest export and check it
+        if: steps.config.outputs.configured == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_BACKUP_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          stamp=$(date -u +%Y-%m-%d)
+          npx wrangler r2 object get "$BUCKET/$stamp/devlab-studios-cms.sql.gz" --file "$RUNNER_TEMP/cms.sql.gz" --remote
+          gunzip "$RUNNER_TEMP/cms.sql.gz"
+          node scripts/ops/restore-drill.mjs "$RUNNER_TEMP/cms.sql" site_settings:1 pages:1 projects:1 articles:1 seo_metadata:1
+          rm -f "$RUNNER_TEMP/cms.sql"

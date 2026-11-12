@@ -28,6 +28,8 @@ import { handleEmail } from './mailbox/inbound/handler.js'
 import { recordJobRun, sendFailedJobsSummary } from './worker/jobs/jobRuns.js'
 import { sendUnansweredInquiryReminder } from './worker/leads/funnel.js'
 import { bumpGeneration } from './lib/cache/htmlCache'
+import { runRetentionJob } from './worker/privacy/retention.js'
+import { recordAuditEvent } from './worker/repositories/auditLog.js'
 import { createResendProvider } from './worker/delivery/providers.js'
 import { getSiteSetting } from './worker/repositories/content.js'
 import {
@@ -95,6 +97,14 @@ export default {
       now,
       provider: createResendProvider(env, { name: 'resend-inquiry-reminder' }),
       getSetting: (key) => (env.DB ? getSiteSetting(env.DB, key, null) : Promise.resolve(null)),
+    })))
+
+    // SEC-08: retention. Off by default; a dry run (counts only) until the
+    // owner confirms the periods and turns dry run off.
+    ctx.waitUntil(recordJobRun(env, 'retention', () => runRetentionJob(env, {
+      now,
+      getSetting: (key) => (env.DB ? getSiteSetting(env.DB, key, null) : Promise.resolve(null)),
+      audit: (event) => recordAuditEvent(env.DB, { actorEmail: 'cron', ...event }),
     })))
 
     // The owner's daily list of failed runs from the last 24 hours (internal
