@@ -19,8 +19,8 @@ money, legal wording or a real data deletion are skipped and listed under
 | 5 | Pages I | not started |
 | 6 | Pages II | not started |
 | 7 | Routes + SEO | not started |
-| 8 | Ops + editorial | done in code (SEC-07 moved to Phase 9) |
-| 9 | Performance | not started |
+| 8 | Ops + editorial | done (PR #49, production at `4183fb1`) |
+| 9 | Performance | OPS-01 done in code; SEC-07 → Phase 10; TEST-06 partial |
 | 10 | Data-touching jobs | not started |
 | 11 | Product Worker split | not started |
 | 12 | Docs + release | not started |
@@ -129,6 +129,16 @@ Decision: this phase adds the brand system without switching any live page (each
 | OPS-05 | done | GA4 id + off switch in Site Settings, default today's id. CF Web Analytics CSP entries kept (N12 default: enable at the zone) |
 | CMS-04 | done | Preview links (derived key, `p1.` format, bound to one item, 1 h, no-store + noindex; refused as a session: tested); multiple admin logins (account must still exist on every request); rendered markdown preview |
 | LEAD-05 | done | Funnel panel + daily unanswered-inquiry reminder (internal only, no message text). 4 unit + 1 e2e |
-| SEC-07 | moved to Phase 9 | Astro 7's built-in `security.csp` hashes its own scripts but sets its own CSP header, which our middleware overwrites; merging them belongs with the HTML cache (OPS-01), where per-request policy and cached pages interact |
+| SEC-07 | moved (now Phase 10, see Phase 9) | Astro 7's built-in `security.csp` hashes its own scripts but sets its own CSP header, which our middleware overwrites; merging them belongs with the HTML cache (OPS-01), where per-request policy and cached pages interact |
 
 Admin e2e: 50 passed; the one failure is the pre-existing seed-dependent SEO-editor test.
+
+Promotion: CI green on `4183fb1` → `development` (migration check ran: both preview DBs current) → preview: health all ok, bogus preview link no-store/noindex, new admin APIs 401 → `main` → Workers Builds success; production health all ok, 31/31 legacy URLs 200.
+
+## Phase 9 — Performance
+
+| Req | Status | Evidence |
+|---|---|---|
+| OPS-01 | done (code) | Cache API, generation key (`site_settings.html_cache_generation`, memo 2 s), bumped by any successful admin write and the digest; maintenance read memo 60 s; `CACHE_HTML` kill switch. 7 unit + 4 static e2e (HIT, tracking params, preview/admin/API never cached) + 1 worker e2e (save visible within 5 s). Baseline TTFB from the owner's location before the change: `/` 0.95 s, `/solutions` 0.64–0.91 s, `/about` 0.45–0.67 s |
+| SEC-07 | moved to Phase 10 | Pages carry Astro island loaders, inlined component scripts, the GA bootstrap and the Google Fonts `onload` handler. Plan: adopt Astro 7's built-in `security.csp` (build-time hashes, so compatible with the HTML cache), move GA to an external same-origin script, and drop the Google Fonts handler when the brand fonts go live (Phase 5). The plan lists SEC-07 as depending on OPS-07, also Phase 10 |
+| TEST-06 | partial | TTFB measured before/after from the owner's location; Lighthouse CI on preview needs the redesigned pages to set budgets against (Phase 5+) |
