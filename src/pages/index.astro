@@ -1,130 +1,103 @@
 ---
 /**
- * Home (audit UX-06 / BR.9 / BR.14). Six sections, each answering one of the
- * buyer's questions and naming its next step: who we are and what we build
- * (hero), which problems (S1 → S2), what we build (three service lines), why
- * trust us (Work figures, then S3 and the reliability rules), how to start
- * (S6 and the audit). Copy lives in src/data/site/content.js; Work entries
- * come from the CMS through loadWorkEntries.
+ * Home (Blueprint, ADR 0014). The hero states the promise beside a live
+ * schematic of an inquiry pipeline, then: §01 the four quiet failure modes as
+ * a diagnostic console, §02 the four rules every system ships with, §03 the
+ * systems in production, §04 the three service lines, §05 the audit beside
+ * the principal engineer, and the final call to action. Copy lives in
+ * src/data/site/content.js (HOME); Work entries come from the CMS through
+ * loadWorkEntries. No section calls /api.
  */
 import BrandLayout from '../layouts/BrandLayout.astro'
 import PageHeader from '../components/brand/PageHeader.astro'
 import Section from '../components/brand/Section.astro'
-import SceneFrame from '../components/brand/SceneFrame.astro'
-import Figure from '../components/brand/Figure.astro'
-import Portrait from '../components/brand/Portrait.astro'
-import { createFigureCounter } from '../components/brand/figures'
+import HeroPipelineVisualizer from '../components/brand/HeroPipelineVisualizer.astro'
+import FailureDiagnosticConsole from '../components/brand/FailureDiagnosticConsole.astro'
+import ReliabilityBentoGrid from '../components/brand/ReliabilityBentoGrid.astro'
+import CaseStudyShowcase from '../components/brand/CaseStudyShowcase.astro'
+import PrincipalSpotlight from '../components/brand/PrincipalSpotlight.astro'
+import NodeMascot from '../components/brand/NodeMascot.jsx'
 import { getOrganizationSchema, getWebsiteSchema } from '../config/schema.js'
-import { COMPANY } from '../config/company.js'
 import { loadPageSeo } from '../lib/content/seo'
 import { loadWorkEntries } from '../lib/content/work'
-import { HOME, OFFER_AUDIT, RELIABILITY_PRINCIPLES, SERVICE_LINES } from '../data/site/content.js'
+import { HOME, OFFER_AUDIT, SERVICE_LINES } from '../data/site/content.js'
 
 const seo = await loadPageSeo('home')
 const work = (await loadWorkEntries()).slice(0, 3)
-const figures = createFigureCounter()
 const jsonLd = [getOrganizationSchema(), getWebsiteSchema()]
+const index = (position: number) => String(position + 1).padStart(2, '0')
 ---
 
-<BrandLayout title="DevLab Studios · Operations software that holds up" seo={seo} jsonLd={jsonLd}>
+<BrandLayout title="DevLab Studios · Systems that don't silently fail" seo={seo} jsonLd={jsonLd}>
   <PageHeader eyebrow={HOME.hero.eyebrow} heading={HOME.hero.heading} lead={HOME.hero.lead} ink>
-    <a href="/contact?type=business_system" class="dl-button-primary" data-cta-id="home-hero-primary" data-cta-variant="primary" data-inquiry-type="business_system">{HOME.hero.primary.label}</a>
-    <a href={HOME.hero.secondary.href} class="dl-button-quiet" data-cta-id="home-hero-secondary" data-cta-variant="secondary">{HOME.hero.secondary.label}</a>
-    <div slot="aside" class="flex items-center gap-5 border-t border-dl-rule pt-6 lg:flex-col lg:items-start lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0" data-founder-strip>
-      <Portrait size={128} loading="eager" class="shrink-0" />
-      <div>
-        <p class="text-step--1 text-dl-ink-2">{HOME.founder.text}</p>
-        <a href={COMPANY.founder.profilePath} class="label mt-3 inline-block text-dl-ink">{HOME.founder.linkLabel}</a>
-      </div>
+    <a href={HOME.hero.primary.href} class="dl-button-primary" data-cta-id="home-hero-primary" data-cta-variant="primary" data-inquiry-type="workflow_audit">{HOME.hero.primary.label}</a>
+    <a href={HOME.hero.secondary.href} class="dl-button-outline" data-cta-id="home-hero-secondary" data-cta-variant="secondary">{HOME.hero.secondary.label}</a>
+    <div slot="aside">
+      <HeroPipelineVisualizer />
     </div>
   </PageHeader>
 
   <Section id="home-problems" eyebrow={HOME.problems.eyebrow} heading={HOME.problems.heading} intro={HOME.problems.text}>
-    <div class="mt-10 grid gap-10 lg:grid-cols-2">
-      <SceneFrame sceneId="fragmented-intake" figure={figures.next()} />
-      <SceneFrame sceneId="connected-system" figure={figures.next()} />
+    <div class="mt-10">
+      <FailureDiagnosticConsole />
     </div>
-    <a href="/solutions" class="dl-button-quiet mt-8" data-cta-id="home-problems-solutions">How we fix it</a>
+  </Section>
+
+  <Section id="home-reliability" eyebrow={HOME.reliability.eyebrow} heading={HOME.reliability.heading} intro={HOME.reliability.text} class="border-t border-dl-rule">
+    <ReliabilityBentoGrid />
+  </Section>
+
+  <Section id="home-work" eyebrow={HOME.work.eyebrow} heading={HOME.work.heading} intro={HOME.work.text} class="border-t border-dl-rule">
+    <CaseStudyShowcase entries={work} />
   </Section>
 
   <Section id="home-solutions" eyebrow={HOME.solutions.eyebrow} heading={HOME.solutions.heading} class="border-t border-dl-rule">
-    <ol class="mt-10 grid gap-px overflow-hidden rounded-dl-s border border-dl-rule bg-dl-rule md:grid-cols-3">
-      {SERVICE_LINES.map((line, index) => (
+    <ol class="mt-10 grid gap-px overflow-hidden rounded-dl-m border border-dl-rule bg-dl-rule md:grid-cols-3">
+      {SERVICE_LINES.map((line, position) => (
         <li class="flex flex-col bg-dl-paper p-6" data-solution-id={line.solutionId}>
-          <p class="label text-dl-ink-3">{String(index + 1).padStart(2, '0')}</p>
+          <p class="label text-dl-ink-3">{index(position)}</p>
           <h3 class="mt-3 text-step-1">{line.title}</h3>
           <p class="mt-3 text-dl-ink-2">{line.outcome}</p>
           <a href={`/solutions/${line.slug}`} class="dl-button-quiet mt-auto self-start pt-6" data-cta-id={`home-solution-${line.slug}`}>
-            What this includes<span class="sr-only">: {line.title}</span>
+            {HOME.solutions.linkLabel}<span class="sr-only">: {line.title}</span>
           </a>
         </li>
       ))}
     </ol>
     <p class="mt-6 text-dl-ink-2">
-      Not sure which? <a href={OFFER_AUDIT.path} data-cta-id="home-solutions-audit">Start with the {OFFER_AUDIT.title}</a>.
+      If the right line is unclear, <a href={OFFER_AUDIT.path} data-cta-id="home-solutions-audit">start with the {OFFER_AUDIT.title}</a>.
     </p>
   </Section>
 
-  {work.length > 0 && (
-    <Section id="home-work" eyebrow={HOME.work.eyebrow} heading={HOME.work.heading} intro={HOME.work.text} class="border-t border-dl-rule">
-      <ul class="mt-10 grid gap-10 md:grid-cols-3">
-        {work.map((entry) => {
-          const picture = entry.project.optimizedImage
-          return (
-            <li>
-              <Figure number={figures.next()} caption={entry.project.title}>
-                {picture ? (
-                  <picture>
-                    <source type="image/avif" srcset={picture.avifSrcSet} />
-                    <source type="image/webp" srcset={picture.webpSrcSet} />
-                    <img src={picture.src} width={picture.width} height={picture.height} alt={`Screenshot of ${entry.project.title}`} loading="lazy" decoding="async" class="aspect-[4/3] w-full object-cover" />
-                  </picture>
-                ) : (
-                  <div class="aspect-[4/3]" />
-                )}
-              </Figure>
-              <p class="mt-4 text-dl-ink-2">{entry.problem}</p>
-              <a href={`/work/${entry.slug}`} class="dl-button-quiet mt-2" data-cta-id="home-work-item">Read the write-up<span class="sr-only">: {entry.project.title}</span></a>
-            </li>
-          )
-        })}
-      </ul>
-    </Section>
-  )}
-
-  <Section id="home-reliability" eyebrow={HOME.reliability.eyebrow} heading={HOME.reliability.heading} intro={HOME.reliability.text} ink>
-    <div class="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-start">
-      <SceneFrame sceneId="persist-before-deliver" figure={figures.next()} />
-      <ol class="divide-y divide-dl-rule border-y border-dl-rule">
-        {RELIABILITY_PRINCIPLES.map((principle, index) => (
-          <li class="flex gap-4 py-4">
-            <span class="label shrink-0 pt-1 text-dl-ink-3">{String(index + 1).padStart(2, '0')}</span>
-            <span><strong class="block font-semibold">{principle.title}</strong><span class="text-dl-ink-2">{principle.text}</span></span>
-          </li>
-        ))}
-      </ol>
-    </div>
-  </Section>
-
-  <Section id="home-start" eyebrow={HOME.start.eyebrow} heading={HOME.start.heading} intro={HOME.start.text}>
-    <div class="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] lg:items-center">
-      <div>
-        <p class="text-step-1 font-semibold">{OFFER_AUDIT.title}</p>
-        <p class="mt-2 text-dl-ink-2">{OFFER_AUDIT.summary}</p>
-        <div class="mt-6 flex flex-wrap gap-x-6 gap-y-3">
-          <a href={OFFER_AUDIT.contactHref} class="dl-button-primary" data-cta-id="home-audit-primary" data-inquiry-type="workflow_audit">Request the audit</a>
-          <a href={OFFER_AUDIT.path} class="dl-button-quiet" data-cta-id="home-audit-details">What you receive</a>
+  <Section id="home-start" eyebrow={HOME.start.eyebrow} heading={HOME.start.heading} class="border-t border-dl-rule">
+    <div class="mt-10 grid gap-6 lg:grid-cols-2 lg:items-stretch">
+      <div class="dl-gradient-border flex flex-col p-6 sm:p-8" data-audit-card>
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h3 class="text-step-2">{HOME.audit.title}</h3>
+            <p class="mt-2 text-dl-ink-2">{HOME.audit.text}</p>
+          </div>
+          <NodeMascot state="idle" size={56} decorative id="home-audit-node" className="shrink-0" />
+        </div>
+        <ul class="mt-6 space-y-2 border-t border-dl-rule pt-5">
+          {HOME.audit.deliverables.map((deliverable, position) => (
+            <li class="flex gap-3"><span class="label pt-0.5 text-dl-magenta">{index(position)}</span><span>{deliverable}</span></li>
+          ))}
+        </ul>
+        <div class="mt-auto flex flex-wrap gap-x-6 gap-y-3 pt-8">
+          <a href={HOME.audit.primary.href} class="dl-button-primary" data-cta-id="home-audit-primary" data-inquiry-type="workflow_audit">{HOME.audit.primary.label}</a>
+          <a href={HOME.audit.secondary.href} class="dl-button-quiet" data-cta-id="home-audit-details">{HOME.audit.secondary.label}</a>
         </div>
       </div>
-      <SceneFrame sceneId="workflow-audit" figure={figures.next()} />
+      <PrincipalSpotlight />
     </div>
   </Section>
 
-  <section id="home-cta" aria-labelledby="home-cta-heading" class="ink-panel">
+  <section id="home-cta" aria-labelledby="home-cta-heading" class="ink-panel border-t border-dl-rule">
     <div class="mx-auto max-w-container px-[var(--gutter)] py-[calc(var(--section-rhythm)*0.75)]">
       <h2 id="home-cta-heading" class="max-w-3xl text-step-3">{HOME.final.heading}</h2>
       <p class="mt-4 text-step-1 text-dl-ink-2">{HOME.final.text}</p>
-      <a href="/contact?type=business_system" class="dl-button-primary mt-8" data-cta-id="home-final-primary" data-cta-variant="primary" data-inquiry-type="business_system">{HOME.final.primary.label}</a>
+      <a href={HOME.final.primary.href} class="dl-button-primary mt-8" data-cta-id="home-final-primary" data-cta-variant="primary" data-inquiry-type="business_system">{HOME.final.primary.label}</a>
     </div>
   </section>
 </BrandLayout>

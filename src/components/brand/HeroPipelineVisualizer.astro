@@ -1,0 +1,152 @@
+---
+/**
+ * The home hero's live schematic (ADR 0014): an inquiry moving through four
+ * checkpoints, 01 Intake → 02 SQL persist → 03 Deterministic route → 04 Human
+ * handoff, with a webhook branch off 03. Node sits on the spine at 03 as the
+ * router.
+ *
+ * "Simulate outage" flips the root's data-state between nominal and outage;
+ * CSS does all the state styling and the status line is announced politely.
+ * The toggle is client-side only and never calls the network. With JS off the
+ * nominal diagram renders and the toggle stays hidden. Data packets are SMIL:
+ * hidden under reduced motion and paused by src/lib/motion.ts.
+ */
+import NodeMascot from './NodeMascot.jsx'
+import { HOME } from '../../data/site/content.js'
+
+const pipeline = HOME.pipeline
+// Spine y for each checkpoint; 03 (index 2) is Node, not a square.
+const Y = [40, 118, 196, 274]
+const ROUTE = 2
+---
+<figure
+  class="pipeline ink-panel rounded-dl-m border border-dl-rule"
+  data-pipeline
+  data-state="nominal"
+  data-status-nominal={pipeline.status.nominal}
+  data-status-outage={pipeline.status.outage}
+>
+  <figcaption class="label flex items-center justify-between gap-3 border-b border-dl-rule px-4 py-3 text-dl-ink-3">
+    <span>{pipeline.caption}</span>
+    <span class="pipeline__mode" aria-hidden="true"><span class="pipeline__mode-nominal">Nominal</span><span class="pipeline__mode-outage">Outage</span></span>
+  </figcaption>
+  <svg viewBox="0 0 316 304" class="pipeline__svg" role="img" aria-labelledby="pipeline-title" data-motion-root>
+    <title id="pipeline-title">Inquiry pipeline: intake, SQL persist, deterministic route with a webhook branch, then human handoff.</title>
+
+    <path class="pl-spine" d={`M36 ${Y[0]}V${Y[3]}`} />
+    <path class="pl-branch" d={`M60 ${Y[ROUTE]}H218`} />
+    <path class="pl-fail" d={`M132 ${Y[ROUTE] - 6}l12 12M144 ${Y[ROUTE] - 6}l-12 12`} />
+    <path class="pl-retry-link" d={`M263 ${Y[ROUTE] + 16}V${Y[ROUTE] + 44}`} />
+
+    {pipeline.checkpoints.map((checkpoint, index) => (
+      <g class={`pl-checkpoint pl-checkpoint--${checkpoint.id}`}>
+        {index !== ROUTE && <rect class="pl-square" x="29" y={Y[index] - 7} width="14" height="14" rx="2" />}
+        <text class="pl-index" x="72" y={index === ROUTE ? Y[index] - 22 : Y[index] - 4}>{checkpoint.index}</text>
+        <text class="pl-label" x="72" y={index === ROUTE ? Y[index] - 8 : Y[index] + 12}>{checkpoint.label.toUpperCase()}</text>
+      </g>
+    ))}
+    <text class="pl-note pl-note--persisted" x="72" y={Y[1] + 26}>PAYLOAD HELD</text>
+    <text class="pl-note pl-note--alerted" x="72" y={Y[3] + 26}>OPERATOR ALERTED</text>
+
+    <g class="pl-webhook">
+      <rect class="pl-box" x="218" y={Y[ROUTE] - 16} width="92" height="32" rx="3" />
+      <text class="pl-box-label" x="227" y={Y[ROUTE] + 4}>{pipeline.branchLabel.toUpperCase()}</text>
+      <circle class="pl-led" cx="298" cy={Y[ROUTE]} r="4" />
+    </g>
+    <g class="pl-retrybox">
+      <rect class="pl-box" x="218" y={Y[ROUTE] + 44} width="92" height="32" rx="3" />
+      <text class="pl-box-label" x="227" y={Y[ROUTE] + 64}>{pipeline.retryLabel.toUpperCase()}</text>
+    </g>
+
+    <g class="pl-packets">
+      <circle class="pl-packet" r="3" cx="36" cy={Y[0]}>
+        <animateMotion dur="3.2s" repeatCount="indefinite" path={`M0 0V${Y[3] - Y[0]}`} />
+      </circle>
+      <circle class="pl-packet pl-packet--branch" r="3" cx="60" cy={Y[ROUTE]}>
+        <animateMotion dur="1.6s" repeatCount="indefinite" path="M0 0H158" />
+      </circle>
+    </g>
+
+    <g transform={`translate(12 ${Y[ROUTE] - 28})`}>
+      <g class="pl-node-nominal"><NodeMascot state="active" size={48} decorative id="hero-node-active" /></g>
+      <g class="pl-node-outage"><NodeMascot state="diagnostic" size={48} decorative id="hero-node-diagnostic" /></g>
+    </g>
+  </svg>
+  <div class="flex flex-wrap items-center justify-between gap-3 border-t border-dl-rule px-4 py-3">
+    <p class="pipeline__status label text-dl-ink-2" aria-live="polite" data-pipeline-status>{pipeline.status.nominal}</p>
+    <button type="button" class="dl-button-outline" aria-pressed="false" data-pipeline-toggle data-needs-js hidden>{pipeline.toggleLabel}</button>
+  </div>
+</figure>
+
+<style>
+  .pipeline { overflow: hidden; }
+  .pipeline__svg { display: block; width: 100%; height: auto; padding: 0.5rem 0.75rem; }
+  .pipeline__status { max-width: 34ch; text-transform: none; letter-spacing: 0.02em; }
+  .pipeline__mode-outage,
+  [data-state='outage'] .pipeline__mode-nominal { display: none; }
+  [data-state='outage'] .pipeline__mode-outage { display: inline; color: var(--accent-amber); }
+  .pipeline__mode-nominal { color: var(--ok); }
+
+  .pl-spine,
+  .pl-branch,
+  .pl-retry-link { fill: none; stroke-width: 2; stroke-linecap: round; }
+  .pl-spine { stroke: var(--brand-violet); }
+  .pl-branch { stroke: var(--brand-magenta); transition: stroke var(--duration-ui) var(--ease-draw); }
+  .pl-retry-link { stroke: var(--accent-amber); stroke-dasharray: 3 4; opacity: 0; }
+  .pl-fail { fill: none; stroke: var(--accent-danger); stroke-width: 2.5; stroke-linecap: round; opacity: 0; }
+  .pl-square { fill: var(--paper-2); stroke: var(--brand-magenta); stroke-width: 2; }
+  .pl-index,
+  .pl-label,
+  .pl-note,
+  .pl-box-label { font-family: var(--font-label); letter-spacing: 0.08em; }
+  .pl-index { font-size: 9px; fill: var(--ink-3); }
+  .pl-label { font-size: 10.5px; fill: var(--ink); font-weight: 500; }
+  .pl-note { font-size: 9px; fill: var(--accent-amber); opacity: 0; }
+  .pl-box { fill: var(--paper-2); stroke: var(--rule); stroke-width: 1.5; }
+  .pl-box-label { font-size: 10px; fill: var(--ink-2); }
+  .pl-led { fill: var(--ok); }
+  .pl-retrybox { opacity: 0; }
+  .pl-packet { fill: var(--ink); }
+  .pl-node-outage { display: none; }
+
+  [data-state='outage'] .pl-branch { stroke: var(--accent-danger); stroke-dasharray: 5 5; }
+  [data-state='outage'] .pl-fail,
+  [data-state='outage'] .pl-retry-link,
+  [data-state='outage'] .pl-retrybox,
+  [data-state='outage'] .pl-note { opacity: 1; }
+  [data-state='outage'] .pl-retrybox .pl-box { stroke: var(--accent-amber); }
+  [data-state='outage'] .pl-webhook .pl-box { stroke: var(--accent-danger); }
+  [data-state='outage'] .pl-led { fill: var(--accent-danger); }
+  [data-state='outage'] .pl-checkpoint--persist .pl-square { stroke: var(--accent-amber); fill: var(--accent-amber); }
+  [data-state='outage'] .pl-packet--branch,
+  [data-state='outage'] .pl-node-nominal { display: none; }
+  [data-state='outage'] .pl-node-outage { display: inline; }
+
+  .pl-fail,
+  .pl-retry-link,
+  .pl-retrybox,
+  .pl-note { transition: opacity var(--duration-ui) var(--ease-draw); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pl-packets { display: none; }
+  }
+</style>
+
+<script>
+  import { respectReducedMotion } from '../../lib/motion'
+
+  // Client-side only: the outage is a drawing, never a request.
+  for (const root of document.querySelectorAll<HTMLElement>('[data-pipeline]')) {
+    const button = root.querySelector<HTMLButtonElement>('[data-pipeline-toggle]')
+    const status = root.querySelector<HTMLElement>('[data-pipeline-status]')
+    if (!button || !status) continue
+    button.hidden = false
+    button.addEventListener('click', () => {
+      const outage = root.dataset.state !== 'outage'
+      root.dataset.state = outage ? 'outage' : 'nominal'
+      button.setAttribute('aria-pressed', String(outage))
+      status.textContent = (outage ? root.dataset.statusOutage : root.dataset.statusNominal) ?? ''
+    })
+  }
+  respectReducedMotion()
+</script>

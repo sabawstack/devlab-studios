@@ -302,6 +302,9 @@ body.brand {
     backdrop-filter: blur(12px);
   }
 }
+/* Controls that only work with JavaScript stay hidden until a script reveals them,
+   even when an action class sets a display value. */
+[data-needs-js][hidden] { display: none; }
 .dl-skip-link {
   position: absolute;
   left: 1rem;

@@ -5,7 +5,8 @@ import AxeBuilder from '@axe-core/playwright'
 // TEST-03..TEST-05). Word budgets come from BR.9; they count the visible text
 // of <main> only (navigation and footer excluded).
 const PAGES = [
-  { path: '/', words: 800, business: true, noStack: true },
+  // The home page shows stack tags on its production-system cards (ADR 0014).
+  { path: '/', words: 900, business: true },
   { path: '/solutions', words: 900, business: true, noStack: true },
   { path: '/solutions/lead-intake-and-follow-up', words: 600, business: true },
   { path: '/solutions/workflow-and-ai-automation', words: 600, business: true },

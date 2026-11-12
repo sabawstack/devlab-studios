@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 const pages = [
-  { path: '/', heading: 'We build and run the systems behind' },
+  { path: '/', heading: "Systems that don't silently fail" },
   { path: '/about', heading: 'A small studio that builds operational software' },
   { path: '/solutions', heading: 'Operational software, built to be run' },
   { path: '/solutions/lead-intake-and-follow-up', heading: 'Lead intake and follow-up' },
@@ -162,8 +162,8 @@ test('the homepage does not ask visitors to classify themselves', async ({ page 
 test('the homepage hero leads with business outcomes, not an employment pitch', async ({ page }) => {
   await page.goto('/')
   const hero = page.locator('main > header').first()
-  await expect(hero.getByRole('link', { name: 'Discuss your system' })).toBeVisible()
-  await expect(hero.getByRole('link', { name: 'See the work' })).toBeVisible()
+  await expect(hero.getByRole('link', { name: 'Request a Workflow Audit' })).toHaveAttribute('href', '/contact?type=workflow_audit&solution=workflow-systems-audit')
+  await expect(hero.getByRole('link', { name: 'Explore Production Systems' })).toBeVisible()
   await expect(hero).not.toContainText(/available for (?:full-time|part-time) employment/i)
   await expect(hero.getByRole('link', { name: /resume|résumé/i })).toHaveCount(0)
 })
@@ -171,8 +171,8 @@ test('the homepage hero leads with business outcomes, not an employment pitch', 
 test('the homepage follows the business conversion order', async ({ page }) => {
   await page.goto('/')
   const positions = await page.evaluate(() => {
-    // BR.14: problems, what we build, proof, how we build, how to start, then the final CTA.
-    const idsInOrder = ['home-problems', 'home-solutions', 'home-work', 'home-reliability', 'home-start', 'home-cta']
+    // ADR 0014: failure modes, rules of reliability, production systems, what we build, how to start, then the final CTA.
+    const idsInOrder = ['home-problems', 'home-reliability', 'home-work', 'home-solutions', 'home-start', 'home-cta']
     return idsInOrder.map((id) => {
       const element = document.getElementById(id)
       return element ? element.getBoundingClientRect().top + window.scrollY : -1
@@ -261,21 +261,19 @@ test('the sitemap lists canonical routes and no redirect sources', async ({ requ
 test('homepage presents DevLab Studios as a business and routes visitors to Work', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/')
-  await expect(
-    page.getByRole('heading', { level: 1, name: 'We build and run the systems behind your inquiries, handoffs and reports.' }),
-  ).toBeVisible()
-  await expect(page.getByRole('link', { name: 'See the work' })).toHaveAttribute('href', '/work')
+  await expect(page.getByRole('heading', { level: 1, name: "Systems that don't silently fail" })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Explore Production Systems' })).toHaveAttribute('href', '/work')
   const heroBox = await page.locator('main > header').first().boundingBox()
   expect(Math.abs(heroBox.x)).toBeLessThanOrEqual(1)
   expect(Math.abs(heroBox.width - 1440)).toBeLessThanOrEqual(1)
 })
 
-test('homepage shows the problem as drawings: fragmented intake, then the connected system', async ({ page }) => {
+test('homepage shows the four failure modes as a diagnostic console', async ({ page }) => {
   await page.goto('/')
   const problems = page.locator('#home-problems')
-  await expect(problems.locator('[data-scene-frame="fragmented-intake"] svg')).toBeVisible()
-  await expect(problems.locator('[data-scene-frame="connected-system"] svg')).toBeVisible()
-  await expect(problems.getByText(/^Fig\. 01$/)).toBeVisible()
+  await expect(problems.getByRole('tab')).toHaveCount(4)
+  await expect(problems.getByRole('tab', { name: /Unowned lead intake/ })).toHaveAttribute('aria-selected', 'true')
+  await expect(problems.getByRole('tabpanel')).toContainText('VERIFIED')
 })
 
 test('homepage presents the three service lines with links to their own pages', async ({ page }) => {

@@ -77,7 +77,7 @@ export default defineConfig({
   projects: [
     {
       name: 'static',
-      testMatch: /(public-pages|contact-form|image-weight|legacy-urls|brand|html-cache|redesign)\.spec\.js/,
+      testMatch: /(public-pages|contact-form|image-weight|legacy-urls|brand|html-cache|redesign|home-interactive)\.spec\.js/,
       use: { baseURL: 'http://localhost:4173' },
     },
     {

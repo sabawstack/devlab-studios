@@ -1,8 +1,8 @@
 // Copy for the redesigned marketing pages (audit BUS-01, BR.3, F.2, F.5).
 //
 // Written to the audit's rules: one idea per sentence, short headings, the
-// operational result before the mechanism, no stack names on the home page or
-// the solutions index, no number that cannot be sourced, the founder named at
+// operational result before the mechanism, no stack names on the solutions
+// index (the home page allows them only as CMS-sourced tags on system cards), no number that cannot be sourced, the founder named at
 // most once per business page. Word budgets per page are enforced by
 // tests/e2e/redesign.spec.js. Everything here was cut down from the site's
 // earlier, already-truthful copy (git history: src/data/solutionsContent.js),
@@ -121,46 +121,123 @@ export const DELIVERY_STEPS = [
   { title: 'Hand it over', text: 'Deployment, a walkthrough, documentation and the failure paths written down.' },
 ]
 
+/**
+ * Home (Blueprint, ADR 0014). Voice: declarative, no rhetorical questions,
+ * no filler; the founder is named once (in `principal`). Stack names are
+ * allowed here only as tags on the production-system cards, which come from
+ * the CMS. Shape and voice are guarded by homeContent.test.js.
+ */
 export const HOME = {
   hero: {
-    eyebrow: 'DevLab Studios · operations software',
-    heading: 'We build and run the systems behind your inquiries, handoffs and reports.',
-    lead: 'One accountable engineer, production-grade practices, and systems your own team can operate.',
-    primary: { label: 'Discuss your system', href: '/contact' },
-    secondary: { label: 'See the work', href: '/work' },
+    eyebrow: '[ DEVLAB STUDIOS • SYSTEMS ARCHITECTURE ]',
+    heading: "Systems that don't silently fail.",
+    lead: 'Custom web interfaces, backend services, and AI workflows engineered end-to-end by one senior architect. No outsourced handoffs. No brittle wrappers.',
+    primary: { label: 'Request a Workflow Audit', href: OFFER_AUDIT.contactHref },
+    secondary: { label: 'Explore Production Systems', href: '/work' },
+  },
+  /** The hero schematic. Client-side only: the outage toggle never calls the network. */
+  pipeline: {
+    caption: 'Inquiry pipeline · live schematic',
+    checkpoints: [
+      { id: 'intake', index: '01', label: 'Intake' },
+      { id: 'persist', index: '02', label: 'SQL persist' },
+      { id: 'route', index: '03', label: 'Deterministic route' },
+      { id: 'handoff', index: '04', label: 'Human handoff' },
+    ],
+    branchLabel: 'Webhook',
+    retryLabel: 'Retry queue',
+    toggleLabel: 'Simulate outage',
+    status: {
+      nominal: 'Nominal: payload persisted, delivered, handed off.',
+      outage: 'Outage: webhook failed. Payload persisted in SQL, retry queued, operator alerted.',
+    },
   },
   problems: {
-    eyebrow: '§1 The problem',
-    heading: 'Work goes missing between tools.',
-    text: 'Inquiries land in four places, nobody owns them, and follow-up depends on someone remembering. We draw what is happening, then build the version where nothing is lost.',
+    eyebrow: '§01 Failure modes',
+    heading: 'Four ways operations fail quietly.',
+    text: 'Each one is invisible until a customer finds it. Select a failure vector to see the architecture that closes it.',
+    labels: { vector: 'Failure vector', architecture: 'DevLab architecture', verification: 'Node verification' },
+  },
+  console: [
+    {
+      id: 'unowned-intake',
+      title: 'Unowned lead intake',
+      vector: 'Inquiries arrive by form, inbox, chat and phone and land in four tools with no owner.',
+      architecture: 'Every inquiry is written once to SQL with a status and a named owner, then routed by rules that can be read.',
+      verification: 'VERIFIED · one record per inquiry · owner assigned at write time',
+    },
+    {
+      id: 'silent-drops',
+      title: 'Silent automation drops',
+      vector: 'A scheduled job fails at 02:00 and nobody learns until a customer asks.',
+      architecture: 'Every delivery attempt is recorded with its outcome. Failures alert an operator and stay retryable from the admin.',
+      verification: 'VERIFIED · attempt log · retry queue · operator alert',
+    },
+    {
+      id: 'data-silos',
+      title: 'Fragmented data silos',
+      vector: 'The CRM, the spreadsheet and the billing tool each hold a different version of the customer.',
+      architecture: 'One system of record with documented integration points; other tools are kept in step by deterministic sync, never by hand.',
+      verification: 'VERIFIED · single source of record · typed integration contracts',
+    },
+    {
+      id: 'manual-reentry',
+      title: 'Manual re-entry bottlenecks',
+      vector: 'The same details are typed into three tools, and the gaps between them are where work is lost.',
+      architecture: 'Data moves between tools by code. People approve what needs approval and never retype what the system already knows.',
+      verification: 'VERIFIED · zero re-keying on the audited path',
+    },
+  ],
+  reliability: {
+    eyebrow: '§02 Rules of reliability',
+    heading: 'Four rules every system ships with.',
+    text: 'This site runs on the same rules: its own inquiry form saves before it sends, and every delivery is logged.',
+  },
+  /** The delivery log drawn in the first rule's card: what "persist before delivery" looks like during an outage. */
+  persistLog: [
+    { step: 'write', target: 'inquiry saved', result: 'ok' },
+    { step: 'deliver', target: 'crm webhook', result: 'retry' },
+    { step: 'deliver', target: 'crm webhook', result: 'ok' },
+  ],
+  bento: [
+    { id: 'persist', title: 'Persist Before Delivery', text: 'Every submission writes to SQL before any external webhook, CRM, or email API fires. Outages leave work queued, never lost.' },
+    { id: 'visible', title: 'Visible Failures', text: 'Every delivery attempt records its outcome and retry eligibility. Broken integrations alert operators immediately, never customers.' },
+    { id: 'deterministic', title: 'Deterministic Routing', text: 'AI summarizes and drafts; permissions, state transitions, and delivery rules are governed by testable code.' },
+    { id: 'handoff', title: 'Human Handoff', text: 'Ambiguous or high-impact decisions always terminate at a verified human operator, never an unmonitored black box.' },
+  ],
+  work: {
+    eyebrow: '§03 Production systems',
+    heading: 'Systems in production.',
+    text: 'Specification cards for systems running today. Each links to the full engineering write-up.',
+    linkLabel: 'Inspect the write-up',
+    productBadge: 'Product · live',
+    productLinkLabel: 'Open the product',
   },
   solutions: {
-    eyebrow: '§2 What we build',
-    heading: 'Three kinds of system. One way to start.',
-  },
-  work: {
-    eyebrow: '§3 Work',
-    heading: 'Systems already running.',
-    text: 'Each write-up shows the problem, the system and what it verifiably does. Results we cannot evidence are not claimed.',
-  },
-  reliability: {
-    eyebrow: '§4 How we build',
-    heading: 'Built to fail visibly, not silently.',
-    text: 'This site runs on the same rules. Its own inquiry form saves before it sends, and every delivery is logged.',
+    eyebrow: '§04 What we build',
+    heading: 'Three service lines. One entry point.',
+    linkLabel: 'What this includes',
   },
   start: {
-    eyebrow: '§5 Start here',
-    heading: 'Not sure what to fix first?',
-    text: 'The audit reviews one workflow end to end and ends in a written recommendation, whether or not we build it.',
+    eyebrow: '§05 Start here',
+    heading: 'Start with one workflow.',
   },
-  founder: {
-    text: 'DevLab Studios is run by Stephen Rey Agustinez, a full-stack engineer in Cebu, Philippines, working with clients remotely.',
-    linkLabel: 'Read the founder profile',
+  audit: {
+    title: OFFER_AUDIT.title,
+    text: 'A fixed-scope diagnostic of one workflow, end to end.',
+    deliverables: ['End-to-end bottleneck map', 'Recommended architecture', 'Prioritised build roadmap'],
+    primary: { label: 'Request the audit', href: OFFER_AUDIT.contactHref },
+    secondary: { label: 'What you receive', href: OFFER_AUDIT.path },
+  },
+  principal: {
+    eyebrow: 'Principal engineer',
+    text: 'Stephen Rey Agustinez designs the schema, writes the API, documents the failure paths and answers the email. No account managers, no handoffs between teams, one person accountable for the system in production.',
+    linkLabel: 'Read the profile',
   },
   final: {
-    heading: 'Tell us about the system you need.',
-    text: 'A person reads every inquiry. Nothing is auto-replied and closed.',
-    primary: { label: 'Discuss your system', href: '/contact' },
+    heading: 'Describe the system you need.',
+    text: 'Every inquiry is persisted before it is delivered, and a person reads it.',
+    primary: { label: 'Discuss your system', href: '/contact?type=business_system' },
   },
 }
 
