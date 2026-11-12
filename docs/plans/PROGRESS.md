@@ -18,10 +18,10 @@ money, legal wording or a real data deletion are skipped and listed under
 | 4 | Brand foundation | done (PR #48, production at `1a2f663`; `/brand` 404 in production); **scene approval needed before Phases 5–6** |
 | 5 | Pages I | not started |
 | 6 | Pages II | not started |
-| 7 | Routes + SEO | page-independent part done (WEB-02, SEO-03/06/07/08); route work waits for Phases 5–6 |
+| 7 | Routes + SEO | part 1 done (PR #51, production at `dc6d8d2`); route work waits for Phases 5–6 |
 | 8 | Ops + editorial | done (PR #49, production at `4183fb1`) |
 | 9 | Performance | OPS-01 done (PR #50, production at `bd559a5`, HIT verified from SIN); SEC-07 → Phase 10; TEST-06 partial |
-| 10 | Data-touching jobs | not started |
+| 10 | Data-touching jobs | done in code; going live needs owner setup (Blockers 10–12) |
 | 11 | Product Worker split | not started |
 | 12 | Docs + release | not started |
 
@@ -36,7 +36,11 @@ money, legal wording or a real data deletion are skipped and listed under
 6. **Scene approval (gate for Phases 5–6):** review S1–S6 at `<preview>/brand`, then set `artReady: true` per approved scene (docs/brand/scenes.md), or send replacement art. Also confirm the "Working Drawings" direction (N1, default approve).
 7. **Uptime monitor (N8):** point a free-tier monitor at `/` and `/api/health` (docs/operations.md).
 8. **Production article tags** (Phase 7, after migration `0018`): `scripts/cms/updates/2026-11-12-article-problem-tags.sql` (applied to preview). Until then production's home page falls back to the first non-technical article from the static data rule.
-9. Observed, not changed: `/haosweetitis/` returns 404 on production and preview; only `/haosweetitis/index.html` loads. Share that URL, or ask for a route fix.
+10. **Backups (OPS-04):** create the private `devlab-backups` bucket with a 30-day lifecycle and add the `CLOUDFLARE_BACKUP_API_TOKEN` secret (D1 read + R2 edit), then run the workflow once with the drill (docs/operations.md "Backups").
+11. **Retention (SEC-08, N6):** confirm the periods; after backups run, turn retention on (dry run first, attended first real run). Mailbox erasure for a data-subject request is manual for now.
+12. **Media domain (OPS-07):** add `media.devlabstudios.com` (and a preview host) as R2 custom domains; then the rewrite script moves stored URLs (preview dry run: 41 URLs).
+13. **Privacy page (SEC-03, N5):** legal review; if production has a stored privacy page row, apply `scripts/cms/updates/2026-11-12-privacy-page.sql` (no-op otherwise).
+14. Observed, not changed: `/haosweetitis/` returns 404 on production and preview; only `/haosweetitis/index.html` loads. Share that URL, or ask for a route fix.
 
 ## Phase 1 — Guard rails
 
@@ -155,3 +159,15 @@ Production after Phase 9: MISS then HIT from the Singapore edge; preview TTFB on
 | SEO-03 | done | Article schema image fallback, dateModified, author/publisher `@id` |
 | SEO-08 | done | 15 articles tagged (static + preview D1); home promotes owner articles only; briefs in docs/content/briefs.md. `site_settings.insights_featured_tag` not added: the audience rule covers the plan's intent without another setting |
 | SEO-01, SEO-04 (rest), WEB-01 | pending | Depend on the new routes and page copy (Phases 5–6) |
+
+## Phase 10 — Data-touching jobs
+
+| Req | Status | Evidence |
+|---|---|---|
+| OPS-04 | done (inert until owner setup) | `backup.yml` nightly export + load check + upload; monthly/on-demand restore drill; `scripts/ops/restore-drill.mjs` verified on synthetic dumps (pass and missing-table fail) |
+| SEC-08 | done (off by default) | Retention plan/apply with bounded batches, off + dry run until enabled; daily cron step recorded in `job_runs`; export/erase API + panel (audited by hash). 4 + 2 unit tests on SQLite, 1 e2e. Mailbox erasure: documented manual step |
+| SEC-03 | done (pending legal review) | Factual privacy page from a code audit of every processing activity; generated guarded D1 update (dry-run verified); preview shows the static text (no stored row) |
+| OPS-07 | script done; domain is an owner action | `media-domain-rewrite.mjs` dry-run on preview: 19 project images + 22 gallery images would move |
+| SEC-07 | pending | After the Phase 5 font switch (removes the Google Fonts inline handler); then Astro `security.csp` hashes + external GA bootstrap |
+
+Also fixed: two e2e races (cache warm-up assumed two requests suffice; the preview-link and cache tests both edit /process and now run serially).
