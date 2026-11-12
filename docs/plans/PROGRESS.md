@@ -16,14 +16,14 @@ money, legal wording or a real data deletion are skipped and listed under
 | 2 | CMS correctness + content model | done (PR #46, production at `a80df26`); production data steps blocked (Blockers 1–2) |
 | 3 | Identity + personal data | done (PR #47, production at `0b0a2ab`) |
 | 4 | Brand foundation | done (PR #48, production at `1a2f663`; `/brand` 404 in production); **scene approval needed before Phases 5–6** |
-| 5 | Pages I | not started |
-| 6 | Pages II | not started |
+| 5 | Pages I | **waiting on scene approval** (Blocker 6) and copy review |
+| 6 | Pages II | waiting on Phase 5 |
 | 7 | Routes + SEO | part 1 done (PR #51, production at `dc6d8d2`); route work waits for Phases 5–6 |
 | 8 | Ops + editorial | done (PR #49, production at `4183fb1`) |
 | 9 | Performance | OPS-01 done (PR #50, production at `bd559a5`, HIT verified from SIN); SEC-07 → Phase 10; TEST-06 partial |
-| 10 | Data-touching jobs | done in code; going live needs owner setup (Blockers 10–12) |
-| 11 | Product Worker split | not started |
-| 12 | Docs + release | not started |
+| 10 | Data-touching jobs | done (PR #52, production at `8d17eca`); going live needs owner setup (Blockers 10–12) |
+| 11 | Product Worker split | not started: scheduled after the first redesign pages ship (N10 default) and needs the Workers Paid plan decision (N7) |
+| 12 | Docs + release | **v2.3.0 released 2026-11-12** (PR #53); ADRs 0011/0012; full docs refresh (OPS-08) after the remaining phases |
 
 ## Blockers (owner)
 
@@ -171,3 +171,9 @@ Production after Phase 9: MISS then HIT from the Singapore edge; preview TTFB on
 | SEC-07 | pending | After the Phase 5 font switch (removes the Google Fonts inline handler); then Astro `security.csp` hashes + external GA bootstrap |
 
 Also fixed: two e2e races (cache warm-up assumed two requests suffice; the preview-link and cache tests both edit /process and now run serially).
+
+## Release 2.3.0 (2026-11-12)
+
+Everything above shipped: CI created `v2.3.0` and its GitHub Release; `main` and `development` both at `c6209aa` (`0 0`); production smoke 31/31 legacy URLs 200, health ok.
+
+**Where the plan stands.** Done and live: Phases 1, 2, 3, 4 (pending scene approval), 7 part 1, 8, 9, 10 (inert until owner setup). Waiting on the owner: scene approval + copy review (Phases 5–6 and the rest of 7), the product-Worker split timing and plan (Phase 11), and the setup items in Blockers 1–13. SEC-07 follows Phase 5's font switch. OPS-08's full documentation refresh follows the remaining phases.
