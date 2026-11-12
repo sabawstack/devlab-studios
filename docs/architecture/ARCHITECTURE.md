@@ -69,6 +69,16 @@ The fallback is a resilience path, not a data synchronization mechanism. Seed
 files and static data can drift from existing databases, so operators inspect
 real Preview/Production rows before applying targeted updates.
 
+**Content-adapter boundary.** Public pages, layouts and components read
+content only through the loaders in `src/lib/content/*` (and
+`src/lib/publicContent.ts`), never from `src/worker/repositories/*`. The
+loaders own the D1-or-fallback decision, so the store behind them can change
+(for example to an EmDash loader, Option D in
+`docs/plans/devlab-b2b-cms-architecture-audit.md`) without editing a page. API
+routes under `src/pages/api/` are the write path and may use repositories.
+`src/lib/content/adapterBoundary.test.ts` fails if a page or component
+imports a repository.
+
 ## CMS model
 
 The Admin CMS uses a mix of block-composed singleton pages and structured

@@ -51,6 +51,10 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+### Added
+
+- A unit test enforces the content-adapter boundary: public pages, layouts and components must read content through `src/lib/content/*`, never from the D1 repositories directly, so the content store can change later without editing pages (documented in ARCHITECTURE.md). (CMS-05)
+
 ### Changed
 
 - Dependabot now updates react, react-dom and their types together, and skips the Tailwind, TypeScript, ESLint and Vitest major versions that need a hand-made migration, so it stops opening update PRs that leave the two React packages on different versions or that cannot build.
