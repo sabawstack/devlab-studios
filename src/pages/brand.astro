@@ -24,6 +24,7 @@ import Tag from '../components/brand/Tag.astro'
 import Table from '../components/brand/Table.astro'
 import Field from '../components/brand/Field.astro'
 import { createFigureCounter } from '../components/brand/figures'
+import NodeMascot from '../components/brand/NodeMascot.jsx'
 
 export const prerender = false
 
@@ -99,11 +100,29 @@ const sceneFigures = SCENES.map((scene) => ({ scene, number: figures.next() }))
         <h2 id="buttons-heading" class="mt-2 text-step-3">Buttons and tags</h2>
         <div class="mt-8 flex flex-wrap items-center gap-6">
           <Button href="#buttons-heading">Request the audit</Button>
+          <Button variant="outline" href="#buttons-heading">Explore production systems</Button>
           <Button variant="quiet" href="#buttons-heading">See the work</Button>
           <Button disabled>Disabled</Button>
           <Tag>Lead intake</Tag>
           <Tag tone="red">Failed delivery</Tag>
         </div>
+      </section>
+
+      <section aria-labelledby="node-heading">
+        <p class="label text-dl-ink-3">§4b Node</p>
+        <h2 id="node-heading" class="mt-2 text-step-3">Node, in its three states</h2>
+        <ul class="mt-8 flex flex-wrap items-end gap-10" data-node-states>
+          {(['idle', 'active', 'diagnostic'] as const).map((state) => (
+            <li class="flex flex-col items-center gap-3">
+              <NodeMascot state={state} size={96} id={`brand-node-${state}`} title={`Node, ${state}`} />
+              <p class="label text-dl-ink-3">{state}</p>
+            </li>
+          ))}
+          <li class="flex flex-col items-center gap-3">
+            <NodeMascot state="active" size={40} id="brand-node-small" decorative />
+            <p class="label text-dl-ink-3">40 px</p>
+          </li>
+        </ul>
       </section>
 
       <section aria-labelledby="panels-heading">
@@ -151,5 +170,9 @@ const sceneFigures = SCENES.map((scene) => ({ scene, number: figures.next() }))
         </form>
       </section>
     </main>
+    <script>
+      import { respectReducedMotion } from '../lib/motion'
+      respectReducedMotion()
+    </script>
   </body>
 </html>

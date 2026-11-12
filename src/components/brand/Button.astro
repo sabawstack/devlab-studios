@@ -1,56 +1,31 @@
 ---
 /**
- * Brand button / link-button (audit BR.10). `primary`: ink fill, paper text.
- * `quiet`: ink text with an underline that turns redline on hover. 44 px
- * minimum target, mono label. Renders an <a> when `href` is set.
+ * Brand button / link-button. Wraps the global action classes in brand.css so
+ * a button and a plain link look the same: `primary` (brand gradient under a
+ * navy scrim), `outline` (technical outline) and `quiet` (underlined text).
+ * 44 px minimum target, mono label. Renders an <a> when `href` is set.
  */
 interface Props {
   href?: string
-  variant?: 'primary' | 'quiet'
+  variant?: 'primary' | 'outline' | 'quiet'
   type?: 'button' | 'submit'
   disabled?: boolean
   class?: string
   [key: string]: unknown
 }
 const { href, variant = 'primary', type = 'button', disabled = false, class: className = '', ...rest } = Astro.props
-const classes = ['dl-button', `dl-button--${variant}`, className].join(' ')
+const classes = [`dl-button-${variant}`, 'dl-button', className].join(' ')
 ---
 {href && !disabled
   ? <a href={href} class={classes} {...rest}><slot /></a>
   : <button type={type} class={classes} disabled={disabled} {...rest}><slot /></button>}
 
 <style>
-  .dl-button {
-    display: inline-flex;
-    min-height: 44px;
-    align-items: center;
-    gap: 0.5rem;
-    font-family: var(--font-label);
-    font-size: var(--step--1);
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    text-decoration: none;
-    cursor: pointer;
-    transition: color var(--duration-ui) var(--ease-draw), background-color var(--duration-ui) var(--ease-draw), text-decoration-color var(--duration-ui) var(--ease-draw);
+  .dl-button { cursor: pointer; }
+  .dl-button:disabled {
+    cursor: not-allowed;
+    border: 1px solid var(--rule);
+    background: var(--paper-2);
+    color: var(--ink-3);
   }
-  .dl-button--primary {
-    padding: 0 1.25rem;
-    border: 1px solid var(--ink);
-    border-radius: var(--radius-s);
-    background: var(--ink);
-    color: var(--paper);
-  }
-  .dl-button--primary:hover { background: var(--ink-2); }
-  .dl-button--quiet {
-    padding: 0 0.125rem;
-    border: 0;
-    background: transparent;
-    color: var(--ink);
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 0.3em;
-  }
-  .dl-button--quiet:hover { text-decoration-color: var(--redline); }
-  .dl-button:focus-visible { outline: 2px solid var(--redline); outline-offset: 2px; }
-  .dl-button:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>

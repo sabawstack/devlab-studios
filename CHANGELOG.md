@@ -54,6 +54,7 @@ decided against that surface specifically:
 ### Added
 
 - "Blueprint" brand palette (ADR 0014): navy canvas with a faint blueprint grid, the logo gradient (magenta → violet → blue) as the only accent surface, amber for status, and new token names (`--bg-studio`, `--surface-card`, `--brand-magenta`, `--brand-gradient`, `--accent-amber`…) that the existing `dl-*` roles now alias. New `dl-button-outline` (technical outline) and `dl-gradient-border` (gradient border on hover/focus) utilities; Tailwind gains `dl-magenta`, `dl-violet`, `dl-blue`, `dl-amber`, `dl-danger`.
+- Node, the DevLab routing engine (`src/components/brand/NodeMascot.jsx`): a secondary figure built from the logo's `< | >` traces, in three states (idle, active with data packets, diagnostic with an amber visor and a slate). Hook-free React, styled from tokens, unique ids per instance, decorative or labelled; reduced motion hides the packets and `src/lib/motion.ts` pauses SVG animation. Shown in all states on the `/brand` review page.
 
 ### Changed
 
@@ -61,6 +62,7 @@ decided against that surface specifically:
 - Footer closes with "Systems architected, engineered, and maintained end-to-end by Stephen Rey Agustinez." and shows the location as Lapu-Lapu City, Cebu, Philippines; Organization and Person schema gain `addressRegion: Cebu` (still city-level, no street or postal code).
 - Every brand-layout page switches to the dark palette through the global tokens; `.ink-panel` is now the raised navy card surface instead of a light inversion. Primary buttons use the brand gradient under a navy scrim (white text ≥ 4.5:1); the inquiry form's buttons, errors and status messages use the tokens.
 - Brand fonts: Space Grotesk (display and text) and JetBrains Mono (labels) replace Bricolage Grotesque and Martian Mono, still self-hosted, Latin subset, 62 KB together, with metric-matched fallbacks. Newsreader stays for long-form.
+- `Button.astro` wraps the global action classes (`primary`, new `outline`, `quiet`) instead of keeping its own copy of the styles. Vitest now runs `*.test.jsx` with the automatic JSX runtime.
 - `brandTokens.test.ts` now checks the Blueprint values and AA contrast on navy (magenta and amber held to 4.5:1 as text), allows gradients only through `var(--brand-gradient)`, forbids gradient text and raw hex colours in brand components and pages.
 
 ## [2.4.0] - 2026-11-12

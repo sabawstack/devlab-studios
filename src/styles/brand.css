@@ -409,3 +409,32 @@ body.brand {
 .dl-form .form-surface [role='status'][data-status='success'] > svg { color: var(--ok); }
 .dl-form .form-surface [role='status'][data-status='error'] { color: var(--ink); border-color: var(--accent-danger); }
 .dl-form .form-surface [role='status'][data-status='error'] > svg { color: var(--accent-danger); }
+
+/* ---- Node, the routing engine (NodeMascot.jsx, ADR 0014) ---- */
+.node-mascot { overflow: visible; }
+.node-stop-magenta { stop-color: var(--brand-magenta); }
+.node-stop-violet { stop-color: var(--brand-violet); }
+.node-stop-blue { stop-color: var(--brand-blue); }
+.node-wire { fill: none; stroke: var(--ink-3); stroke-width: 1.5; stroke-linecap: round; }
+.node-ring { fill: var(--paper); stroke-width: 2; }
+.node-ring--left { stroke: var(--brand-magenta); }
+.node-ring--centre { stroke: var(--ink); }
+.node-ring--right { stroke: var(--brand-blue); }
+.node-plate { stroke-width: 2; stroke-linejoin: round; }
+.node-plate--left { fill: var(--brand-magenta); fill-opacity: 0.22; stroke: var(--brand-magenta); }
+/* Blue is dim on navy, so its plate is filled more strongly to read at small sizes. */
+.node-plate--right { fill: var(--brand-blue); fill-opacity: 0.45; stroke: var(--brand-blue); }
+.node-visor { stroke: var(--paper); stroke-width: 1.5; }
+.node-visor--amber { fill: var(--accent-amber); }
+.node-eye { fill: var(--ink); }
+.node-hand { fill: var(--paper); stroke: var(--ink-2); stroke-width: 1.5; }
+.node-slate { fill: var(--surface-card); stroke: var(--accent-amber); stroke-width: 1.5; }
+.node-slate-line { fill: none; stroke: var(--ink-3); stroke-width: 1.2; stroke-linecap: round; }
+.node-packet { fill: var(--ink); }
+@keyframes node-pulse {
+  50% { opacity: 0.55; }
+}
+.node-mascot[data-state='active'] .node-visor { animation: node-pulse 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .node-packets { display: none; }
+}
