@@ -67,7 +67,7 @@ export function diffRemovedGalleryUrls(previousUrls, nextUrls) {
   return [...new Set(previousUrls)].filter((url) => !nextSet.has(url))
 }
 
-function toDbProject(input) {
+export function toDbProject(input) {
   return {
     id: String(input.id || '').trim(),
     title: String(input.title || '').trim(),
@@ -79,7 +79,9 @@ function toDbProject(input) {
     image_filename: String(input.imageFilename || '').trim(),
     type: String(input.type || '').trim(),
     sort_order: Number.isFinite(Number(input.sortOrder)) ? Number(input.sortOrder) : 999,
-    status: input.status === 'draft' ? 'draft' : 'published',
+    // The projects table accepts only 'draft' and 'published'; 'archived' means
+    // "not public", so it is stored as a draft, never as published.
+    status: input.status === 'draft' || input.status === 'archived' ? 'draft' : 'published',
   }
 }
 

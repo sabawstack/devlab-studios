@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { getReplaceAllCollection, getPerItemCollection, getSingletonContentType } from '../../../../../worker/adminRegistry.js'
 import { getVersion, recordVersion } from '../../../../../worker/repositories/contentVersions.js'
 import { recordAuditEvent } from '../../../../../worker/repositories/auditLog.js'
+import { replacePage } from '../../../../../worker/repositories/pages.js'
+import { checkPageForSave } from '../../../../../lib/pageSave'
 import { getEnv } from '../../../../../lib/env'
 import { jsonResponse, readJsonBody } from '../../../../../lib/http'
 import { SINGLETON_CONTENT_SCHEMAS } from '../../../../../lib/schemas/legacyContentTypes'
@@ -37,8 +39,28 @@ const unguardedPOST: APIRoute = async ({ params, request, locals }) => {
   const env = getEnv()
   if (!env.DB) return jsonResponse({ error: 'D1 DB binding is not configured.' }, 503)
 
+  // Pages are versioned per slug (contentId) by PUT /api/admin/pages/:slug,
+  // not through the collection registry, so they restore through the same
+  // checks that page save runs.
+  if (type === 'pages' && (typeof contentId !== 'string' || !contentId)) {
+    return jsonResponse({ error: 'contentId (the page slug) is required to restore a page.' }, 400)
+  }
+
   const version = await getVersion(env.DB, type, contentId, versionNumber)
   if (!version) return jsonResponse({ error: 'Version not found.' }, 404)
+
+  if (type === 'pages') {
+    const slug = contentId as string
+    const check = await checkPageForSave(env.DB, slug, version.snapshot)
+    if (!check.ok) {
+      const { error, issues, projectIds } = (await check.response.json()) as { error?: string; issues?: unknown; projectIds?: unknown }
+      return jsonResponse({ error: `This version cannot be restored: ${error}`, issues, projectIds }, 400)
+    }
+    const restored = await replacePage(env.DB, slug, check.data)
+    await recordVersion(env.DB, { contentType: 'pages', contentId: slug, status: check.data.status, snapshot: restored, createdBy: locals.adminEmail || null })
+    await recordAuditEvent(env.DB, { actorEmail: locals.adminEmail || null, action: 'restore', entityType: 'pages', entityId: slug, metadata: { summary: `Restored the ${slug} page from version ${versionNumber}.`, restoredVersion: versionNumber } })
+    return jsonResponse(restored)
+  }
 
   const replaceAll = getReplaceAllCollection(type)
   const perItem = getPerItemCollection(type)

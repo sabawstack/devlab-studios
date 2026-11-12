@@ -69,7 +69,9 @@ decided against that surface specifically:
 - The lead engine's "unanswered replies" list now orders messages by when they were sent or received instead of when their rows were inserted, so a reply recorded in the same millisecond as the inbound message (an import or a retry) is no longer listed as unanswered, and an outbound message sent before the inbound one no longer hides it.
 - The static end-to-end suite now runs from a fresh checkout and in CI: the test server applies the CMS migrations to its local database first, starts with remote bindings off (Workers AI no longer needs a Cloudflare login or bills a test run), and stays in the foreground when Astro detects an AI coding agent.
 - A database error while checking maintenance mode or a CMS redirect no longer breaks the home, about, solutions, profile and insights pages: both checks now fail open (no maintenance, no redirect) and log the error.
-
+- The Solutions and Insights page editors can save again (their slugs were missing from the page schema, so every save failed validation); a test keeps the schema in step with the admin's page list. (CMS-01)
+- Restoring a page version in the admin works: it answered 404 because pages were never registered with the restore route. A restore now runs the same checks as a save, including Work's project references. (CMS-01)
+- The page editors no longer offer an "Archived" status that the pages table rejects on every save. Projects, services, FAQs and the other draft/published-only content now store "archived" as a draft; before, the API stored it as published, which would have made archived content public. (CMS-01)
 ### Security
 
 - Admin JSON bodies are capped at 256 KB (configurable per route) and refused with 413 before parsing; malformed JSON now gets a 400 instead of a 500, including in admin routes without their own error handling. (SEC-05)

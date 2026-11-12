@@ -255,7 +255,6 @@ export default function WorkPageManager() {
             <select value={page.status} onChange={(event) => setPage((current) => ({ ...current, status: event.target.value }))} className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-brand-teal">
               <option value="draft">Draft</option>
               <option value="published">Published</option>
-              <option value="archived">Archived</option>
             </select>
           </label>
         </div>

@@ -1,18 +1,12 @@
 import type { APIRoute } from 'astro'
 import { getPage, replacePage } from '../../../../worker/repositories/pages.js'
-import { listProjects } from '../../../../worker/repositories/projects.js'
-import { pageSingletonSchema } from '../../../../lib/schemas/singletons.js'
+import { checkPageForSave } from '../../../../lib/pageSave'
 import { recordVersion } from '../../../../worker/repositories/contentVersions.js'
 import { recordAuditEvent } from '../../../../worker/repositories/auditLog.js'
 import { getEnv } from '../../../../lib/env'
 import { jsonResponse, readJsonBody } from '../../../../lib/http'
 import { buildAuditMetadata } from '../../../../lib/audit.js'
 import { withAdmin } from '../../../../lib/adminGuard'
-
-interface ProjectReferenceRecord {
-  id: string
-  status?: string
-}
 
 const unguardedGET: APIRoute = async ({ params }) => {
   const slug = params.slug as string
@@ -30,45 +24,17 @@ const unguardedPUT: APIRoute = async ({ params, request, locals }) => {
 
   const before = await getPage(env.DB, slug, { includeDrafts: true })
   const payload = await readJsonBody(request)
-  const result = pageSingletonSchema.safeParse({ ...payload, slug })
-  if (!result.success) return jsonResponse({ error: 'Validation failed.', issues: result.error.issues }, 400)
+  const check = await checkPageForSave(env.DB, slug, payload)
+  if (!check.ok) return check.response
 
-  if (slug === 'work') {
-    const showcase = result.data.blocks.find((block) => block.type === 'workProjectShowcase')
-    const featuredItems = showcase?.type === 'workProjectShowcase' ? showcase.props.items : []
-    const projects = await listProjects(env.DB, { includeDrafts: true }) as ProjectReferenceRecord[]
-    const projectsById = new Map(projects.map((project) => [project.id, project]))
-    const missingProjectIds = featuredItems
-      .map((item) => item.projectId)
-      .filter((projectId) => !projectsById.has(projectId))
-
-    if (missingProjectIds.length > 0) {
-      return jsonResponse({
-        error: 'Work contains project references that do not exist.',
-        projectIds: missingProjectIds,
-      }, 400)
-    }
-
-    const unpublishedProjectIds = featuredItems
-      .filter((item) => item.status === 'published' && projectsById.get(item.projectId)?.status !== 'published')
-      .map((item) => item.projectId)
-
-    if (unpublishedProjectIds.length > 0) {
-      return jsonResponse({
-        error: 'Publish the referenced Projects before publishing their Work entries.',
-        projectIds: unpublishedProjectIds,
-      }, 400)
-    }
-  }
-
-  const saved = await replacePage(env.DB, slug, result.data)
-  await recordVersion(env.DB, { contentType: 'pages', contentId: slug, status: result.data.status, snapshot: saved, createdBy: locals.adminEmail || null })
+  const saved = await replacePage(env.DB, slug, check.data)
+  await recordVersion(env.DB, { contentType: 'pages', contentId: slug, status: check.data.status, snapshot: saved, createdBy: locals.adminEmail || null })
   await recordAuditEvent(env.DB, {
     actorEmail: locals.adminEmail || null,
     action: 'replace',
     entityType: 'pages',
     entityId: slug,
-    metadata: buildAuditMetadata({ before, after: saved, label: `${result.data.title || slug} page` }),
+    metadata: buildAuditMetadata({ before, after: saved, label: `${check.data.title || slug} page` }),
   })
 
   return jsonResponse(saved)

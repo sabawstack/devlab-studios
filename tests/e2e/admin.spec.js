@@ -280,6 +280,58 @@ test('page builder: add a block, save, verify it persists, then remove it', asyn
   await expect(page.getByText(/^saved/i)).toBeVisible({ timeout: 10_000 })
 })
 
+// CMS-01: the Solutions and Insights builders loaded but every save failed
+// validation (their slugs were missing from the page schema).
+for (const name of ['Solutions', 'Insights']) {
+  test(`page builder: the ${name} page saves`, async ({ page }) => {
+    await login(page)
+    await openAdminNavGroup(page, 'Public Pages')
+    await page.getByRole('navigation').getByRole('link', { name, exact: true }).click()
+    await expect(page.getByRole('heading', { name: /^Page:/, level: 1 })).toBeVisible()
+
+    await page.getByRole('button', { name: /^save page/i }).click()
+    await expect(page.getByText(/^saved/i)).toBeVisible({ timeout: 10_000 })
+  })
+}
+
+test('page builder offers only the statuses the pages table accepts', async ({ page }) => {
+  await login(page)
+  await openAdminNavGroup(page, 'Public Pages')
+  await page.getByRole('navigation').getByRole('link', { name: 'Home' }).click()
+  await expect(page.getByRole('heading', { name: /^Page:/, level: 1 })).toBeVisible()
+  await expect(page.locator('option[value="archived"]')).toHaveCount(0)
+})
+
+// CMS-01: restoring a page version answered 404 (pages were never registered
+// with the rollback route).
+test('a page version can be restored', async ({ page, baseURL }) => {
+  await login(page)
+  const original = await (await page.request.get(`${baseURL}/api/admin/pages/about`)).json()
+
+  const firstTitle = `About restore A ${Date.now()}`
+  const secondTitle = `About restore B ${Date.now()}`
+  for (const title of [firstTitle, secondTitle]) {
+    const saved = await page.request.put(`${baseURL}/api/admin/pages/about`, {
+      data: { ...original, title, status: original.status === 'published' ? 'published' : 'draft' },
+    })
+    expect(saved.ok(), await saved.text()).toBeTruthy()
+  }
+
+  const versions = await (await page.request.get(`${baseURL}/api/admin/versions/pages?id=about`)).json()
+  const target = versions.find((version) => version.snapshot?.title === firstTitle)
+  expect(target, 'the first save recorded a version').toBeTruthy()
+
+  const restored = await page.request.post(`${baseURL}/api/admin/versions/pages/rollback`, {
+    data: { contentId: 'about', versionNumber: target.versionNumber },
+  })
+  expect(restored.status(), await restored.text()).toBe(200)
+  expect((await (await page.request.get(`${baseURL}/api/admin/pages/about`)).json()).title).toBe(firstTitle)
+
+  // Put the page back as it was.
+  const reset = await page.request.put(`${baseURL}/api/admin/pages/about`, { data: original })
+  expect(reset.ok()).toBeTruthy()
+})
+
 test('creating a project through the bespoke Projects editor still records a version', async ({ page, baseURL }) => {
   // ProjectsManager keeps its own bespoke UI (image upload, gallery
   // reordering) rather than being rewritten onto SchemaForm, but its

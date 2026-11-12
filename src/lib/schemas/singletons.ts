@@ -52,14 +52,28 @@ export const profileSchema = z.object({
 export type Profile = z.infer<typeof profileSchema>
 
 /**
- * Block-composed singleton pages (Home, About, Process, Work). Contact keeps a
- * fixed form component rather than being block-composed. Backed by the
- * repurposed `pages`/`page_sections` tables (see src/worker/repositories/pages.js).
+ * Every page the admin page builder edits (PUBLIC_SURFACES entries whose
+ * adminPath is /admin/pages/*; src/lib/schemas/pageSingleton.test.ts keeps the
+ * two in step). Solutions and Insights were missing, so their editors could
+ * load but never save.
+ */
+export const PAGE_SLUGS = ['home', 'about', 'solutions', 'work', 'insights', 'process', 'contact'] as const
+
+/**
+ * The `pages` and `page_sections` tables only accept these (CHECK in
+ * migrations/0001). `archived` used to be offered and failed every save.
+ */
+export const PAGE_STATUSES = ['draft', 'published'] as const
+
+/**
+ * Block-composed singleton pages. Contact keeps a fixed form component rather
+ * than being block-composed. Backed by the repurposed `pages`/`page_sections`
+ * tables (see src/worker/repositories/pages.js).
  */
 export const pageSingletonSchema = z.object({
-  slug: z.enum(['home', 'about', 'process', 'work', 'contact']),
+  slug: z.enum(PAGE_SLUGS),
   title: z.string().min(1),
-  status: z.enum(['draft', 'published', 'archived']).default('draft'),
+  status: z.enum(PAGE_STATUSES).default('draft'),
   blocks: z.array(pageBlockSchema).default([]),
   seo: seoSchema.optional(),
   // Belt and braces over the per-field link schemas in blocks.ts: any block
@@ -71,7 +85,7 @@ export type PageSingleton = z.infer<typeof pageSingletonSchema>
 export const legalPageSchema = z.object({
   slug: z.enum(['privacy', 'terms']),
   title: z.string().min(1),
-  status: z.enum(['draft', 'published', 'archived']).default('draft'),
+  status: z.enum(PAGE_STATUSES).default('draft'),
   body: z.string().min(1),
   seo: seoSchema.optional(),
 })

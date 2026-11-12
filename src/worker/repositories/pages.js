@@ -12,8 +12,10 @@ function normalizeString(value) {
   return String(value || '').trim()
 }
 
-function normalizeStatus(value) {
-  return value === 'draft' || value === 'archived' ? value : 'published'
+// The pages and page_sections tables accept only 'draft' and 'published';
+// anything meaning "not public" is stored as a draft.
+export function normalizeStatus(value) {
+  return value === 'draft' || value === 'archived' ? 'draft' : 'published'
 }
 
 async function getPageRow(db, slug) {

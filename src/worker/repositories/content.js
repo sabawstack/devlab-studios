@@ -1,8 +1,11 @@
 import { nowIso, parseJsonField } from '../utils/responses'
 import { listCertifications } from './certifications.js'
 
-function normalizeStatus(value) {
-  return value === 'draft' ? 'draft' : 'published'
+// These tables accept only 'draft' and 'published'. 'archived' (valid in the
+// shared item schema for other collections) means "not public", so it is
+// stored as a draft -- never as published.
+export function normalizeStatus(value) {
+  return value === 'draft' || value === 'archived' ? 'draft' : 'published'
 }
 
 function normalizeSortOrder(value, fallback = 999) {

@@ -6,8 +6,10 @@ import SchemaForm from '../components/SchemaForm'
 import VersionHistoryPanel from './VersionHistoryPanel'
 import PublicUsageNotice from '../components/PublicUsageNotice'
 import { PUBLIC_SURFACES } from '../../config/publicSurfaces'
+import { PAGE_STATUSES } from '../../lib/schemas/singletons'
 
-const STATUS_OPTIONS = ['draft', 'published', 'archived']
+// Only what the pages table accepts; 'archived' used to fail every save.
+const STATUS_OPTIONS = PAGE_STATUSES
 const HIDDEN_PUBLIC_BLOCKS = new Set(['featuredCaseStudies', 'testimonials'])
 const PAGE_ALLOWED_BLOCK_TYPES = {
   home: ['hero', 'stats', 'richText', 'servicesGrid', 'processSteps'],
