@@ -16,3 +16,7 @@ have to re-derive from git archaeology.
 7. [Business inquiry pipeline](./0007-business-inquiry-pipeline.md)
 8. [Insights daily digest: a cron in our own Worker entrypoint](./0008-insights-daily-digest.md)
 9. [Renaming /services to /solutions, and why the redirect is in code](./0009-solutions-route-rename.md)
+11. [Edge HTML cache with generation-based invalidation](./0011-edge-html-cache.md)
+12. ["Working Drawings" brand system and a code-owned scene registry](./0012-brand-system-and-scene-registry.md)
+
+(0010 is reserved for the product-Worker split, written with that change.)

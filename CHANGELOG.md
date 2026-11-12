@@ -51,6 +51,8 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-11-12
+
 ### Added
 
 - A unit test enforces the content-adapter boundary: public pages, layouts and components must read content through `src/lib/content/*`, never from the D1 repositories directly, so the content store can change later without editing pages (documented in ARCHITECTURE.md). (CMS-05)
@@ -76,6 +78,7 @@ decided against that surface specifically:
 - Nightly backups (OPS-04): a workflow exports both production databases, checks each export loads, and uploads it gzipped to a private R2 bucket; a monthly restore drill proves the latest one restores. Inert until the owner creates the bucket and adds a scoped token (docs/operations.md).
 - Retention and privacy requests (SEC-08): a daily retention step for closed inquiries (24 months), confirmation-cap hashes (30 days), the audit log (24 months) and old content versions (keep 50), shipped off and dry-run until the owner confirms the periods, with every run recorded; Inquiries → **Privacy requests** exports or erases everything an address submitted (audited by hash). Suppression records are kept.
 - `scripts/cms/media-domain-rewrite.mjs` moves every stored media URL to a new host (dry run by default, reversible), for the move to a custom media domain (OPS-07).
+- Architecture decision records 0011 (edge HTML cache) and 0012 (brand system and scene registry).
 ### Changed
 
 - Dependabot now updates react, react-dom and their types together, and skips the Tailwind, TypeScript, ESLint and Vitest major versions that need a hand-made migration, so it stops opening update PRs that leave the two React packages on different versions or that cannot build.
