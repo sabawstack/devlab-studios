@@ -706,19 +706,21 @@ export async function replaceResourcesContent(db, payload) {
 }
 
 export async function getSiteSettingsContent(db, { includeDrafts = false } = {}) {
-  const [navigation, footer, ctas] = await Promise.all([
+  const [navigation, footer, ctas, analytics] = await Promise.all([
     listNavigationItems(db, { includeDrafts }),
     getSiteSetting(db, 'site_footer', {}),
     getSiteSetting(db, 'site_ctas', {}),
+    getSiteSetting(db, 'site_analytics', {}),
   ])
 
-  return { navigation, footer, ctas }
+  return { navigation, footer, ctas, analytics }
 }
 
 export async function replaceSiteSettingsContent(db, payload) {
   await replaceNavigationItems(db, payload.navigation)
   await setSiteSetting(db, 'site_footer', payload.footer || {})
   await setSiteSetting(db, 'site_ctas', payload.ctas || {})
+  if (payload.analytics) await setSiteSetting(db, 'site_analytics', payload.analytics)
   return getSiteSettingsContent(db, { includeDrafts: true })
 }
 

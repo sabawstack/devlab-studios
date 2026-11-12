@@ -7,6 +7,7 @@ import Footer from '../components/Footer.astro'
 import PublicBackdrop from '../components/PublicBackdrop.astro'
 import { loadSiteSettings } from '../lib/content/siteSettings'
 import type { SeoData } from '../lib/content/seo'
+import { resolveGaMeasurementId } from '../config/analytics.js'
 
 interface Props {
   title: string
@@ -16,6 +17,8 @@ interface Props {
 
 const { title, seo = null, jsonLd } = Astro.props
 const siteSettings = await loadSiteSettings()
+// OPS-05: the GA4 id is an admin setting; unset means today's default, '' means off.
+const gaMeasurementId = siteSettings.gaMeasurementId ?? resolveGaMeasurementId(undefined)
 const currentPath = new URL(Astro.request.url).pathname
 // Helpers like getFaqSchema() return null when there is nothing truthful to
 // emit, so falsy entries are dropped rather than rendered as a `null` script.
@@ -56,17 +59,21 @@ function safeJsonLd(value: unknown): string {
     <link rel="manifest" href="/site.webmanifest" />
 
     <!-- Google tag (gtag.js), delayed so it does not compete with first render on mobile. -->
-    <script is:inline>
+    <script is:inline define:vars={{ gaMeasurementId }}>
+      if (gaMeasurementId) {
       window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
+      // Explicitly global: define:vars may wrap this script in a scope, and
+      // src/lib/analytics.ts calls window.gtag.
+      window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+      var gtag = window.gtag;
       window.addEventListener('load', function () {
         var loadAnalytics = function () {
           var script = document.createElement('script');
-          script.src = 'https://www.googletagmanager.com/gtag/js?id=G-MD3PL91M9G';
+          script.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(gaMeasurementId);
           script.async = true;
           document.head.appendChild(script);
           gtag('js', new Date());
-          gtag('config', 'G-MD3PL91M9G', { client_storage: 'none', anonymize_ip: true });
+          gtag('config', gaMeasurementId, { client_storage: 'none', anonymize_ip: true });
         };
 
         if ('requestIdleCallback' in window) {
@@ -75,6 +82,7 @@ function safeJsonLd(value: unknown): string {
           window.setTimeout(loadAnalytics, 1800);
         }
       });
+      }
     </script>
   </head>
   <body class="public-page">

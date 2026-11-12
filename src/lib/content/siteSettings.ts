@@ -3,6 +3,7 @@ import { siteSettingsContent } from '../../data/siteSettingsContent.js'
 import { getEnv } from '../env'
 import { sanitizeLinkFields } from '../safeHref'
 import { COMPANY, scrubPersonalContacts } from '../../config/company.js'
+import { resolveGaMeasurementId } from '../../config/analytics.js'
 
 /**
  * '' when there is no real tagline: unset, a test placeholder, or the retired
@@ -27,6 +28,8 @@ export interface SiteSettingsData {
     quickLinks?: Array<{ label: string; href: string }>
     socialLinks?: Array<{ label: string; href: string }>
   }
+  /** GA4 measurement id to render ('' = analytics off); unset means the default (OPS-05). */
+  gaMeasurementId?: string
 }
 
 /**
@@ -58,6 +61,7 @@ export async function loadSiteSettings(): Promise<SiteSettingsData> {
         socialLinks: footer.socialLinks?.length ? footer.socialLinks : siteSettingsContent.footer.socialLinks,
         legalLinks: footer.legalLinks?.length ? footer.legalLinks : siteSettingsContent.footer.legalLinks,
       },
+      gaMeasurementId: resolveGaMeasurementId((data as { analytics?: unknown }).analytics),
     }
   } catch {
     return siteSettingsContent

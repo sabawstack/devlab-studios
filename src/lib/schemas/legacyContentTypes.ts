@@ -91,6 +91,11 @@ export const siteSettingsContentSchema = z.object({
   navigation: z.array(navigationItemInputSchema).optional().default([]),
   footer: z.record(z.string(), z.unknown()).optional().default({}),
   ctas: z.record(z.string(), z.unknown()).optional().default({}),
+  // OPS-05: GA4 measurement id ('' keeps the default) and an off switch.
+  analytics: z.object({
+    enabled: z.boolean().optional().default(true),
+    gaMeasurementId: z.string().trim().toUpperCase().regex(/^(G-[A-Z0-9]{4,16})?$/, 'Use a GA4 measurement id like G-XXXXXXX, or leave it blank.').optional().default(''),
+  }).optional(),
 }).superRefine(refineSafeLinks)
 
 const seoPageInputSchema = z.object({

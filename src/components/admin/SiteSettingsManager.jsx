@@ -279,6 +279,30 @@ export default function SiteSettingsManager() {
         </section>
 
         <section className="rounded-md border border-slate-200 bg-white">
+          <SectionHeader title="Analytics" description="Google Analytics 4 runs cookieless. Leave the id blank to use the default." />
+          <div className="grid gap-4 px-5 py-5 md:grid-cols-2">
+            <label className="grid gap-1.5 text-sm font-semibold text-slate-800">
+              GA4 measurement id
+              <input
+                value={value.analytics?.gaMeasurementId || ''}
+                placeholder="G-XXXXXXXXXX"
+                onChange={(event) => setValue((current) => ({ ...current, analytics: { enabled: current.analytics?.enabled !== false, ...(current.analytics || {}), gaMeasurementId: event.target.value } }))}
+                className="rounded-md border border-slate-300 px-3 py-2 text-sm font-normal text-slate-800 outline-none transition focus:border-slate-500"
+              />
+            </label>
+            <label className="flex items-center gap-3 self-end text-sm font-semibold text-slate-800">
+              <input
+                type="checkbox"
+                checked={value.analytics?.enabled !== false}
+                onChange={(event) => setValue((current) => ({ ...current, analytics: { gaMeasurementId: '', ...(current.analytics || {}), enabled: event.target.checked } }))}
+                className="h-4 w-4 rounded border-slate-300"
+              />
+              Analytics on
+            </label>
+          </div>
+        </section>
+
+        <section className="rounded-md border border-slate-200 bg-white">
           <SectionHeader title="Footer Identity" description="Main footer copy and contact info." />
           <div className="grid gap-4 px-5 py-5 md:grid-cols-2">
             {[

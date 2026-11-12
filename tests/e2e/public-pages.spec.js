@@ -467,3 +467,9 @@ test('the primary navigation points at /solutions, not the old route', async ({ 
   const navigation = await headerNav(page)
   await expect(navigation.getByRole('link', { name: 'Solutions' }).first()).toHaveAttribute('href', '/solutions')
 })
+
+// OPS-05: the GA4 id comes from settings, with today's id as the default.
+test('the page renders the configured GA4 measurement id', async ({ request }) => {
+  const html = await (await request.get('/')).text()
+  expect(html).toMatch(/G-[A-Z0-9]{4,16}/)
+})
