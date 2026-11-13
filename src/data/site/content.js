@@ -131,7 +131,7 @@ export const DELIVERY_STEPS = [
  */
 export const HOME = {
   hero: {
-    eyebrow: '[ DEVLAB STUDIOS • SYSTEMS ARCHITECTURE ]',
+    eyebrow: 'DevLab Studios',
     heading: "Systems that don't silently fail.",
     lead: 'Custom web interfaces, backend services, and AI workflows engineered end-to-end by one senior architect. No outsourced handoffs. No brittle wrappers.',
     primary: { label: 'Request a Workflow Audit', href: OFFER_AUDIT.contactHref },
@@ -155,7 +155,7 @@ export const HOME = {
     },
   },
   problems: {
-    eyebrow: '§01 Failure modes',
+    eyebrow: 'Failure modes',
     heading: 'Four ways operations fail quietly.',
     text: 'Each one is invisible until a customer finds it. Select a failure vector to see the architecture that closes it.',
     labels: { vector: 'Failure vector', architecture: 'DevLab architecture', verification: 'Node verification' },
@@ -191,7 +191,7 @@ export const HOME = {
     },
   ],
   reliability: {
-    eyebrow: '§02 Rules of reliability',
+    eyebrow: 'Rules of reliability',
     heading: 'Four rules every system ships with.',
     text: 'This site runs on the same rules: its own inquiry form saves before it sends, and every delivery is logged.',
   },
@@ -208,7 +208,7 @@ export const HOME = {
     { id: 'handoff', title: 'Human Handoff', text: 'Ambiguous or high-impact decisions always terminate at a verified human operator, never an unmonitored black box.' },
   ],
   work: {
-    eyebrow: '§03 Production systems',
+    eyebrow: 'Production systems',
     heading: 'Systems in production.',
     text: 'Specification cards for systems running today. Each links to the full engineering write-up.',
     linkLabel: 'Inspect the write-up',
@@ -216,12 +216,12 @@ export const HOME = {
     productLinkLabel: 'Open the product',
   },
   solutions: {
-    eyebrow: '§04 What we build',
+    eyebrow: 'What we build',
     heading: 'Three service lines. One entry point.',
     linkLabel: 'What this includes',
   },
   start: {
-    eyebrow: '§05 Start here',
+    eyebrow: 'Start here',
     heading: 'Start with one workflow.',
   },
   audit: {

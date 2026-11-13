@@ -187,8 +187,7 @@ function mixHex(hex: string, [r, g, b, alpha]: number[]): string {
 describe('Direction B guards (TEST-01)', () => {
   it('finds the CSS rules', () => expect(rules.length).toBeGreaterThan(50))
 
-  // Fixed by BRAND-02 (removes the gradient border on cards).
-  it.fails('the gradient is referenced only by the four allowed roles (BRAND-02)', () => {
+  it('the gradient is referenced only by the four allowed roles', () => {
     const wrong = rules.filter(({ selector, body }) => /var\(--brand-gradient\)/.test(body) && !GRADIENT_SELECTORS.some((allowed) => allowed.test(selector)))
     expect(wrong.map(({ selector }) => selector)).toEqual([])
   })

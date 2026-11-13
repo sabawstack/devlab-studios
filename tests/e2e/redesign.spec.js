@@ -171,3 +171,21 @@ test('brand pages render on stone with no grid, glow or header blur', async ({ p
     expect([styles.blur, styles.beforeBlur].filter((value) => value && value !== 'none'), path).toEqual([])
   }
 })
+
+// BRAND-02: the current nav item carries the gradient underline; section
+// labels and form labels are plain sentence-case words in the text face.
+test('nav underline, section labels and form labels follow spec N.5', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/about')
+  const underline = await page.locator('nav[aria-label="Primary"] a[aria-current="page"]').evaluate((link) => getComputedStyle(link, '::after').backgroundImage)
+  expect(underline).toMatch(/linear-gradient/)
+  await page.goto('/contact')
+  const styles = await page.evaluate(() => {
+    const read = (element) => ({ transform: getComputedStyle(element).textTransform, font: getComputedStyle(element).fontFamily })
+    return { section: read(document.querySelector('main .label')), field: read(document.querySelector('.form-surface label')) }
+  })
+  for (const [name, style] of Object.entries(styles)) {
+    expect(style.transform, name).toBe('none')
+    expect(style.font, name).toMatch(/Space Grotesk/)
+  }
+})

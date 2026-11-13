@@ -2,8 +2,8 @@
 /**
  * Site navigation for the redesigned pages (audit G.2 / WEB-03): logo as home,
  * the CMS navigation items (Home is the logo, so it is not repeated), and one
- * primary CTA. Sticky glass bar on the Blueprint canvas (ADR 0014); the
- * current page is underlined in magenta. Phones get a full-height sheet with 56 px targets; Escape and
+ * primary CTA. A plain stone bar (spec N.5); the current page is ink over a
+ * 2 px gradient underline (brand.css). Phones get a full-height sheet with 56 px targets; Escape and
  * the close button return focus to the menu button.
  */
 import type { SiteSettingsData } from '../../lib/content/siteSettings'
@@ -26,7 +26,7 @@ const isCurrent = (href: string) => currentPath === href || (href !== '/' && cur
     <nav aria-label="Primary" class="hidden lg:block">
       <ul class="flex items-center gap-7">
         {links.map((link) => (
-          <li><a href={link.href} class={`label text-dl-ink-2 no-underline hover:text-dl-ink ${isCurrent(link.href) ? 'dl-nav__current text-dl-ink' : ''}`} aria-current={isCurrent(link.href) ? 'page' : undefined}>{link.label}</a></li>
+          <li><a href={link.href} class={`label text-dl-ink-2 no-underline hover:text-dl-ink ${isCurrent(link.href) ? 'text-dl-ink' : ''}`} aria-current={isCurrent(link.href) ? 'page' : undefined}>{link.label}</a></li>
         ))}
       </ul>
     </nav>
@@ -56,7 +56,6 @@ const isCurrent = (href: string) => currentPath === href || (href !== '/' && cur
 </header>
 
 <style>
-  .dl-nav__current { text-decoration: underline; text-decoration-color: var(--redline); text-decoration-thickness: 2px; text-underline-offset: 0.6em; }
   .dl-menu-button {
     min-height: 44px; min-width: 44px; padding: 0 0.75rem;
     border: 1px solid var(--rule); border-radius: var(--radius-s);

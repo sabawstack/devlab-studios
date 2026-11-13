@@ -16,7 +16,7 @@ function strings(value, path = 'HOME') {
 
 describe('home hero', () => {
   it('leads with the reliability promise and the audit', () => {
-    expect(HOME.hero.eyebrow).toBe('[ DEVLAB STUDIOS • SYSTEMS ARCHITECTURE ]')
+    expect(HOME.hero.eyebrow).toBe('DevLab Studios')
     expect(HOME.hero.heading).toBe("Systems that don't silently fail.")
     expect(HOME.hero.primary).toEqual({ label: 'Request a Workflow Audit', href: OFFER_AUDIT.contactHref })
     expect(HOME.hero.secondary).toEqual({ label: 'Explore Production Systems', href: '/work' })

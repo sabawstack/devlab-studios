@@ -146,8 +146,8 @@ describe('section labels (TEST-01; spec I.2, N.2)', () => {
 
   it('finds the section labels', () => expect(eyebrows.length).toBeGreaterThan(5))
 
-  // Fixed by BRAND-02: plain words, read aloud as words by screen readers.
-  it.fails('use no §, brackets or bullets, and are not shouted in capitals (BRAND-02)', () => {
+  // BRAND-02: plain words, read aloud as words by screen readers.
+  it('use no §, brackets or bullets, and are not shouted in capitals', () => {
     const wrong = eyebrows.filter(([, text]) => /[§[\]•]/.test(text) || /^[^a-z]*[A-Z]{4,}[^a-z]*$/.test(text)).map(([path, text]) => `${path}: ${text}`)
     expect(wrong).toEqual([])
   })

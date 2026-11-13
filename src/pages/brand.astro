@@ -60,7 +60,7 @@ const sceneFigures = SCENES.map((scene) => ({ scene, number: figures.next() }))
 
     <main id="main" class="mx-auto max-w-container space-y-[var(--section-rhythm)] px-[var(--gutter)] py-16">
       <section aria-labelledby="scenes-heading">
-        <p class="label text-dl-ink-3">§1 Scenes</p>
+        <p class="label text-dl-ink-3">Scenes</p>
         <h2 id="scenes-heading" class="mt-2 text-step-3">The six scenes</h2>
         <div class="mt-10 grid gap-12 lg:grid-cols-2">
           {sceneFigures.map(({ scene, number }) => (
@@ -73,7 +73,7 @@ const sceneFigures = SCENES.map((scene) => ({ scene, number: figures.next() }))
       </section>
 
       <section aria-labelledby="inverted-heading" class="ink-panel rounded-dl-m p-6 sm:p-10">
-        <p class="label text-dl-ink-3">§2 On an ink panel</p>
+        <p class="label text-dl-ink-3">On a graphite exhibit</p>
         <h2 id="inverted-heading" class="mt-2 text-step-3">Scenes invert with the panel</h2>
         <div class="mt-8 max-w-2xl">
           <SceneFrame sceneId="persist-before-deliver" figure={figures.next()} preview />
@@ -81,7 +81,7 @@ const sceneFigures = SCENES.map((scene) => ({ scene, number: figures.next() }))
       </section>
 
       <section aria-labelledby="type-heading">
-        <p class="label text-dl-ink-3">§3 Type</p>
+        <p class="label text-dl-ink-3">Type</p>
         <h2 id="type-heading" class="mt-2 text-step-3">Type scale</h2>
         <div class="mt-8 space-y-4">
           <p class="text-step-5 font-semibold leading-none tracking-tight">Systems that hold up</p>
@@ -96,7 +96,7 @@ const sceneFigures = SCENES.map((scene) => ({ scene, number: figures.next() }))
       </section>
 
       <section aria-labelledby="buttons-heading">
-        <p class="label text-dl-ink-3">§4 Actions</p>
+        <p class="label text-dl-ink-3">Actions</p>
         <h2 id="buttons-heading" class="mt-2 text-step-3">Buttons and tags</h2>
         <div class="mt-8 flex flex-wrap items-center gap-6">
           <Button href="#buttons-heading">Request the audit</Button>
@@ -109,7 +109,7 @@ const sceneFigures = SCENES.map((scene) => ({ scene, number: figures.next() }))
       </section>
 
       <section aria-labelledby="node-heading">
-        <p class="label text-dl-ink-3">§4b Node</p>
+        <p class="label text-dl-ink-3">Node</p>
         <h2 id="node-heading" class="mt-2 text-step-3">Node, in its three states</h2>
         <ul class="mt-8 flex flex-wrap items-end gap-10" data-node-states>
           {(['idle', 'active', 'diagnostic'] as const).map((state) => (
@@ -126,7 +126,7 @@ const sceneFigures = SCENES.map((scene) => ({ scene, number: figures.next() }))
       </section>
 
       <section aria-labelledby="panels-heading">
-        <p class="label text-dl-ink-3">§5 Content</p>
+        <p class="label text-dl-ink-3">Content</p>
         <h2 id="panels-heading" class="mt-2 text-step-3">Panels, figures, facts and proof</h2>
         <div class="mt-8 grid gap-6 md:grid-cols-2">
           <Panel eyebrow="Framed panel" title="One record per inquiry"><p class="text-dl-ink-2">A hairline frame, never also a tint.</p></Panel>
@@ -154,7 +154,7 @@ const sceneFigures = SCENES.map((scene) => ({ scene, number: figures.next() }))
       </section>
 
       <section aria-labelledby="form-heading">
-        <p class="label text-dl-ink-3">§6 Forms</p>
+        <p class="label text-dl-ink-3">Forms</p>
         <h2 id="form-heading" class="mt-2 text-step-3">Field states</h2>
         <form class="mt-8 grid max-w-xl gap-6">
           <Field id="demo-name" label="Full name" help="As you would like to be addressed.">
