@@ -51,6 +51,10 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+### Added
+
+- Guard tests for the brand, UX and architecture spec (TEST-01), written before the work they guard: forbidden labels and marketing clichés in the site copy and the static legal data (spec C.3, I.2), the approved call-to-action labels (K.3), plain section labels without `§`, brackets or bullets, the gradient's four allowed roles, contrast for links, captions and white text on the gradient, amber only inside exhibits, no personal data in any SQL file under `scripts/`, the frozen legacy-URL fixture pinned by hash, and Node at most twice per page. Guards that a later requirement makes true run as expected failures tagged with that requirement, so CI stays green today and the guard turns red the moment the fix lands until it is switched on.
+
 ### Changed
 
 - Docs: the approved brand, UX and architecture specification (re-audit dated 2026-11-12, owner decisions 2026-11-13) is now in the repository at `docs/plans/devlab-complete-b2b-brand-ux-architecture-spec.md`; PROGRESS.md gains Phase 14 with the drift found since the spec and the Group 1 plan.

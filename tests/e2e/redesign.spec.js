@@ -142,3 +142,15 @@ test('the contact form groups business options ahead of the employment path', as
   const groups = await page.locator('select optgroup').evaluateAll((elements) => elements.map((element) => element.getAttribute('label')))
   expect(groups).toEqual(['A business system', 'Something else', 'Working with Stephen'])
 })
+
+// TEST-01 / MASCOT-03: Node appears at most twice per page (spec G.3: the home
+// exhibit and the offer card; the success state; the 404). The home page shows
+// it eleven times until MASCOT-03 lands, so that one case is an expected
+// failure that turns red when the fix arrives and must then be un-marked.
+for (const path of [...PAGES.map((entry) => entry.path), '/this-page-does-not-exist']) {
+  test(`${path}: Node appears at most twice`, async ({ page }) => {
+    test.fail(path === '/', 'MASCOT-03 reduces the home page to two instances')
+    await page.goto(path)
+    expect(await page.locator('.node-mascot').count()).toBeLessThanOrEqual(2)
+  })
+}

@@ -159,3 +159,53 @@ describe('migrated pages use the brand layout (UX-04)', () => {
     expect(text).toMatch(/BrandLayout|LegalPage/)
   })
 })
+
+// TEST-01 guards for Direction B, "Graphite on stone" (spec N.1, N.3, N.5).
+// Guards that BRAND-01/BRAND-02 make true are `it.fails` until then: they prove
+// the gap today and turn red when the fix lands, forcing the flip to `it`.
+const rules = [...stripComments(css).matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selector, body]) => ({ selector: selector.trim(), body }))
+
+// The gradient is the brand colour, used in four places only: the logo mark,
+// primary buttons (the inquiry form's submit button is one), the 3 px hero
+// rule and the current-nav underline. `:root` defines it.
+const GRADIENT_SELECTORS = [/^:root$/, /\.dl-button-primary/, /\.form-surface button/, /\.hero-rule/, /aria-current|\.is-current/, /\.dl-logo-mark/]
+
+function mixHex(hex: string, [r, g, b, alpha]: number[]): string {
+  const base = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
+  return `#${base.map((c, i) => Math.round(c * (1 - alpha) + [r, g, b][i] * alpha).toString(16).padStart(2, '0')).join('')}`
+}
+
+describe('Direction B guards (TEST-01)', () => {
+  it('finds the CSS rules', () => expect(rules.length).toBeGreaterThan(50))
+
+  // Fixed by BRAND-02 (removes the gradient border on cards).
+  it.fails('the gradient is referenced only by the four allowed roles (BRAND-02)', () => {
+    const wrong = rules.filter(({ selector, body }) => /var\(--brand-gradient\)/.test(body) && !GRADIENT_SELECTORS.some((allowed) => allowed.test(selector)))
+    expect(wrong.map(({ selector }) => selector)).toEqual([])
+  })
+
+  // White on the magenta end of a primary button, under its resting scrim.
+  it('white text over the gradient holds 4.5:1 at the magenta end', () => {
+    const magenta = /--brand-gradient:\s*linear-gradient\(135deg,\s*(#[0-9a-f]{6})/i.exec(block(':root'))?.[1]
+    const scrim = /--button-scrim:\s*rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/.exec(css)?.slice(1).map(Number)
+    expect(magenta).toBeTruthy()
+    expect(scrim).toBeTruthy()
+    expect(contrast('#ffffff', mixHex(magenta as string, scrim as number[]))).toBeGreaterThanOrEqual(4.5)
+  })
+
+  // Fixed by BRAND-01 (adds the indigo link role).
+  it.fails('links (--link) hold 7:1 on the stone canvas (BRAND-01)', () => {
+    expect(contrast(token(':root', 'link'), token(':root', 'paper'))).toBeGreaterThanOrEqual(7)
+  })
+
+  it('captions (--ink-3) hold 4.5:1 on the canvas', () => {
+    expect(contrast(token(':root', 'ink-3'), token(':root', 'paper'))).toBeGreaterThanOrEqual(4.5)
+  })
+
+  // Amber is an exhibit colour: only inside `.ink-panel`. Fixed by BRAND-01 and
+  // MASCOT-01 (Node's amber visor and slate today sit on the open page).
+  it.fails('amber is used only inside .ink-panel (BRAND-01, MASCOT-01)', () => {
+    const wrong = rules.filter(({ selector, body }) => /var\(--(?:accent-)?amber\)/.test(body) && !/\.ink-panel/.test(selector))
+    expect(wrong.map(({ selector }) => selector)).toEqual([])
+  })
+})
