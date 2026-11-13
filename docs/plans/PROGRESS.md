@@ -277,8 +277,8 @@ through `development` → preview → owner sign-off → `main`.
 
 | Group | Requirement IDs | Status |
 |---|---|---|
-| 1 Gates and guards | OPS-01, TEST-01, SEC-01, OPS-02 | done locally; PR, preview and production in progress |
-| 2 Brand foundation | BRAND-01, BRAND-02, BRAND-03, BRAND-05, MASCOT-01, MASCOT-02, MASCOT-03 | not started |
+| 1 Gates and guards | OPS-01, TEST-01, SEC-01, OPS-02 | done (PR #59, production at `15f93e4`, 2026-11-13) |
+| 2 Brand foundation | BRAND-01, BRAND-02, BRAND-03, BRAND-05, MASCOT-01, MASCOT-02, MASCOT-03 | done locally; PR, preview and production in progress |
 | 3 Review gate | `/brand` review of scenes and the Node redraw (MASCOT-04 fallback) | not started |
 | 4 Data | CMS-01, CMS-02, CMS-03 | not started |
 | 5 Pages I | UX-02, UX-01, WEB-03, CONTENT-01, CONTENT-02, CONTENT-03, CASE-01, CASE-02 | not started |
@@ -328,3 +328,24 @@ Branch `feat/brand-ux-1-gates-guards` from `main` (`dd6b377`). Order:
 Local verification before push: lint 0 errors (1 pre-existing pickleball warning), typecheck 0 errors, unit 2,883 passed / 9 expected fail / 1 skipped (203 files), build OK, static e2e 240 passed / 1 skipped.
 
 Deviation: SEC-01 drops the phone and birth-date fields instead of filling synthetic values (matches the live-database cleanup in `2026-11-12-business-identity.sql`; a fake phone would render as data).
+
+Group 1 promotion: PR #59 CI `validate` green; `development` fast-forwarded to `15f93e4`, `deploy-preview.yml` run 43355858919 green. Preview: 31/31 legacy URLs, `/api/health` 200, `/brand` 200, hashed `script-src` (13 hashes, no `unsafe-inline`), `/admin` `noindex, nofollow`. `main` fast-forwarded to `15f93e4` (PR #59 shows MERGED); `origin/main...origin/development` = `0 0`. Production after Workers Builds: 31/31 legacy URLs, `/api/health` 200, `/brand` 404 (by design), hashed `script-src`, `/admin` noindex, personal-data scan of `/`, `/about`, `/profile`, `/contact`, `/work`, `/privacy`, `/terms` = 0 hits.
+
+### Group 2 — Brand foundation
+
+**Plan.** BRAND-01 tokens (test first) → BRAND-02 actions, labels, fields → MASCOT-01/02 Node redraw and motion behind an approval gate → MASCOT-03 placements → BRAND-05 crops, S7, S8, D-1…D-4 (all unapproved) → BRAND-03 cards and icons. No data writes. Rollback per requirement: revert its commit (the art also has `artReady`/`tallArtReady`/`NODE_ART` switches). Branch `feat/brand-ux-2-brand-foundation` from `15f93e4`.
+
+| Req | Status | Commit | Evidence |
+|---|---|---|---|
+| BRAND-01 | done | `1d299f7` | Token test rewritten to N.1 first (RED: exhibit tokens missing), then green. Measured contrast forced three changes, recorded in `brand.css`: `--ink-3` `#6b6984` (spec `#6d6b87` = 4.47:1), `--redline` `#b800d1` (spec `#c400de` = 4.17:1), button scrim 12 % at rest (spec 10 % = 4.40:1 for white at the magenta end) and 18 % on hover. `--link` `#4338ca` kept: 6.90:1 on stone (spec claimed ≥ 7; AA is the bar). Added `--exhibit-ok` `#4ade80` and `--exhibit-amber` `#f59e0b` (spec green/amber read 3.6:1 on graphite; axe caught it). Grid, radial glows and header blur removed; new e2e asserts stone body, no background image, no backdrop-filter on every brand route. Footer, phone menu and CTA bands moved off graphite (`.dl-band`); home hero band closed by `.hero-rule` |
+| BRAND-02 | done | `b1fdec7` | Eyebrow guard and gradient-role guard switched on (were expected failures). `.label` is the plain text-face section label; mono only in figures, code and exhibits. Buttons in the text face; outline secondary 1.5 px ink; indigo links; current-nav gradient underline (in `brand.css`, allowed selector). Form labels sentence case, 44 px white fields, 2 px ink focus, `--danger` errors. e2e checks the underline and label styles |
+| MASCOT-01/02 | done (pending owner review) | `c073e03` | New `NodeMascot.test.jsx` RED (missing config) → 36/36 incl. 12 snapshots (4 states × 3 tiers), ≤ 6 KB each, no SMIL/hex/gradient, lamp only, 1.6 plate ratio, CSS sequences ≤ 1.2 s and run once, reduced-motion and hidden-tab rules. `NODE_ART` gate: every state `false`, so public placements render nothing until the owner approves on `/brand`. 12 static exports in `public/branding/node/` (1.2–2.3 KB). `docs/brand/node.md` character sheet. `/brand` e2e: 24 renders, 2 silhouettes, replay runs once ≤ 1.2 s |
+| MASCOT-03 | done | `dc87753` | Node-count guard switched on for `/` (0 today while unapproved; ≤ 2 once approved). Console rows lose Node; hero uses one Node (outage turns its lamp amber inside the exhibit) or a plain checkpoint while unapproved; audit card holding; 404 idle; success state confirming or a check mark. Amber guard switched on |
+| BRAND-05 | done (pending owner review) | `0f39f19` | S7, S8, D-1…D-4 drawn from the symbol library; tall 4:5 crops for S1, S2, S3, S6, S7, S8, D-1…D-4; all `artReady`/`tallArtReady` false. D-x drawn from each write-up's own description (Memory Preview read from production D1, read-only); D-4 has no person or ledger because its write-up describes neither. `brand.spec.js`: tall-crop byte budgets, viewBox, titles; phone aspect switches to 4:5 on `/brand` |
+| BRAND-03 | done | `c0ea23c` | 12 cards + `og.png` re-rendered on stone with a scene symbol (38–51 KB; spec said 45–60 KB, the lighter cards compress smaller, all far under the 200 KB test budget). Icons and favicon on stone; manifest colours `#f0eff3` |
+
+Verification (local, before push): lint 0 errors (1 pre-existing warning), typecheck 0 errors, unit 2,925 passed / 5 expected fail / 1 skipped (203 files), build OK, static e2e 244 passed / 1 skipped. Worker + admin-auth: 317 passed / 7 failed / 1 skipped; the failing tests (outbox bearer checks, mailbox retry, Lead CRM sources, iPhone poster share, and on one run the Work draft-preview, Work editor and SEO slug tests) fail identically on `origin/main` (`15f93e4`) and `dd6b377`: pre-existing local-environment failures, not from this group. Legacy-layout routes (`/pickleball`, `/offers/lead-intake-checklist`, `/maintenance`) compared against production at 390 and 1440: visually identical (≤ 0.2 % pixels, local seed data in the footer).
+
+Deviations: the contrast adjustments above; exhibit green/amber added; D-4 without a person or ledger; MASCOT-01 and MASCOT-02 share one commit (same component and stylesheet block); card sizes below the spec's range.
+
+Owner actions opened by this group (Group 3 gate): approve or reject on `/brand` (preview) the Node redraw (silhouette test; else MASCOT-04), S7, S8, D-1…D-4, and the tall crops.
