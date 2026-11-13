@@ -25,16 +25,11 @@ function hits(path) {
     .flatMap((line, index) => PATTERNS.filter(([, pattern]) => pattern.test(line)).map(([kind]) => `line ${index + 1}: ${kind}`))
 }
 
-const KNOWN = ['scripts/cms/seed/cms-content-seed.sql']
-
 describe('SQL under scripts/ carries no personal data (SEC-01)', () => {
   it('finds the seed and update files', () => {
     expect(sqlFiles).toContain('scripts/cms/seed/cms-content-seed.sql')
     expect(sqlFiles.some((path) => path.startsWith('scripts/cms/updates/'))).toBe(true)
   })
 
-  it.each(sqlFiles.filter((path) => !KNOWN.includes(path)))('%s', (path) => expect(hits(path)).toEqual([]))
-
-  // Fixed by SEC-01 (owner decision Q-18: the file only, no history rewrite).
-  it.fails.each(KNOWN)('%s (SEC-01)', (path) => expect(hits(path)).toEqual([]))
+  it.each(sqlFiles)('%s', (path) => expect(hits(path)).toEqual([]))
 })
