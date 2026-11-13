@@ -25,11 +25,11 @@ money, legal wording or a real data deletion are skipped and listed under
 | 11 | Product Worker split | not started: the redesign has shipped, so this is next once the Workers Paid plan decision (N7) is made |
 | 12 | Docs + release | v2.3.0 (PR #53) and **v2.4.0 released 2026-11-12** (PR #55); ADRs 0011–0013; full docs refresh (OPS-08) still open |
 | 13 | Blueprint rebrand | done (PR #57, production at `3874835`, v2.5.0 tagged; GitHub Release entry pending, see Phase 13 Open) |
-| 14 | Brand, UX and architecture spec (`devlab-complete-b2b-brand-ux-architecture-spec.md`) | in progress: Group 1 planned, waiting for owner approval and a production token (see Phase 14) |
+| 14 | Brand, UX and architecture spec (`devlab-complete-b2b-brand-ux-architecture-spec.md`) | in progress (see Phase 14) |
 
 ## Blockers (owner)
 
-1. **Production D1 migrations `0018_editorial_fields` and `0019_job_runs`** (Phase 2, CMS-03). Additive columns only, already applied and verified on preview. The deployed code works without it, but the new project/article/SEO fields cannot be saved in production until it runs:
+1. ~~**Production D1 migrations `0018_editorial_fields` and `0019_job_runs`**~~ applied 2026-11-13 (Phase 14 OPS-01). (Phase 2, CMS-03). Additive columns only, already applied and verified on preview. The deployed code works without it, but the new project/article/SEO fields cannot be saved in production until it runs:
    `CLOUDFLARE_API_TOKEN=<fresh token> npx wrangler d1 migrations apply devlab-studios-cms --remote` (applies both; both additive, both verified on preview). Until `0019` runs, job runs are only logged, not stored.
 2. **Production project reconciliation** (Phase 2, CMS-02). Production reads were not permitted in this session, so production keeps `PROJECTS_STATIC_MERGE=true` (today's behaviour). Run `node scripts/cms/static-projects-missing-from-d1.mjs --env production`, seed any project that should stay, then set the var to `"false"` in `wrangler.jsonc`. Preview: 0 static projects missing (checked).
 3. **Branch protection** (OPS-02): enable "Require status checks" with the `validate` check on `main` and `development` (GitHub settings; see docs/testing.md).
@@ -277,7 +277,7 @@ through `development` → preview → owner sign-off → `main`.
 
 | Group | Requirement IDs | Status |
 |---|---|---|
-| 1 Gates and guards | OPS-01, TEST-01, SEC-01, OPS-02 | planned; waiting for owner approval (production migrations) and a fresh production token |
+| 1 Gates and guards | OPS-01, TEST-01, SEC-01, OPS-02 | done locally; PR, preview and production in progress |
 | 2 Brand foundation | BRAND-01, BRAND-02, BRAND-03, BRAND-05, MASCOT-01, MASCOT-02, MASCOT-03 | not started |
 | 3 Review gate | `/brand` review of scenes and the Node redraw (MASCOT-04 fallback) | not started |
 | 4 Data | CMS-01, CMS-02, CMS-03 | not started |
@@ -315,3 +315,16 @@ Branch `feat/brand-ux-1-gates-guards` from `main` (`dd6b377`). Order:
 3. **SEC-01 Seed file personal data** (Q-18: file only, no history rewrite). In `scripts/cms/seed/cms-content-seed.sql`, `profile_about`: drop `phone` and `dateOfBirth` (the same keys `2026-11-12-business-identity.sql` already removes from live databases), city-level location, business mailbox; `site_footer`: business mailbox. The founder's public name stays. Flip the seed scan to a plain test. Risk: a fresh environment seeded from this file shows no phone or birth date (intended). Rollback: n/a (file change only; no database touched).
 4. **OPS-02 GitHub Release v2.5.0**: `gh release create v2.5.0 --verify-tag --title v2.5.0 --notes-file <CHANGELOG 2.5.0 section>`. Check `gh release view v2.5.0` after. Rollback: `gh release delete v2.5.0` (keeps the tag).
 5. PR, CI, `development`, preview check (no visual change expected: tests and a seed file only), `main`, production smoke, PROGRESS evidence.
+
+**Group 1 log.** Owner approved the plan and terminal work without check-ins (2026-11-13).
+
+| Req | Status | Commit | Evidence |
+|---|---|---|---|
+| OPS-01 | done | — (no code) | Production restore point before the write: Time Travel bookmark `00005750-00000000-00005122-4ba814ce4a9a02bfa9b4fd989e6b683b`. Applied `0018_editorial_fields.sql` and `0019_job_runs.sql` with `npx wrangler d1 migrations apply devlab-studios-cms --remote` (account `db49…`; the existing Wrangler login, owner instruction not to stop for a token). Read back: `d1_migrations` ends at 18, 19; all 12 new columns present; `job_runs` exists; `projects` still 20 rows. `/work`, the four write-ups and `/api/health` 200 with identical `<main>` HTML before and after |
+| TEST-01 | done | `265177e` | New: `src/data/site/contentGuards.test.js` (59 pass, 6 expected fail), `scripts/cms/seed/seedPrivacy.test.js`, `src/lib/legacyUrlFixture.test.ts` (2), Direction B block in `brandTokens.test.ts` (3 pass, 3 expected fail), Node-count e2e in `redesign.spec.js` (15 routes; `/` expected fail). Every expected failure was run as a plain test and failed for the reason the spec names (forbidden labels on `/`, Terms "illustrative purposes", `SYS-` cards, six off-list CTA labels, `§` eyebrows, `.dl-gradient-border`, missing `--link`, Node's amber outside `.ink-panel`, 11 Nodes on `/`) |
+| SEC-01 | done | `7da059f` | Seed guard RED first (expected failure), then the fix turned it into "Expect test to fail" and it was flipped to a plain test: 19/19 SQL files clean. Changed only `profile_about` (removed `phone`, `dateOfBirth`; business mailbox; city-level location) and `site_footer` (business mailbox, email link). All migrations + the seed apply to an empty SQLite; both rows parse. No database touched; no history rewrite (Q-18) |
+| OPS-02 | done | — | `gh release create v2.5.0 --verify-tag` from the tag's CHANGELOG section; `gh release list` shows v2.5.0 Latest (2026-11-13T02:51:25Z) |
+
+Local verification before push: lint 0 errors (1 pre-existing pickleball warning), typecheck 0 errors, unit 2,883 passed / 9 expected fail / 1 skipped (203 files), build OK, static e2e 240 passed / 1 skipped.
+
+Deviation: SEC-01 drops the phone and birth-date fields instead of filling synthetic values (matches the live-database cleanup in `2026-11-12-business-identity.sql`; a fake phone would render as data).
