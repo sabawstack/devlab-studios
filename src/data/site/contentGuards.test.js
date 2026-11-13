@@ -62,8 +62,8 @@ describe('honesty and writing standards (TEST-01; spec C.3, I.2)', () => {
     expect(violations(contentStrings)).toEqual([])
   })
 
-  // Fixed by CONTENT-03 (Terms "illustrative purposes"; owner decision Q-06).
-  it.fails('the static legal data uses no forbidden label or cliché (CONTENT-03)', () => {
+  // CMS-03 / CONTENT-03: Terms no longer calls the Work screenshots illustrative (Q-06).
+  it('the static legal data uses no forbidden label or cliché', () => {
     expect(violations(legalStrings)).toEqual([])
   })
 

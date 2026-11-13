@@ -67,6 +67,8 @@ decided against that surface specifically:
 
 ### Changed
 
+- Terms of Service no longer call the Work screenshots "illustrative" (CMS-03, CONTENT-03; spec C.3, owner decision Q-06): "Project descriptions and screenshots on this site are of real systems, shown with client data removed or replaced with synthetic data." "Last updated" moves to November 13, 2026. Neither database stores a Terms page (checked 2026-11-13), so the static page is the source; `scripts/cms/updates/2026-11-13-terms-screenshots.sql` (guarded, with its paired revert) ran on preview and production with 0 rows written and covers any stored copy later. The Privacy "pending legal review" note is unchanged (it stays until a lawyer reviews it).
+
 - Social cards, app icons and the web manifest move to the stone palette (BRAND-03; spec N.7): the twelve cards in `public/og/` and `public/og.png` show the page title in ink on stone with one scene symbol, the 3 px gradient rule and a white footer with the mark (38–51 KB each); the home card's label reads "DevLab Studios" instead of "[ Systems architecture ]". The app icons and favicon put the mark on stone, and the manifest's background and theme colours are `#f0eff3`.
 
 - Node appears at most twice per page (MASCOT-03; spec G.3): removed from the eight failure-console rows; one instance (not two swapped by CSS) marks the route step of the home schematic, where the outage turns its lamp amber; the audit card shows Node holding; the 404 page gains Node idle; the inquiry success state shows Node confirming. While the redraw awaits approval these render nothing (the success state shows a check mark, the schematic a plain checkpoint). A count guard runs on every public route.

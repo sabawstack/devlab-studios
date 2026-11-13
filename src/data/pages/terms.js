@@ -12,7 +12,7 @@ export const termsPage = {
       props: {
         eyebrow: 'Legal',
         heading: 'Terms of Service',
-        subheading: 'Last updated: July 31, 2026. These terms govern your use of this website. They do not cover the terms of any specific client engagement, which are agreed separately.',
+        subheading: 'Last updated: November 13, 2026. These terms govern your use of this website. They do not cover the terms of any specific client engagement, which are agreed separately.',
       },
     },
     {
@@ -40,7 +40,7 @@ Browsing this site or submitting the contact form does not create a client relat
 
 ## Portfolio and case studies
 
-Project descriptions, screenshots, and outcomes shown on this site are presented for illustrative purposes. Specific results are not guaranteed for future engagements, since every project's scope and constraints differ.
+Project descriptions and screenshots on this site are of real systems, shown with client data removed or replaced with synthetic data. Specific results are not guaranteed for future engagements, since every project's scope and constraints differ.
 
 ## Disclaimer and limitation of liability
 
