@@ -73,3 +73,64 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: db49443cea6f0725d848254f17bcdab5
           command: deploy --env preview
+
+  # OPS-04: the mobile performance and accessibility budget on the deployed
+  # preview (scripts/perf/budget.js). A miss fails this run before anything is
+  # promoted to main.
+  performance-budget:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Lighthouse budget on preview
+        run: |
+          export CHROME_PATH="$(node -e "console.log(require('@playwright/test').chromium.executablePath())")"
+          node scripts/perf/lighthouse-budget.mjs https://devlab-studios-preview.stpnrey-agustinez.workers.dev
+
+  # OPS-03: full-page screenshots of the canonical routes at three widths on
+  # the deployed preview, kept as an artifact for the before/after review.
+  # Never committed: pages can show personal data.
+  visual-capture:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Capture the preview
+        run: node scripts/visual/capture.mjs https://devlab-studios-preview.stpnrey-agustinez.workers.dev visual/preview
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: visual-preview-${{ github.sha }}
+          path: visual/
+          retention-days: 30

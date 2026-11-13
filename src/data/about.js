@@ -9,7 +9,7 @@ const aboutData = {
   email: "hello@devlabstudios.com",
   resumeLink: "/resume.pdf",
   about:
-    "Full-stack developer and AI automation specialist building end-to-end systems across React and Astro interfaces, Java and Laravel services, REST APIs, SQL-backed data flows, n8n workflows, and AI agents. I connect every layer from customer experience to operational handoff so systems remain useful, reliable, and maintainable.",
+    "Full-stack developer and AI automation specialist building end-to-end systems across React and Astro interfaces, Java and Laravel services, REST APIs, SQL-backed data flows, n8n workflows, and AI agents. He connects every layer, from customer experience to operational handoff, so systems stay useful, reliable and maintainable.",
   education: [
     {
       program: "Bachelor of Science in Computer Engineering",

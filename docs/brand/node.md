@@ -83,3 +83,12 @@ router glyph without the lamp, idle and confirming only).
 Drawn in code in this repository by DevLab Studios; no third-party or
 AI-generated artwork. Trademark search and any filing follow spec G.5 and
 owner decision Q-14 (search yes, filing no until reviewed; MASCOT-05).
+
+### Preliminary trademark search (MASCOT-05, 2026-11-13)
+
+A preliminary web search, not a clearance search. Findings:
+
+- **The word "Node" is crowded in software classes.** NODE.JS is registered by the OpenJS Foundation in Nice classes 9 and 42 (US reg. 5731344), and its policy forbids marks "confusingly similar" to its own. Several other live or pending "NODE" marks exist in classes 9 and/or 42 (for example US 97921108, 87363437), plus many "-node" compounds. Sources: [nodejs.org branding](https://nodejs.org/en/about/branding), [OpenJS trademark transfer](https://openjsf.org/blog/node-js-trademarks-transferred-to-openjs-foundation), [US 87851829 (NODE JS)](https://markinton.com/trademark/node-js-87851829), [US 97921108 (NODE)](https://gleanmark.com/trademark/uspto-97921108), [US 87363437 (NODE)](https://gleanmark.com/trademark/uspto-87363437).
+- **No figurative mark resembling the redrawn figure was found** in these results; figurative marks are not searchable this way.
+
+**Decision (owner Q-14 default):** do not file. Use "Node" only as the character's name inside copy ("Node, the DevLab router"), never as a product or word mark, which is what the site already does. Before any filing, merchandise or product use of the figure: run figurative searches in the [WIPO Global Brand Database](https://branddb.wipo.int) (classes 9 and 42, image search) and IPOPHL, and consult a trademark practitioner (spec G.5). No money was spent and nothing was filed.

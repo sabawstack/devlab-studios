@@ -71,6 +71,8 @@ const shots: Shot[] = (gallery.length
   ? gallery
   : entry?.project.optimizedImageFull ? [{ picture: entry.project.optimizedImageFull, caption: `${title}: the workflow as built (screenshot).` }] : []
 ).slice(0, 3)
+// CONTENT-05: the short lead is the summary; the project's longer architecture description moves here.
+const technicalSummary = entry && entry.project.description && entry.project.description !== summary ? String(entry.project.description) : ''
 /** K.2: results are shown only with evidence and consent; scope is stated or explicitly not published. */
 const RESULTS_NOT_PUBLISHED = "Operational results are the client's and are not published."
 const SCOPE_NOT_PUBLISHED = 'Scope and responsibility were agreed with the client for this engagement and are not published.'
@@ -138,8 +140,9 @@ const caseSections = caseStudy
         <p class="mt-6 text-step--1 text-dl-ink-2" data-founder-line>
           Designed and built by Stephen Rey Agustinez, founder of {COMPANY.name}. <a href={COMPANY.founder.profilePath} data-cta-id="work-detail-profile">Founder profile</a>
         </p>
-        {(entry.project.techStack || []).length > 0 && (
+        {((entry.project.techStack || []).length > 0 || technicalSummary) && (
           <Disclosure summary="Technical notes" class="mt-10">
+            {technicalSummary && <p class="mb-4 max-w-prose text-dl-ink-2" data-technical-summary>{technicalSummary}</p>}
             <ul class="flex flex-wrap gap-2" aria-label="Tools and services used">
               {(entry.project.techStack || []).map((tool) => <li><Tag>{tool}</Tag></li>)}
             </ul>

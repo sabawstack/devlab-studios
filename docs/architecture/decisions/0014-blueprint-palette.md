@@ -1,6 +1,6 @@
 # 14. "Blueprint" palette, interactive home page and the Node mascot
 
-**Status:** Accepted (2026-11-12, release 2.5.0). Supersedes the palette, type
+**Status:** Superseded in part by ADR 0015 (2026-11-13: palette, home page and mascot). Accepted (2026-11-12, release 2.5.0). Supersedes the palette, type
 and motion rules of ADR 0012; the scene registry and its approval gate stand.
 
 ## Context

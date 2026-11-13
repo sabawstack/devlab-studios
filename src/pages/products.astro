@@ -8,18 +8,24 @@ import BrandLayout from '../layouts/BrandLayout.astro'
 import PageHeader from '../components/brand/PageHeader.astro'
 import Section from '../components/brand/Section.astro'
 import FactList from '../components/brand/FactList.astro'
+import ProofMount from '../components/brand/ProofMount.astro'
+import { optimizeImage } from '../lib/images/optimizeImage'
+import boardShot from '../assets/products/pickleball-board.webp'
 import { getBreadcrumbSchema } from '../config/schema.js'
 import { loadPageSeo, type SeoData } from '../lib/content/seo'
 import { PRODUCTS } from '../data/site/content.js'
 const fallbackSeo: SeoData = {
   metaTitle: 'Products · DevLab Studios',
-  metaDescription: 'Software DevLab Studios builds and runs itself: Devlab Pickleball, live and free, and product ideas being explored with the businesses that need them.',
+  // SEO-01: identical to the products record in src/data/seoContent.js.
+  metaDescription: 'Software DevLab Studios builds and runs itself: Devlab Pickleball, live and free, plus product ideas we want to test with the businesses that would use them.',
   canonicalUrl: 'https://www.devlabstudios.com/products',
   ogTitle: 'Products · DevLab Studios',
   ogDescription: 'Software DevLab Studios builds and runs itself.',
 }
 const seo: SeoData = (await loadPageSeo('products')) || fallbackSeo
 const jsonLd = [getBreadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Products', path: '/products' }])]
+// UX-04: a real product screenshot, sample session with synthetic names.
+const board = await optimizeImage(boardShot, { width: 1280, height: 800, fit: 'cover' })
 ---
 
 <BrandLayout title={seo.metaTitle || 'DevLab Studios'} seo={seo} jsonLd={jsonLd}>
@@ -33,6 +39,14 @@ const jsonLd = [getBreadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Produ
       </div>
       <FactList facts={PRODUCTS.live.facts.map((text) => ({ text }))} />
     </div>
+    {board && (
+      <ProofMount
+        class="mt-10"
+        picture={board}
+        caption="Devlab Pickleball: the live board players follow by QR."
+        looking="A sample session with made-up player names."
+      />
+    )}
   </Section>
 
   <Section id="products-exploring" eyebrow="In exploration" heading="Ideas we are testing with businesses." intro={PRODUCTS.exploringNote} class="border-t border-dl-rule">

@@ -484,3 +484,28 @@ The site-wide wording changed to "Talk to us about your system" (header "Talk to
 - **Clicks:** `primary_cta_click` and `secondary_cta_click` carry `cta_id`, `inquiry_type` and the context ids; GA4 adds the page. Link text is deliberately not sent, so compare by `cta_id` and date.
 - **Read:** persisted inquiries per 1,000 sessions for the four weeks before 2026-11-13 against the four weeks after, by landing page and `cta_id`. `lead_attribution` in D1 records which page and CTA each saved inquiry came from.
 - **Decision rule:** if the rate falls, revert the labels (`src/config/ctas.js` and the paired revert in `scripts/cms/updates/2026-11-13-home-work-content.sql`). The labels shipped together with the price line, reply window and new home copy, so a change is not attributable to wording alone.
+
+## Identity consistency (SEO-04, checked 2026-11-13)
+
+One name, one email, one city and one founding date everywhere. The site is
+the source of truth (`src/config/company.js`); external profiles must match it.
+
+| Fact | Value | Site (checked live) | Schema |
+|---|---|---|---|
+| Name | DevLab Studios | All pages | Organization `name` |
+| Email | hello@devlabstudios.com | All pages, footer, Privacy, Terms | Organization `email` |
+| City | Lapu-Lapu City, Cebu, Philippines | Footer, About, Contact, Profile, Privacy, Terms (Privacy and Terms aligned 2026-11-13) | `addressLocality` / `addressRegion` |
+| Founded | March 2026 | About | `foundingDate` 2026-03-02 |
+| Markets | Philippines, United States, Australia | About | `areaServed` (Organization, Person, Service) |
+
+Owner actions (outside the repository; the system cannot sign in for you):
+
+- [ ] LinkedIn (profile and any company page): name, email and city as above; link to https://www.devlabstudios.com and /profile.
+- [ ] GitHub organisation `stpn-dev`: same name and city; website https://www.devlabstudios.com.
+- [ ] Facebook page (only if maintained, Q-10): same name, email, city.
+- [ ] Directories (Clutch, GoodFirms; only if maintained): same values, linking the Work write-ups.
+
+### Search Console and Business Profile (SEO-02, owner action)
+
+1. Google Search Console → Add property → Domain `devlabstudios.com` → add the TXT record it shows in Cloudflare DNS → Verify. Then submit `https://www.devlabstudios.com/sitemap.xml`.
+2. Google Business Profile → Create a **service-area business** (no storefront address shown) named "DevLab Studios", category "Software company", service areas Philippines, United States, Australia, website https://www.devlabstudios.com, email as above. Do not publish a personal phone or street address.

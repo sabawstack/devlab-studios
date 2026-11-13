@@ -11,8 +11,10 @@ interface Props {
   lead?: string
   ink?: boolean
   breadcrumb?: { label: string; href: string }[]
+  /** Show the aside (a scene) before the copy on phones (spec H.2: service-line pages, UX-03). */
+  asideFirst?: boolean
 }
-const { eyebrow, heading, lead, ink = false, breadcrumb } = Astro.props
+const { eyebrow, heading, lead, ink = false, breadcrumb, asideFirst = false } = Astro.props
 const hasAside = Astro.slots.has('aside')
 ---
 <header class={ink ? 'ink-panel' : 'border-b border-dl-rule'}>
@@ -32,7 +34,7 @@ const hasAside = Astro.slots.has('aside')
       {lead && <p class="mt-5 text-step-1 text-dl-ink-2">{lead}</p>}
       {Astro.slots.has('default') && <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3"><slot /></div>}
     </div>
-    {hasAside && <div><slot name="aside" /></div>}
+    {hasAside && <div class={asideFirst ? 'order-first lg:order-none' : ''}><slot name="aside" /></div>}
   </div>
   {ink && <div class="hero-rule" aria-hidden="true"></div>}
 </header>

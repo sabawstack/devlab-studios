@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Sample Workflow Systems Audit — DevLab Studios</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Space Grotesk', system-ui, sans-serif; color: #15142a; font-size: 10.5pt; line-height: 1.5; margin: 0; }
+  .sample { border: 1.5px solid #b800d1; color: #b800d1; padding: 4px 10px; border-radius: 4px; display: inline-block; font-size: 9pt; font-weight: 600; }
+  h1 { font-size: 22pt; line-height: 1.1; margin: 10px 0 4px; letter-spacing: -0.02em; }
+  h2 { font-size: 13pt; margin: 18px 0 6px; padding-top: 10px; border-top: 1px solid #d5d3df; }
+  .muted { color: #6b6984; }
+  table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 9.5pt; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #d5d3df; vertical-align: top; }
+  th { color: #6b6984; font-weight: 600; }
+  .flag { color: #b800d1; font-weight: 600; }
+  .ok { color: #1f7a4d; font-weight: 600; }
+  ol li { margin-bottom: 4px; }
+  .rule { height: 3px; background: linear-gradient(90deg, #e100ff, #7b2cbf 50%, #0048ba); margin: 14px 0; }
+  .page { page-break-after: always; }
+  .box { border: 1px solid #d5d3df; border-radius: 6px; padding: 10px 12px; margin-top: 8px; }
+  svg { display: block; margin: 8px 0; }
+</style></head>
+<body>
+<section class="page">
+  <span class="sample">SAMPLE · fictional business · synthetic data</span>
+  <h1>Workflow Systems Audit</h1>
+  <p class="muted">Inquiry intake and follow-up · Harbour Lane Dental (a fictional clinic) · prepared by DevLab Studios</p>
+  <div class="rule"></div>
+  <h2>1. The workflow, step by step</h2>
+  <table>
+    <tr><th>#</th><th>Step</th><th>Who</th><th>Tool</th><th>Finding</th></tr>
+    <tr><td>1</td><td>Inquiry arrives (web form, email, Messenger, phone)</td><td>Nobody named</td><td>Four inboxes</td><td class="flag">No single record; 3 of 4 channels have no owner</td></tr>
+    <tr><td>2</td><td>Front desk copies details into a spreadsheet</td><td>Front desk</td><td>Spreadsheet</td><td class="flag">Typed twice; done at end of day</td></tr>
+    <tr><td>3</td><td>Callback to book an appointment</td><td>Front desk</td><td>Phone</td><td>Works when the sheet is up to date</td></tr>
+    <tr><td>4</td><td>Booking entered in the clinic system</td><td>Front desk</td><td>Clinic system</td><td class="ok">Reliable once entered</td></tr>
+    <tr><td>5</td><td>Follow-up if no booking</td><td>Nobody named</td><td>None</td><td class="flag">Not done; inquiries go quiet</td></tr>
+  </table>
+  <h2>2. Where it stalls, and who owns each handoff</h2>
+  <ol>
+    <li><strong>Intake has no owner.</strong> Messenger and email inquiries wait until someone happens to check.</li>
+    <li><strong>The spreadsheet is the record, but it is filled in late.</strong> A callback depends on it.</li>
+    <li><strong>No follow-up step exists.</strong> An inquiry without a booking is never revisited.</li>
+  </ol>
+  <h2>3. Data and integrations</h2>
+  <p>Four inbound channels, one spreadsheet, one clinic system with a booking API. No integration today; every transfer is manual. Data shown in this sample is synthetic.</p>
+</section>
+<section>
+  <span class="sample">SAMPLE · fictional business · synthetic data</span>
+  <h2>4. Recommended system, drawn</h2>
+  <svg viewBox="0 0 600 120" width="100%" height="120" fill="none" stroke="#15142a" stroke-width="1.5" font-family="monospace" font-size="10">
+    <rect x="10" y="40" width="90" height="40" rx="4"/><text x="22" y="64" stroke="none" fill="#15142a">4 CHANNELS</text>
+    <path d="M100 60H140"/><rect x="140" y="40" width="110" height="40" rx="4"/><text x="150" y="64" stroke="none" fill="#15142a">ONE RECORD</text>
+    <path d="M250 60H290"/><rect x="290" y="40" width="110" height="40" rx="4"/><text x="300" y="64" stroke="none" fill="#15142a">OWNER + DUE</text>
+    <path d="M400 60H440"/><rect x="440" y="40" width="140" height="40" rx="4" stroke="#1f7a4d"/><text x="450" y="64" stroke="none" fill="#1f7a4d">BOOKED OR FOLLOWED UP</text>
+  </svg>
+  <p>Every inquiry is saved once, gets a named owner and a due time, and stays visible until it is booked or closed with a reason. Bookings go to the clinic system through its API; a failed handoff is shown to a person, not dropped.</p>
+  <h2>5. Roadmap, in priority order</h2>
+  <ol>
+    <li><strong>One intake record</strong> for all four channels, with an owner. <span class="muted">Phase 1</span></li>
+    <li><strong>A follow-up rule</strong>: no booking after two working days goes back to the owner. <span class="muted">Phase 1</span></li>
+    <li><strong>Booking handoff</strong> to the clinic system, with failures visible. <span class="muted">Phase 2</span></li>
+    <li><strong>Weekly report</strong>: inquiries, bookings, and what is waiting. <span class="muted">Phase 3</span></li>
+  </ol>
+  <h2>6. Decision point</h2>
+  <div class="box">Build it with DevLab Studios, with another team, or not at all. This recommendation is yours to use either way. Each phase is quoted separately, after this review.</div>
+  <p class="muted" style="margin-top:18px">DevLab Studios · devlabstudios.com · This is a sample for illustration: the business, people and figures are fictional.</p>
+</section>
+</body></html>

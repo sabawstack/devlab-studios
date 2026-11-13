@@ -20,7 +20,7 @@ export const privacyPage = {
       props: {
         body: `## Who we are
 
-This site is run by DevLab Studios, operated by Stephen Rey Agustinez, Cebu, Philippines. Contact: hello@devlabstudios.com. This page describes what the site actually does with personal information. It is pending legal review and does not claim compliance with any particular law.
+This site is run by DevLab Studios, operated by Stephen Rey Agustinez, Lapu-Lapu City, Cebu, Philippines. Contact: hello@devlabstudios.com. This page describes what the site actually does with personal information. It is pending legal review and does not claim compliance with any particular law.
 
 ## Inquiry and contact forms
 

@@ -8,6 +8,9 @@ import BrandLayout from '../../layouts/BrandLayout.astro'
 import PageHeader from '../../components/brand/PageHeader.astro'
 import Section from '../../components/brand/Section.astro'
 import SceneFrame from '../../components/brand/SceneFrame.astro'
+import ProofMount from '../../components/brand/ProofMount.astro'
+import sampleThumbSource from '../../assets/samples/audit-sample-page-1.webp'
+import { optimizeImage } from '../../lib/images/optimizeImage'
 import FaqList from '../../components/brand/FaqList.astro'
 import { createFigureCounter } from '../../components/brand/figures'
 import { getBreadcrumbSchema, getFaqSchema, getServiceSchema } from '../../config/schema.js'
@@ -29,6 +32,8 @@ const path = `/solutions/${slug}`
 const title = line ? line.title : OFFER_AUDIT.title
 const description = line ? `${line.problem} ${line.outcome}` : OFFER_AUDIT.summary
 const { business } = await loadSiteSettings()
+// CONVERT-05: the sample deliverable's first page (synthetic data).
+const sampleThumb = isAudit ? await optimizeImage(sampleThumbSource, { width: 240, height: 339, fit: 'contain' }) : null
 // BUS-05: the audit's price line comes from site settings (owner Q-02), in the page and the FAQ answer.
 const auditFaq = AUDIT_PAGE.faq.map((item) => (item.id === 'price' ? { ...item, answer: `${business.auditPriceLine}. The scope is fixed and agreed before any work starts.` } : item))
 const faq = line ? line.faq : auditFaq
@@ -53,7 +58,7 @@ const breadcrumb = [{ label: 'Solutions', href: '/solutions' }]
 <BrandLayout title={seo.metaTitle || 'DevLab Studios'} seo={seo} jsonLd={jsonLd}>
   {line ? (
     <>
-      <PageHeader breadcrumb={breadcrumb} eyebrow="Service line" heading={line.title} lead={line.lead}>
+      <PageHeader breadcrumb={breadcrumb} eyebrow="Service line" heading={line.title} lead={line.lead} asideFirst>
         <a href={serviceLineContactHref(line)} class="dl-button-primary" data-cta-id={`solution-${line.slug}-primary`} data-inquiry-type={line.inquiryType}>{line.ctaLabel}</a>
         {work && <a href={`/work/${work.slug}`} class="dl-button-quiet" data-cta-id={`solution-${line.slug}-work`}>Read the write-up</a>}
         <SceneFrame slot="aside" sceneId={line.sceneId} figure={figures.next()} />
@@ -76,9 +81,16 @@ const breadcrumb = [{ label: 'Solutions', href: '/solutions' }]
 
       {work ? (
         <Section id="solution-proof" eyebrow="Proof" heading={work.project.title} class="border-t border-dl-rule">
-          <p class="mt-4 text-dl-ink-2">{work.problem}</p>
-          <p class="mt-3 text-dl-ink-2">{work.value}</p>
-          <a href={`/work/${work.slug}`} class="dl-button-quiet mt-6" data-cta-id={`solution-${line.slug}-proof`}>Read the write-up</a>
+          <div class="mt-6 grid gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
+            <div>
+              <p class="text-dl-ink-2">{work.problem}</p>
+              <p class="mt-3 text-dl-ink-2">{work.value}</p>
+              <a href={`/work/${work.slug}`} class="dl-button-quiet mt-6" data-cta-id={`solution-${line.slug}-proof`}>Read the write-up</a>
+            </div>
+            {work.project.optimizedImageFull && (
+              <ProofMount picture={work.project.optimizedImageFull} caption={`${work.project.title}: the workflow as built.`} number={figures.next()} looking="A real screenshot, with client data removed." />
+            )}
+          </div>
         </Section>
       ) : line.productProof ? (
         <Section id="solution-proof" eyebrow="Proof" heading={line.productProof.title} class="border-t border-dl-rule">
@@ -111,6 +123,16 @@ const breadcrumb = [{ label: 'Solutions', href: '/solutions' }]
           ))}
         </ol>
         <p class="mt-6 text-step-1 font-semibold" data-audit-price>Price: {business.auditPriceLine}</p>
+        {sampleThumb && (
+          <figure class="mt-10 grid items-center gap-6 sm:grid-cols-[12rem_minmax(0,1fr)]" data-audit-sample>
+            <a href="/samples/workflow-systems-audit-sample.pdf" class="block rounded-dl-s border border-dl-rule bg-dl-paper-2 p-2" data-cta-id="audit-sample-pdf">
+              <img src={sampleThumb.src} width={sampleThumb.width} height={sampleThumb.height} alt="Page one of a sample Workflow Systems Audit for a fictional dental clinic" loading="lazy" decoding="async" class="h-auto w-full" />
+            </a>
+            <figcaption class="text-dl-ink-2">
+              See what you receive: <a href="/samples/workflow-systems-audit-sample.pdf" data-cta-id="audit-sample-pdf-link">a two-page sample audit (PDF, 142 KB)</a> for a fictional clinic, with synthetic data.
+            </figcaption>
+          </figure>
+        )}
       </Section>
 
       <Section id="audit-steps" eyebrow="How it runs" heading="Three steps." class="border-t border-dl-rule">

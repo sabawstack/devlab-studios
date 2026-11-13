@@ -1,6 +1,37 @@
 # Current State
 
-Snapshot as of 2026-09-17, after the business-first rebuild.
+## As of 2026-11-13 (release 2.6.0)
+
+- **Brand:** "Graphite on stone" (ADR 0015): stone canvas, graphite ink, indigo
+  links, the logo gradient on the mark, primary buttons and the hero rule only;
+  no underlined text; the current nav item is a filled pill. Every public route
+  uses `BrandLayout`; the pickleball app screens keep their own shell. All fonts
+  self-hosted; no Google Fonts.
+- **Home:** the approved copy ("Business systems that don't quietly lose
+  work."), four ways work gets lost, the inquiry exhibit (illustration, client
+  side only) beside a real screenshot, the service lines, the audit offer with
+  the price line, the closing call to action with the reply window. No founder
+  strip (the site speaks as "we").
+- **Conversion:** one CTA wording (`src/config/ctas.js`); Contact states the
+  reply window and hours from Site Settings → Business details
+  (`site_settings.site_business`, defaults in `src/config/business.js`); the
+  receipt email states them too; the inquiry pipeline is unchanged.
+- **Work:** write-ups in the case-study order (spec K.2) with their own D-x
+  diagrams; situation, decisions and scope are editable per project (migration
+  `0020`) and show "not published" lines until written.
+- **Node and scenes:** approved by the owner on 2026-11-13
+  (`src/config/node.js`, `src/config/scenes.ts`).
+- **Quality gates:** guard tests (tokens, gradient roles, underlines, labels,
+  Node count, every path on the brand shell, seed privacy, legacy URLs); on
+  preview after each deploy, a Lighthouse budget and a visual capture.
+- **Open owner actions:** write-up situation/decisions/scope texts; Search
+  Console and Business Profile; external profile consistency
+  (`docs/operations.md`); legal review of Privacy; moving the personal
+  invitation off the business domain.
+
+The sections below are the earlier snapshot (2026-09-17), kept for history.
+
+## Snapshot as of 2026-09-17, after the business-first rebuild
 
 ## Product positioning
 

@@ -222,3 +222,25 @@ test('every public path uses the brand shell, with no underline and no Google Fo
   expect(offBrand).toEqual([])
   expect(external).toEqual([])
 })
+
+// TEST-04: what a screen reader reads on / and /contact is words, not symbols
+// (the closest automated check to the spec's VoiceOver pass), and axe is clean
+// on the pages moved onto the brand shell in Group 7.
+test('the accessibility tree of / and /contact reads as words', async ({ page }) => {
+  for (const path of ['/', '/contact']) {
+    await page.goto(path)
+    const tree = await page.locator('body').ariaSnapshot()
+    expect(tree, path).not.toMatch(/§|\[\s*[A-Z]|•/)
+    expect(tree, path).toMatch(/heading "[^"]+" \[level=1\]/)
+  }
+})
+
+test('axe finds no serious or critical issues on the migrated pages', async ({ page }) => {
+  test.setTimeout(120_000)
+  for (const path of ['/offers/lead-intake-checklist', '/insights/daily', '/crawler', '/maintenance', '/pickleball', '/pickleball/how-it-works', '/pickleball/rotation', '/this-page-does-not-exist']) {
+    await page.goto(path)
+    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()
+    const blocking = results.violations.filter((violation) => ['serious', 'critical'].includes(violation.impact))
+    expect(blocking.map((violation) => `${violation.id}: ${violation.nodes.map((node) => node.target.join(' ')).slice(0, 3).join(', ')}`), path).toEqual([])
+  }
+})

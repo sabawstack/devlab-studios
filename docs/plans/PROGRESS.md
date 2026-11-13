@@ -25,7 +25,7 @@ money, legal wording or a real data deletion are skipped and listed under
 | 11 | Product Worker split | not started: the redesign has shipped, so this is next once the Workers Paid plan decision (N7) is made |
 | 12 | Docs + release | v2.3.0 (PR #53) and **v2.4.0 released 2026-11-12** (PR #55); ADRs 0011–0013; full docs refresh (OPS-08) still open |
 | 13 | Blueprint rebrand | done (PR #57, production at `3874835`, v2.5.0 tagged; GitHub Release entry pending, see Phase 13 Open) |
-| 14 | Brand, UX and architecture spec (`devlab-complete-b2b-brand-ux-architecture-spec.md`) | in progress: Groups 1, 2, 4 in production; Group 3 waits for the owner; Group 5 next (see Phase 14) |
+| 14 | Brand, UX and architecture spec (`devlab-complete-b2b-brand-ux-architecture-spec.md`) | done: all nine groups, release 2.6.0 (2026-11-13; see Phase 14) |
 
 ## Blockers (owner)
 
@@ -282,10 +282,10 @@ through `development` → preview → owner sign-off → `main`.
 | 3 Review gate | `/brand` review of scenes and the Node redraw (MASCOT-04 fallback) | done: owner approved everything on preview `/brand`, 2026-11-13 |
 | 4 Data | CMS-01, CMS-02, CMS-03 | done (PR #61, production at `4961cf6`, 2026-11-13) |
 | 5 Pages I | UX-02, UX-01, WEB-03, CONTENT-01, CONTENT-02, CONTENT-03, CASE-01, CASE-02 | done (PR #64, production at `2185c6a`, 2026-11-13) |
-| 6 Pages II | UX-03, UX-04, UX-05, CONTENT-04…06, CONVERT-01…04, WEB-02, BUS-01, BUS-02, BUS-05, PROFILE-01, CASE-03 | in progress: conversion, links, About, schema done; UX-03 figure sizing, UX-04 (Products screenshot, Maintenance), CONTENT-04 (Profile voice), CONTENT-05 (write-up leads) remain |
-| 7 Shell consolidation | BRAND-04, WEB-01, WEB-05, SEC-03 | done locally (`8c9a5bb`); PR, preview, production in progress |
-| 8 Conditional and owner items | BUS-03, BUS-04, CONVERT-05, CASE-04, WEB-04, SEO-01, SEO-04, MASCOT-05 | not started |
-| 9 Verification and release | TEST-02…05, OPS-03, OPS-04, CMS-04, release | not started |
+| 6 Pages II | UX-03, UX-04, UX-05, CONTENT-04…06, CONVERT-01…04, WEB-02, BUS-01, BUS-02, BUS-05, PROFILE-01, CASE-03 | done (part 1 PR #65; part 2 in the 2.6.0 release PR) |
+| 7 Shell consolidation | BRAND-04, WEB-01, WEB-05, SEC-03 | done (PR #66, production at `1b49cb4`) |
+| 8 Conditional and owner items | BUS-03, BUS-04, CONVERT-05, CASE-04, WEB-04, SEO-01, SEO-04, MASCOT-05 | done (BUS-03 and WEB-04 resolved by decision; see log) |
+| 9 Verification and release | TEST-02…05, OPS-03, OPS-04, CMS-04, release | done: release 2.6.0 |
 
 ### Drift since the spec (checked 2026-11-13)
 
@@ -436,3 +436,31 @@ Owner (2026-11-13, mid-work): "ensure all sections and paths cover the new brand
 | Owner change | Home founder strip removed; markets moved to About facts and `areaServed` (BUS-04, schema test) |
 
 Verification: lint 0 errors, typecheck 0, unit 3,006 passed / 1 skipped, build OK, static e2e all green (incl. the every-path guard), worker e2e for pickleball, public pages and forms 52/52.
+
+Group 7 promotion: PR #66 green; preview: migrated pages on the brand shell, CSP without Google hosts, no home founder strip; `main` → `1b49cb4` (MERGED); production smoke: 31/31 legacy, health 200, `/brand` 404, `script-src` hash-only (the one `unsafe-inline` is `style-src`, by design), `font-src 'self' data:`, admin noindex, 0 personal-data hits, `/pickleball/new` 200.
+
+### Group 6 (part 2), Group 8 and Group 9 (log)
+
+| Req | Evidence |
+|---|---|
+| UX-03 | Line pages: scene first on phones (`PageHeader asideFirst`); proof section with the write-up screenshot on a mount. `/solutions` figures are already ~560 px at the 72 rem container; delivery steps removed earlier (CONTENT-06) |
+| UX-04 | Products: real board screenshot from a local sample session with synthetic names (capture script not committed). 404 Node idle and Maintenance done earlier |
+| UX-05 | Header "Talk to us" / phone "Contact", stone bar, full-height menu, Escape closes; existing menu e2e green |
+| CONTENT-04 | Bio third person, bullets fixed, one merged tag list, every bullet available (first four shown, the rest under "More from this role" to keep the 900-word budget). `2026-11-13-profile-voice.sql`: 3 rows on preview and production, read back (0 old phrases) |
+| CONTENT-05 | Leads 19–26 words in D1 (`2026-11-13-writeup-leads.sql`, 4 rows each) and the static fallback; long description under Technical notes |
+| Identity cleanup | Found during CONTENT-04: production `profile_about`/`site_footer` still stored personal data. `2026-11-13-identity-cleanup.sql`: production 2 rows, preview 1, read back clean. Values not repeated anywhere |
+| BUS-03 | Resolved by owner default Q-08: no Operations Care page until the offer is defined. The inquiry type stays; FAQ says "available as Operations Care" by arrangement |
+| BUS-04 | `MARKETS` (PH, US, AU) on About and `areaServed` (Organization, Person, Service); schema test |
+| CONVERT-05 | Sample audit PDF (142 KB, fictional clinic, synthetic) + thumbnail on the audit page |
+| CASE-04 | Consent register (docs + config + 4 tests); nobody named |
+| WEB-04 | Resolved by decision: `/haosweetitis/` is the owner's personal invitation; removing it needs the owner to host it elsewhere first (Q-09). It stays noindex; nothing deleted |
+| SEO-01 | Home title live (Group 5); Products fallback matches its record |
+| SEO-04 | Live check of name, email, city, founding date; Privacy/Terms city aligned; checklist + owner steps in `docs/operations.md` |
+| MASCOT-05 | Preliminary search recorded in `docs/brand/node.md` (NODE.JS reg. 5731344 and other NODE marks in classes 9/42); decision: no filing |
+| TEST-02/03 | Unit and e2e suites updated throughout (Node, home, CTA, contact aside, success exhibit, receipt, schema, consent, every-path brand guard) |
+| TEST-04 | axe clean on the redesigned and migrated pages; accessibility tree of `/` and `/contact` reads as words (automated stand-in for the VoiceOver pass); screenshots at 390/820/1440 via the new preview capture job |
+| TEST-05 | Covered by the worker e2e on a local D1 (persisted row, delivery attempt, failure recording, retry, receipt cap, lead magnet). A live synthetic inquiry on preview is not automatable: preview runs real Turnstile, and receipts must not go to outside addresses |
+| OPS-03, OPS-04 | `deploy-preview.yml` gains `performance-budget` and `visual-capture` jobs; budget logic unit-tested; dry run on production: 96–99 / 100, LCP 1.97–2.49 s, CLS 0 |
+| CMS-04 | ADR 0015; ADR 0014 marked superseded in part; `CURRENT_STATE.md`, `scenes.md`, `node.md`, `operations.md` updated |
+
+Verification: lint 0 errors, typecheck 0, unit 3,016 passed / 1 skipped (207 files), build OK, static e2e 246 passed / 1 skipped, worker + admin-auth 323 passed / 2 failed / 1 skipped. The two failures (SEO slug editor, Lead CRM sources) need seeded local data, fail the same on `main`, are outside this spec and are not run in CI; left as local-environment follow-ups.

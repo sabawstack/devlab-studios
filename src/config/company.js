@@ -22,7 +22,7 @@ export const COMPANY = {
   legacyTagline: 'Your Vision, Digitally Crafted — one solution at a time, always evolving.',
   foundingDate: '2026-03-02',
   /** Used by the privacy and terms pages until the owner supplies a registered legal name (audit N5). */
-  operatorStatement: 'DevLab Studios, operated by Stephen Rey Agustinez, Cebu, Philippines',
+  operatorStatement: 'DevLab Studios, operated by Stephen Rey Agustinez, Lapu-Lapu City, Cebu, Philippines',
   founder: { name: 'Stephen Rey G. Agustinez', profilePath: '/profile' },
   logo: 'https://www.devlabstudios.com/devlabstudios-logo-only.png',
   sameAs: [
