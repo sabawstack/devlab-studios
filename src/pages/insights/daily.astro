@@ -1,4 +1,5 @@
 ---
+import { CTA } from '../../config/ctas.js'
 import Layout from '../../layouts/Layout.astro'
 import SectionHeader from '../../components/SectionHeader.jsx'
 import PrimaryButton from '../../components/PrimaryButton.jsx'
@@ -145,7 +146,7 @@ const jsonLd = [
             data-inquiry-type="business_system"
           >
             <MessageSquare size={16} aria-hidden="true" />
-            Discuss an Automation
+            {CTA.primary}
           </PrimaryButton>
           <PrimaryButton to="/solutions" variant="secondary" data-cta-id="digest-final-secondary" data-cta-variant="secondary">
             <ArrowRight size={16} aria-hidden="true" />

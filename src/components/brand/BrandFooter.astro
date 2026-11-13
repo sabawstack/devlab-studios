@@ -42,7 +42,7 @@ const year = new Date().getUTCFullYear()
       <p class="label text-dl-ink-3">Connect</p>
       <ul class="mt-3 space-y-2">
         {connect.map((link) => <li><a href={link.href} rel="noopener" class="no-underline">{link.label}</a></li>)}
-        <li><a href="/profile" class="no-underline">Hiring? Contact Stephen</a></li>
+        <li><a href="/contact?type=employment_opportunity" class="no-underline" data-cta-id="footer-hiring" data-inquiry-type="employment_opportunity">Hiring? Contact Stephen</a></li>
       </ul>
     </nav>
   </div>

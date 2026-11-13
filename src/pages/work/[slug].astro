@@ -17,7 +17,8 @@ import FactList from '../../components/brand/FactList.astro'
 import Disclosure from '../../components/brand/Disclosure.astro'
 import Tag from '../../components/brand/Tag.astro'
 import { createFigureCounter } from '../../components/brand/figures'
-import { getBreadcrumbSchema } from '../../config/schema.js'
+import { getBreadcrumbSchema, getCreativeWorkSchema } from '../../config/schema.js'
+import { SERVICE_LINES } from '../../data/site/content.js'
 import { loadWorkEntries } from '../../lib/content/work'
 import { loadCaseStudy } from '../../lib/content/caseStudies'
 import type { SeoData } from '../../lib/content/seo'
@@ -46,7 +47,19 @@ const seo: SeoData = {
   ogImage: 'https://www.devlabstudios.com/og/work.png',
   twitterImage: 'https://www.devlabstudios.com/og/work.png',
 }
-const jsonLd = [getBreadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Work', path: '/work' }, { name: title, path }])]
+const breadcrumbs = getBreadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Work', path: '/work' }, { name: title, path }])
+const line = entry ? SERVICE_LINES.find((candidate) => candidate.workProjectId === entry.project.id) : null
+const coverSrc = entry?.project.optimizedImageFull?.src
+const jsonLd = entry
+  ? [breadcrumbs, getCreativeWorkSchema({
+      slug,
+      title,
+      summary,
+      image: coverSrc ? new URL(coverSrc, Astro.url).toString() : undefined,
+      about: line?.title,
+      inOperationSince: entry.inOperationSince || undefined,
+    })]
+  : [breadcrumbs]
 const figures = createFigureCounter()
 type Shot = { picture: NonNullable<OptimizedPicture>; caption: string }
 // The gallery when there is one (the cover is usually its first image), else the cover.

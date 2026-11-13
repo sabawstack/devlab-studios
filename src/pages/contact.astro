@@ -14,8 +14,21 @@ import { loadPageSeo } from '../lib/content/seo'
 import { resolveTurnstileSiteKey } from '../lib/turnstileSiteKey'
 import { CONTACT_FORM_INQUIRY_TYPES, PRODUCT_INQUIRY_TYPES, isEmploymentInquiry, isProductInquiry, type InquiryType } from '../lib/schemas/inquiry'
 import { CONTACT_PAGE } from '../data/site/content.js'
+import SceneFrame from '../components/brand/SceneFrame.astro'
+import { businessHoursLine, replyWindowLine } from '../config/business.js'
+import { publicContactEmail } from '../config/company.js'
+import { loadSiteSettings } from '../lib/content/siteSettings'
 
 const seo = await loadPageSeo('contact')
+const siteSettings = await loadSiteSettings()
+const { business } = siteSettings
+const email = publicContactEmail(siteSettings.footer?.email)
+/** Q-05: email and the form only; a channel appears once its link is set in Site Settings. */
+const channels = [
+  { label: 'Book a call', href: business.schedulingUrl },
+  { label: 'Messenger', href: business.messengerUrl },
+  { label: 'WhatsApp', href: business.whatsappUrl },
+].filter((channel) => channel.href)
 const turnstileSiteKey = resolveTurnstileSiteKey(Astro.request.url)
 
 const requestedType = Astro.url.searchParams.get('type') || ''
@@ -55,7 +68,17 @@ const jsonLd = [getBreadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Conta
     </div>
 
     <aside class="grid gap-6">
+      {!isEmployment && <SceneFrame sceneId="the-receipt" caption="What happens after you send it: saved and stamped first, a receipt to you, then a person." />}
       <p class="border-l-2 border-dl-ink pl-4 text-dl-ink-2" data-persistence-statement>{CONTACT_PAGE.persistence}</p>
+      {!isEmployment && (
+        <p class="text-dl-ink-2" data-reply-window>
+          You get an automatic receipt as soon as your inquiry is saved. The reply comes from a person {replyWindowLine(business)}. Hours: {businessHoursLine(business)}.
+        </p>
+      )}
+      <p class="text-dl-ink-2" data-contact-alternatives>
+        Prefer email? Write to <a href={`mailto:${email}`} data-cta-id="contact-email">{email}</a>.
+        {channels.map((channel) => <> <a href={channel.href} rel="noopener" data-cta-id={`contact-${channel.label.toLowerCase().replace(/\s+/g, '-')}`}>{channel.label}</a></>)}
+      </p>
       {isEmployment ? (
         <p class="text-dl-ink-2">
           Need a system built rather than a person hired?{' '}

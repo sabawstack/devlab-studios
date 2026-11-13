@@ -6,6 +6,7 @@ import { buildWebhookPayload, createResendProvider, createWebhookProvider } from
 import { classifyDeliveryFailure, isRetryable, nextRetryAt } from './delivery/classify.js'
 import { claimConfirmationSlot, releaseConfirmationSlot } from './delivery/confirmationCap.js'
 import { getLeadMagnet } from '../config/offers.js'
+import { getSiteSetting } from './repositories/content.js'
 import { strictRecipient } from '../lead-engine/domain/domains.js'
 
 const DEFAULT_RECIPIENT = 'hello@devlabstudios.com'
@@ -35,6 +36,8 @@ async function pendingTargets(env, lead, attempts) {
   const confirmationProvider = createResendProvider(env, { name: 'resend-confirmation' })
   const webhookProvider = createWebhookProvider(env)
   const attribution = await getLeadAttribution(env.DB, lead.id).catch(() => null)
+  // CONVERT-03: the receipt's reply window and hours; a failed read uses the defaults.
+  const business = await getSiteSetting(env.DB, 'site_business', {}).catch(() => ({}))
 
   const targets = [
     {
@@ -64,7 +67,7 @@ async function pendingTargets(env, lead, attempts) {
         const message =
           lead.source === LEAD_MAGNET_SOURCE
             ? buildLeadMagnetEmail(lead, getLeadMagnet(lead.solutionInterest))
-            : buildConfirmationEmail(lead)
+            : buildConfirmationEmail(lead, business)
         return {
           to: lead.email,
           replyTo: env.LEAD_NOTIFICATION_EMAIL || DEFAULT_RECIPIENT,

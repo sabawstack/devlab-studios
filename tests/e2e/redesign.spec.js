@@ -14,7 +14,7 @@ const PAGES = [
   { path: '/solutions/workflow-systems-audit', words: 500, business: true },
   { path: '/work', words: 500, business: true },
   { path: '/work/automated-lead-qualification', words: 900, business: true },
-  { path: '/about', words: 450, business: true },
+  { path: '/about', words: 650, business: true },
   { path: '/products', words: 400 },
   { path: '/contact', words: 220 },
   { path: '/profile', words: 900 },

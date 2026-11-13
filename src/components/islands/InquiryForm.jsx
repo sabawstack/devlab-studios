@@ -317,11 +317,16 @@ function InquiryForm({
         track('inquiry_persisted', { form_id: formId, inquiry_type: form.inquiryType, ...analyticsContext(context) })
       }
 
+      // CONVERT-02 (spec I.4): the success text names the address the receipt
+      // goes to; it is shown only to the visitor who typed it.
+      const employment = form.inquiryType === 'employment_opportunity' || form.inquiryType === 'contract_collaboration'
       setStatus({
         type: 'success',
         message: body.duplicate
           ? 'We already have this inquiry — no need to send it again. You will get a reply by email.'
-          : 'Your inquiry has been received and saved. You will get a reply by email.',
+          : employment
+            ? `Saved. Your message is recorded and a receipt is on its way to ${form.email}. Stephen reviews these personally and replies by email.`
+            : `Saved. Your inquiry is recorded and a receipt is on its way to ${form.email}. Stephen reads it next and replies by email with the clearest next step: usually a short call or a scoped recommendation.`,
       })
       setForm({ ...EMPTY_FORM, inquiryType: form.inquiryType })
       setErrors({})
@@ -639,15 +644,15 @@ function InquiryForm({
             aria-live="polite"
             data-status={status.type}
             className={`flex items-start gap-3 rounded-xl px-4 py-3 text-sm font-semibold ${
-              status.type === 'success' ? 'bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900'
+              status.type === 'success' ? 'success-exhibit ink-panel flex-col sm:flex-row sm:items-center bg-emerald-100 text-emerald-900' : 'bg-rose-100 text-rose-900'
             }`}
           >
             {status.type === 'success' ? (
-              // Node confirms the save (spec G.3) once the owner has approved the
-              // confirming state; until then a check mark. Decorative either way:
-              // the message carries the meaning.
+              // CONVERT-02: the success exhibit. Node confirms and hands the
+              // inquiry to a person once (spec G.4), when approved; otherwise a
+              // check mark. Decorative either way: the message carries the meaning.
               isNodeReady('confirming')
-                ? <NodeMascot state="confirming" size={40} id="inquiry-success-node" className="flex-shrink-0" />
+                ? <NodeMascot state="confirming" tier="scene" size={160} run="handoff" id="inquiry-success-node" className="flex-shrink-0" />
                 : <CheckCircle2 size={18} className="mt-0.5 flex-shrink-0" aria-hidden="true" />
             ) : (
               <AlertCircle size={18} className="mt-0.5 flex-shrink-0" aria-hidden="true" />

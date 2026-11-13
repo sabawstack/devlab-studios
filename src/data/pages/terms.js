@@ -38,6 +38,10 @@ The content on this site (text, design, code samples shown, and portfolio descri
 
 Browsing this site or submitting the contact form does not create a client relationship or any obligation on either party. Actual project work is governed by a separate, explicit agreement (proposal, statement of work, or contract) between DevLab Studios and the client.
 
+## Ownership of client work
+
+You own the code, the data and the accounts created for your project.
+
 ## Portfolio and case studies
 
 Project descriptions and screenshots on this site are of real systems, shown with client data removed or replaced with synthetic data. Specific results are not guaranteed for future engagements, since every project's scope and constraints differ.

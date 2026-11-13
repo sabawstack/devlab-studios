@@ -13,6 +13,7 @@ import { createFigureCounter } from '../../components/brand/figures'
 import { getBreadcrumbSchema, getFaqSchema, getServiceSchema } from '../../config/schema.js'
 import { loadWorkEntries } from '../../lib/content/work'
 import { loadPageSeo, type SeoData } from '../../lib/content/seo'
+import { loadSiteSettings } from '../../lib/content/siteSettings'
 import { AUDIT_PAGE, OFFER_AUDIT, SERVICE_LINES, serviceLineContactHref } from '../../data/site/content.js'
 
 const { slug } = Astro.params as { slug: string }
@@ -27,7 +28,10 @@ const figures = createFigureCounter()
 const path = `/solutions/${slug}`
 const title = line ? line.title : OFFER_AUDIT.title
 const description = line ? `${line.problem} ${line.outcome}` : OFFER_AUDIT.summary
-const faq = line ? line.faq : AUDIT_PAGE.faq
+const { business } = await loadSiteSettings()
+// BUS-05: the audit's price line comes from site settings (owner Q-02), in the page and the FAQ answer.
+const auditFaq = AUDIT_PAGE.faq.map((item) => (item.id === 'price' ? { ...item, answer: `${business.auditPriceLine}. The scope is fixed and agreed before any work starts.` } : item))
+const faq = line ? line.faq : auditFaq
 const work = line?.workProjectId ? (await loadWorkEntries()).find((entry) => entry.project.id === line.workProjectId) || null : null
 
 const fallbackSeo: SeoData = {
@@ -106,6 +110,7 @@ const breadcrumb = [{ label: 'Solutions', href: '/solutions' }]
             </li>
           ))}
         </ol>
+        <p class="mt-6 text-step-1 font-semibold" data-audit-price>Price: {business.auditPriceLine}</p>
       </Section>
 
       <Section id="audit-steps" eyebrow="How it runs" heading="Three steps." class="border-t border-dl-rule">
@@ -129,7 +134,7 @@ const breadcrumb = [{ label: 'Solutions', href: '/solutions' }]
   <section id="solution-cta" aria-labelledby="solution-cta-heading" class="dl-band">
     <div class="mx-auto max-w-container px-[var(--gutter)] py-[calc(var(--section-rhythm)*0.6)]">
       <h2 id="solution-cta-heading" class="max-w-3xl text-step-3">{line ? 'Describe the workflow. A person replies.' : 'Choose the workflow to review.'}</h2>
-      <p class="mt-4 text-step-1 text-dl-ink-2">A person reads every inquiry. Nothing is auto-replied and closed.</p>
+      <p class="mt-4 text-step-1 text-dl-ink-2">You get an automatic receipt; the reply itself comes from a person.</p>
       <a
         href={line ? serviceLineContactHref(line) : OFFER_AUDIT.contactHref}
         class="dl-button-primary mt-8"

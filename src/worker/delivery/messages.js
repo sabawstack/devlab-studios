@@ -1,3 +1,4 @@
+import { BUSINESS_DEFAULTS, businessHoursLine, replyWindowLine, resolveBusinessSettings } from '../../config/business.js'
 const INQUIRY_TYPE_LABELS = {
   business_system: 'Business system or automation',
   software_project: 'Website or software project',
@@ -142,18 +143,21 @@ export function buildNotificationEmail(lead, { attribution = null } = {}) {
  * greeting by name and no copy of the message; only the inquiry type picks
  * between two fixed texts. Security audit F4 / M5.
  *
- * Deliberately states only what actually happens — that the inquiry was
- * received and a human will reply — with no response-time promise.
+ * States only what actually happens: the inquiry was received and a person
+ * will reply. For business inquiries it also states the reply window and
+ * hours from the business settings (CMS-02, CONVERT-03; the owner's decided
+ * values by default), which are server-owned, never from the submission.
  */
-export function buildConfirmationEmail(lead) {
+export function buildConfirmationEmail(lead, business = BUSINESS_DEFAULTS) {
   const isEmployment = lead.inquiryType === 'employment_opportunity' || lead.inquiryType === 'contract_collaboration'
   const intro = isEmployment
     ? 'Thanks for reaching out about a role. Your message has been received and Stephen reviews these personally.'
     : 'Thanks for reaching out. Your inquiry has been received and will be reviewed by a person, not an autoresponder.'
 
+  const settings = resolveBusinessSettings(business)
   const next = isEmployment
     ? 'If there is a fit, you will get a direct reply with availability and next steps.'
-    : 'You will get a reply with the clearest next step for your system — usually a short discovery conversation or a scoped recommendation.'
+    : `A person replies ${replyWindowLine(settings)} with the clearest next step for your system — usually a short call or a scoped recommendation. Hours: ${businessHoursLine(settings)}.`
 
   const notYou = 'If you did not contact DevLab Studios, you can ignore this email.'
 

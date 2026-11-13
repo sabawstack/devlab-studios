@@ -79,3 +79,26 @@ describe('Article schema (SEO-03)', async () => {
     expect(getArticleSchema({ ...article, coverImageUrl: 'https://cdn.example/c.webp' }).image).toBe('https://cdn.example/c.webp')
   })
 })
+
+// CASE-03: write-ups are CreativeWork, authored by the founder and published by the business.
+describe('write-up schema (CASE-03)', async () => {
+  const { getCreativeWorkSchema } = await import('./schema.js')
+  const schema = getCreativeWorkSchema({ slug: 'lead-qualification', title: 'Lead qualification', summary: 'A synthetic summary.', image: 'https://www.devlabstudios.com/x.webp', about: 'Lead intake and follow-up', inOperationSince: '2026-04' })
+
+  it('is a CreativeWork at its own URL', () => {
+    expect(schema).toMatchObject({ '@type': 'CreativeWork', name: 'Lead qualification', url: `${COMPANY.url}/work/lead-qualification` })
+  })
+
+  it('references the founder and the business by @id', () => {
+    expect(schema.author['@id']).toBe(PERSON_ID)
+    expect(schema.publisher['@id']).toBe(ORGANIZATION_ID)
+  })
+
+  it('carries the image, the service line and the in-operation date only when known', () => {
+    expect(schema).toMatchObject({ image: { '@type': 'ImageObject', url: 'https://www.devlabstudios.com/x.webp' }, about: { '@type': 'Service', name: 'Lead intake and follow-up' }, dateCreated: '2026-04' })
+    const bare = getCreativeWorkSchema({ slug: 'x', title: 'X', summary: 'Y' })
+    expect(bare).not.toHaveProperty('image')
+    expect(bare).not.toHaveProperty('about')
+    expect(bare).not.toHaveProperty('dateCreated')
+  })
+})

@@ -162,3 +162,27 @@ describe('attemptLeadDelivery with the cap', () => {
     expect(await claimConfirmationSlot(db, 'victim@example.com')).toBe(true)
   })
 })
+
+// CONVERT-03 / BUS-01: the receipt states the reply window and hours from the
+// business settings (CMS-02), still with nothing the visitor typed.
+describe('receipt wording (CONVERT-03)', () => {
+  it('states the reply window and hours from the defaults', async () => {
+    const { BUSINESS_DEFAULTS } = await import('../../config/business.js')
+    const message = buildConfirmationEmail(lead(), BUSINESS_DEFAULTS)
+    for (const part of [message.text, message.html]) {
+      expect(part).toContain('within one business day')
+      expect(part).toContain('Monday to Friday, 9:00–18:00 Philippine time (UTC+8)')
+    }
+    expect(message.subject).toBe('We received your inquiry — DevLab Studios')
+  })
+
+  it('follows a changed setting and falls back to the defaults when none is given', async () => {
+    const { BUSINESS_DEFAULTS } = await import('../../config/business.js')
+    expect(buildConfirmationEmail(lead(), { ...BUSINESS_DEFAULTS, replyWindowDays: 2 }).text).toContain('within 2 business days')
+    expect(buildConfirmationEmail(lead()).text).toContain('within one business day')
+  })
+
+  it('makes no promise in the employment receipt beyond a personal reply', () => {
+    expect(buildConfirmationEmail(lead({ inquiryType: 'employment_opportunity' })).text).not.toMatch(/business day/)
+  })
+})

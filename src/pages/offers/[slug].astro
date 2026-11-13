@@ -1,4 +1,5 @@
 ---
+import { CTA } from '../../config/ctas.js'
 import Layout from '../../layouts/Layout.astro'
 import LeadMagnetForm from '../../components/islands/LeadMagnetForm.jsx'
 import PrimaryButton from '../../components/PrimaryButton.jsx'
@@ -141,13 +142,13 @@ const jsonLd = offer
             </p>
           </div>
           <PrimaryButton
-            to={`/contact?type=workflow_audit&insight=${offer.id}`}
+            to={`/contact?type=business_system&insight=${offer.id}`}
             data-cta-id="offer-to-inquiry"
             data-cta-variant="primary"
             data-offer-id={offer.id}
-            data-inquiry-type="workflow_audit"
+            data-inquiry-type="business_system"
           >
-            Discuss Your System
+            {CTA.line.intake}
             <ArrowRight size={16} aria-hidden="true" />
           </PrimaryButton>
         </div>

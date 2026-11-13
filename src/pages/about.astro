@@ -66,6 +66,17 @@ const jsonLd = [getOrganizationSchema(), getBreadcrumbSchema([{ name: 'Home', pa
     </p>
   </Section>
 
+  <Section id="about-working" eyebrow="Working together" heading={ABOUT.workingHeading} class="border-t border-dl-rule">
+    <dl class="mt-10 grid gap-x-10 gap-y-8 md:grid-cols-2" data-working-with-us>
+      {ABOUT.working.map((item) => (
+        <div class="border-t border-dl-rule pt-4">
+          <dt class="text-step-1 font-semibold">{item.title}</dt>
+          <dd class="mt-2 text-dl-ink-2">{item.text}</dd>
+        </div>
+      ))}
+    </dl>
+  </Section>
+
   <section id="about-cta" aria-labelledby="about-cta-heading" class="dl-band">
     <div class="mx-auto max-w-container px-[var(--gutter)] py-[calc(var(--section-rhythm)*0.6)]">
       <h2 id="about-cta-heading" class="max-w-3xl text-step-3">Tell us about the system you need.</h2>

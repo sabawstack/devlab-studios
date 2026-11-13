@@ -228,7 +228,8 @@ export const AUDIT_PAGE = {
     { title: 'Recommendation', text: 'You receive the written review, the drawing and the roadmap, and we go through it together.' },
   ],
   faq: [
-    { question: 'Is there a price?', answer: 'The scope is fixed; the price is quoted after the intake call, before any work starts.' },
+    // BUS-05: the answer is replaced by the price line from site settings on the page.
+    { id: 'price', question: 'Is there a price?', answer: 'Quoted after a 30-minute call. The scope is fixed and agreed before any work starts.' },
     { question: 'Do we have to build it with you?', answer: 'No. The recommendation is yours to use with any team.' },
     { question: 'How long does it take?', answer: 'It depends on the workflow, and the timeline is agreed at intake.' },
   ],
@@ -246,6 +247,18 @@ export const ABOUT = {
   ],
   principlesHeading: 'What we hold to',
   howHeading: 'How we work',
+  /** BUS-02 (spec K.1): plain statements, no SLA figures; ownership approved by the owner 2026-11-13 (Q-11). */
+  workingHeading: 'What working with us looks like',
+  working: [
+    { title: 'You own it', text: 'You own the code, the data and the accounts. We hand over documentation and the failure paths written down.' },
+    { title: 'A plan before code', text: 'The audit is fixed in scope and quoted. Builds are quoted per phase, after a written recommendation with a drawing.' },
+    { title: 'Each phase ends in a walkthrough', text: 'You get a written list of what is now true, and each phase is tested before the next depends on it.' },
+    { title: 'Changes in writing', text: 'Changes are proposed in writing, agreed, then shipped through a preview you can see first.' },
+    { title: 'Confidential by default', text: 'An NDA on request. Client data is removed from anything we publish, and production access is scoped and removed at handover.' },
+    { title: 'Support by arrangement', text: 'Ongoing monitoring and small changes are a separate arrangement, agreed in writing. No uptime figure is promised that is not measured.' },
+    { title: 'Continuity', text: 'One person runs this studio, so every system is documented well enough for another engineer to take it over.' },
+    { title: 'What we do not do', text: 'No staffing or outsourcing, no generic marketing work, and no AI chatbots left to run without a person behind them.' },
+  ],
 }
 
 export const PRODUCTS = {

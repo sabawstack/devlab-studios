@@ -69,7 +69,7 @@ const jsonLd = [getBreadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Insig
         <p class="label text-dl-ink-3">Start here</p>
         <p class="mt-2 text-step-1 font-semibold">{OFFER_AUDIT.title}</p>
         <p class="mt-2 text-step--1 text-dl-ink-2">{OFFER_AUDIT.summary}</p>
-        <a href={OFFER_AUDIT.path} class="dl-button-primary mt-5" data-cta-id="insights-audit">Request the audit</a>
+        <a href={OFFER_AUDIT.contactHref} class="dl-button-primary mt-5" data-cta-id="insights-audit" data-inquiry-type="workflow_audit">Request the audit</a>
       </div>
       {leadMagnet && (
         <div class="rounded-dl-s border border-dl-rule p-6">

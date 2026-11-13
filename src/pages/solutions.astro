@@ -12,7 +12,7 @@ import SceneFrame from '../components/brand/SceneFrame.astro'
 import { createFigureCounter } from '../components/brand/figures'
 import { getBreadcrumbSchema, getServiceSchema } from '../config/schema.js'
 import { loadPageSeo } from '../lib/content/seo'
-import { DELIVERY_STEPS, OFFER_AUDIT, SERVICE_LINES, SOLUTIONS_INDEX, serviceLineContactHref } from '../data/site/content.js'
+import { OFFER_AUDIT, SERVICE_LINES, SOLUTIONS_INDEX, serviceLineContactHref } from '../data/site/content.js'
 
 const seo = await loadPageSeo('solutions')
 const figures = createFigureCounter()
@@ -64,15 +64,8 @@ const jsonLd = [
     </div>
   </section>
 
-  <Section id="solutions-delivery" eyebrow="Delivery" heading={SOLUTIONS_INDEX.deliveryHeading}>
-    <ol class="mt-10 grid gap-px overflow-hidden rounded-dl-s border border-dl-rule bg-dl-rule sm:grid-cols-2 lg:grid-cols-4">
-      {DELIVERY_STEPS.map((step, index) => (
-        <li class="bg-dl-paper p-6">
-          <p class="label text-dl-ink-3">{String(index + 1).padStart(2, '0')}</p>
-          <h3 class="mt-3 text-step-1">{step.title}</h3>
-          <p class="mt-2 text-dl-ink-2">{step.text}</p>
-        </li>
-      ))}
-    </ol>
-  </Section>
+  <!-- CONTENT-06: how a project runs lives on About only. -->
+  <p class="mx-auto max-w-container px-[var(--gutter)] py-12 text-dl-ink-2">
+    How a project runs, from the first call to handover, is on <a href="/about#how-we-work" data-cta-id="solutions-how-we-work">About</a>.
+  </p>
 </BrandLayout>

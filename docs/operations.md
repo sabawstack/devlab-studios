@@ -475,3 +475,12 @@ bucket.
    `node scripts/cms/media-domain-rewrite.mjs --env preview --from https://pub-…r2.dev --to https://media-preview.devlabstudios.com [--apply]`
    (production adds `CLOUDFLARE_API_TOKEN`). Swap `--from`/`--to` to undo.
 4. Keep the old `pub-*.r2.dev` host enabled until every image is verified.
+
+## Measuring the call-to-action change (CONVERT-04, 2026-11-13)
+
+The site-wide wording changed to "Talk to us about your system" (header "Talk to us") on 2026-11-13. To see whether it helped:
+
+- **Conversion:** the server-confirmed `inquiry_persisted` GA4 event (one per saved inquiry; never from a click).
+- **Clicks:** `primary_cta_click` and `secondary_cta_click` carry `cta_id`, `inquiry_type` and the context ids; GA4 adds the page. Link text is deliberately not sent, so compare by `cta_id` and date.
+- **Read:** persisted inquiries per 1,000 sessions for the four weeks before 2026-11-13 against the four weeks after, by landing page and `cta_id`. `lead_attribution` in D1 records which page and CTA each saved inquiry came from.
+- **Decision rule:** if the rate falls, revert the labels (`src/config/ctas.js` and the paired revert in `scripts/cms/updates/2026-11-13-home-work-content.sql`). The labels shipped together with the price line, reply window and new home copy, so a change is not attributable to wording alone.

@@ -80,7 +80,7 @@ test('a complete business inquiry submits and reports that it was saved', async 
   await page.getByLabel(/I agree that DevLab Studios/i).check()
 
   await page.getByRole('button', { name: 'Send inquiry' }).click()
-  await expect(page.getByRole('status')).toContainText(/received and saved/i)
+  await expect(page.getByRole('status')).toContainText(/inquiry is recorded|message is recorded/i)
   // Spec G.3: Node confirms the save, decoratively, once the owner has approved
   // the state; until then a check mark. The message carries the meaning.
   const node = page.getByRole('status').locator('svg.node-mascot')
@@ -131,7 +131,7 @@ test('a server failure surfaces an error and does not claim success', async ({ p
 
   await page.getByRole('button', { name: 'Send inquiry' }).click()
   await expect(page.getByRole('status')).toContainText(/could not save/i)
-  await expect(page.getByRole('status')).not.toContainText(/received and saved/i)
+  await expect(page.getByRole('status')).not.toContainText(/is recorded/i)
   await expect(page.getByRole('status').locator('svg.node-mascot')).toHaveCount(0)
 })
 
@@ -172,7 +172,7 @@ test('with email delivery unavailable, the inquiry is still saved and the failed
   const response = await responsePromise
   expect(response.status()).toBe(200)
   expect((await response.json()).persisted).toBe(true)
-  await expect(page.getByRole('status')).toContainText(/received and saved/i)
+  await expect(page.getByRole('status')).toContainText(/inquiry is recorded|message is recorded/i)
 
   const db = openStaticCmsDatabase()
   expect(db, 'static e2e D1 file not found').not.toBeNull()
@@ -290,7 +290,7 @@ test('an employment inquiry submits through the same pipeline', async ({ page })
   await page.getByLabel(/I agree that DevLab Studios/i).check()
 
   await page.getByRole('button', { name: 'Send to Stephen' }).click()
-  await expect(page.getByRole('status')).toContainText(/received and saved/i)
+  await expect(page.getByRole('status')).toContainText(/inquiry is recorded|message is recorded/i)
 
   expect(posted.inquiryType).toBe('employment_opportunity')
   expect(posted.roleTitle).toBe('Backend Engineer')
@@ -319,7 +319,7 @@ test('CTA context preselects the inquiry type and is captured as attribution', a
   await page.getByLabel(/I agree that DevLab Studios/i).check()
 
   await page.getByRole('button', { name: 'Send inquiry' }).click()
-  await expect(page.getByRole('status')).toContainText(/received and saved/i)
+  await expect(page.getByRole('status')).toContainText(/inquiry is recorded|message is recorded/i)
 
   expect(posted.inquiryType).toBe('workflow_audit')
   expect(posted.attribution.solutionId).toBe('workflow-systems-audit')
@@ -376,4 +376,17 @@ test('the legacy contact endpoint still backs the Pickleball club form', async (
   }).toPass({ timeout: 25_000 })
 
   expect(posted.subject).toBe('Pickleball early access request')
+})
+
+// CONVERT-01 / BUS-01: the aside states what happens after sending, the reply
+// window and hours (site settings, defaults = owner decisions) and the email
+// alternative; no chat or scheduling link while none is set (Q-05).
+test('the contact aside states the reply window, hours and the email alternative', async ({ page }) => {
+  await page.goto('/contact')
+  const aside = page.locator('aside')
+  await expect(aside.locator('[data-scene-frame="the-receipt"]')).toBeVisible()
+  await expect(aside.locator('[data-reply-window]')).toContainText('within one business day')
+  await expect(aside.locator('[data-reply-window]')).toContainText('Monday to Friday, 9:00–18:00 Philippine time (UTC+8)')
+  await expect(aside.getByRole('link', { name: 'hello@devlabstudios.com' })).toHaveAttribute('href', 'mailto:hello@devlabstudios.com')
+  await expect(aside.getByRole('link', { name: /Messenger|WhatsApp|Book a call/ })).toHaveCount(0)
 })

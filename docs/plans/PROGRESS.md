@@ -281,8 +281,8 @@ through `development` → preview → owner sign-off → `main`.
 | 2 Brand foundation | BRAND-01, BRAND-02, BRAND-03, BRAND-05, MASCOT-01, MASCOT-02, MASCOT-03 | done (PR #60, production at `2a8c0ae`, 2026-11-13); art and Node pending owner review (Group 3) |
 | 3 Review gate | `/brand` review of scenes and the Node redraw (MASCOT-04 fallback) | done: owner approved everything on preview `/brand`, 2026-11-13 |
 | 4 Data | CMS-01, CMS-02, CMS-03 | done (PR #61, production at `4961cf6`, 2026-11-13) |
-| 5 Pages I | UX-02, UX-01, WEB-03, CONTENT-01, CONTENT-02, CONTENT-03, CASE-01, CASE-02 | done locally; PR, preview and production in progress |
-| 6 Pages II | UX-03, UX-04, UX-05, CONTENT-04…06, CONVERT-01…04, WEB-02, BUS-01, BUS-02, BUS-05, PROFILE-01, CASE-03 | not started |
+| 5 Pages I | UX-02, UX-01, WEB-03, CONTENT-01, CONTENT-02, CONTENT-03, CASE-01, CASE-02 | done (PR #64, production at `2185c6a`, 2026-11-13) |
+| 6 Pages II | UX-03, UX-04, UX-05, CONTENT-04…06, CONVERT-01…04, WEB-02, BUS-01, BUS-02, BUS-05, PROFILE-01, CASE-03 | in progress: conversion, links, About, schema done; UX-03 figure sizing, UX-04 (Products screenshot, Maintenance), CONTENT-04 (Profile voice), CONTENT-05 (write-up leads) remain |
 | 7 Shell consolidation | BRAND-04, WEB-01, WEB-05, SEC-03 | not started |
 | 8 Conditional and owner items | BUS-03, BUS-04, CONVERT-05, CASE-04, WEB-04, SEO-01, SEO-04, MASCOT-05 | not started |
 | 9 Verification and release | TEST-02…05, OPS-03, OPS-04, CMS-04, release | not started |
@@ -412,3 +412,11 @@ Commit `1fb45ee` (one commit for the group: the copy, components and tests are i
 | CASE-02 | White mounts, scope line when written, one destination per entry |
 
 Verification: lint 0 errors, typecheck 0, unit 3,018 passed / 1 skipped (no expected failures left), build OK, static e2e 242 passed / 1 skipped. Screenshots of `/` and a write-up at 390 and 1440 reviewed (tall S1 crop on phones).
+
+Group 5 promotion: PR #64 CI green; preview (31/31 legacy URLs; new hero, CTA, price line, reply window, markets present; no "VERIFIED" or "live schematic"; write-up shows D-2 and K.2 sections); `main` → `2185c6a` (MERGED); `0 0`.
+
+### Group 6 — Pages II (log, part 1)
+
+Done: CONVERT-01 (Contact aside: S8, reply window and hours from settings, email alternative, channels only when set; e2e), CONVERT-02 (graphite success exhibit, Node hand-off once, I.4 text with the visitor's own address; contact-form e2e updated), CONVERT-03 (receipt email reply window and hours; 3 new unit tests, 417 worker tests green incl. persist-before-deliver guards), BUS-01, BUS-05 (price line on the offer card, audit page and FAQ), BUS-02 (About "What working with us looks like"; Terms ownership line, owner-approved wording only), CONTENT-06 (delivery steps only on About), WEB-02 (footer hiring link, Insights audit link, offers CTA, digest label), PROFILE-01 (byline), CASE-03 (`CreativeWork`; 3 schema tests), CONVERT-04 (existing click events cover it; measurement note in `docs/operations.md`).
+
+Remaining in Group 6: UX-03 figure sizing on Solutions and line pages, UX-04 (Products screenshot with synthetic data, Maintenance on the brand shell — joins BRAND-04), CONTENT-04 (Profile third person, merged tags, bullet grammar), CONTENT-05 (≤ 30-word write-up leads; needs the CMS narrative rows).

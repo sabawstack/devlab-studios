@@ -255,3 +255,21 @@ export const getArticleSchema = (article) => ({
     '@id': `${COMPANY.url}/insights/${article.slug}`,
   },
 })
+
+/**
+ * A Work write-up (spec L.2, CASE-03): CreativeWork authored by the founder
+ * and published by the business, by @id; the screenshot, the service line it
+ * belongs to and the in-operation date only when known (nothing invented).
+ */
+export const getCreativeWorkSchema = (work) => ({
+  '@context': 'https://schema.org',
+  '@type': 'CreativeWork',
+  name: work.title,
+  description: work.summary,
+  url: `${COMPANY.url}/work/${work.slug}`,
+  ...(work.image ? { image: { '@type': 'ImageObject', url: work.image } } : {}),
+  ...(work.about ? { about: { '@type': 'Service', name: work.about } } : {}),
+  ...(work.inOperationSince ? { dateCreated: work.inOperationSince } : {}),
+  author: { '@type': 'Person', '@id': PERSON_ID, name: COMPANY.founder.name, url: `${COMPANY.url}${COMPANY.founder.profilePath}` },
+  publisher: { '@type': 'Organization', '@id': ORGANIZATION_ID, name: COMPANY.name },
+})
