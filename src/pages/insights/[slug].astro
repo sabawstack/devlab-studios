@@ -62,8 +62,8 @@ const jsonLd = [
       <div class="mx-auto max-w-container px-[var(--gutter)] py-[calc(var(--section-rhythm)*0.5)]">
         <nav aria-label="Breadcrumb" class="mb-6">
           <ol class="label flex flex-wrap gap-2 text-dl-ink-3">
-            <li><a href="/insights" class="no-underline hover:underline">Insights</a></li>
-            {tag && <li class="before:mr-2 before:content-['/']"><a href={`/insights?problem=${tag.id}`} class="no-underline hover:underline">{tag.label}</a></li>}
+            <li><a href="/insights" class="no-underline">Insights</a></li>
+            {tag && <li class="before:mr-2 before:content-['/']"><a href={`/insights?problem=${tag.id}`} class="no-underline">{tag.label}</a></li>}
           </ol>
         </nav>
         <h1 class="max-w-4xl text-step-4">{post.title}</h1>
@@ -123,7 +123,7 @@ const jsonLd = [
         <ul class="mt-6 grid gap-6 md:grid-cols-3">
           {related.map((item) => (
             <li class="border-t border-dl-rule pt-4">
-              <a href={`/insights/${item.slug}`} class="font-semibold no-underline hover:underline" data-cta-id="insight-related-article">{item.title}</a>
+              <a href={`/insights/${item.slug}`} class="font-semibold no-underline" data-cta-id="insight-related-article">{item.title}</a>
               <p class="mt-2 text-step--1 text-dl-ink-2">{item.summary}</p>
             </li>
           ))}

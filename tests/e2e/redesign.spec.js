@@ -169,13 +169,21 @@ test('brand pages render on stone with no grid, glow or header blur', async ({ p
   }
 })
 
-// BRAND-02: the current nav item carries the gradient underline; section
-// labels and form labels are plain sentence-case words in the text face.
-test('nav underline, section labels and form labels follow spec N.5', async ({ page }) => {
+// BRAND-02 + owner rule (2026-11-13): the current nav item is a filled pill
+// with indigo text, nothing is underlined, and section and form labels are
+// plain sentence-case words in the text face.
+test('nav selection, links, section labels and form labels follow the owner rules', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/about')
-  const underline = await page.locator('nav[aria-label="Primary"] a[aria-current="page"]').evaluate((link) => getComputedStyle(link, '::after').backgroundImage)
-  expect(underline).toMatch(/linear-gradient/)
+  const current = await page.locator('nav[aria-label="Primary"] a[aria-current="page"]').evaluate((link) => {
+    const style = getComputedStyle(link)
+    return { bg: style.backgroundColor, color: style.color, decoration: style.textDecorationLine }
+  })
+  expect(current).toEqual({ bg: 'rgb(221, 219, 243)', color: 'rgb(67, 56, 202)', decoration: 'none' })
+  const underlined = await page.evaluate(() => [...document.querySelectorAll('body *')]
+    .filter((element) => getComputedStyle(element).textDecorationLine.includes('underline'))
+    .map((element) => element.outerHTML.slice(0, 80)))
+  expect(underlined).toEqual([])
   await page.goto('/contact')
   const styles = await page.evaluate(() => {
     const read = (element) => ({ transform: getComputedStyle(element).textTransform, font: getComputedStyle(element).fontFamily })

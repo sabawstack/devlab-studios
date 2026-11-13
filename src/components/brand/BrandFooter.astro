@@ -29,27 +29,27 @@ const year = new Date().getUTCFullYear()
     </div>
     <nav class="md:col-span-2" aria-label="Explore">
       <p class="label text-dl-ink-3">Explore</p>
-      <ul class="mt-3 space-y-2">{explore.map((link) => <li><a href={link.href} class="no-underline hover:underline">{link.label}</a></li>)}</ul>
+      <ul class="mt-3 space-y-2">{explore.map((link) => <li><a href={link.href} class="no-underline">{link.label}</a></li>)}</ul>
     </nav>
     <nav class="md:col-span-2" aria-label="Products">
       <p class="label text-dl-ink-3">Products</p>
       <ul class="mt-3 space-y-2">
-        <li><a href="/products" class="no-underline hover:underline">All products</a></li>
-        <li><a href="/pickleball?ref=footer" class="no-underline hover:underline">Devlab Pickleball</a></li>
+        <li><a href="/products" class="no-underline">All products</a></li>
+        <li><a href="/pickleball?ref=footer" class="no-underline">Devlab Pickleball</a></li>
       </ul>
     </nav>
     <nav class="md:col-span-3" aria-label="Connect">
       <p class="label text-dl-ink-3">Connect</p>
       <ul class="mt-3 space-y-2">
-        {connect.map((link) => <li><a href={link.href} rel="noopener" class="no-underline hover:underline">{link.label}</a></li>)}
-        <li><a href="/profile" class="no-underline hover:underline">Hiring? Contact Stephen</a></li>
+        {connect.map((link) => <li><a href={link.href} rel="noopener" class="no-underline">{link.label}</a></li>)}
+        <li><a href="/profile" class="no-underline">Hiring? Contact Stephen</a></li>
       </ul>
     </nav>
   </div>
   <div class="border-t border-dl-rule">
     <div class="mx-auto flex max-w-container flex-wrap items-center justify-between gap-3 px-[var(--gutter)] py-5 text-step--1 text-dl-ink-3">
       <p>© {year} {COMPANY.name} · <span data-footer-signoff>{COMPANY.footerSignOff}</span></p>
-      <ul class="flex gap-5">{legal.map((link) => <li><a href={link.href} class="no-underline hover:underline">{link.label}</a></li>)}</ul>
+      <ul class="flex gap-5">{legal.map((link) => <li><a href={link.href} class="no-underline">{link.label}</a></li>)}</ul>
     </div>
   </div>
 </footer>

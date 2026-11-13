@@ -170,7 +170,7 @@ function LeadMagnetForm({ siteKey = '', offerId, offerTitle, ctaLabel = 'Send me
         />
         <label className="text-sm text-slate-700" htmlFor={fieldId('consentGranted')}>
           {CONSENT_TEXT}{' '}
-          <a href="/privacy" className="font-semibold text-brand-teal underline-offset-2 hover:underline">
+          <a href="/privacy" className="font-semibold text-brand-teal">
             Privacy Policy
           </a>
           .

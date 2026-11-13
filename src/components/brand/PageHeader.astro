@@ -22,7 +22,7 @@ const hasAside = Astro.slots.has('aside')
         <nav aria-label="Breadcrumb" class="mb-6">
           <ol class="label flex flex-wrap gap-2 text-dl-ink-3">
             {breadcrumb.map((crumb) => (
-              <li class="after:ml-2 after:content-['/'] last:after:content-none"><a href={crumb.href} class="no-underline hover:underline">{crumb.label}</a></li>
+              <li class="after:ml-2 after:content-['/'] last:after:content-none"><a href={crumb.href} class="no-underline">{crumb.label}</a></li>
             ))}
           </ol>
         </nav>

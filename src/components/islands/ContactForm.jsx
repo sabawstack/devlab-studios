@@ -124,7 +124,7 @@ function ContactForm({ siteKey = '', copy = {} }) {
           <div ref={turnstile.containerRef} />
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-slate-600" aria-live="polite">{verificationMessages[turnstile.state]}</p>
-            {['expired', 'timeout', 'error'].includes(turnstile.state) ? <button type="button" onClick={turnstile.reset} className="text-xs font-semibold text-brand-teal underline-offset-2 hover:underline">Retry verification</button> : null}
+            {['expired', 'timeout', 'error'].includes(turnstile.state) ? <button type="button" onClick={turnstile.reset} className="text-xs font-semibold text-brand-teal">Retry verification</button> : null}
           </div>
         </div>
 

@@ -54,7 +54,7 @@ const jsonLd = [getBreadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Insig
               {post.publishedAt && <span> · <time datetime={post.publishedAt}>{formatArticleDate(post.publishedAt)}</time></span>}
               {post.readingTimeMinutes ? <span> · {post.readingTimeMinutes} min</span> : null}
             </p>
-            <h3 class="mt-2 text-step-2"><a href={`/insights/${post.slug}`} class="no-underline hover:underline" data-cta-id="insights-article">{post.title}</a></h3>
+            <h3 class="mt-2 text-step-2"><a href={`/insights/${post.slug}`} class="no-underline" data-cta-id="insights-article">{post.title}</a></h3>
             <p class="mt-2 text-dl-ink-2">{post.summary}</p>
           </li>
         ))}

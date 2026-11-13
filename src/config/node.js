@@ -17,9 +17,9 @@ export const NODE_TIERS = {
 }
 
 export const NODE_ART = {
-  reviewedOn: null,
-  reviewer: null,
-  states: { idle: false, holding: false, confirming: false, 'needs-person': false },
+  reviewedOn: '2026-11-13',
+  reviewer: 'owner (Stephen Rey Agustinez), on preview /brand',
+  states: { idle: true, holding: true, confirming: true, 'needs-person': true },
 }
 
 export function isNodeReady(state) {

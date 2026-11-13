@@ -75,7 +75,8 @@ router glyph without the lamp, idle and confirming only).
 
 | Date | Reviewer | Decision |
 |---|---|---|
-| 2026-11-13 | — | Redraw built and on preview for review (MASCOT-01). No state approved yet |
+| 2026-11-13 | — | Redraw built and on preview for review (MASCOT-01) |
+| 2026-11-13 | Owner | Approved on preview `/brand` after review: all four states and three tiers, including the 24 px silhouette ("i think its good"). MASCOT-04 not needed |
 
 ## Ownership and IP
 

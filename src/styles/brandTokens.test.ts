@@ -174,10 +174,10 @@ describe('migrated pages use the brand layout (UX-04)', () => {
 // the gap today and turn red when the fix lands, forcing the flip to `it`.
 const rules = [...stripComments(css).matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(([, selector, body]) => ({ selector: selector.trim(), body }))
 
-// The gradient is the brand colour, used in four places only: the logo mark,
-// primary buttons (the inquiry form's submit button is one), the 3 px hero
-// rule and the current-nav underline. `:root` defines it.
-const GRADIENT_SELECTORS = [/^:root$/, /\.dl-button-primary/, /\.form-surface button/, /\.hero-rule/, /aria-current|\.is-current/, /\.dl-logo-mark/]
+// The gradient is the brand colour, used in three places only: the logo mark,
+// primary buttons (the inquiry form's submit button is one) and the 3 px hero
+// rule (owner, 2026-11-13: the nav no longer has an underline). `:root` defines it.
+const GRADIENT_SELECTORS = [/^:root$/, /\.dl-button-primary/, /\.form-surface button/, /\.hero-rule/, /\.dl-logo-mark/]
 
 function mixHex(hex: string, [r, g, b, alpha]: number[]): string {
   const base = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
@@ -187,7 +187,7 @@ function mixHex(hex: string, [r, g, b, alpha]: number[]): string {
 describe('Direction B guards (TEST-01)', () => {
   it('finds the CSS rules', () => expect(rules.length).toBeGreaterThan(50))
 
-  it('the gradient is referenced only by the four allowed roles', () => {
+  it('the gradient is referenced only by its three allowed roles', () => {
     const wrong = rules.filter(({ selector, body }) => /var\(--brand-gradient\)/.test(body) && !GRADIENT_SELECTORS.some((allowed) => allowed.test(selector)))
     expect(wrong.map(({ selector }) => selector)).toEqual([])
   })
@@ -206,6 +206,11 @@ describe('Direction B guards (TEST-01)', () => {
     expect(contrast(token(':root', 'link'), token(':root', 'paper'))).toBeGreaterThanOrEqual(4.5)
   })
 
+  it('indigo text holds 4.5:1 on the --selected fill (current nav item, link hover)', () => {
+    expect(contrast(token(':root', 'link'), token(':root', 'selected'))).toBeGreaterThanOrEqual(4.5)
+    expect(contrast(token(':root', 'exhibit-link'), token(':root', 'exhibit-rule'))).toBeGreaterThanOrEqual(4.5)
+  })
+
   it('captions (--ink-3) hold 4.5:1 on the canvas', () => {
     expect(contrast(token(':root', 'ink-3'), token(':root', 'paper'))).toBeGreaterThanOrEqual(4.5)
   })
@@ -214,5 +219,28 @@ describe('Direction B guards (TEST-01)', () => {
   it('amber is used only inside .ink-panel', () => {
     const wrong = rules.filter(({ selector, body }) => /var\(--(?:accent-)?amber\)/.test(body) && !/\.ink-panel/.test(selector))
     expect(wrong.map(({ selector }) => selector)).toEqual([])
+  })
+})
+
+// Owner rule (2026-11-13): no text on the public site is underlined. Links
+// are indigo and semi-bold; the current nav item is a filled pill.
+describe('no underlined text on the public site', () => {
+  const PUBLIC_TEMPLATES = [
+    'src/components/brand', 'src/layouts', 'src/components/Footer.astro', 'src/components/Navbar.astro',
+    'src/components/islands/InquiryForm.jsx', 'src/components/islands/LeadMagnetForm.jsx', 'src/components/islands/ContactForm.jsx',
+    ...['index', 'solutions', 'work', 'insights', 'about', 'profile', 'products', 'contact', 'privacy', 'terms', '404', 'crawler', 'maintenance']
+      .map((page) => `src/pages/${page}.astro`),
+    'src/pages/solutions', 'src/pages/work', 'src/pages/insights', 'src/pages/offers', 'src/pages/pickleball/index.astro',
+    'src/pages/pickleball/how-it-works.astro', 'src/pages/pickleball/rotation.astro',
+  ].flatMap(files).filter((path) => /\.(astro|jsx)$/.test(path) && !/\.test\./.test(path))
+
+  it('brand.css never sets an underline', () => {
+    expect(stripComments(css)).not.toMatch(/text-decoration(?:-line)?:\s*[^;]*underline/)
+  })
+
+  it('finds the public templates', () => expect(PUBLIC_TEMPLATES.length).toBeGreaterThan(30))
+
+  it.each(PUBLIC_TEMPLATES)('%s uses no underline utility', (path) => {
+    expect(stripComments(readFileSync(path, 'utf8'))).not.toMatch(/(?<![\w-])(?:[a-z-]+:)*underline(?![\w-])/)
   })
 })

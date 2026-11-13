@@ -279,7 +279,7 @@ through `development` → preview → owner sign-off → `main`.
 |---|---|---|
 | 1 Gates and guards | OPS-01, TEST-01, SEC-01, OPS-02 | done (PR #59, production at `15f93e4`, 2026-11-13) |
 | 2 Brand foundation | BRAND-01, BRAND-02, BRAND-03, BRAND-05, MASCOT-01, MASCOT-02, MASCOT-03 | done (PR #60, production at `2a8c0ae`, 2026-11-13); art and Node pending owner review (Group 3) |
-| 3 Review gate | `/brand` review of scenes and the Node redraw (MASCOT-04 fallback) | open: waiting for the owner on preview `/brand` |
+| 3 Review gate | `/brand` review of scenes and the Node redraw (MASCOT-04 fallback) | done: owner approved everything on preview `/brand`, 2026-11-13 |
 | 4 Data | CMS-01, CMS-02, CMS-03 | done (PR #61, production at `4961cf6`, 2026-11-13) |
 | 5 Pages I | UX-02, UX-01, WEB-03, CONTENT-01, CONTENT-02, CONTENT-03, CASE-01, CASE-02 | not started |
 | 6 Pages II | UX-03, UX-04, UX-05, CONTENT-04…06, CONVERT-01…04, WEB-02, BUS-01, BUS-02, BUS-05, PROFILE-01, CASE-03 | not started |
@@ -388,3 +388,7 @@ Group 4 promotion: PR #61 CI `validate` green. `development` → `4961cf6`, `dep
 - **Dated SQL still to write with their copy:** home SEO title (SEO-01), nav CTA labels in `site_ctas` (CONTENT-02), write-up leads and case-study texts (CONTENT-05, CASE-01). Read rows first; neither D1 stores a Terms or Privacy page.
 - **Local environment:** the old local D1 state was moved to `.wrangler/state-backup-2026-11-13` (kept). Pre-existing worker e2e failures on `main` (SEO slug editor, Lead CRM sources, two pickleball poster-share emulations) are environment issues to fix separately; they are not caused by Phase 14.
 - **Production D1:** both CMS databases are in the account `db49…`; set `CLOUDFLARE_ACCOUNT_ID` for non-interactive Wrangler runs. Production and preview are at `0020_writeup_fields`.
+
+### Owner decisions, 2026-11-13 (afternoon)
+
+1. Home copy of spec I.4 approved as written. 2. Per-group preview sign-off waived: promote to production once preview checks pass. 3. Markets: the Philippines, the United States and Australia may be named (Q-07). 4. "You own the code, the data and the accounts" may be stated on About and in the Terms (Q-11). 5. Node redraw, S7, S8, D-1…D-4 and the tall crops approved after review on preview `/brand` (Q-13; Group 3 done). 6. New design rule: no underlined text anywhere; the current nav item is a background and text-colour change (overrides spec N.5's underlines; saved as a standing preference).

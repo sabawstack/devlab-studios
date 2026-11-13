@@ -3,8 +3,10 @@
  * 2026-11-13; supersedes the Blueprint palette of ADR 0014).
  *
  * A cool stone canvas, graphite-indigo ink, indigo links, and the logo
- * gradient as the one strong colour, used in four places only: the logo mark,
- * primary buttons, the 3 px hero rule and the current-nav underline. The home
+ * gradient as the one strong colour, used in three places only: the logo mark,
+ * primary buttons and the 3 px hero rule. No text is ever underlined (owner,
+ * 2026-11-13): links are indigo and semi-bold, the current nav item is a filled
+ * pill (--selected). The home
  * hero band and the exhibits sit on graphite through `.ink-panel`, which swaps
  * every role for its exhibit value. Magenta (--redline) and violet are diagram
  * colours; amber lives only inside exhibits. Nothing applies until an element
@@ -97,6 +99,8 @@
   --ok: #1f7a4d; /* verified / connected, always beside a word */
   --amber: #b45309; /* exhibits only */
   --danger: #9f1239; /* form errors, with the warning symbol */
+  /* Selected and hover fill: the current nav item, link hover and focus (indigo text 5.8:1 on it). */
+  --selected: #dddbf3;
   --focus-ring: var(--link);
   --brand-gradient: linear-gradient(135deg, #e100ff 0%, #7b2cbf 50%, #0048ba 100%);
   /* Over the gradient so white text holds 4.5:1 at the magenta end: 12 % at
@@ -153,6 +157,7 @@
   --ink-3: var(--exhibit-ink-3);
   --rule: var(--exhibit-rule);
   --link: var(--exhibit-link);
+  --selected: var(--exhibit-rule);
   --ok: var(--exhibit-ok);
   --amber: var(--exhibit-amber);
   --focus-ring: var(--exhibit-ink);
@@ -204,21 +209,22 @@ body.brand {
 }
 .brand :where(a) {
   color: inherit;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.2em;
+  text-decoration: none;
 }
+/* Links in running text: indigo and semi-bold, never underlined (owner,
+   2026-11-13). The weight is the non-colour cue (WCAG 1.4.1); hover and focus
+   add the --selected fill. Link lists marked `no-underline` (nav, footer)
+   keep the text colour and take the fill on hover. */
 .brand :where(p, li, dd) :where(a:not(.no-underline)) {
-  /* Links in running text are indigo and underlined, so colour is never the
-     only cue (BR.12). Link lists that opt out with `no-underline` (nav, footer)
-     keep the text colour. */
   color: var(--link);
-  text-decoration-line: underline;
+  font-weight: 600;
+  border-radius: var(--radius-xs);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  transition: background-color var(--duration-ui) var(--ease-draw);
 }
-.brand :where(p, li, dd) :where(a:not(.no-underline):hover) {
-  color: var(--ink);
-}
-.brand :where(a:hover) {
-  text-decoration-color: currentColor;
+.brand :where(p, li, dd) :where(a:hover, a:focus-visible) {
+  background-color: var(--selected);
 }
 .brand :where(:focus-visible) {
   outline: 2px solid var(--focus-ring);
@@ -271,8 +277,7 @@ body.brand {
   font-weight: 500;
   line-height: 1.2;
   text-decoration: none;
-  transition: background-color var(--duration-ui) var(--ease-draw), border-color var(--duration-ui) var(--ease-draw),
-    text-decoration-color var(--duration-ui) var(--ease-draw);
+  transition: background-color var(--duration-ui) var(--ease-draw), border-color var(--duration-ui) var(--ease-draw);
 }
 /* The gradient button, one per screen (spec N.5). White on bare magenta is
    ~3.1:1, so a graphite scrim sits over the gradient (--button-scrim). */
@@ -298,14 +303,15 @@ body.brand {
 @media (max-width: 639px) {
   .dl-button-primary--compact { padding: 0 0.75rem; }
 }
-/* The text link action. */
+/* The text link action: indigo, semi-bold, a --selected fill on hover; no underline. */
 .dl-button-quiet {
+  margin-inline: -0.5rem;
+  padding: 0 0.5rem;
+  border-radius: var(--radius-s);
   color: var(--link);
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.3em;
+  font-weight: 600;
 }
-.dl-button-quiet:hover { color: var(--ink); }
+.dl-button-quiet:hover { background-color: var(--selected); }
 .dl-button-primary:focus-visible,
 .dl-button-outline:focus-visible,
 .dl-button-quiet:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
@@ -331,20 +337,24 @@ body.brand {
   z-index: 40;
   background: var(--paper);
 }
-/* The current page: ink text over a 2 px gradient underline (one of the gradient's four roles). */
-.dl-nav nav[aria-label='Primary'] a[aria-current='page'] {
-  position: relative;
-  color: var(--ink);
+/* Nav links are pills: a --selected fill on hover; the current page keeps the
+   fill and turns indigo (owner, 2026-11-13: no underline). */
+.dl-nav nav[aria-label='Primary'] a {
+  display: inline-block;
+  padding: 0.375rem 0.75rem;
+  border-radius: var(--radius-s);
+  transition: background-color var(--duration-ui) var(--ease-draw), color var(--duration-ui) var(--ease-draw);
 }
-.dl-nav nav[aria-label='Primary'] a[aria-current='page']::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  bottom: -0.45em;
-  left: 0;
-  height: 2px;
-  background: var(--brand-gradient);
+.dl-nav nav[aria-label='Primary'] a:hover { background-color: var(--selected); color: var(--ink); }
+.dl-nav nav[aria-label='Primary'] a[aria-current='page'],
+.dl-nav nav[aria-label='Primary (mobile)'] a[aria-current='page'] {
+  background-color: var(--selected);
+  color: var(--link);
 }
+.dl-nav nav[aria-label='Primary (mobile)'] a[aria-current='page'] { padding-inline: 0.75rem; border-radius: var(--radius-s); }
+/* Link lists (footer, breadcrumbs, contents): a --selected fill on hover instead of an underline. */
+.brand a.no-underline { border-radius: var(--radius-xs); transition: background-color var(--duration-ui) var(--ease-draw), color var(--duration-ui) var(--ease-draw); }
+.brand a.no-underline:hover { background-color: var(--selected); color: var(--link); }
 /* Controls that only work with JavaScript stay hidden until a script reveals them,
    even when an action class sets a display value. */
 [data-needs-js][hidden] { display: none; }

@@ -387,7 +387,7 @@ function InquiryForm({
             <ul className="mt-2 space-y-1 text-sm text-rose-800">
               {errorEntries.map(([name, message]) => (
                 <li key={name}>
-                  <a href={`#${fieldId(name)}`} className="underline underline-offset-2">
+                  <a href={`#${fieldId(name)}`} className="font-semibold">
                     {message}
                   </a>
                 </li>
@@ -563,7 +563,7 @@ function InquiryForm({
                 />
                 <label className="text-sm text-slate-700" htmlFor={fieldId('consentGranted')}>
                   {CONSENT_TEXT}{' '}
-                  <a href="/privacy" className="font-semibold text-brand-teal underline-offset-2 hover:underline">
+                  <a href="/privacy" className="font-semibold text-brand-teal">
                     Privacy Policy
                   </a>
                   .
@@ -590,7 +590,7 @@ function InquiryForm({
                   <button
                     type="button"
                     onClick={turnstile.reset}
-                    className="text-xs font-semibold text-brand-teal underline-offset-2 hover:underline"
+                    className="text-xs font-semibold text-brand-teal"
                   >
                     Retry verification
                   </button>

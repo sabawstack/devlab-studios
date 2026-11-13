@@ -61,16 +61,16 @@ shows only the frame and caption. To approve:
 | S4 Handoff to a person | approved 2026-11-12 |
 | S5 Build in layers | approved 2026-11-12 |
 | S6 Workflow audit | approved 2026-11-12 |
-| S7 Human-controlled automation | drawn 2026-11-13 (BRAND-05), pending approval |
-| S8 The receipt | drawn 2026-11-13 (BRAND-05), pending approval |
-| D-1 Memory Preview | drawn 2026-11-13 from the write-up, pending approval |
-| D-2 Lead qualification | drawn 2026-11-13 from the write-up, pending approval |
-| D-3 Buyer intelligence | drawn 2026-11-13 from the write-up, pending approval |
-| D-4 Messenger agent | drawn 2026-11-13 from the write-up, pending approval (no person or ledger: the write-up describes neither, so none is drawn) |
+| S7 Human-controlled automation | approved 2026-11-13 (owner, on preview `/brand`) |
+| S8 The receipt | approved 2026-11-13 (owner, on preview `/brand`) |
+| D-1 Memory Preview | approved 2026-11-13 (owner, on preview `/brand`) |
+| D-2 Lead qualification | approved 2026-11-13 (owner, on preview `/brand`) |
+| D-3 Buyer intelligence | approved 2026-11-13 (owner, on preview `/brand`) |
+| D-4 Messenger agent | approved 2026-11-13 (owner, on preview `/brand`) (no person or ledger: the write-up describes neither, so none is drawn) |
 
 Tall (4:5) phone crops have their own approval, `tallArtReady`. Drawn
 2026-11-13 for S1, S2, S3, S6, S7, S8 and D-1…D-4 (S4 is square; S5's layers
-already read at phone width), all pending. Until a crop is approved, phones
+already read at phone width); all approved by the owner on 2026-11-13. Until a crop is approved, phones
 show the wide drawing at full width. `/brand` previews every crop.
 
 ## Known limits (for the reviewer)

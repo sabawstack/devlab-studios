@@ -32,7 +32,7 @@ const jsonLd = [getBreadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Work'
           <li class="grid gap-8 border-b border-dl-rule py-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-center" data-work-entry={entry.slug}>
             <div>
               <p class="label text-dl-ink-3">{String(index + 1).padStart(2, '0')} · {entry.project.type}</p>
-              <h3 class="mt-2 text-step-2"><a href={`/work/${entry.slug}`} class="no-underline hover:underline">{entry.project.title}</a></h3>
+              <h3 class="mt-2 text-step-2"><a href={`/work/${entry.slug}`} class="no-underline">{entry.project.title}</a></h3>
               <dl class="mt-5 grid gap-4">
                 <div><dt class="label text-dl-ink-3">The problem</dt><dd class="mt-1 text-dl-ink-2">{entry.problem}</dd></div>
                 <div><dt class="label text-dl-ink-3">What it does</dt><dd class="mt-1 text-dl-ink-2">{entry.value}</dd></div>

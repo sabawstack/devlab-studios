@@ -45,7 +45,7 @@ export const SCENES = [
     artReady: true,
     kind: 'scene',
     tall: true,
-    tallArtReady: false,
+    tallArtReady: true,
   },
   {
     id: 'connected-system',
@@ -58,7 +58,7 @@ export const SCENES = [
     artReady: true,
     kind: 'scene',
     tall: true,
-    tallArtReady: false,
+    tallArtReady: true,
   },
   {
     id: 'persist-before-deliver',
@@ -71,7 +71,7 @@ export const SCENES = [
     artReady: true,
     kind: 'scene',
     tall: true,
-    tallArtReady: false,
+    tallArtReady: true,
   },
   {
     id: 'handoff-to-person',
@@ -84,7 +84,7 @@ export const SCENES = [
     artReady: true,
     kind: 'scene',
     tall: false,
-    tallArtReady: false,
+    tallArtReady: true,
   },
   {
     id: 'build-in-layers',
@@ -97,7 +97,7 @@ export const SCENES = [
     artReady: true,
     kind: 'scene',
     tall: false,
-    tallArtReady: false,
+    tallArtReady: true,
   },
   {
     id: 'workflow-audit',
@@ -110,7 +110,7 @@ export const SCENES = [
     artReady: true,
     kind: 'scene',
     tall: true,
-    tallArtReady: false,
+    tallArtReady: true,
   },
   // New in spec H.1 (BRAND-05): pending owner approval on /brand.
   {
@@ -121,10 +121,10 @@ export const SCENES = [
     alt: 'A row of automated steps, each checked; one exception leaves the row for a named person and returns stamped',
     aspect: { wide: [3, 2], tall: [4, 5] },
     byteBudget: 12 * 1024,
-    artReady: false,
+    artReady: true,
     kind: 'scene',
     tall: true,
-    tallArtReady: false,
+    tallArtReady: true,
   },
   {
     id: 'the-receipt',
@@ -134,10 +134,10 @@ export const SCENES = [
     alt: 'A form saved as a stamped record, then a receipt envelope sent to a person',
     aspect: { wide: [3, 2], tall: [4, 5] },
     byteBudget: 12 * 1024,
-    artReady: false,
+    artReady: true,
     kind: 'scene',
     tall: true,
-    tallArtReady: false,
+    tallArtReady: true,
   },
   {
     id: 'diagram-memory-preview',
@@ -147,10 +147,10 @@ export const SCENES = [
     alt: 'Chat to an MCP bridge, then checks, then a person approves, then the knowledge is saved in GitHub',
     aspect: { wide: [16, 9], tall: [4, 5] },
     byteBudget: 16 * 1024,
-    artReady: false,
+    artReady: true,
     kind: 'diagram',
     tall: true,
-    tallArtReady: false,
+    tallArtReady: true,
   },
   {
     id: 'diagram-lead-qualification',
@@ -160,10 +160,10 @@ export const SCENES = [
     alt: 'Scheduled intake, an AI voice call, the call webhook, the lead record, then a person in acquisitions',
     aspect: { wide: [16, 9], tall: [4, 5] },
     byteBudget: 16 * 1024,
-    artReady: false,
+    artReady: true,
     kind: 'diagram',
     tall: true,
-    tallArtReady: false,
+    tallArtReady: true,
   },
   {
     id: 'diagram-buyer-intelligence',
@@ -173,10 +173,10 @@ export const SCENES = [
     alt: 'Deal intake, geocoding, an address cache, AI ranking, a buyer sheet, then a person reviewing it',
     aspect: { wide: [16, 9], tall: [4, 5] },
     byteBudget: 16 * 1024,
-    artReady: false,
+    artReady: true,
     kind: 'diagram',
     tall: true,
-    tallArtReady: false,
+    tallArtReady: true,
   },
   {
     id: 'diagram-messenger-agent',
@@ -186,10 +186,10 @@ export const SCENES = [
     alt: 'A message, a filter, fetched context, an AI reply, downstream actions, then the reply sent back',
     aspect: { wide: [16, 9], tall: [4, 5] },
     byteBudget: 16 * 1024,
-    artReady: false,
+    artReady: true,
     kind: 'diagram',
     tall: true,
-    tallArtReady: false,
+    tallArtReady: true,
   },
 ] as const satisfies readonly SceneDefinition[]
 

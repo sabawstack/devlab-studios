@@ -60,7 +60,7 @@ const socialIcon = (label: string) => {
         <p class="mb-3 max-w-md text-slate-400">
           {footerTagline}
         </p>
-        <a href={`mailto:${footerEmail}`} class="mb-1 block text-slate-200 transition hover:text-white hover:underline">
+        <a href={`mailto:${footerEmail}`} class="mb-1 block text-slate-200 transition hover:text-white">
           {footerEmail}
         </a>
         <span class="block text-slate-400">{COMPANY.locationLabel}</span>
@@ -70,7 +70,7 @@ const socialIcon = (label: string) => {
         <p class="mb-2 font-semibold text-white">Explore</p>
         <ul>
           {quickLinks.map((item) => (
-            <li><a href={item.href} class="inline-block py-2 transition hover:text-white hover:underline">{item.label}</a></li>
+            <li><a href={item.href} class="inline-block py-2 transition hover:text-white">{item.label}</a></li>
           ))}
         </ul>
       </div>
@@ -79,7 +79,7 @@ const socialIcon = (label: string) => {
       <nav class="flex flex-1 flex-col items-center" aria-label="Products">
         <p class="mb-2 font-semibold text-white">Products</p>
         <ul>
-          <li><a href="/pickleball?ref=footer" class="inline-block py-2 transition hover:text-white hover:underline">Devlab Pickleball (free)</a></li>
+          <li><a href="/pickleball?ref=footer" class="inline-block py-2 transition hover:text-white">Devlab Pickleball (free)</a></li>
         </ul>
       </nav>
 
@@ -114,7 +114,7 @@ const socialIcon = (label: string) => {
       <span class="flex flex-wrap justify-center gap-x-2 md:justify-end">
         {legalLinks.map((link, index) => (
           <>
-            <a href={link.href} class="inline-block py-2 transition hover:text-white hover:underline">{link.label}</a>
+            <a href={link.href} class="inline-block py-2 transition hover:text-white">{link.label}</a>
             {index < legalLinks.length - 1 ? <span aria-hidden="true" class="self-center">|</span> : null}
           </>
         ))}
