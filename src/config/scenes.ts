@@ -22,6 +22,15 @@ export interface SceneDefinition {
   /** Maximum size of the optimised SVG, in bytes. */
   byteBudget: number
   artReady: boolean
+  /** A scene (S-x) or a per-project system diagram (D-x). */
+  kind: 'scene' | 'diagram'
+  /**
+   * A separate tall (phone) drawing exists. Phones show it only once
+   * `tallArtReady` is true (owner approval on /brand); until then they show
+   * the wide drawing at full width.
+   */
+  tall: boolean
+  tallArtReady: boolean
 }
 
 export const SCENES = [
@@ -34,6 +43,9 @@ export const SCENES = [
     aspect: { wide: [3, 2], tall: [4, 5] },
     byteBudget: 24 * 1024,
     artReady: true,
+    kind: 'scene',
+    tall: true,
+    tallArtReady: false,
   },
   {
     id: 'connected-system',
@@ -44,6 +56,9 @@ export const SCENES = [
     aspect: { wide: [3, 2], tall: [4, 5] },
     byteBudget: 28 * 1024,
     artReady: true,
+    kind: 'scene',
+    tall: true,
+    tallArtReady: false,
   },
   {
     id: 'persist-before-deliver',
@@ -54,6 +69,9 @@ export const SCENES = [
     aspect: { wide: [16, 9], tall: [4, 5] },
     byteBudget: 24 * 1024,
     artReady: true,
+    kind: 'scene',
+    tall: true,
+    tallArtReady: false,
   },
   {
     id: 'handoff-to-person',
@@ -64,6 +82,9 @@ export const SCENES = [
     aspect: { wide: [1, 1], tall: [1, 1] },
     byteBudget: 16 * 1024,
     artReady: true,
+    kind: 'scene',
+    tall: false,
+    tallArtReady: false,
   },
   {
     id: 'build-in-layers',
@@ -74,6 +95,9 @@ export const SCENES = [
     aspect: { wide: [16, 9], tall: [4, 5] },
     byteBudget: 20 * 1024,
     artReady: true,
+    kind: 'scene',
+    tall: false,
+    tallArtReady: false,
   },
   {
     id: 'workflow-audit',
@@ -84,6 +108,88 @@ export const SCENES = [
     aspect: { wide: [3, 2], tall: [4, 5] },
     byteBudget: 24 * 1024,
     artReady: true,
+    kind: 'scene',
+    tall: true,
+    tallArtReady: false,
+  },
+  // New in spec H.1 (BRAND-05): pending owner approval on /brand.
+  {
+    id: 'human-controlled-automation',
+    code: 'S7',
+    title: 'Human-controlled automation',
+    caption: 'Automation handles the routine steps. The one exception goes to a named person and comes back approved.',
+    alt: 'A row of automated steps, each checked; one exception leaves the row for a named person and returns stamped',
+    aspect: { wide: [3, 2], tall: [4, 5] },
+    byteBudget: 12 * 1024,
+    artReady: false,
+    kind: 'scene',
+    tall: true,
+    tallArtReady: false,
+  },
+  {
+    id: 'the-receipt',
+    code: 'S8',
+    title: 'The receipt',
+    caption: 'Your inquiry is saved and stamped first; the receipt goes to you, and a person reads it.',
+    alt: 'A form saved as a stamped record, then a receipt envelope sent to a person',
+    aspect: { wide: [3, 2], tall: [4, 5] },
+    byteBudget: 12 * 1024,
+    artReady: false,
+    kind: 'scene',
+    tall: true,
+    tallArtReady: false,
+  },
+  {
+    id: 'diagram-memory-preview',
+    code: 'D-1',
+    title: 'Memory Preview, as built',
+    caption: 'ChatGPT proposes through an MCP bridge; checks run; a person approves; approved knowledge is versioned in GitHub.',
+    alt: 'Chat to an MCP bridge, then checks, then a person approves, then the knowledge is saved in GitHub',
+    aspect: { wide: [16, 9], tall: [4, 5] },
+    byteBudget: 16 * 1024,
+    artReady: false,
+    kind: 'diagram',
+    tall: true,
+    tallArtReady: false,
+  },
+  {
+    id: 'diagram-lead-qualification',
+    code: 'D-2',
+    title: 'Lead qualification, as built',
+    caption: 'Leads are cleaned on a schedule, called by an AI voice agent, recorded from the call webhook, then handed to acquisitions.',
+    alt: 'Scheduled intake, an AI voice call, the call webhook, the lead record, then a person in acquisitions',
+    aspect: { wide: [16, 9], tall: [4, 5] },
+    byteBudget: 16 * 1024,
+    artReady: false,
+    kind: 'diagram',
+    tall: true,
+    tallArtReady: false,
+  },
+  {
+    id: 'diagram-buyer-intelligence',
+    code: 'D-3',
+    title: 'Buyer intelligence, as built',
+    caption: 'A deal comes in, the address is geocoded and cached, buyers are ranked, and the shortlist lands in a sheet a person reviews.',
+    alt: 'Deal intake, geocoding, an address cache, AI ranking, a buyer sheet, then a person reviewing it',
+    aspect: { wide: [16, 9], tall: [4, 5] },
+    byteBudget: 16 * 1024,
+    artReady: false,
+    kind: 'diagram',
+    tall: true,
+    tallArtReady: false,
+  },
+  {
+    id: 'diagram-messenger-agent',
+    code: 'D-4',
+    title: 'Messenger agent, as built',
+    caption: 'A message is filtered, context is fetched, an AI reply is drafted, downstream actions run, and the reply goes back.',
+    alt: 'A message, a filter, fetched context, an AI reply, downstream actions, then the reply sent back',
+    aspect: { wide: [16, 9], tall: [4, 5] },
+    byteBudget: 16 * 1024,
+    artReady: false,
+    kind: 'diagram',
+    tall: true,
+    tallArtReady: false,
   },
 ] as const satisfies readonly SceneDefinition[]
 

@@ -14,6 +14,7 @@ import { getEnv } from '../lib/env'
 import { isLoopbackRequest } from '../lib/loopback'
 import { SCENES } from '../config/scenes'
 import SceneFrame from '../components/brand/SceneFrame.astro'
+import SceneArt from '../components/brand/SceneArt.astro'
 import Button from '../components/brand/Button.astro'
 import Panel from '../components/brand/Panel.astro'
 import Figure from '../components/brand/Figure.astro'
@@ -67,7 +68,7 @@ const sceneFigures = SCENES.map((scene) => ({ scene, number: figures.next() }))
     <main id="main" class="mx-auto max-w-container space-y-[var(--section-rhythm)] px-[var(--gutter)] py-16">
       <section aria-labelledby="scenes-heading">
         <p class="label text-dl-ink-3">Scenes</p>
-        <h2 id="scenes-heading" class="mt-2 text-step-3">The six scenes</h2>
+        <h2 id="scenes-heading" class="mt-2 text-step-3">Scenes and project diagrams</h2>
         <div class="mt-10 grid gap-12 lg:grid-cols-2">
           {sceneFigures.map(({ scene, number }) => (
             <div>
@@ -111,6 +112,22 @@ const sceneFigures = SCENES.map((scene) => ({ scene, number: figures.next() }))
           <Button disabled>Disabled</Button>
           <Tag>Lead intake</Tag>
           <Tag tone="red">Failed delivery</Tag>
+        </div>
+      </section>
+
+      <section aria-labelledby="crops-heading" data-crop-review>
+        <p class="label text-dl-ink-3">Phone crops</p>
+        <h2 id="crops-heading" class="mt-2 text-step-3">Tall (4:5) drawings for phones</h2>
+        <p class="mt-4 text-dl-ink-2">Phones show these once each crop is approved (<code>tallArtReady</code>); until then they show the wide drawing.</p>
+        <div class="mt-10 grid gap-10 sm:grid-cols-2 lg:grid-cols-3">
+          {SCENES.filter((scene) => scene.tall).map((scene) => (
+            <div>
+              <div class="rounded-dl-m border border-dl-rule bg-dl-paper p-4" data-tall-crop={scene.id}>
+                <SceneArt sceneId={scene.id} crop="tall" idPrefix={`review-${scene.id}`} />
+              </div>
+              <p class="label mt-2 text-dl-ink-3">{scene.code} · tall · {scene.tallArtReady ? 'approved' : 'pending approval'}</p>
+            </div>
+          ))}
         </div>
       </section>
 

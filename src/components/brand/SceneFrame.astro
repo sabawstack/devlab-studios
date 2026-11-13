@@ -9,6 +9,8 @@
  *   drawing immediately. Nothing loops.
  * - Until a scene is approved (`artReady` in src/config/scenes.ts) only the
  *   frame and caption render, unless `preview` is set (the brand review page).
+ * - Below 640 px a scene with a tall drawing shows it (4:5) once that crop is
+ *   approved (`tallArtReady`, or `preview`); otherwise the wide drawing.
  */
 import SceneArt from './SceneArt.astro'
 import { getScene } from '../../config/scenes'
@@ -27,13 +29,20 @@ const { sceneId, caption, figure, preview = false, class: className = '' } = Ast
 const scene = getScene(sceneId)
 const [w, h] = scene ? scene.aspect.wide : [3, 2]
 const showArt = Boolean(scene && (scene.artReady || preview))
+const showTall = Boolean(showArt && scene?.tall && (scene.tallArtReady || preview))
+const [tw, th] = showTall && scene ? scene.aspect.tall : [w, h]
 const label = figure ? `Fig. ${String(figure).padStart(2, '0')}` : null
 ---
 
 {scene && (
   <figure class={`scene-frame ${className}`} data-scene-frame={scene.id}>
-    <div class="scene-frame__box rounded-dl-m border border-dl-rule bg-dl-paper" style={`aspect-ratio: ${w} / ${h}`}>
-      {showArt ? <SceneArt sceneId={scene.id} /> : <span class="sr-only">{scene.alt}</span>}
+    <div class="scene-frame__box rounded-dl-m border border-dl-rule bg-dl-paper" style={`--aspect-wide: ${w} / ${h}; --aspect-tall: ${tw} / ${th}`} data-crops={showTall ? 'both' : 'wide'}>
+      {showArt ? (
+        <>
+          <div class="scene-frame__crop scene-frame__crop--wide"><SceneArt sceneId={scene.id} /></div>
+          {showTall && <div class="scene-frame__crop scene-frame__crop--tall"><SceneArt sceneId={scene.id} crop="tall" /></div>}
+        </>
+      ) : <span class="sr-only">{scene.alt}</span>}
     </div>
     <figcaption class="mt-3 flex gap-3 text-step--1 text-dl-ink-3">
       {label && <span class="label shrink-0 text-dl-ink-2">{label}</span>}
@@ -48,6 +57,14 @@ const label = figure ? `Fig. ${String(figure).padStart(2, '0')}` : null
     place-items: center;
     overflow: hidden;
     padding: clamp(0.5rem, 2vw, 1.5rem);
+    aspect-ratio: var(--aspect-wide);
+  }
+  .scene-frame__crop { width: 100%; }
+  .scene-frame__crop--tall { display: none; }
+  @media (max-width: 639px) {
+    .scene-frame__box { aspect-ratio: var(--aspect-tall); }
+    .scene-frame__box[data-crops='both'] .scene-frame__crop--wide { display: none; }
+    .scene-frame__box[data-crops='both'] .scene-frame__crop--tall { display: block; }
   }
   /* Draw-in: every symbol and connector path draws once when revealed. */
   .scene-frame :global(.draw path:not([stroke-dasharray])),

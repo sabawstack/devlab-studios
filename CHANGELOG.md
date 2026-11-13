@@ -53,6 +53,8 @@ decided against that surface specifically:
 
 ### Added
 
+- New scene art for review (BRAND-05; spec H.1): S7 "Human-controlled automation" and S8 "The receipt", and one system diagram per write-up drawn from its real description (D-1 Memory Preview, D-2 lead qualification, D-3 buyer intelligence, D-4 Messenger agent). Tall 4:5 phone drawings for S1, S2, S3, S6, S7, S8 and D-1…D-4: below 640 px a scene frame shows the tall drawing once that crop is approved (`tallArtReady`), otherwise the wide one. Everything new starts unapproved (`artReady: false`) and is shown only on `/brand`, which gains a phone-crop review grid; byte budgets 12 KB per scene and 16 KB per diagram are tested for both crops. `docs/brand/scenes.md` records the approval state.
+
 - Guard tests for the brand, UX and architecture spec (TEST-01), written before the work they guard: forbidden labels and marketing clichés in the site copy and the static legal data (spec C.3, I.2), the approved call-to-action labels (K.3), plain section labels without `§`, brackets or bullets, the gradient's four allowed roles, contrast for links, captions and white text on the gradient, amber only inside exhibits, no personal data in any SQL file under `scripts/`, the frozen legacy-URL fixture pinned by hash, and Node at most twice per page. Guards that a later requirement makes true run as expected failures tagged with that requirement, so CI stays green today and the guard turns red the moment the fix lands until it is switched on.
 
 ### Security

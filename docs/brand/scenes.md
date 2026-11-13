@@ -1,9 +1,9 @@
 # Scenes and symbols ("Working Drawings")
 
-> Since 2.5.0 the site uses the Blueprint palette (ADR 0014). The scenes are
-> unchanged: they draw with `currentColor` and the role tokens, so they now
-> render light-on-navy. `--redline` is magenta and `--ok` green; the rule
-> below that scenes use no gradients still holds.
+> Palette: "Graphite on stone" (spec N.1, 2026-11-13). Scenes draw with
+> `currentColor` and the role tokens, so they render ink on stone and invert
+> inside `.ink-panel` (graphite exhibits). `--redline` (magenta) and `--violet`
+> appear only inside figures; scenes use no gradients.
 
 The illustrated scenes the public site shows, how they are drawn, and how one is
 approved. Source: audit sections BR.5 (Direction 1), BR.8 and BR.10.
@@ -14,7 +14,7 @@ approved. Source: audit sections BR.5 (Direction 1), BR.8 and BR.10.
 |---|---|
 | Scene registry (ids, titles, captions, alt text, aspect, byte budget, approval) | `src/config/scenes.ts` |
 | Symbol library (16 line symbols) | `src/components/brand/Glyph.astro` |
-| Scene art (S1–S6), composed from the symbols | `src/components/brand/SceneArt.astro` |
+| Scene art (S1–S8) and project diagrams (D-1…D-4), wide and tall crops | `src/components/brand/SceneArt.astro` |
 | Frame, caption and one-time draw-in | `src/components/brand/SceneFrame.astro` |
 | Review page (preview and localhost only, never indexed) | `/brand` (`src/pages/brand.astro`) |
 | Tests: byte budget, title/desc, aspect at 390/820/1440, reduced motion, axe | `tests/e2e/brand.spec.js` |
@@ -61,11 +61,21 @@ shows only the frame and caption. To approve:
 | S4 Handoff to a person | approved 2026-11-12 |
 | S5 Build in layers | approved 2026-11-12 |
 | S6 Workflow audit | approved 2026-11-12 |
+| S7 Human-controlled automation | drawn 2026-11-13 (BRAND-05), pending approval |
+| S8 The receipt | drawn 2026-11-13 (BRAND-05), pending approval |
+| D-1 Memory Preview | drawn 2026-11-13 from the write-up, pending approval |
+| D-2 Lead qualification | drawn 2026-11-13 from the write-up, pending approval |
+| D-3 Buyer intelligence | drawn 2026-11-13 from the write-up, pending approval |
+| D-4 Messenger agent | drawn 2026-11-13 from the write-up, pending approval (no person or ledger: the write-up describes neither, so none is drawn) |
+
+Tall (4:5) phone crops have their own approval, `tallArtReady`. Drawn
+2026-11-13 for S1, S2, S3, S6, S7, S8 and D-1…D-4 (S4 is square; S5's layers
+already read at phone width), all pending. Until a crop is approved, phones
+show the wide drawing at full width. `/brand` previews every crop.
 
 ## Known limits (for the reviewer)
 
-- One crop per scene. The plan's separate tall (4:5) phone crops are not drawn
-  yet; phones show the wide drawing at full width, which keeps proportions but
-  makes the in-art labels small (the captions carry the meaning).
-- Case-study diagrams (D-x) are drawn per project with each write-up (UX-08).
+- Project diagrams are drawn from each write-up's own description (the CMS
+  narrative or `src/data/projectRecords.js`); a step a write-up does not state
+  is not drawn. They are linear chains, so they share one renderer.
 - AI-generated drafts are never committed as production art.

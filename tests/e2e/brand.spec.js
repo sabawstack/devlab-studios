@@ -23,6 +23,19 @@ test('every registered scene renders within its byte budget, with a title and de
   }
 })
 
+// BRAND-05: every tall (phone) drawing is on the review page, within budget, labelled.
+test('every tall crop renders within its byte budget, with a title and description', async ({ page }) => {
+  await page.goto('/brand')
+  for (const scene of SCENES.filter((entry) => entry.tall)) {
+    const svg = page.locator(`[data-tall-crop="${scene.id}"] svg[data-scene="${scene.id}"]`)
+    await expect(svg, scene.id).toBeVisible()
+    expect(await svg.getAttribute('viewBox'), scene.id).toBe('0 0 480 600')
+    const markup = await svg.evaluate((element) => element.outerHTML)
+    expect(new TextEncoder().encode(markup).length, `${scene.id} tall bytes`).toBeLessThanOrEqual(scene.byteBudget)
+    await expect(svg.locator('title')).toHaveText(scene.title)
+  }
+})
+
 for (const viewport of VIEWPORTS) {
   test(`brand page at ${viewport.name} width: no horizontal scroll, scenes keep their aspect ratio`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height })
@@ -30,7 +43,8 @@ for (const viewport of VIEWPORTS) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width)
     for (const scene of SCENES) {
       const box = await page.locator(`[data-scene-frame="${scene.id}"] .scene-frame__box`).first().boundingBox()
-      const [w, h] = scene.aspect.wide
+      // /brand previews every crop, so phones show the tall drawing where one exists.
+      const [w, h] = viewport.width < 640 && scene.tall ? scene.aspect.tall : scene.aspect.wide
       expect(Math.abs(box.width / box.height - w / h), scene.id).toBeLessThan(0.02)
     }
     await testInfo.attach(`brand-${viewport.name}.png`, { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
