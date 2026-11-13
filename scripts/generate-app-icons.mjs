@@ -2,7 +2,7 @@ import sharp from 'sharp'
 import { mkdirSync, writeFileSync } from 'fs'
 
 const SOURCE = 'src/assets/devlabstudios-logo-only.png'
-const BACKGROUND = '#050b14' // Blueprint --bg-studio (ADR 0014)
+const BACKGROUND = '#f0eff3' // --paper, the stone canvas (spec N.1, N.7: the mark on paper)
 const CANVAS_SIZE = 1024
 const MARK_SCALE = 0.62 // fraction of canvas the logo mark occupies, leaving safe padding for icon masking
 

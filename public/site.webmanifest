@@ -4,8 +4,8 @@
   "description": "Software, integrations and workflow automation for businesses that need their operations to hold up.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#050b14",
-  "theme_color": "#050b14",
+  "background_color": "#f0eff3",
+  "theme_color": "#f0eff3",
   "icons": [
     {
       "src": "/icon-192.png",
