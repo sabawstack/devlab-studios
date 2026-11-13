@@ -102,3 +102,50 @@ describe('articles and SEO records, with and without migration 0018', async () =
     await expect(replaceSeoMetadata(unmigrated, [record])).rejects.toMatchObject({ status: 409 })
   })
 })
+
+// CMS-01: the write-up fields from migrations/0020 (spec K.2) follow the same
+// rule: optional at runtime, refused (not dropped) on a database without them.
+const before0020 = CMS_MIGRATIONS.filter((file) => file < '0020').map((file) => `migrations/${file}`)
+const through0020 = CMS_MIGRATIONS.filter((file) => file <= '0020_writeup_fields.sql').map((file) => `migrations/${file}`)
+
+describe('write-up fields (migration 0020)', () => {
+  it('exists as an additive migration', () => {
+    expect(CMS_MIGRATIONS).toContain('0020_writeup_fields.sql')
+  })
+
+  it('on a database without 0020, lists projects with empty write-up fields', async () => {
+    const { d1 } = createSqliteD1(before0020)
+    await upsertProject(d1, baseProject)
+    const [project] = await listProjects(d1)
+    expect(project).toMatchObject({ situation: '', decisions: [], scope: '', inOperationSince: '' })
+  })
+
+  it('on a database without 0020, refuses write-up values and names the migration', async () => {
+    const { d1 } = createSqliteD1(before0020)
+    await expect(upsertProject(d1, { ...baseProject, scope: 'We built the intake; the client runs the CRM.' }))
+      .rejects.toMatchObject({ status: 409, message: expect.stringMatching(/0020_writeup_fields.*scope/) })
+  })
+
+  it('with 0020, stores and reads back every write-up field, trimmed and capped', async () => {
+    const { d1 } = createSqliteD1(through0020)
+    await upsertProject(d1, {
+      ...baseProject,
+      situation: '  A property firm taking leads from four sources.  ',
+      decisions: ['Rules route; AI only drafts', ' ', 'A sheet, not a CRM', 'Calls are logged', 'Retries are visible', 'a fifth is dropped'],
+      scope: 'DevLab built the intake and the call flow; the client owns the sheet.',
+      inOperationSince: '2026-04',
+    })
+    expect(await getProject(d1, 'p-intake')).toMatchObject({
+      situation: 'A property firm taking leads from four sources.',
+      decisions: ['Rules route; AI only drafts', 'A sheet, not a CRM', 'Calls are logged', 'Retries are visible'],
+      scope: 'DevLab built the intake and the call flow; the client owns the sheet.',
+      inOperationSince: '2026-04',
+    })
+  })
+
+  it('with 0020, keeps the 0018 fields working alongside', async () => {
+    const { d1 } = createSqliteD1(through0020)
+    await upsertProject(d1, { ...baseProject, systemDiagramId: 'diagram-lead-qualification', scope: 'Scope.' })
+    expect(await getProject(d1, 'p-intake')).toMatchObject({ systemDiagramId: 'diagram-lead-qualification', scope: 'Scope.' })
+  })
+})

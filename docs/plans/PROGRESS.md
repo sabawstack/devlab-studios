@@ -349,3 +349,15 @@ Verification (local, before push): lint 0 errors (1 pre-existing warning), typec
 Deviations: the contrast adjustments above; exhibit green/amber added; D-4 without a person or ledger; MASCOT-01 and MASCOT-02 share one commit (same component and stylesheet block); card sizes below the spec's range.
 
 Owner actions opened by this group (Group 3 gate): approve or reject on `/brand` (preview) the Node redraw (silhouette test; else MASCOT-04), S7, S8, D-1…D-4, and the tall crops.
+
+### Group 3 — Review gate (owner)
+
+Open. On the preview `/brand`: approve or reject the Node redraw (24 px silhouette test; reject = MASCOT-04), S7, S8, D-1…D-4 and the tall crops. Approval = set `NODE_ART.states.*`, `artReady` and `tallArtReady` to `true` with the date in `docs/brand/node.md` and `docs/brand/scenes.md`. Work continues on groups that do not depend on it.
+
+### Group 4 — Data (plan)
+
+Owner instruction 2026-11-13: proceed without check-ins (covers the plan-approval gate and production data writes with the existing Wrangler login, as for OPS-01). Branch `feat/brand-ux-4-data` from the Group 2 head.
+
+1. **CMS-01 migration `0020_writeup_fields`** (TDD: `editorialFields.test.js` for databases with and without `0020` first). Additive nullable-safe columns on `projects`: `situation`, `decisions_json`, `scope`, `in_operation_since`. Drift: the spec's `diagram_id` already exists as `system_diagram_id` (`0018`), so it is reused, not duplicated. Four places: repository (column-aware, refuses unsaved values naming `0020`), Zod schema + admin form, `workEntries.ts` read path, static fallback type. Apply to preview (`--env preview`), read back; then production (Time Travel bookmark first, read back). Rollback: columns unread; Time Travel restore as last resort.
+2. **CMS-02 business settings** (TDD: `business.test.js`, schema test). One `site_business` row (`replyWindowDays`, `businessHours`, `timeZoneLabel`, `schedulingUrl`, `messengerUrl`, `whatsappUrl`, `auditPriceLine`), defaults in `src/config/business.js` = the owner's 2026-11-13 decisions; channels null. Schema, repository, `loadSiteSettings`, admin "Business details" fields, static fallback. No data write needed (defaults apply when the row is absent). Rollback: revert; the row is ignored.
+3. **CMS-03 dated updates**: `scripts/cms/updates/2026-11-13-terms-screenshots.sql` with a guarded `UPDATE` of the Terms "illustrative purposes" sentence (Q-06 decided) and its paired revert, with the static `terms.js` changed in the same commit (CONTENT-03 legal guard switched on). Read production and preview rows first; apply preview, read back; then production, read back. The home SEO title, CTA labels and write-up leads wait for their copy (Groups 5–6) and get their own dated files then.

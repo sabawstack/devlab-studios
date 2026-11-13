@@ -3,9 +3,10 @@ import { deleteMediaAssetByKey, deleteMediaAssetByUrl, findMediaReferences } fro
 import { missingMigrationError, tableColumns } from './columns.js'
 
 /**
- * Editorial columns added by migrations/0018_editorial_fields.sql (CMS-03),
- * with the value each holds when unset. Read and written only when the
- * database has them; see ./columns.js.
+ * Optional columns with the value each holds when unset and the migration
+ * that adds it: the editorial fields (0018, CMS-03) and the write-up fields
+ * (0020, CMS-01). Read and written only when the database has them; see
+ * ./columns.js.
  */
 const EDITORIAL_COLUMNS = {
   slug: null,
@@ -13,6 +14,16 @@ const EDITORIAL_COLUMNS = {
   outcome_statements_json: '[]',
   system_diagram_id: '',
   evidence_note: '',
+  situation: '',
+  decisions_json: '[]',
+  scope: '',
+  in_operation_since: '',
+}
+const COLUMN_MIGRATION = {
+  situation: '0020_writeup_fields',
+  decisions_json: '0020_writeup_fields',
+  scope: '0020_writeup_fields',
+  in_operation_since: '0020_writeup_fields',
 }
 
 function isMissingGalleryTableError(error) {
@@ -53,6 +64,10 @@ function toProject(row, galleryImages = []) {
     outcomeStatements: parseJsonField(row.outcome_statements_json, []),
     systemDiagramId: row.system_diagram_id || '',
     evidenceNote: row.evidence_note || '',
+    situation: row.situation || '',
+    decisions: parseJsonField(row.decisions_json, []),
+    scope: row.scope || '',
+    inOperationSince: row.in_operation_since || '',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -119,6 +134,15 @@ export function toDbProject(input) {
     ),
     system_diagram_id: String(input.systemDiagramId || '').trim(),
     evidence_note: String(input.evidenceNote || '').trim(),
+    situation: String(input.situation || '').trim(),
+    decisions_json: JSON.stringify(
+      (Array.isArray(input.decisions) ? input.decisions : [])
+        .map((decision) => String(decision || '').trim())
+        .filter(Boolean)
+        .slice(0, 4),
+    ),
+    scope: String(input.scope || '').trim(),
+    in_operation_since: String(input.inOperationSince || '').trim(),
   }
 }
 
@@ -278,7 +302,11 @@ export async function upsertProject(db, input, env = {}) {
   const unsaved = Object.keys(EDITORIAL_COLUMNS).filter(
     (column) => !available.has(column) && (project[column] ?? null) !== EDITORIAL_COLUMNS[column],
   )
-  if (unsaved.length) throw missingMigrationError('0018_editorial_fields', unsaved)
+  if (unsaved.length) {
+    // Name the earliest missing migration: they apply in order.
+    const migration = unsaved.every((column) => COLUMN_MIGRATION[column]) ? '0020_writeup_fields' : '0018_editorial_fields'
+    throw missingMigrationError(migration, unsaved.filter((column) => (COLUMN_MIGRATION[column] ?? '0018_editorial_fields') === migration))
+  }
 
   const columns = [
     'id', 'title', 'description', 'tech_stack', 'live_url', 'source_url', 'image_url', 'image_filename', 'type', 'sort_order', 'status',

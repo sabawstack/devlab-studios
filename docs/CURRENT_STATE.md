@@ -181,14 +181,18 @@ See [ADR 0008](architecture/decisions/0008-insights-daily-digest.md).
   inherited by an environment, and `checkRateLimit()` fails open when the
   binding is absent, so preview had been enforcing no rate limits at all.
 
-## D1 migration state (checked 2026-11-12)
+## D1 migration state (checked 2026-11-13)
 
 | Database | Applied through | How checked |
 |---|---|---|
-| `devlab-studios-cms-preview` | `0019_job_runs` (all) | `wrangler d1 migrations list … --remote --env preview` |
-| `devlab-pickleball-preview` | `0020_drop_legacy_pickleball` (all) | same |
-| `devlab-studios-cms` (production) | **unverified from the implementation session**; `0018_editorial_fields` and `0019_job_runs` known pending | needs the owner's token: `npx wrangler d1 migrations list devlab-studios-cms --remote` |
+| `devlab-studios-cms-preview` | `0020_writeup_fields` (all) | `SELECT name FROM d1_migrations` with `--env preview --remote` |
+| `devlab-pickleball-preview` | `0020_drop_legacy_pickleball` (all) | `wrangler d1 migrations list … --remote --env preview` (2026-11-12) |
+| `devlab-studios-cms` (production) | `0020_writeup_fields` (all; `0018`, `0019` applied 2026-11-13, `0020` the same day) | `SELECT name FROM d1_migrations` with `--remote` (account `db49…`) |
 | `devlab-pickleball` (production) | unverified (confirm `0020`) | `npx wrangler d1 migrations list devlab-pickleball --remote` |
+
+Both CMS databases live in the Cloudflare account named "Devlab Studios
+Development" (`db49…`). Non-interactive Wrangler runs need
+`CLOUDFLARE_ACCOUNT_ID` set to it.
 
 The preview deploy workflow now fails if either preview database has an
 unapplied migration (OPS-06). Production migrations stay a manual, token-gated

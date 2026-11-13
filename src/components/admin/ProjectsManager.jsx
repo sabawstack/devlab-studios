@@ -37,6 +37,10 @@ const emptyProject = {
   outcomeStatements: [],
   systemDiagramId: '',
   evidenceNote: '',
+  situation: '',
+  decisions: [],
+  scope: '',
+  inOperationSince: '',
 }
 
 function deriveFilenameFromUrl(url) {
@@ -101,6 +105,10 @@ function toPayload(form) {
     outcomeStatements: (form.outcomeStatements || []).map((item) => String(item || '').trim()).filter(Boolean).slice(0, 3),
     systemDiagramId: form.systemDiagramId || '',
     evidenceNote: String(form.evidenceNote || '').trim(),
+    situation: String(form.situation || '').trim(),
+    decisions: (form.decisions || []).map((item) => String(item || '').trim()).filter(Boolean).slice(0, 4),
+    scope: String(form.scope || '').trim(),
+    inOperationSince: String(form.inOperationSince || '').trim(),
   }
 }
 

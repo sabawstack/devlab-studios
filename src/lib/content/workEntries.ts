@@ -19,6 +19,11 @@ export interface WorkEntry {
   outcomes: string[]
   sceneId: string
   evidenceNote: string
+  /** Case-study parts (spec K.2, CMS-01); '' or [] when not written yet. */
+  situation: string
+  decisions: string[]
+  scope: string
+  inOperationSince: string
 }
 
 export function workSlug(project: { id: string; slug?: unknown }): string {
@@ -49,6 +54,12 @@ export function buildWorkEntries(items: Record<string, unknown>[], projects: Pro
         .filter(Boolean),
       sceneId: getScene(diagram) ? diagram : DEFAULT_SCENE,
       evidenceNote: String(project.evidenceNote || ''),
+      situation: String(project.situation || ''),
+      decisions: (Array.isArray(project.decisions) ? project.decisions : [])
+        .map((decision) => String(decision || '').trim())
+        .filter(Boolean),
+      scope: String(project.scope || ''),
+      inOperationSince: String(project.inOperationSince || ''),
     }]
   })
 }

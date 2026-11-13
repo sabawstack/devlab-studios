@@ -29,6 +29,11 @@ export interface ProjectData {
   liveUrl?: string
   sourceUrl?: string
   techStack?: string[]
+  /** Write-up fields (CMS-01, migration 0020). Absent in the static fallback, read as empty. */
+  situation?: string
+  decisions?: string[]
+  scope?: string
+  inOperationSince?: string
   [key: string]: unknown
 }
 

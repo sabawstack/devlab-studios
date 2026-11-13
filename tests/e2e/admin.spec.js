@@ -449,11 +449,17 @@ test('a project keeps its write-up fields through the admin API', async ({ page,
         id, title: 'Editorial fields', description: 'Created by an e2e test.', type: 'Automation', status: 'draft',
         slug, clientType: 'internal', outcomeStatements: ['Every inquiry has an owner'], systemDiagramId: 'build-in-layers',
         evidenceNote: 'Synthetic data only.',
+        // CMS-01 (migration 0020): the case-study parts round-trip too.
+        situation: 'A synthetic service business.', decisions: ['Rules route; AI drafts'], scope: 'Synthetic scope line.', inOperationSince: '2026-04',
       },
     })
     expect(created.ok(), await created.text()).toBeTruthy()
     const saved = await (await page.request.get(`${baseURL}/api/admin/projects/${id}`)).json()
     expect(saved).toMatchObject({ slug, clientType: 'internal', outcomeStatements: ['Every inquiry has an owner'], systemDiagramId: 'build-in-layers', evidenceNote: 'Synthetic data only.' })
+    expect(saved).toMatchObject({ situation: 'A synthetic service business.', decisions: ['Rules route; AI drafts'], scope: 'Synthetic scope line.', inOperationSince: '2026-04' })
+
+    const badDate = await page.request.put(`${baseURL}/api/admin/projects/${id}`, { data: { ...saved, inOperationSince: 'April 2026' } })
+    expect(badDate.status()).toBe(400)
 
     const invalid = await page.request.put(`${baseURL}/api/admin/projects/${id}`, { data: { ...saved, systemDiagramId: 'uploaded.svg' } })
     expect(invalid.status()).toBe(400)

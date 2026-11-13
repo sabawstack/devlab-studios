@@ -21,6 +21,15 @@ export const projectEditorialFields = {
   outcomeStatements: z.array(z.string().max(160)).max(3).optional().default([]),
   systemDiagramId: registryEnum(SYSTEM_DIAGRAM_IDS).optional().default(''),
   evidenceNote: z.string().max(400).optional().default(''),
+  // Write-up fields (spec K.2, CMS-01; migrations/0020_writeup_fields.sql).
+  /** The business context, 2–3 sentences. */
+  situation: z.string().max(600).optional().default(''),
+  /** Two to four decisions that mattered, one line each. */
+  decisions: z.array(z.string().max(200)).max(4).optional().default([]),
+  /** What DevLab built, what the client or others own, who maintains what. */
+  scope: z.string().max(600).optional().default(''),
+  /** Year and month (or a full date) the system has been running, only if true. */
+  inOperationSince: z.string().regex(/^(\d{4}-(0[1-9]|1[0-2])(-(0[1-9]|[12]\d|3[01]))?)?$/, 'Use YYYY-MM or YYYY-MM-DD.').optional().default(''),
 }
 
 export const articleEditorialFields = {
