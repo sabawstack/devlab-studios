@@ -38,12 +38,13 @@ export default {
           rule: 'var(--rule)',
           redline: 'var(--redline)',
           ok: 'var(--ok)',
-          // Blueprint accents (ADR 0014). Blue and violet are stroke-only on navy.
-          magenta: 'var(--brand-magenta)',
-          violet: 'var(--brand-violet)',
-          blue: 'var(--brand-blue)',
-          amber: 'var(--accent-amber)',
-          danger: 'var(--accent-danger)',
+          link: 'var(--link)',
+          // Diagram and exhibit accents (spec N.3): magenta and violet only inside figures, amber only inside exhibits.
+          magenta: 'var(--redline)',
+          violet: 'var(--violet)',
+          blue: 'var(--link)',
+          amber: 'var(--amber)',
+          danger: 'var(--danger)',
         },
         brand: {
           DEFAULT: '#4500ff',

@@ -1,7 +1,8 @@
 ---
 /**
  * The opening band of a redesigned page (audit BR.9 / UX-05): eyebrow, the
- * page's single h1, a lead and the actions slot. `ink` gives the ink hero band.
+ * page's single h1, a lead and the actions slot. `ink` gives the graphite hero
+ * band (home only, spec N.10), closed by the 3 px gradient rule.
  * A named `aside` slot sits beside the copy from 1024 px.
  */
 interface Props {
@@ -33,4 +34,5 @@ const hasAside = Astro.slots.has('aside')
     </div>
     {hasAside && <div><slot name="aside" /></div>}
   </div>
+  {ink && <div class="hero-rule" aria-hidden="true"></div>}
 </header>

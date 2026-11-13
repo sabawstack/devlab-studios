@@ -15,7 +15,7 @@ const log = HOME.persistLog
     <li class={`dl-gradient-border flex flex-col p-6 sm:p-8 ${position === 0 ? 'lg:justify-between' : ''}`} data-rule-id={rule.id}>
       <p class="label text-dl-magenta">{String(position + 1).padStart(2, '0')}</p>
       {position === 0 && (
-        <ol class="bento__log mt-6 rounded-dl-s border border-dl-rule bg-dl-paper p-4" aria-label="Delivery log">
+        <ol class="bento__log ink-panel mt-6 rounded-dl-s border border-dl-rule p-4" aria-label="Delivery log">
           {log.map((line, row) => (
             <li class="flex gap-3">
               <span class="text-dl-ink-3">{String(row + 1).padStart(2, '0')}</span>

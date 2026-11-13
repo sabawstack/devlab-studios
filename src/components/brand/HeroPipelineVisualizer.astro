@@ -85,24 +85,24 @@ const ROUTE = 2
   .pipeline__status { max-width: 34ch; text-transform: none; letter-spacing: 0.02em; }
   .pipeline__mode-outage,
   [data-state='outage'] .pipeline__mode-nominal { display: none; }
-  [data-state='outage'] .pipeline__mode-outage { display: inline; color: var(--accent-amber); }
+  [data-state='outage'] .pipeline__mode-outage { display: inline; color: var(--amber); }
   .pipeline__mode-nominal { color: var(--ok); }
 
   .pl-spine,
   .pl-branch,
   .pl-retry-link { fill: none; stroke-width: 2; stroke-linecap: round; }
-  .pl-spine { stroke: var(--brand-violet); }
-  .pl-branch { stroke: var(--brand-magenta); transition: stroke var(--duration-ui) var(--ease-draw); }
-  .pl-retry-link { stroke: var(--accent-amber); stroke-dasharray: 3 4; opacity: 0; }
-  .pl-fail { fill: none; stroke: var(--accent-danger); stroke-width: 2.5; stroke-linecap: round; opacity: 0; }
-  .pl-square { fill: var(--paper-2); stroke: var(--brand-magenta); stroke-width: 2; }
+  .pl-spine { stroke: var(--violet); }
+  .pl-branch { stroke: var(--redline); transition: stroke var(--duration-ui) var(--ease-draw); }
+  .pl-retry-link { stroke: var(--amber); stroke-dasharray: 3 4; opacity: 0; }
+  .pl-fail { fill: none; stroke: var(--danger); stroke-width: 2.5; stroke-linecap: round; opacity: 0; }
+  .pl-square { fill: var(--paper-2); stroke: var(--redline); stroke-width: 2; }
   .pl-index,
   .pl-label,
   .pl-note,
   .pl-box-label { font-family: var(--font-label); letter-spacing: 0.08em; }
   .pl-index { font-size: 9px; fill: var(--ink-3); }
   .pl-label { font-size: 10.5px; fill: var(--ink); font-weight: 500; }
-  .pl-note { font-size: 9px; fill: var(--accent-amber); opacity: 0; }
+  .pl-note { font-size: 9px; fill: var(--amber); opacity: 0; }
   .pl-box { fill: var(--paper-2); stroke: var(--rule); stroke-width: 1.5; }
   .pl-box-label { font-size: 10px; fill: var(--ink-2); }
   .pl-led { fill: var(--ok); }
@@ -110,15 +110,15 @@ const ROUTE = 2
   .pl-packet { fill: var(--ink); }
   .pl-node-outage { display: none; }
 
-  [data-state='outage'] .pl-branch { stroke: var(--accent-danger); stroke-dasharray: 5 5; }
+  [data-state='outage'] .pl-branch { stroke: var(--danger); stroke-dasharray: 5 5; }
   [data-state='outage'] .pl-fail,
   [data-state='outage'] .pl-retry-link,
   [data-state='outage'] .pl-retrybox,
   [data-state='outage'] .pl-note { opacity: 1; }
-  [data-state='outage'] .pl-retrybox .pl-box { stroke: var(--accent-amber); }
-  [data-state='outage'] .pl-webhook .pl-box { stroke: var(--accent-danger); }
-  [data-state='outage'] .pl-led { fill: var(--accent-danger); }
-  [data-state='outage'] .pl-checkpoint--persist .pl-square { stroke: var(--accent-amber); fill: var(--accent-amber); }
+  [data-state='outage'] .pl-retrybox .pl-box { stroke: var(--amber); }
+  [data-state='outage'] .pl-webhook .pl-box { stroke: var(--danger); }
+  [data-state='outage'] .pl-led { fill: var(--danger); }
+  [data-state='outage'] .pl-checkpoint--persist .pl-square { stroke: var(--amber); fill: var(--amber); }
   [data-state='outage'] .pl-packet--branch,
   [data-state='outage'] .pl-node-nominal { display: none; }
   [data-state='outage'] .pl-node-outage { display: inline; }

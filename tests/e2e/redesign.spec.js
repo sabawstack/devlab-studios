@@ -154,3 +154,20 @@ for (const path of [...PAGES.map((entry) => entry.path), '/this-page-does-not-ex
     expect(await page.locator('.node-mascot').count()).toBeLessThanOrEqual(2)
   })
 }
+
+// BRAND-01: every brand page sits on the stone canvas with no grid, glow or
+// header blur; only the home hero band is graphite (spec N.1, N.10).
+test('brand pages render on stone with no grid, glow or header blur', async ({ page }) => {
+  for (const { path } of PAGES) {
+    await page.goto(path)
+    const styles = await page.evaluate(() => {
+      const body = getComputedStyle(document.body)
+      const header = getComputedStyle(document.querySelector('header.dl-nav'))
+      const before = getComputedStyle(document.querySelector('header.dl-nav'), '::before')
+      return { bg: body.backgroundColor, image: body.backgroundImage, blur: header.backdropFilter, beforeBlur: before.backdropFilter }
+    })
+    expect(styles.bg, path).toBe('rgb(240, 239, 243)')
+    expect(styles.image, path).toBe('none')
+    expect([styles.blur, styles.beforeBlur].filter((value) => value && value !== 'none'), path).toEqual([])
+  }
+})

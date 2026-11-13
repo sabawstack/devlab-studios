@@ -61,6 +61,8 @@ decided against that surface specifically:
 
 ### Changed
 
+- Brand palette moves to "Graphite on stone" (BRAND-01; spec N.1, owner decision Q-01): a cool stone canvas (`#f0eff3`), graphite-indigo ink, indigo links (`--link`), white mounts, and the logo gradient kept for strong accents. The blueprint grid, the radial glows and the header blur are gone; the header is a plain stone bar with a hairline. `.ink-panel` is now the graphite exhibit surface (`#14122b`) and swaps every colour role for its exhibit value; only the home hero band uses it as a band, closed by a 3 px gradient rule (`.hero-rule`). Closing call-to-action bands, the footer and the phone menu move to light surfaces (`.dl-band`). Section rhythm follows the "Balanced" density (`clamp(4rem, 7vw, 7rem)`); gutters are 1 / 1.5 / 2 rem. Retired token names (`--bg-studio`, `--brand-magenta`, `--accent-amber`…) are replaced by the role names; Tailwind gains `dl-link`. Contrast is measured, not assumed: captions are `#6b6984` (the spec's `#6d6b87` measured 4.47:1) and the redline `#b800d1` (the spec's `#c400de` measured 4.17:1); the button scrim is 12 % at rest (the spec's 10 % measured 4.40:1 for white at the gradient's magenta end) and 18 % on hover; exhibits add light green and amber variants (`--exhibit-ok`, `--exhibit-amber`) because the spec's values read 3.6:1 on graphite. The interim home delivery log sits on graphite so its amber status passes.
+
 - Docs: the approved brand, UX and architecture specification (re-audit dated 2026-11-12, owner decisions 2026-11-13) is now in the repository at `docs/plans/devlab-complete-b2b-brand-ux-architecture-spec.md`; PROGRESS.md gains Phase 14 with the drift found since the spec and the Group 1 plan.
 
 ## [2.5.0] - 2026-11-12

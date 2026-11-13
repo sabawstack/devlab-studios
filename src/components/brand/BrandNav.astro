@@ -37,7 +37,7 @@ const isCurrent = (href: string) => currentPath === href || (href !== '/' && cur
       </button>
     </div>
   </div>
-  <div id="dl-mobile-menu" class="dl-sheet ink-panel" hidden data-menu>
+  <div id="dl-mobile-menu" class="dl-sheet bg-dl-paper text-dl-ink" hidden data-menu>
     <div class="flex items-center justify-between px-[var(--gutter)] py-4">
       <span class="text-step-0 font-semibold">DevLab Studios</span>
       <button type="button" class="dl-menu-button" data-menu-close><span class="label">Close</span></button>
@@ -56,7 +56,7 @@ const isCurrent = (href: string) => currentPath === href || (href !== '/' && cur
 </header>
 
 <style>
-  .dl-nav__current { text-decoration: underline; text-decoration-color: var(--brand-magenta); text-decoration-thickness: 2px; text-underline-offset: 0.6em; }
+  .dl-nav__current { text-decoration: underline; text-decoration-color: var(--redline); text-decoration-thickness: 2px; text-underline-offset: 0.6em; }
   .dl-menu-button {
     min-height: 44px; min-width: 44px; padding: 0 0.75rem;
     border: 1px solid var(--rule); border-radius: var(--radius-s);
