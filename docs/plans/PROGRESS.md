@@ -281,7 +281,7 @@ through `development` → preview → owner sign-off → `main`.
 | 2 Brand foundation | BRAND-01, BRAND-02, BRAND-03, BRAND-05, MASCOT-01, MASCOT-02, MASCOT-03 | done (PR #60, production at `2a8c0ae`, 2026-11-13); art and Node pending owner review (Group 3) |
 | 3 Review gate | `/brand` review of scenes and the Node redraw (MASCOT-04 fallback) | done: owner approved everything on preview `/brand`, 2026-11-13 |
 | 4 Data | CMS-01, CMS-02, CMS-03 | done (PR #61, production at `4961cf6`, 2026-11-13) |
-| 5 Pages I | UX-02, UX-01, WEB-03, CONTENT-01, CONTENT-02, CONTENT-03, CASE-01, CASE-02 | not started |
+| 5 Pages I | UX-02, UX-01, WEB-03, CONTENT-01, CONTENT-02, CONTENT-03, CASE-01, CASE-02 | done locally; PR, preview and production in progress |
 | 6 Pages II | UX-03, UX-04, UX-05, CONTENT-04…06, CONVERT-01…04, WEB-02, BUS-01, BUS-02, BUS-05, PROFILE-01, CASE-03 | not started |
 | 7 Shell consolidation | BRAND-04, WEB-01, WEB-05, SEC-03 | not started |
 | 8 Conditional and owner items | BUS-03, BUS-04, CONVERT-05, CASE-04, WEB-04, SEO-01, SEO-04, MASCOT-05 | not started |
@@ -392,3 +392,23 @@ Group 4 promotion: PR #61 CI `validate` green. `development` → `4961cf6`, `dep
 ### Owner decisions, 2026-11-13 (afternoon)
 
 1. Home copy of spec I.4 approved as written. 2. Per-group preview sign-off waived: promote to production once preview checks pass. 3. Markets: the Philippines, the United States and Australia may be named (Q-07). 4. "You own the code, the data and the accounts" may be stated on About and in the Terms (Q-11). 5. Node redraw, S7, S8, D-1…D-4 and the tall crops approved after review on preview `/brand` (Q-13; Group 3 done). 6. New design rule: no underlined text anywhere; the current nav item is a background and text-colour change (overrides spec N.5's underlines; saved as a standing preference).
+
+Owner fixes PR #63 (no underlines, filled nav state, approved art): CI green; `development` and `main` → `53688d7` (MERGED); preview showed Node in both home placements and the filled current-nav item.
+
+### Group 5 — Pages I (log)
+
+Commit `1fb45ee` (one commit for the group: the copy, components and tests are interdependent; deviation from one-commit-per-requirement).
+
+| Req | Evidence |
+|---|---|
+| UX-02 | `Exhibit.astro`; `InquiryFlowExhibit.astro` (was `HeroPipelineVisualizer`): title "(illustration)", statuses "In this simulation…", visible pressed state, Node "receive" once per click and on first view; e2e: 0 `/api/` requests, pressed background changes, runs once |
+| UX-01, CONTENT-01 | Home in N.10 order with the approved I.4 copy; `homeContent.test.js` rewritten (shape, founder once, markets PH/US/AU, ≤ 600 words); content forbidden-word guard switched on |
+| WEB-03 | Portrait served fine on production (all variants 200); the founder strip now uses a 3:4 crop with a paper fill; e2e: image loads |
+| WEB-01 (part) | Deleted `FailureDiagnosticConsole`, `ReliabilityBentoGrid`, `CaseStudyShowcase`, `PrincipalSpotlight` (no references left). `ProofStrip` remains (used on `/brand`), legacy components wait for BRAND-04 |
+| CONTENT-02 | `src/config/ctas.js`; CTA guard switched on; header "Talk to us" / phone "Contact". `2026-11-13-home-work-content.sql` read first (both D1s: stored labels "Discuss Your System", diagrams empty, stale home titles), applied: preview 6 rows, production 6 rows, read back. Also applied to the local dev D1 |
+| CONTENT-03 | Contact lead no longer claims "Nothing is auto-replied and closed"; status-label guard on all components |
+| SEO-01 (home) | Static record and D1 row: "Business systems that don't quietly lose work · DevLab" (55 chars; the spec's 62-character title exceeds the 60 limit) |
+| CASE-01 | Write-ups in K.2 order with their own D-x diagram (no S5 fallback); results and scope fall back to "not published" lines. **Owner input needed:** the situation, decisions and scope texts per write-up (admin → Projects → Write-up details); nothing was invented |
+| CASE-02 | White mounts, scope line when written, one destination per entry |
+
+Verification: lint 0 errors, typecheck 0, unit 3,018 passed / 1 skipped (no expected failures left), build OK, static e2e 242 passed / 1 skipped. Screenshots of `/` and a write-up at 390 and 1440 reviewed (tall S1 crop on phones).
