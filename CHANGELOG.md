@@ -51,6 +51,8 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-11-13
+
 ### Added
 
 - A two-page sample Workflow Systems Audit for a fictional clinic with synthetic data (`public/samples/workflow-systems-audit-sample.pdf`, 142 KB), linked with a page-one thumbnail on the audit page (CONVERT-05; owner default Q-03). Regenerate with `node scripts/brand/render-sample-audit.mjs`.
