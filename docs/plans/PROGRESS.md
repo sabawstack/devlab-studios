@@ -278,9 +278,9 @@ through `development` → preview → owner sign-off → `main`.
 | Group | Requirement IDs | Status |
 |---|---|---|
 | 1 Gates and guards | OPS-01, TEST-01, SEC-01, OPS-02 | done (PR #59, production at `15f93e4`, 2026-11-13) |
-| 2 Brand foundation | BRAND-01, BRAND-02, BRAND-03, BRAND-05, MASCOT-01, MASCOT-02, MASCOT-03 | done locally; PR, preview and production in progress |
-| 3 Review gate | `/brand` review of scenes and the Node redraw (MASCOT-04 fallback) | not started |
-| 4 Data | CMS-01, CMS-02, CMS-03 | not started |
+| 2 Brand foundation | BRAND-01, BRAND-02, BRAND-03, BRAND-05, MASCOT-01, MASCOT-02, MASCOT-03 | done (PR #60, production at `2a8c0ae`, 2026-11-13); art and Node pending owner review (Group 3) |
+| 3 Review gate | `/brand` review of scenes and the Node redraw (MASCOT-04 fallback) | open: waiting for the owner on preview `/brand` |
+| 4 Data | CMS-01, CMS-02, CMS-03 | done locally, migrations applied to both D1s; PR, preview and production in progress |
 | 5 Pages I | UX-02, UX-01, WEB-03, CONTENT-01, CONTENT-02, CONTENT-03, CASE-01, CASE-02 | not started |
 | 6 Pages II | UX-03, UX-04, UX-05, CONTENT-04…06, CONVERT-01…04, WEB-02, BUS-01, BUS-02, BUS-05, PROFILE-01, CASE-03 | not started |
 | 7 Shell consolidation | BRAND-04, WEB-01, WEB-05, SEC-03 | not started |
@@ -361,3 +361,17 @@ Owner instruction 2026-11-13: proceed without check-ins (covers the plan-approva
 1. **CMS-01 migration `0020_writeup_fields`** (TDD: `editorialFields.test.js` for databases with and without `0020` first). Additive nullable-safe columns on `projects`: `situation`, `decisions_json`, `scope`, `in_operation_since`. Drift: the spec's `diagram_id` already exists as `system_diagram_id` (`0018`), so it is reused, not duplicated. Four places: repository (column-aware, refuses unsaved values naming `0020`), Zod schema + admin form, `workEntries.ts` read path, static fallback type. Apply to preview (`--env preview`), read back; then production (Time Travel bookmark first, read back). Rollback: columns unread; Time Travel restore as last resort.
 2. **CMS-02 business settings** (TDD: `business.test.js`, schema test). One `site_business` row (`replyWindowDays`, `businessHours`, `timeZoneLabel`, `schedulingUrl`, `messengerUrl`, `whatsappUrl`, `auditPriceLine`), defaults in `src/config/business.js` = the owner's 2026-11-13 decisions; channels null. Schema, repository, `loadSiteSettings`, admin "Business details" fields, static fallback. No data write needed (defaults apply when the row is absent). Rollback: revert; the row is ignored.
 3. **CMS-03 dated updates**: `scripts/cms/updates/2026-11-13-terms-screenshots.sql` with a guarded `UPDATE` of the Terms "illustrative purposes" sentence (Q-06 decided) and its paired revert, with the static `terms.js` changed in the same commit (CONTENT-03 legal guard switched on). Read production and preview rows first; apply preview, read back; then production, read back. The home SEO title, CTA labels and write-up leads wait for their copy (Groups 5–6) and get their own dated files then.
+
+Group 2 promotion: PR #60 CI `validate` green. `development` → `2a8c0ae`, `deploy-preview.yml` run 43360430974 green. Preview: 31/31 legacy URLs, `/api/health` 200, `/brand` 200, theme colour `#f0eff3`, hero rule present, no Node on `/` (gated), hashed `script-src` (13). Visual capture of 12 routes × 3 widths on preview: 36 images OK (local scratch, not committed: the profile shows personal data). `main` → `2a8c0ae` (PR #60 MERGED); `0 0`. Production after Workers Builds: 31/31 legacy URLs, `/api/health` 200, `/brand` 404, hashed `script-src`, `/admin` noindex, theme `#f0eff3` and hero rule on `/`, personal-data scan 0 hits, `/og/home.png` 200 (44 KB).
+
+**Group 4 log.**
+
+| Req | Status | Commit | Evidence |
+|---|---|---|---|
+| CMS-01 | done | `bc2399f` | Repository tests RED (5) → 14/14; schema and read-path tests 4/4; admin API round-trip e2e (worker) passes with the four new fields and rejects a malformed date (400). Preview D1: `0020_writeup_fields` applied, 4 columns, 19 project rows intact. Production D1: Time Travel bookmark `0000575b-00000000-00005122-9da46301838b7085bc5a6540b7546412` recorded, `0020` applied, last migration `0020_writeup_fields.sql`, 4 columns, 20 rows intact; `/work`, `/work/memory-preview`, `/api/health` 200. `docs/CURRENT_STATE.md` migration table updated |
+| CMS-02 | done | `a74fcda` | `business.test.js` RED (missing module) → 11/11 (defaults = owner decisions, field-by-field merge, https-only channels, sentence helpers, schema limits). Admin e2e: business details save, persist across reload and clear back to the defaults. No D1 write needed |
+| CMS-03 | done (Terms) | `e922f8f` | Read first: neither D1 stores a `terms` or `privacy` page (0 rows), so `/terms` renders `terms.js`, fixed in the same commit; legal guard switched on. `scripts/cms/updates/2026-11-13-terms-screenshots.sql` (guarded, paired revert) ran on preview and production: `rows_written: 0` on both. Home SEO title, CTA labels and write-up leads deferred to their copy (Groups 5–6) |
+
+Verification: lint 0 errors, typecheck 0, unit 2,947 passed / 4 expected fail / 1 skipped (205 files), build OK. Static e2e first run: 3 failures caused by leftover `smoke-*` projects and a replaced Work narrative in the local dev D1 (left by the pre-existing failing admin tests); the local state was moved aside to `.wrangler/state-backup-2026-11-13` (kept, not deleted) and the suite rerun on fresh state, as CI does: 244 passed / 1 skipped. Worker + admin-auth on fresh state: 321 passed / 4 failed / 1 skipped; the 4 (SEO slug editor, Lead CRM sources, two pickleball poster-share emulations) are the same pre-existing failures as on `main`.
+
+Deviations: one `site_business` row instead of seven keys; spec `diagram_id` reuses the existing `system_diagram_id`; code defaults are the owner's decided values (the brief's no-hardcoding rule) rather than "not stated".
