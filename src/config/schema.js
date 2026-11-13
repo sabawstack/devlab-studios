@@ -1,6 +1,9 @@
 // Schema.js - JSON-LD structured data helpers
 import aboutData from '../data/about.js'
-import { COMPANY, ORGANIZATION_ID, PERSON_ID } from './company.js'
+import { COMPANY, MARKETS, ORGANIZATION_ID, PERSON_ID } from './company.js'
+
+/** BUS-04: the countries with completed work, the same list the About page names. */
+const AREA_SERVED = MARKETS.map((name) => ({ '@type': 'Country', name }))
 
 /** City-level only: no street, postal code or telephone in any schema (audit PROF-02). */
 const CITY_ADDRESS = {
@@ -89,7 +92,7 @@ export const getPersonSchema = ({ image, credentials = [] } = {}) => ({
       url: 'https://www.devlabstudios.com/solutions',
     },
   ],
-  areaServed: 'Worldwide',
+  areaServed: AREA_SERVED,
   worksFor: { '@id': ORGANIZATION_ID },
   sameAs: COMPANY.sameAs,
   image: image || COMPANY.logo,
@@ -145,7 +148,7 @@ export const getOrganizationSchema = () => ({
     'Zapier',
     'n8n',
   ],
-  areaServed: 'Worldwide',
+  areaServed: AREA_SERVED,
   sameAs: COMPANY.sameAs,
   contactPoint: {
     '@type': 'ContactPoint',
@@ -193,7 +196,8 @@ export const getFaqSchema = (faqs) => {
  * Deliberately NOT LocalBusiness: DevLab Studios operates remotely and
  * serves clients worldwide, so the physical-premises fields a LocalBusiness
  * implies would be misleading. ProfessionalService/Organization plus
- * `areaServed: Worldwide` is what is actually true.
+ * `areaServed` naming the markets with completed work (BUS-04) is what is
+ * actually true.
  */
 export const getServiceSchema = (service) => ({
   '@context': 'https://schema.org',
@@ -206,7 +210,7 @@ export const getServiceSchema = (service) => ({
     name: 'DevLab Studios',
     url: 'https://www.devlabstudios.com',
   },
-  areaServed: 'Worldwide',
+  areaServed: AREA_SERVED,
   url: `https://www.devlabstudios.com${service.path || `/solutions#${service.id}`}`,
   ...(service.capabilities?.length
     ? {

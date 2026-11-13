@@ -194,3 +194,31 @@ test('nav selection, links, section labels and form labels follow the owner rule
     expect(style.font, name).toMatch(/Space Grotesk/)
   }
 })
+
+// BRAND-04 + owner rule (2026-11-13): every public path is on the new brand —
+// the brand shell (stone header and footer), no underlined text, no Google
+// Fonts. Every URL in the sitemap plus the pages it leaves out on purpose.
+// Only the pickleball app screens keep their own shell (spec J.1, out of scope).
+test('every public path uses the brand shell, with no underline and no Google Fonts', async ({ page, request }) => {
+  test.setTimeout(240_000)
+  const sitemap = await (await request.get('/sitemap.xml')).text()
+  const fromSitemap = [...sitemap.matchAll(/<loc>https:\/\/www\.devlabstudios\.com([^<]*)<\/loc>/g)].map((match) => match[1] || '/')
+  const unlisted = ['/offers/lead-intake-checklist', '/insights/daily', '/crawler', '/maintenance', '/pickleball/how-it-works', '/pickleball/rotation', '/this-page-does-not-exist']
+  // App screens (start a session, host, board) are the product itself, in PickleballAppShell.
+  const isAppScreen = (path) => path.startsWith('/pickleball/') && !['/pickleball/how-it-works', '/pickleball/rotation'].includes(path)
+  const paths = [...new Set([...fromSitemap, ...unlisted])].filter((path) => !isAppScreen(path))
+  expect(fromSitemap.length).toBeGreaterThanOrEqual(30)
+  const external = []
+  page.on('request', (sent) => { if (/fonts\.(googleapis|gstatic)\.com/.test(sent.url())) external.push(sent.url()) })
+  const offBrand = []
+  for (const path of paths) {
+    await page.goto(path)
+    const check = await page.evaluate(() => ({
+      brand: document.body.classList.contains('brand') && Boolean(document.querySelector('header.dl-nav')) && Boolean(document.querySelector('footer.dl-band')),
+      underlined: [...document.querySelectorAll('body *')].filter((element) => getComputedStyle(element).textDecorationLine.includes('underline')).length,
+    }))
+    if (!check.brand || check.underlined) offBrand.push(`${path}: brand=${check.brand} underlined=${check.underlined}`)
+  }
+  expect(offBrand).toEqual([])
+  expect(external).toEqual([])
+})

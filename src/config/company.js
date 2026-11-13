@@ -66,3 +66,10 @@ export function scrubPersonalContacts(value) {
   }
   return value
 }
+
+/**
+ * Markets with completed work, named on the site and in structured data
+ * (BUS-04; owner decision Q-07, 2026-11-13). Change here, and About and the
+ * schema follow.
+ */
+export const MARKETS = ['Philippines', 'United States', 'Australia']

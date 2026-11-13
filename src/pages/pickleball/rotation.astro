@@ -1,6 +1,6 @@
 ---
 // src/pages/pickleball/rotation.astro
-import Layout from '../../layouts/Layout.astro'
+import BrandLayout from '../../layouts/BrandLayout.astro'
 import BalancedSplitArt from '../../components/pickleball/art/BalancedSplitArt.jsx'
 import PaddleStackArt from '../../components/pickleball/art/PaddleStackArt.jsx'
 import StandingWindowArt from '../../components/pickleball/art/StandingWindowArt.jsx'
@@ -31,7 +31,9 @@ const rules = [
   'The host can switch the mode at any time; it applies to the next game, never to one already on court.',
 ]
 ---
-<Layout title="How fair rotation works: Devlab Pickleball" seo={seo}>
+<BrandLayout title="How fair rotation works: Devlab Pickleball" seo={seo}>
+  <!-- BRAND-04: the brand shell around the product\'s own look (spec J.1, "preserve as a product experience"). -->
+  <div class="pb-marketing">
   <div class="mx-auto max-w-5xl px-4 py-10 md:py-16">
     <section class="grid items-center gap-8 md:grid-cols-[1.2fr_1fr]">
       <div>
@@ -94,4 +96,5 @@ const rules = [
       <a href="/pickleball/new" class="inline-flex min-h-12 items-center rounded-xl bg-[#4500ff] px-6 text-lg font-bold text-white hover:bg-[#3a00d6]">Start a free session</a>
     </div>
   </div>
-</Layout>
+  </div>
+</BrandLayout>

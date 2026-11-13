@@ -33,7 +33,9 @@ describe('applySecurityHeaders', () => {
     expect(scriptSrc).not.toContain("'unsafe-inline'")
     expect(scriptSrc).toContain('https://challenges.cloudflare.com')
     expect(csp).toContain("frame-ancestors 'none'")
-    expect(csp).toContain('https://fonts.gstatic.com')
+    // SEC-03: every face is self-hosted; Google Fonts is not allowed anywhere.
+    expect(csp).not.toMatch(/fonts\.(googleapis|gstatic)\.com/)
+    expect(csp).toContain("font-src 'self'")
     expect(csp.match(/script-src/g)).toHaveLength(1)
   })
 
@@ -71,5 +73,12 @@ describe('public/_headers', () => {
     expect(file).toContain(`Content-Security-Policy: ${csp}`)
     expect(file).toContain(`Permissions-Policy: ${PERMISSIONS_POLICY}`)
     expect(file).not.toContain('zoho')
+  })
+})
+
+describe('no layout requests Google Fonts (SEC-03)', () => {
+  it.each(['src/layouts/PickleballAppShell.astro', 'src/layouts/BrandLayout.astro', 'astro.config.mjs'])('%s', async (path) => {
+    const { readFileSync } = await import('node:fs')
+    expect(readFileSync(path, 'utf8')).not.toMatch(/fonts\.(googleapis|gstatic)\.com/)
   })
 })

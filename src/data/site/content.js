@@ -126,7 +126,8 @@ export const DELIVERY_STEPS = [
 
 /**
  * Home (spec N.10, I.4; copy approved by the owner 2026-11-13). Outcome before
- * mechanism, plain words, the founder named once (in `founder`). The reply
+ * mechanism, plain words, in the studio voice ("we"); no founder strip (owner,
+ * 2026-11-13: the founder is on About and Profile). The reply
  * window, hours and audit price line come from site settings (CMS-02), not
  * from here. Shape and voice are guarded by homeContent.test.js and
  * contentGuards.test.js.
@@ -185,12 +186,6 @@ export const HOME = {
     primary: { label: CTA.audit, href: OFFER_AUDIT.contactHref },
     secondary: { label: 'What you receive', href: OFFER_AUDIT.path },
   },
-  founder: {
-    eyebrow: 'Who you work with',
-    text: 'Stephen Rey Agustinez designs the system, writes the code, documents the failure paths and answers your email.',
-    markets: 'DevLab Studios is his studio in Cebu, Philippines, working with businesses in the Philippines, the United States and Australia.',
-    profileLabel: 'Founder profile',
-  },
   final: {
     heading: 'Tell us what is going wrong.',
     primary: { label: CTA.primary, href: CTA.primaryHref },
@@ -243,6 +238,8 @@ export const ABOUT = {
     { label: 'Founded', value: 'March 2026' },
     { label: 'Based in', value: COMPANY.locationLabel },
     { label: 'Works', value: 'Remote-first' },
+    // BUS-04 (Q-07, owner confirmed 2026-11-13): markets with completed work.
+    { label: 'Clients in', value: 'The Philippines, the United States and Australia' },
     { label: 'Run by', value: 'Stephen Rey Agustinez' },
   ],
   principlesHeading: 'What we hold to',

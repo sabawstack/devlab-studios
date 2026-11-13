@@ -70,12 +70,10 @@ test('every id on the home page is unique', async ({ page }) => {
   expect(duplicates).toEqual([])
 })
 
-// WEB-03: the founder portrait is never an empty frame.
-test('the founder portrait loads when scrolled into view', async ({ page }) => {
+// Owner, 2026-11-13: the home page has no founder strip or portrait.
+test('the home page has no founder strip', async ({ page }) => {
   await page.goto('/')
-  const portrait = page.locator('[data-principal] img')
-  await portrait.scrollIntoViewIfNeeded()
-  await expect.poll(() => portrait.evaluate((image) => image.complete && image.naturalWidth)).toBeGreaterThan(0)
+  await expect(page.locator('[data-principal], #home-founder')).toHaveCount(0)
 })
 
 test.describe('with reduced motion', () => {

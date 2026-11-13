@@ -19,7 +19,6 @@ import Button from '../components/brand/Button.astro'
 import Panel from '../components/brand/Panel.astro'
 import Figure from '../components/brand/Figure.astro'
 import FactList from '../components/brand/FactList.astro'
-import ProofStrip from '../components/brand/ProofStrip.astro'
 import Disclosure from '../components/brand/Disclosure.astro'
 import Tag from '../components/brand/Tag.astro'
 import Table from '../components/brand/Table.astro'
@@ -188,11 +187,6 @@ const sceneFigures = SCENES.map((scene) => ({ scene, number: figures.next() }))
           { text: 'Inquiries are saved before any email or webhook is attempted.' },
           { text: 'Every delivery attempt is recorded, with its failure reason.' },
           { text: 'The admin requires a signed session on every route.', source: { label: 'Security notes', href: '#panels-heading' } },
-        ]} />
-        <ProofStrip class="mt-10" items={[
-          { kind: 'system', value: 'Persist-first', label: 'Saved before anything is sent' },
-          { kind: 'principle', value: 'One owner', label: 'Every inquiry has a named owner' },
-          { kind: 'credential', value: 'Certified', label: 'Cloud and automation certifications', evidenceUrl: '#panels-heading' },
         ]} />
         <Disclosure summary="Technical notes" class="mt-10"><p class="text-dl-ink-2">Stack, integrations and links live here, closed by default.</p></Disclosure>
         <Table class="mt-10" caption="Delivery attempts (synthetic)" columns={['Target', 'Status', 'Attempt']} rows={[

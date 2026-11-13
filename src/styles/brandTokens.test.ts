@@ -226,7 +226,7 @@ describe('Direction B guards (TEST-01)', () => {
 // are indigo and semi-bold; the current nav item is a filled pill.
 describe('no underlined text on the public site', () => {
   const PUBLIC_TEMPLATES = [
-    'src/components/brand', 'src/layouts', 'src/components/Footer.astro', 'src/components/Navbar.astro',
+    'src/components/brand', 'src/layouts',
     'src/components/islands/InquiryForm.jsx', 'src/components/islands/LeadMagnetForm.jsx', 'src/components/islands/ContactForm.jsx',
     ...['index', 'solutions', 'work', 'insights', 'about', 'profile', 'products', 'contact', 'privacy', 'terms', '404', 'crawler', 'maintenance']
       .map((page) => `src/pages/${page}.astro`),

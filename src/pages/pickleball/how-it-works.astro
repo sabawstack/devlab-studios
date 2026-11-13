@@ -1,5 +1,5 @@
 ---
-import Layout from '../../layouts/Layout.astro'
+import BrandLayout from '../../layouts/BrandLayout.astro'
 import BracketArt from '../../components/pickleball/art/BracketArt.jsx'
 import ScoreTapArt from '../../components/pickleball/art/ScoreTapArt.jsx'
 import { loadPageSeo } from '../../lib/content/seo'
@@ -29,7 +29,9 @@ const steps = [
   { title: 'Finish up', body: 'End the session and the board, the console and the TV show the final results: a podium for the top three, everyone else in order, and who did not play. Share results sends the standings and the board link from any phone. Download the results as a CSV too. Everything is deleted 7 days after the last change, or delete it yourself any time.' },
 ]
 ---
-<Layout title="How to run open play with Devlab Pickleball" seo={seo}>
+<BrandLayout title="How to run open play with Devlab Pickleball" seo={seo}>
+  <!-- BRAND-04: the brand shell around the product\'s own look (spec J.1, "preserve as a product experience"). -->
+  <div class="pb-marketing">
   <div class="mx-auto max-w-4xl px-4 py-10 md:py-16">
     <section class="grid items-center gap-8 md:grid-cols-[1.4fr_1fr]">
       <div>
@@ -65,4 +67,5 @@ const steps = [
       <a href="/pickleball/rotation" class="font-semibold text-white">How fair rotation works</a>
     </div>
   </div>
-</Layout>
+  </div>
+</BrandLayout>

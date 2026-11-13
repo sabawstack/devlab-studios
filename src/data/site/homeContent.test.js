@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { HOME, OFFER_AUDIT } from './content.js'
+import { ABOUT, HOME, OFFER_AUDIT } from './content.js'
 import { CTA } from '../../config/ctas.js'
 
 // Shape and voice guards for the home copy (spec N.10, I.4; approved by the
@@ -62,8 +62,12 @@ describe('offer, founder and close', () => {
     expect(HOME.audit.primary).toEqual({ label: CTA.audit, href: OFFER_AUDIT.contactHref })
   })
 
-  it('names only the markets the owner confirmed (Q-07: PH, US, AU)', () => {
-    expect(HOME.founder.markets).toMatch(/the Philippines, the United States and Australia/)
+  it('has no one-engineer founder strip; the studio speaks as "we" (owner, 2026-11-13)', () => {
+    expect(HOME).not.toHaveProperty('founder')
+  })
+
+  it('About names only the markets the owner confirmed (Q-07: PH, US, AU)', () => {
+    expect(ABOUT.facts.find((fact) => fact.label === 'Clients in')?.value).toBe('The Philippines, the United States and Australia')
   })
 
   it('closes with the primary conversation', () => {
@@ -82,9 +86,10 @@ describe('home voice', () => {
     for (const [path, text] of all.filter(([path]) => /heading|title/i.test(path))) expect(text.trim(), path).not.toMatch(/\?$/)
   })
 
-  it('names the founder exactly once', () => {
+  it('names the founder at most once and never pitches "one engineer"', () => {
     const count = all.reduce((total, [, text]) => total + (text.match(/Stephen Rey Agustinez/g) || []).length, 0)
-    expect(count).toBe(1)
+    expect(count).toBeLessThanOrEqual(1)
+    for (const [path, text] of all) expect(text, path).not.toMatch(/one engineer|one senior architect|one person accountable/i)
   })
 
   it('never uses an exclamation mark', () => {

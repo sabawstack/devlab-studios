@@ -27,7 +27,7 @@ export default defineConfig({
   security: {
     csp: {
       scriptDirective: { resources: SCRIPT_SOURCES },
-      styleDirective: { resources: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'] },
+      styleDirective: { resources: ["'self'", "'unsafe-inline'"] },
     },
   },
   image: {

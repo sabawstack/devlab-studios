@@ -171,8 +171,8 @@ test('the homepage hero leads with business outcomes, not an employment pitch', 
 test('the homepage follows the business conversion order', async ({ page }) => {
   await page.goto('/')
   const positions = await page.evaluate(() => {
-    // Spec N.10: problems, the exhibit, what we build, the audit, the founder, then the closing CTA.
-    const idsInOrder = ['home-problems', 'home-exhibit', 'home-solutions', 'home-start', 'home-founder', 'home-cta']
+    // Spec N.10 (owner, 2026-11-13: no founder strip): problems, the exhibit, what we build, the audit, the closing CTA.
+    const idsInOrder = ['home-problems', 'home-exhibit', 'home-solutions', 'home-start', 'home-cta']
     return idsInOrder.map((id) => {
       const element = document.getElementById(id)
       return element ? element.getBoundingClientRect().top + window.scrollY : -1

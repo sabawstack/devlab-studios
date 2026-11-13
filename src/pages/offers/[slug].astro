@@ -1,17 +1,17 @@
 ---
 import { CTA } from '../../config/ctas.js'
-import Layout from '../../layouts/Layout.astro'
+import BrandLayout from '../../layouts/BrandLayout.astro'
+import PageHeader from '../../components/brand/PageHeader.astro'
+import Symbol from '../../components/brand/Symbol.astro'
 import LeadMagnetForm from '../../components/islands/LeadMagnetForm.jsx'
-import PrimaryButton from '../../components/PrimaryButton.jsx'
-import VectorField from '../../components/VectorField.astro'
-import { ArrowRight, CheckCircle2 } from '../../components/icons/icons.js'
 import { getBreadcrumbSchema } from '../../config/schema.js'
 import { getLeadMagnet } from '../../config/offers.js'
 import { resolveTurnstileSiteKey } from '../../lib/turnstileSiteKey'
 import type { SeoData } from '../../lib/content/seo'
 
 /**
- * Lead-magnet landing pages.
+ * Lead-magnet landing pages (BRAND-04, WEB-05: on the brand shell; the form,
+ * its consent text and Turnstile are unchanged).
  *
  * Deliberately under /offers rather than /resources: `/resources/[slug]` is an
  * existing permanent redirect into /insights, and adding a second meaning to
@@ -60,99 +60,51 @@ const jsonLd = offer
   : []
 ---
 
-<Layout title={offer ? `${offer.title} — DevLab Studios` : 'Resource not found'} seo={seo} jsonLd={jsonLd}>
+<BrandLayout title={offer ? `${offer.title} · DevLab Studios` : 'Resource not found · DevLab Studios'} seo={seo} jsonLd={jsonLd} robots={offer ? undefined : 'noindex, follow'}>
   {!offer ? (
-    <div class="light-artifact rounded-[28px] bg-white p-8 text-center shadow-[0_18px_45px_rgba(60,28,120,0.10)] ring-1 ring-slate-200">
-      <p class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-teal">Resource</p>
-      <h1 class="mt-3 text-3xl font-semibold text-brand-ink">Resource not found</h1>
-      <p class="mt-3 text-slate-600">This resource is not available. The Insights library has everything published.</p>
-      <div class="mt-6 flex justify-center">
-        <PrimaryButton to="/insights">Browse Insights</PrimaryButton>
-      </div>
-    </div>
+    <PageHeader eyebrow="Resource" heading="Resource not found" lead="This resource is not available. The Insights library has everything published.">
+      <a href="/insights" class="dl-button-primary" data-cta-id="offer-missing-insights">Browse Insights</a>
+    </PageHeader>
   ) : (
-    <div class="space-y-10">
-      <nav aria-label="Breadcrumb" class="text-sm text-slate-400">
-        <ol class="flex flex-wrap items-center gap-2">
-          <li><a href="/" class="transition hover:text-white">Home</a></li>
-          <li aria-hidden="true">/</li>
-          <li><a href="/insights" class="transition hover:text-white">Insights</a></li>
-          <li aria-hidden="true">/</li>
-          <li aria-current="page" class="text-slate-200">{offer.title}</li>
-        </ol>
-      </nav>
+    <>
+      <PageHeader breadcrumb={[{ label: 'Insights', href: '/insights' }]} eyebrow="Free resource" heading={offer.title} lead={offer.summary} />
 
-      <section class="cinematic-panel relative overflow-hidden rounded-[2rem] p-6 text-white sm:p-8 lg:p-10">
-        <VectorField motif="editorial" />
-        <div class="relative z-10 max-w-3xl space-y-4">
-          <p class="tech-kicker">Free resource</p>
-          <h1 class="text-4xl font-semibold leading-tight tracking-[-0.03em] sm:text-5xl">{offer.title}</h1>
-          <p class="max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">{offer.summary}</p>
-        </div>
-      </section>
-
-      <div class="grid gap-6 lg:grid-cols-[1fr_0.95fr] lg:items-start">
-        <section class="light-artifact space-y-4 rounded-[1.75rem] bg-white/[0.94] p-6 shadow-[0_14px_32px_rgba(60,28,120,0.10)] ring-1 ring-slate-200 sm:p-8">
-          <h2 class="text-xl font-semibold text-brand-ink">What it covers</h2>
-          <ul class="grid gap-2 text-sm text-slate-700">
+      <div class="mx-auto grid max-w-container gap-10 px-[var(--gutter)] py-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
+        <section aria-labelledby="offer-covers-heading">
+          <h2 id="offer-covers-heading" class="text-step-2">What it covers</h2>
+          <ul class="mt-6 divide-y divide-dl-rule border-y border-dl-rule">
             {covers.map((item) => (
-              <li class="flex gap-2 leading-relaxed">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-teal" aria-hidden="true" />
-                <span>{item}</span>
-              </li>
+              <li class="flex gap-3 py-3 text-dl-ink-2"><Symbol name="check" size={20} class="mt-0.5" /><span>{item}</span></li>
             ))}
           </ul>
-          <p class="rounded-2xl bg-[#f7f7ff] p-4 text-sm leading-relaxed text-slate-600 ring-1 ring-slate-200">
-            Nothing here is gated. The full write-up is
-            <a href={offer.path} class="font-semibold text-brand-teal"> published on the site</a>
-            — the form below just sends you a copy and an offer to talk it through.
+          <p class="mt-6 text-dl-ink-2">
+            Nothing here is gated. The full write-up is <a href={offer.path} data-cta-id="offer-read-online">published on the site</a>; the form only sends you a copy and an offer to talk it through.
           </p>
         </section>
 
-        <section
-          class="light-artifact rounded-[1.75rem] bg-gradient-to-br from-[#fff9ff] via-[#fbf9ff] to-[#f2efff] p-6 shadow-[0_18px_38px_rgba(48,28,114,0.12)] sm:p-8"
-          data-view-event="lead_magnet_view"
-          data-offer-id={offer.id}
-        >
-          <h2 class="text-xl font-semibold text-brand-ink">Send me the checklist</h2>
-          <p class="mt-2 text-sm leading-relaxed text-slate-600">
-            One email with the checklist. No sequence, no list.
-          </p>
-          <div class="mt-5">
-            <LeadMagnetForm
-              client:load
-              siteKey={turnstileSiteKey}
-              offerId={offer.id}
-              offerTitle={offer.title}
-              ctaLabel={offer.ctaLabel}
-            />
+        <section class="dl-form" aria-labelledby="offer-form-heading" data-view-event="lead_magnet_view" data-offer-id={offer.id}>
+          <h2 id="offer-form-heading" class="text-step-2">Send me the checklist</h2>
+          <p class="mt-2 text-dl-ink-2">One email with the checklist. No sequence, no list.</p>
+          <div class="mt-6">
+            <LeadMagnetForm client:load siteKey={turnstileSiteKey} offerId={offer.id} offerTitle={offer.title} ctaLabel={offer.ctaLabel} />
           </div>
         </section>
       </div>
 
-      <section class="chapter-dark p-6 sm:p-8">
-        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div class="max-w-2xl">
-            <p class="tech-kicker">After the checklist</p>
-            <h2 class="mt-3 text-2xl font-semibold text-white sm:text-3xl">
-              Want this applied to your own intake and follow-up?
-            </h2>
-            <p class="mt-2 text-white/75">
-              The same checklist, run against your actual workflow, with a recommendation you can act on.
-            </p>
-          </div>
-          <PrimaryButton
-            to={`/contact?type=business_system&insight=${offer.id}`}
+      <section aria-labelledby="offer-next-heading" class="dl-band">
+        <div class="mx-auto max-w-container px-[var(--gutter)] py-[calc(var(--section-rhythm)*0.6)]">
+          <h2 id="offer-next-heading" class="max-w-3xl text-step-3">Want this applied to your own intake and follow-up?</h2>
+          <p class="mt-4 max-w-prose text-step-1 text-dl-ink-2">The same checklist, run against your actual workflow, with a recommendation you can act on.</p>
+          <a
+            href={`/contact?type=business_system&insight=${offer.id}`}
+            class="dl-button-primary mt-8"
             data-cta-id="offer-to-inquiry"
             data-cta-variant="primary"
             data-offer-id={offer.id}
             data-inquiry-type="business_system"
-          >
-            {CTA.line.intake}
-            <ArrowRight size={16} aria-hidden="true" />
-          </PrimaryButton>
+          >{CTA.line.intake}</a>
         </div>
       </section>
-    </div>
+    </>
   )}
-</Layout>
+</BrandLayout>

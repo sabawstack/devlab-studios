@@ -24,7 +24,8 @@ export const ERROR_MESSAGES = {
   MAINTENANCE_MODE: {
     title: 'Under Maintenance',
     message: 'The site is temporarily offline for updates and will be back shortly.',
-    details: 'Expected return time: within the next few hours.',
+    // UX-04: no fixed return time is promised.
+    details: 'Please try again a little later. Email still reaches us in the meantime.',
   },
 
   // Generic/Unknown Errors

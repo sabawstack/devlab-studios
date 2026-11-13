@@ -3,7 +3,7 @@
  * Home (spec N.10, H.2; UX-01; copy approved by the owner 2026-11-13): the
  * graphite hero band with S1, four ways work gets lost, the inquiry exhibit
  * beside a real screenshot, the three service lines, the audit offer with the
- * price line, the founder strip, and the closing call to action with the reply
+ * price line, and the closing call to action with the reply
  * window. Copy lives in src/data/site/content.js (HOME); the reply window,
  * hours and price line come from site settings (CMS-02). No section calls /api.
  */
@@ -14,7 +14,6 @@ import SceneFrame from '../components/brand/SceneFrame.astro'
 import InquiryFlowExhibit from '../components/brand/InquiryFlowExhibit.astro'
 import ProofMount from '../components/brand/ProofMount.astro'
 import OfferCard from '../components/brand/OfferCard.astro'
-import FounderStrip from '../components/brand/FounderStrip.astro'
 import Symbol from '../components/brand/Symbol.astro'
 import { getOrganizationSchema, getWebsiteSchema } from '../config/schema.js'
 import { businessHoursLine, replyWindowLine } from '../config/business.js'
@@ -96,10 +95,6 @@ const LINE_SYMBOLS = { 'lead-intake-and-follow-up': 'inbox', 'workflow-and-ai-au
         secondary={HOME.audit.secondary}
       />
     </div>
-  </Section>
-
-  <Section id="home-founder" eyebrow={HOME.founder.eyebrow} heading="One engineer, start to finish." class="border-t border-dl-rule">
-    <div class="mt-10"><FounderStrip /></div>
   </Section>
 
   <section id="home-cta" aria-labelledby="home-cta-heading" class="dl-band">

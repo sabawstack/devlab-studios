@@ -105,7 +105,7 @@ function LeadMagnetForm({ siteKey = '', offerId, offerTitle, ctaLabel = 'Send me
   const fieldClass = 'form-control min-h-12 w-full px-4 py-3 placeholder:text-slate-500'
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-4">
+    <form onSubmit={handleSubmit} noValidate className="form-surface space-y-4 p-6 sm:p-8">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
           <label className="text-sm font-semibold text-brand-ink" htmlFor={fieldId('fullName')}>

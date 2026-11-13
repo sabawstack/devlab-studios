@@ -1,81 +1,30 @@
 ---
-import Layout from '../layouts/Layout.astro'
-import GlassCard from '../components/GlassCard.jsx'
-import SectionHeader from '../components/SectionHeader.jsx'
-import AnimatedIcon from '../components/icons/AnimatedIcon.jsx'
-import { Wrench, Mail } from '../components/icons/icons.js'
+/**
+ * Maintenance (BRAND-04, UX-04): on the brand shell, with no fixed return
+ * time. Middleware serves it while site_settings.maintenance_mode is on.
+ */
+import BrandLayout from '../layouts/BrandLayout.astro'
+import PageHeader from '../components/brand/PageHeader.astro'
+import NodeMascot from '../components/brand/NodeMascot.jsx'
 import { COMPANY } from '../config/company.js'
 import { ERROR_MESSAGES } from '../config/errorMessages.js'
 
 const { title, message, details } = ERROR_MESSAGES.MAINTENANCE_MODE
 ---
 
-<Layout title="Under Maintenance">
-  <div class="space-y-8">
-    <SectionHeader title={title} subtitle={message} align="center" />
-
-    <GlassCard className="p-8">
-      <div class="space-y-6 text-center">
-        <div class="flex justify-center">
-          <AnimatedIcon
-            icon={Wrench}
-            size={64}
-            color="text-navy-300"
-            animationType="pulse"
-            ariaLabel="Under maintenance"
-          />
-        </div>
-
-        <div class="space-y-3">
-          <p class="text-lg text-slate-200/85">{details}</p>
-          <p class="text-sm text-slate-200/70">
-            Thank you for the patience while improvements are made.
-          </p>
-        </div>
-
-        <div class="flex flex-col items-center justify-center gap-3 pt-4 sm:flex-row">
-          <button
-            type="button"
-            id="maintenance-refresh"
-            class="inline-flex items-center justify-center gap-2 rounded-full bg-navy-300 px-5 py-2.5 text-sm font-semibold text-brand-ink transition hover:brightness-95"
-          >
-            Refresh Page
-          </button>
-          <a
-            href="/contact"
-            class="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/15"
-          >
-            Contact Us
-          </a>
-        </div>
-      </div>
-    </GlassCard>
-
-    <div class="space-y-4 text-center">
-      <p class="text-sm text-slate-200/70">
-        In the meantime, you can reach out to us directly:
-      </p>
-      <div class="inline-flex gap-2">
-        <a
-          href={`mailto:${COMPANY.publicEmail}`}
-          class="group inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/15 hover:border-navy-300/50"
-        >
-          <AnimatedIcon
-            icon={Mail}
-            size={16}
-            color="text-white group-hover:text-navy-300"
-            animationType="none"
-            ariaLabel={null}
-          />
-          Email
-        </a>
-      </div>
-    </div>
-  </div>
-</Layout>
+<BrandLayout title={`${title} · DevLab Studios`} robots="noindex, nofollow">
+  <PageHeader eyebrow="Maintenance" heading={title} lead={message}>
+    <button type="button" id="maintenance-refresh" class="dl-button-primary" data-needs-js hidden>Refresh the page</button>
+    <a href={`mailto:${COMPANY.publicEmail}`} class="dl-button-quiet" data-cta-id="maintenance-email">{COMPANY.publicEmail}</a>
+    <NodeMascot slot="aside" state="idle" id="maintenance-node" className="mx-auto" />
+  </PageHeader>
+  <p class="mx-auto max-w-container px-[var(--gutter)] py-12 text-dl-ink-2">{details}</p>
+</BrandLayout>
 
 <script>
-  document.getElementById('maintenance-refresh')?.addEventListener('click', () => {
-    window.location.reload()
-  })
+  const refresh = document.getElementById('maintenance-refresh')
+  if (refresh) {
+    refresh.hidden = false
+    refresh.addEventListener('click', () => window.location.reload())
+  }
 </script>

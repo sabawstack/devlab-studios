@@ -102,3 +102,14 @@ describe('write-up schema (CASE-03)', async () => {
     expect(bare).not.toHaveProperty('dateCreated')
   })
 })
+
+// BUS-04: structured data names the same markets as the site (owner Q-07).
+describe('areaServed (BUS-04)', () => {
+  it('lists the Philippines, the United States and Australia on the Organization, Person and Service', async () => {
+    const { getServiceSchema } = await import('./schema.js')
+    const expected = [{ '@type': 'Country', name: 'Philippines' }, { '@type': 'Country', name: 'United States' }, { '@type': 'Country', name: 'Australia' }]
+    expect(getOrganizationSchema().areaServed).toEqual(expected)
+    expect(getPersonSchema().areaServed).toEqual(expected)
+    expect(getServiceSchema({ id: 'x', title: 'X', description: 'Y', capabilities: [] }).areaServed).toEqual(expected)
+  })
+})

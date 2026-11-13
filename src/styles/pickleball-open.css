@@ -50,3 +50,11 @@
    * to the floor; with no transitions the new size applies immediately. */
   .pb-fit, .pb-fit * { transition: none !important; }
 }
+
+/* The product band on the brand shell (BRAND-04): the pickleball marketing
+   pages keep their own dark look inside the DevLab header and footer. */
+.pb-marketing {
+  background: #070916;
+  color: #f7f7fc;
+}
+.pb-marketing :focus-visible { outline: 2px solid #c6ff2e; outline-offset: 2px; }

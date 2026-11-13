@@ -20,8 +20,9 @@ function buildContentSecurityPolicy(isLocalhost: boolean): string {
     `script-src 'self' 'unsafe-inline' ${SCRIPT_SOURCES.filter((source) => source !== "'self'").join(' ')}`,
     "connect-src 'self' https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://www.google.com https://www.googletagmanager.com https://challenges.cloudflare.com https://cloudflareinsights.com",
     "img-src 'self' data: https:",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    "font-src 'self' https://fonts.gstatic.com data:",
+    // SEC-03: every face is self-hosted (public/fonts), so no third-party font host.
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self' data:",
     "frame-src 'self' https://challenges.cloudflare.com",
     "object-src 'none'",
     "base-uri 'self'",

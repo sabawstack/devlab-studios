@@ -1,16 +1,13 @@
 ---
 import { CTA } from '../../config/ctas.js'
-import Layout from '../../layouts/Layout.astro'
-import SectionHeader from '../../components/SectionHeader.jsx'
-import PrimaryButton from '../../components/PrimaryButton.jsx'
-import VectorField from '../../components/VectorField.astro'
-import { ArrowRight, ExternalLink, MessageSquare } from '../../components/icons/icons.js'
+import BrandLayout from '../../layouts/BrandLayout.astro'
+import PageHeader from '../../components/brand/PageHeader.astro'
 import { loadDigests, formatDigestDate, sourceHost } from '../../lib/content/digests'
 import { RETENTION_DAYS } from '../../worker/digest/feeds.js'
 import { getBreadcrumbSchema } from '../../config/schema.js'
 
 /**
- * AI & Automation Daily — a dated log on one permanent URL.
+ * AI & Automation Daily — a dated log on one permanent URL (BRAND-04: brand shell).
  *
  * Deliberately NOT one page per day. Each day's digest is a handful of
  * summarized links; a separate indexable page per day would be a thin-content
@@ -37,123 +34,54 @@ const jsonLd = [
 ]
 ---
 
-<Layout title="AI & Automation Daily — DevLab Studios" seo={seo} jsonLd={jsonLd}>
-  <div class="space-y-10">
-    <section class="cinematic-panel relative overflow-hidden rounded-[2rem] p-6 text-white sm:p-8 lg:p-10">
-      <VectorField motif="editorial" />
-      <div class="relative z-10 space-y-5">
-        <p class="tech-kicker">Daily Log</p>
-        <h1 class="text-4xl font-semibold leading-tight text-white sm:text-5xl">AI &amp; Automation Daily</h1>
-        <p class="max-w-3xl text-base leading-relaxed text-slate-300 sm:text-lg">
-          A short daily pass over AI automation and AI advancement news. Each item is summarized in a sentence
-          and linked to the publisher &mdash; read the summary to decide, then read the source. The last {RETENTION_DAYS} days
-          are kept here.
-        </p>
-        <p class="text-sm text-slate-400">
-          Summaries are machine-generated from each publisher&rsquo;s own headline and excerpt, then linked back to the
-          original. DevLab Studios does not author, endorse, or verify the linked reporting.
-        </p>
-        <div class="flex flex-wrap gap-3">
-          <PrimaryButton to="/insights" variant="secondary" data-cta-id="digest-hero-insights" data-cta-variant="secondary">
-            <ArrowRight size={16} aria-hidden="true" />
-            All Insights
-          </PrimaryButton>
-        </div>
-      </div>
+<BrandLayout title="AI & Automation Daily · DevLab Studios" seo={seo} jsonLd={jsonLd}>
+  <PageHeader breadcrumb={[{ label: 'Insights', href: '/insights' }]} eyebrow="Daily log" heading="AI & Automation Daily" lead={`A short daily pass over AI automation and AI advancement news. Each item is summarized in a sentence and linked to the publisher: read the summary to decide, then read the source. The last ${RETENTION_DAYS} days are kept here.`}>
+    <a href="/insights" class="dl-button-quiet" data-cta-id="digest-hero-insights" data-cta-variant="secondary">All Insights</a>
+  </PageHeader>
+  <p class="mx-auto max-w-container px-[var(--gutter)] pt-8 text-step--1 text-dl-ink-3" data-disclosure>
+    Summaries are machine-generated from each publisher's own headline and excerpt, then linked back to the original. DevLab Studios does not author, endorse, or verify the linked reporting.
+  </p>
+
+  {digests.length === 0 ? (
+    <section class="mx-auto max-w-container px-[var(--gutter)] py-12" aria-labelledby="digest-empty-heading">
+      <h2 id="digest-empty-heading" class="text-step-2">No digest yet</h2>
+      <p class="mt-3 max-w-prose text-dl-ink-2">The next edition publishes after the daily run. In the meantime, the long-form guides and implementation notes are on the main Insights page.</p>
+      <a href="/insights" class="dl-button-quiet mt-4" data-cta-id="digest-empty-insights">Read Insights</a>
     </section>
-
-    {digests.length === 0 ? (
-      <section class="rounded-[28px] border border-slate-200 bg-white/95 p-8 text-center shadow-[0_18px_45px_rgba(60,28,120,0.10)]">
-        <h2 class="text-2xl font-semibold text-brand-ink">No digest yet</h2>
-        <p class="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-slate-600">
-          The next edition publishes after the daily run. In the meantime, the long-form guides and implementation
-          notes are on the main Insights page.
-        </p>
-        <div class="mt-6 flex justify-center">
-          <PrimaryButton to="/insights" showIcon>Read Insights</PrimaryButton>
-        </div>
-      </section>
-    ) : (
-      <section class="space-y-8">
-        <SectionHeader
-          title="Latest editions"
-          subtitle={`Newest first. ${latest ? `Last updated ${formatDigestDate(latest.digestDate)}.` : ''}`}
-        />
-
-        {digests.map((digest, digestIndex) => (
-          <article id={digest.digestDate} class="scroll-mt-24 rounded-[28px] border border-slate-200 bg-white/95 p-6 shadow-[0_18px_45px_rgba(60,28,120,0.10)] sm:p-8">
-            <header class="flex flex-wrap items-baseline justify-between gap-3 border-b border-slate-200 pb-4">
-              <div>
-                <h2 class="text-2xl font-semibold text-brand-ink">
-                  <a href={`#${digest.digestDate}`} class="transition hover:text-brand-teal">
-                    <time datetime={digest.digestDate}>{formatDigestDate(digest.digestDate)}</time>
+  ) : (
+    <section class="mx-auto max-w-container px-[var(--gutter)] py-12" aria-labelledby="digest-latest-heading">
+      <h2 id="digest-latest-heading" class="text-step-3">Latest editions</h2>
+      <p class="mt-2 text-dl-ink-3">Newest first.{latest ? ` Last updated ${formatDigestDate(latest.digestDate)}.` : ''}</p>
+      {digests.map((digest, digestIndex) => (
+        <article id={digest.digestDate} class="scroll-mt-24 border-t border-dl-rule py-8 first-of-type:mt-8">
+          <h3 class="text-step-2"><a href={`#${digest.digestDate}`} class="no-underline"><time datetime={digest.digestDate}>{formatDigestDate(digest.digestDate)}</time></a></h3>
+          <p class="mt-1 text-step--1 text-dl-ink-3">{digest.itemCount} {digest.itemCount === 1 ? 'story' : 'stories'}{digestIndex === 0 ? ' · latest edition' : ''}</p>
+          <ol class="mt-5 divide-y divide-dl-rule">
+            {digest.items.map((item) => (
+              <li class="py-4">
+                <h4 class="text-step-1 font-semibold">
+                  <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer nofollow" class="no-underline" data-cta-id="digest-item" data-cta-variant="link">
+                    {item.title}<span class="sr-only"> (opens on {sourceHost(item.sourceUrl)} in a new tab)</span>
                   </a>
-                </h2>
-                <p class="mt-1 text-sm text-slate-500">
-                  {digest.itemCount} {digest.itemCount === 1 ? 'story' : 'stories'}
-                  {digestIndex === 0 ? ' · latest edition' : ''}
-                </p>
-              </div>
-            </header>
-
-            <ol class="mt-5 space-y-5">
-              {digest.items.map((item) => (
-                <li class="border-b border-slate-100 pb-5 last:border-b-0 last:pb-0">
-                  <h3 class="text-lg font-semibold leading-snug text-brand-ink">
-                    <a
-                      href={item.sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      class="inline-flex items-start gap-2 transition hover:text-brand-teal"
-                      data-cta-id="digest-item"
-                      data-cta-variant="link"
-                    >
-                      <span>{item.title}</span>
-                      <ExternalLink className="mt-1 h-4 w-4 flex-shrink-0 text-slate-400" aria-hidden="true" />
-                      <span class="sr-only">(opens on {sourceHost(item.sourceUrl)} in a new tab)</span>
-                    </a>
-                  </h3>
-                  {item.summary ? (
-                    <p class="mt-2 text-sm leading-relaxed text-slate-600">{item.summary}</p>
-                  ) : null}
-                  <p class="mt-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                    {item.sourceName}
-                    {sourceHost(item.sourceUrl) ? ` · ${sourceHost(item.sourceUrl)}` : ''}
-                  </p>
-                </li>
-              ))}
-            </ol>
-          </article>
-        ))}
-      </section>
-    )}
-
-    <section class="rounded-[28px] bg-gradient-to-r from-brand-ink via-[#22185a] to-[#3120a3] p-6 text-white shadow-[0_22px_50px_rgba(20,13,64,0.22)] sm:p-8">
-      <div class="grid gap-6 lg:grid-cols-[1fr_0.8fr] lg:items-center">
-        <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">From reading to building</p>
-          <h2 class="mt-2 text-3xl font-semibold">Want one of these working in your business?</h2>
-          <p class="mt-3 text-white/75">
-            Most of what lands here is a capability before it is a product. If something in the log looks like it
-            solves a problem you actually have, we can scope what it would take to run it in your operation.
-          </p>
-        </div>
-        <div class="flex flex-wrap gap-3 lg:justify-end">
-          <PrimaryButton
-            to="/contact?type=business_system"
-            data-cta-id="digest-final-primary"
-            data-cta-variant="primary"
-            data-inquiry-type="business_system"
-          >
-            <MessageSquare size={16} aria-hidden="true" />
-            {CTA.primary}
-          </PrimaryButton>
-          <PrimaryButton to="/solutions" variant="secondary" data-cta-id="digest-final-secondary" data-cta-variant="secondary">
-            <ArrowRight size={16} aria-hidden="true" />
-            View Solutions
-          </PrimaryButton>
-        </div>
-      </div>
+                </h4>
+                {item.summary ? <p class="mt-2 max-w-prose text-dl-ink-2">{item.summary}</p> : null}
+                <p class="mt-2 text-step--1 text-dl-ink-3">{item.sourceName}{sourceHost(item.sourceUrl) ? ` · ${sourceHost(item.sourceUrl)}` : ''}</p>
+              </li>
+            ))}
+          </ol>
+        </article>
+      ))}
     </section>
-  </div>
-</Layout>
+  )}
+
+  <section aria-labelledby="digest-cta-heading" class="dl-band">
+    <div class="mx-auto max-w-container px-[var(--gutter)] py-[calc(var(--section-rhythm)*0.6)]">
+      <h2 id="digest-cta-heading" class="max-w-3xl text-step-3">Want one of these working in your business?</h2>
+      <p class="mt-4 max-w-prose text-step-1 text-dl-ink-2">Most of what lands here is a capability before it is a product. If something in the log solves a problem you actually have, we can scope what it would take to run it in your operation.</p>
+      <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <a href="/contact?type=business_system" class="dl-button-primary" data-cta-id="digest-final-primary" data-cta-variant="primary" data-inquiry-type="business_system">{CTA.primary}</a>
+        <a href="/solutions" class="dl-button-quiet" data-cta-id="digest-final-secondary" data-cta-variant="secondary">View Solutions</a>
+      </div>
+    </div>
+  </section>
+</BrandLayout>

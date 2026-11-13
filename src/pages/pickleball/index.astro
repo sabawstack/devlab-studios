@@ -1,5 +1,5 @@
 ---
-import Layout from '../../layouts/Layout.astro'
+import BrandLayout from '../../layouts/BrandLayout.astro'
 import HeroRallyArt from '../../components/pickleball/art/HeroRallyArt.jsx'
 import PaddleStackArt from '../../components/pickleball/art/PaddleStackArt.jsx'
 import ScoreTapArt from '../../components/pickleball/art/ScoreTapArt.jsx'
@@ -88,7 +88,9 @@ const faqs = [
   { q: 'Can I use it on a tablet, laptop or big screen?', a: 'Yes. The courts reflow to fit any screen, from a phone to a wide monitor, and the TV board shows every court in large type on a venue screen.' },
 ]
 ---
-<Layout title="Devlab Pickleball: free open play manager" seo={seo}>
+<BrandLayout title="Devlab Pickleball: free open play manager" seo={seo}>
+  <!-- BRAND-04: the brand shell around the product\'s own look (spec J.1, "preserve as a product experience"). -->
+  <div class="pb-marketing">
   <div class="mx-auto max-w-6xl px-4 py-10 md:py-16">
     <section class="grid items-center gap-10 md:grid-cols-[1.1fr_1fr]">
       <div>
@@ -164,4 +166,5 @@ const faqs = [
       </div>
     </section>
   </div>
-</Layout>
+  </div>
+</BrandLayout>
