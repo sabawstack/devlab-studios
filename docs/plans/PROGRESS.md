@@ -25,7 +25,7 @@ money, legal wording or a real data deletion are skipped and listed under
 | 11 | Product Worker split | not started: the redesign has shipped, so this is next once the Workers Paid plan decision (N7) is made |
 | 12 | Docs + release | v2.3.0 (PR #53) and **v2.4.0 released 2026-11-12** (PR #55); ADRs 0011–0013; full docs refresh (OPS-08) still open |
 | 13 | Blueprint rebrand | done (PR #57, production at `3874835`, v2.5.0 tagged; GitHub Release entry pending, see Phase 13 Open) |
-| 14 | Brand, UX and architecture spec (`devlab-complete-b2b-brand-ux-architecture-spec.md`) | in progress (see Phase 14) |
+| 14 | Brand, UX and architecture spec (`devlab-complete-b2b-brand-ux-architecture-spec.md`) | in progress: Groups 1, 2, 4 in production; Group 3 waits for the owner; Group 5 next (see Phase 14) |
 
 ## Blockers (owner)
 
@@ -280,7 +280,7 @@ through `development` → preview → owner sign-off → `main`.
 | 1 Gates and guards | OPS-01, TEST-01, SEC-01, OPS-02 | done (PR #59, production at `15f93e4`, 2026-11-13) |
 | 2 Brand foundation | BRAND-01, BRAND-02, BRAND-03, BRAND-05, MASCOT-01, MASCOT-02, MASCOT-03 | done (PR #60, production at `2a8c0ae`, 2026-11-13); art and Node pending owner review (Group 3) |
 | 3 Review gate | `/brand` review of scenes and the Node redraw (MASCOT-04 fallback) | open: waiting for the owner on preview `/brand` |
-| 4 Data | CMS-01, CMS-02, CMS-03 | done locally, migrations applied to both D1s; PR, preview and production in progress |
+| 4 Data | CMS-01, CMS-02, CMS-03 | done (PR #61, production at `4961cf6`, 2026-11-13) |
 | 5 Pages I | UX-02, UX-01, WEB-03, CONTENT-01, CONTENT-02, CONTENT-03, CASE-01, CASE-02 | not started |
 | 6 Pages II | UX-03, UX-04, UX-05, CONTENT-04…06, CONVERT-01…04, WEB-02, BUS-01, BUS-02, BUS-05, PROFILE-01, CASE-03 | not started |
 | 7 Shell consolidation | BRAND-04, WEB-01, WEB-05, SEC-03 | not started |
@@ -375,3 +375,16 @@ Group 2 promotion: PR #60 CI `validate` green. `development` → `2a8c0ae`, `dep
 Verification: lint 0 errors, typecheck 0, unit 2,947 passed / 4 expected fail / 1 skipped (205 files), build OK. Static e2e first run: 3 failures caused by leftover `smoke-*` projects and a replaced Work narrative in the local dev D1 (left by the pre-existing failing admin tests); the local state was moved aside to `.wrangler/state-backup-2026-11-13` (kept, not deleted) and the suite rerun on fresh state, as CI does: 244 passed / 1 skipped. Worker + admin-auth on fresh state: 321 passed / 4 failed / 1 skipped; the 4 (SEO slug editor, Lead CRM sources, two pickleball poster-share emulations) are the same pre-existing failures as on `main`.
 
 Deviations: one `site_business` row instead of seven keys; spec `diagram_id` reuses the existing `system_diagram_id`; code defaults are the owner's decided values (the brief's no-hardcoding rule) rather than "not stated".
+
+Group 4 promotion: PR #61 CI `validate` green. `development` → `4961cf6`, `deploy-preview.yml` run 43362376904 green (the migration check passed: preview D1 already at `0020`). Preview: 31/31 legacy URLs, `/terms` carries the new sentence and not the old one, `/api/health` and a write-up 200, `/api/admin/content/site-settings` 401 without a session. `main` → `4961cf6` (PR #61 MERGED); `0 0`. Production after Workers Builds: 31/31 legacy URLs, `/api/health` 200, `/brand` 404, `/terms` new sentence, hashed `script-src` (13), `/admin` noindex, personal-data scan 0 hits.
+
+### Handoff for the next session (Group 5 — Pages I)
+
+- **Start from** `main` = `development` = the commit after this note. Read this Phase 14 section first.
+- **Owner gate:** Group 5 introduces the spec's proposed home copy (I.4, "proposed, not approved"). Build it, ship it to preview, and hold the production push until the owner has reviewed the home copy on preview.
+- **WEB-03 finding (2026-11-13):** the home portrait is not broken. Every `/_image` variant (AVIF and WebP, 96 and 192 px) returns 200 on production; the audit's "empty frame" is the bordered box of a `loading="lazy"` image in a full-page screenshot. The founder strip (UX-01) should use spec N.7's 3:4 portrait and give the frame a paper fill so it never reads as empty while loading.
+- **Guards waiting to be switched on** (expected failures, each turns red when its fix lands): `content.js` forbidden labels and clichés (CONTENT-01/03), the `SYS-` label in `CaseStudyShowcase.astro` (UX-01, then WEB-01 deletes the file), contact CTA labels (CONTENT-02), the home hero label (CONTENT-01).
+- **Ready to use:** `loadSiteSettings().business` with `replyWindowLine()` and `businessHoursLine()` (`src/config/business.js`) for the home closing line, Contact and the receipt email; the write-up fields `situation`, `decisions`, `scope`, `inOperationSince` on `WorkEntry` for the K.2 layout; S8 and D-1…D-4 in the scene registry (unapproved until Group 3, so their frames show captions only).
+- **Dated SQL still to write with their copy:** home SEO title (SEO-01), nav CTA labels in `site_ctas` (CONTENT-02), write-up leads and case-study texts (CONTENT-05, CASE-01). Read rows first; neither D1 stores a Terms or Privacy page.
+- **Local environment:** the old local D1 state was moved to `.wrangler/state-backup-2026-11-13` (kept). Pre-existing worker e2e failures on `main` (SEO slug editor, Lead CRM sources, two pickleball poster-share emulations) are environment issues to fix separately; they are not caused by Phase 14.
+- **Production D1:** both CMS databases are in the account `db49…`; set `CLOUDFLARE_ACCOUNT_ID` for non-interactive Wrangler runs. Production and preview are at `0020_writeup_fields`.
