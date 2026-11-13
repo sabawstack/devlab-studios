@@ -1,0 +1,26 @@
+---
+/**
+ * An exhibit (spec J.3, N.6; UX-02): a graphite `.ink-panel` that holds one
+ * piece of evidence or one illustration, with a title row in the label face,
+ * the body, an optional caption and an optional control row. Never nested in
+ * another panel; on phones it scrolls inside its own frame, never the page.
+ */
+interface Props { title: string; caption?: string; id?: string; class?: string; [key: string]: unknown }
+const { title, caption, id, class: className = '', ...rest } = Astro.props
+const hasControls = Astro.slots.has('controls')
+---
+<figure class={`exhibit ink-panel rounded-dl-m ${className}`} id={id} {...rest}>
+  <p class="exhibit__title label border-b border-dl-rule px-4 py-3 text-dl-ink-3">{title}</p>
+  <div class="exhibit__body"><slot /></div>
+  {(caption || hasControls) && (
+    <figcaption class="flex flex-wrap items-center justify-between gap-3 border-t border-dl-rule px-4 py-3">
+      {caption && <span class="max-w-prose text-step--1 text-dl-ink-2">{caption}</span>}
+      {hasControls && <slot name="controls" />}
+    </figcaption>
+  )}
+</figure>
+
+<style>
+  .exhibit { overflow: hidden; }
+  .exhibit__body { overflow-x: auto; }
+</style>

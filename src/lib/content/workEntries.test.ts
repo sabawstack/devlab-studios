@@ -57,11 +57,11 @@ describe('buildWorkEntries', () => {
     expect(entries).toEqual([])
   })
 
-  it('uses the project drawing when it names a known scene, else the layered system drawing', () => {
+  it('uses the project drawing when it names a known scene, else none (spec H.1: no generic S5)', () => {
     const [withScene] = buildWorkEntries([item()], [project({ systemDiagramId: 'handoff-to-person' })])
     const [unknownScene] = buildWorkEntries([item()], [project({ systemDiagramId: 'not-a-scene' })])
     expect(withScene.sceneId).toBe('handoff-to-person')
-    expect(unknownScene.sceneId).toBe('build-in-layers')
+    expect(unknownScene.sceneId).toBe('')
   })
 
   it('keeps only non-empty outcome statements', () => {

@@ -14,8 +14,9 @@ export const siteSettingsContent = {
     { id: 'nav-profile', label: 'Profile', href: '/profile', sortOrder: 60, status: 'published' },
   ],
   ctas: {
-    navbarContactLabel: 'Discuss Your System',
-    mobileContactLabel: 'Discuss Your System',
+    // Spec K.3 / CONTENT-02 (owner approved 2026-11-13); see src/config/ctas.js.
+    navbarContactLabel: 'Talk to us',
+    mobileContactLabel: 'Contact',
   },
   footer: {
     companyName: 'DevLab Studios',

@@ -1,0 +1,26 @@
+---
+/**
+ * The founder strip (spec H.2 screen 6, J.3; WEB-03, BUS-04): the real
+ * portrait (3:4), two sentences and links to the profile, LinkedIn and GitHub.
+ * The founder's single mention on the home page.
+ */
+import Portrait from './Portrait.astro'
+import { COMPANY } from '../../config/company.js'
+import { HOME } from '../../data/site/content.js'
+
+const copy = HOME.founder
+const linkedin = COMPANY.sameAs.find((url: string) => url.includes('linkedin.com'))
+const github = COMPANY.sameAs.find((url: string) => url.includes('github.com'))
+---
+<div class="grid items-center gap-8 sm:grid-cols-[auto_minmax(0,1fr)]" data-principal>
+  <Portrait size={150} height={200} />
+  <div>
+    <p class="text-step-1">{copy.text}</p>
+    <p class="mt-3 text-dl-ink-2" data-markets>{copy.markets}</p>
+    <ul class="mt-5 flex flex-wrap gap-x-6 gap-y-2">
+      <li><a href={COMPANY.founder.profilePath} class="dl-button-quiet" data-cta-id="home-founder-profile">{copy.profileLabel}</a></li>
+      {linkedin && <li><a href={linkedin} class="dl-button-quiet" rel="noopener" data-cta-id="home-founder-linkedin">LinkedIn</a></li>}
+      {github && <li><a href={github} class="dl-button-quiet" rel="noopener" data-cta-id="home-founder-github">GitHub</a></li>}
+    </ul>
+  </div>
+</div>

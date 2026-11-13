@@ -1,8 +1,10 @@
 ---
 /**
- * A Work write-up (audit UX-08 / WEB-05 / BR.9): problem → system → what it
- * verifiably does, a system drawing, the real screenshot, and the stack in a
- * closed "Technical notes" disclosure. Entries come from the CMS Work page and
+ * A Work write-up in the case-study order of spec K.2 (CASE-01): the
+ * situation (when written), the problem, what we built with the project's own
+ * diagram and the decisions that mattered, what it does now (outcomes only
+ * with evidence, else a "not published" line), real screenshots on mounts,
+ * scope and responsibility, Technical notes, and one call to action. Entries come from the CMS Work page and
  * projects (loadWorkEntries). A published row in the older case_studies table
  * is still served at its slug so no existing link breaks; anything else 404s.
  */
@@ -10,7 +12,7 @@ import BrandLayout from '../../layouts/BrandLayout.astro'
 import PageHeader from '../../components/brand/PageHeader.astro'
 import Section from '../../components/brand/Section.astro'
 import SceneFrame from '../../components/brand/SceneFrame.astro'
-import Figure from '../../components/brand/Figure.astro'
+import ProofMount from '../../components/brand/ProofMount.astro'
 import FactList from '../../components/brand/FactList.astro'
 import Disclosure from '../../components/brand/Disclosure.astro'
 import Tag from '../../components/brand/Tag.astro'
@@ -21,6 +23,7 @@ import { loadCaseStudy } from '../../lib/content/caseStudies'
 import type { SeoData } from '../../lib/content/seo'
 import type { OptimizedPicture } from '../../lib/images/optimizeImage'
 import { COMPANY } from '../../config/company.js'
+import { CTA } from '../../config/ctas.js'
 
 const { slug } = Astro.params as { slug: string }
 const entries = await loadWorkEntries()
@@ -55,6 +58,13 @@ const shots: Shot[] = (gallery.length
   ? gallery
   : entry?.project.optimizedImageFull ? [{ picture: entry.project.optimizedImageFull, caption: `${title}: the workflow as built (screenshot).` }] : []
 ).slice(0, 3)
+/** K.2: results are shown only with evidence and consent; scope is stated or explicitly not published. */
+const RESULTS_NOT_PUBLISHED = "Operational results are the client's and are not published."
+const SCOPE_NOT_PUBLISHED = 'Scope and responsibility were agreed with the client for this engagement and are not published.'
+const formatSince = (value: string) => {
+  const [year, month] = value.split('-').map(Number)
+  return month ? new Date(Date.UTC(year, month - 1, 1)).toLocaleDateString('en', { month: 'long', year: 'numeric', timeZone: 'UTC' }) : String(year)
+}
 const contactHref = `/contact?type=business_system&case=${encodeURIComponent(entry ? entry.project.id : slug)}`
 const caseSections = caseStudy
   ? [
@@ -69,37 +79,50 @@ const caseSections = caseStudy
 
 <BrandLayout title={seo.metaTitle || 'DevLab Studios'} seo={seo} jsonLd={jsonLd}>
   <PageHeader breadcrumb={[{ label: 'Work', href: '/work' }]} eyebrow={entry ? 'Write-up' : 'Case study'} heading={title} lead={summary}>
-    <a href={contactHref} class="dl-button-primary" data-cta-id="work-detail-primary" data-case-study-id={entry ? entry.project.id : slug} data-inquiry-type="business_system">Discuss a similar system</a>
+    <a href={contactHref} class="dl-button-primary" data-cta-id="work-detail-primary" data-case-study-id={entry ? entry.project.id : slug} data-inquiry-type="business_system">{CTA.similar}</a>
     <a href="/work" class="dl-button-quiet" data-cta-id="work-detail-back">Back to work</a>
   </PageHeader>
 
   {entry ? (
     <>
-      <Section id="work-problem" eyebrow="01 · The problem" heading="What was going wrong">
-        <p class="mt-4 text-step-1 text-dl-ink-2">{entry.problem}</p>
+      {entry.situation && (
+        <Section id="work-situation" eyebrow="The situation" heading="Who it was for">
+          <p class="mt-4 max-w-prose text-step-1 text-dl-ink-2">{entry.situation}</p>
+        </Section>
+      )}
+
+      <Section id="work-problem" eyebrow="The problem" heading="What was going wrong" class={entry.situation ? 'border-t border-dl-rule' : ''}>
+        <p class="mt-4 max-w-prose text-step-1 text-dl-ink-2">{entry.problem}</p>
       </Section>
 
-      <Section id="work-system" eyebrow="02 · The system" heading="What was built" class="border-t border-dl-rule">
-        <div class="mt-6 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-start">
-          <p class="text-step-1 text-dl-ink-2">{entry.system}</p>
-          <SceneFrame sceneId={entry.sceneId} figure={figures.next()} />
-        </div>
+      <Section id="work-system" eyebrow="What we built" heading="The system" class="border-t border-dl-rule">
+        {entry.sceneId && <SceneFrame sceneId={entry.sceneId} figure={figures.next()} class="mt-8" />}
+        <p class="mt-8 max-w-prose text-step-1 text-dl-ink-2">{entry.system}</p>
+        {entry.decisions.length > 0 && (
+          <>
+            <h3 class="mt-10 text-step-1">Decisions that mattered</h3>
+            <ul class="mt-4 max-w-prose divide-y divide-dl-rule border-y border-dl-rule" data-decisions>
+              {entry.decisions.map((decision) => <li class="py-3 text-dl-ink-2">{decision}</li>)}
+            </ul>
+          </>
+        )}
+      </Section>
+
+      <Section id="work-result" eyebrow="What it does now" heading="What it verifiably does" class="border-t border-dl-rule">
+        <p class="mt-4 max-w-prose text-step-1 text-dl-ink-2">{entry.value}</p>
+        {entry.outcomes.length > 0
+          ? <FactList facts={entry.outcomes.map((text) => ({ text }))} class="mt-8" />
+          : <p class="mt-6 text-dl-ink-3" data-results-note>{RESULTS_NOT_PUBLISHED}</p>}
+        {entry.inOperationSince && <p class="mt-4 text-dl-ink-3" data-in-operation>In operation since {formatSince(entry.inOperationSince)}.</p>}
         {shots.map((shot) => (
-          <Figure number={figures.next()} caption={shot.caption} class="mt-10">
-            <picture>
-              <source type="image/avif" srcset={shot.picture.avifSrcSet} />
-              <source type="image/webp" srcset={shot.picture.webpSrcSet} />
-              <img src={shot.picture.src} width={shot.picture.width} height={shot.picture.height} alt={shot.caption} loading="lazy" decoding="async" class="h-auto w-full" />
-            </picture>
-          </Figure>
+          <ProofMount picture={shot.picture} caption={shot.caption} number={figures.next()} looking="A real screenshot, with client data removed or replaced with synthetic data." class="mt-10" />
         ))}
+        {entry.evidenceNote && <p class="mt-6 text-step--1 text-dl-ink-3">{entry.evidenceNote}</p>}
       </Section>
 
-      <Section id="work-result" eyebrow="03 · What it does" heading="What it verifiably does in operation" class="border-t border-dl-rule">
-        <p class="mt-4 text-step-1 text-dl-ink-2">{entry.value}</p>
-        {entry.outcomes.length > 0 && <FactList facts={entry.outcomes.map((text) => ({ text }))} class="mt-8" />}
-        {entry.evidenceNote && <p class="mt-6 text-step--1 text-dl-ink-3">{entry.evidenceNote}</p>}
-        <p class="mt-8 text-step--1 text-dl-ink-2" data-founder-line>
+      <Section id="work-scope" eyebrow="Scope and responsibility" heading="Who built and runs what" class="border-t border-dl-rule">
+        <p class="mt-4 max-w-prose text-dl-ink-2" data-scope>{entry.scope || SCOPE_NOT_PUBLISHED}</p>
+        <p class="mt-6 text-step--1 text-dl-ink-2" data-founder-line>
           Designed and built by Stephen Rey Agustinez, founder of {COMPANY.name}. <a href={COMPANY.founder.profilePath} data-cta-id="work-detail-profile">Founder profile</a>
         </p>
         {(entry.project.techStack || []).length > 0 && (
@@ -113,7 +136,7 @@ const caseSections = caseStudy
     </>
   ) : (
     caseSections.map((section, index) => (
-      <Section id={`case-${index}`} eyebrow={String(index + 1).padStart(2, '0')} heading={section.title} class={index ? 'border-t border-dl-rule' : ''}>
+      <Section id={`case-${index}`} eyebrow={section.title} heading={section.title} class={index ? 'border-t border-dl-rule' : ''}>
         <p class="mt-4 text-step-1 text-dl-ink-2">{section.body}</p>
       </Section>
     ))
@@ -122,8 +145,8 @@ const caseSections = caseStudy
   <section aria-labelledby="work-cta-heading" class="dl-band">
     <div class="mx-auto max-w-container px-[var(--gutter)] py-[calc(var(--section-rhythm)*0.6)]">
       <h2 id="work-cta-heading" class="max-w-3xl text-step-3">Need something like this?</h2>
-      <p class="mt-4 text-step-1 text-dl-ink-2">Describe the workflow. A person reads every inquiry.</p>
-      <a href={contactHref} class="dl-button-primary mt-8" data-cta-id="work-detail-final" data-inquiry-type="business_system">Discuss a similar system</a>
+      <p class="mt-4 text-step-1 text-dl-ink-2">Describe the workflow in your own words.</p>
+      <a href={contactHref} class="dl-button-primary mt-8" data-cta-id="work-detail-final" data-inquiry-type="business_system">{CTA.similar}</a>
     </div>
   </section>
 </BrandLayout>

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { HOME, OFFER_AUDIT } from './content.js'
+import { CTA } from '../../config/ctas.js'
 
-// Shape and voice guards for the Blueprint home page copy (ADR 0014).
-// Voice: declarative, no rhetorical questions, no filler, the founder named once.
+// Shape and voice guards for the home copy (spec N.10, I.4; approved by the
+// owner 2026-11-13). Forbidden labels and clichés are in contentGuards.test.js.
 
 const words = (text) => String(text).split(/\s+/).filter(Boolean).length
 
@@ -14,58 +15,59 @@ function strings(value, path = 'HOME') {
   return []
 }
 
-describe('home hero', () => {
-  it('leads with the reliability promise and the audit', () => {
-    expect(HOME.hero.eyebrow).toBe('DevLab Studios')
-    expect(HOME.hero.heading).toBe("Systems that don't silently fail.")
-    expect(HOME.hero.primary).toEqual({ label: 'Request a Workflow Audit', href: OFFER_AUDIT.contactHref })
-    expect(HOME.hero.secondary).toEqual({ label: 'Explore Production Systems', href: '/work' })
+describe('home hero (spec I.4)', () => {
+  it('states the outcome and offers one conversation', () => {
+    expect(HOME.hero.heading).toBe("Business systems that don't quietly lose work.")
+    expect(HOME.hero.primary).toEqual({ label: CTA.primary, href: '/contact?type=business_system' })
+    expect(HOME.hero.secondary).toEqual({ label: 'See the work', href: '/work' })
+    expect(HOME.hero).not.toHaveProperty('eyebrow')
+  })
+
+  it('keeps the lead to one or two sentences', () => {
+    expect(HOME.hero.lead.split(/(?<=\.)\s/).length).toBeLessThanOrEqual(2)
   })
 })
 
-describe('hero pipeline copy', () => {
-  it('names four checkpoints in order and both statuses', () => {
-    expect(HOME.pipeline.checkpoints.map((checkpoint) => checkpoint.label)).toEqual(['Intake', 'SQL persist', 'Deterministic route', 'Human handoff'])
-    expect(HOME.pipeline.status.nominal).toBe('Nominal: payload persisted, delivered, handed off.')
-    expect(HOME.pipeline.status.outage).toBe('Outage: webhook failed. Payload persisted in SQL, retry queued, operator alerted.')
-    expect(HOME.pipeline.toggleLabel).toBe('Simulate outage')
-  })
-})
-
-describe('failure-mode console', () => {
-  it('has four items with unique ids and all three fields', () => {
-    expect(HOME.console).toHaveLength(4)
-    expect(new Set(HOME.console.map((item) => item.id)).size).toBe(4)
-    for (const item of HOME.console) {
-      expect(item.id).toMatch(/^[a-z-]+$/)
-      for (const field of ['title', 'vector', 'architecture', 'verification']) expect(item[field], `${item.id}.${field}`).toBeTruthy()
+describe('four ways work gets lost', () => {
+  it('pairs four problems with what we do instead, each with a scene symbol', () => {
+    expect(HOME.problems.items).toHaveLength(4)
+    expect(new Set(HOME.problems.items.map((item) => item.id)).size).toBe(4)
+    expect(HOME.problems.items.map((item) => item.symbol)).toEqual(['inbox', 'clock', 'sheet', 'form'])
+    for (const item of HOME.problems.items) {
+      expect(words(item.problem), item.id).toBeLessThanOrEqual(10)
+      expect(words(item.fix), item.id).toBeLessThanOrEqual(22)
     }
   })
+})
 
-  it('keeps every field within 45 words', () => {
-    for (const item of HOME.console) {
-      for (const field of ['vector', 'architecture', 'verification']) expect(words(item[field]), `${item.id}.${field}`).toBeLessThanOrEqual(45)
+describe('the inquiry exhibit (spec C.3, H.2)', () => {
+  it('is labelled as an illustration and its statuses say they are a simulation', () => {
+    expect(HOME.exhibit.title).toMatch(/\(illustration\)$/)
+    expect(HOME.exhibit.status.nominal).toMatch(/^In this simulation/)
+    expect(HOME.exhibit.status.outage).toMatch(/^In this simulation/)
+    expect(HOME.exhibit.checkpoints.map((checkpoint) => checkpoint.label)).toEqual(['Intake', 'Saved first', 'Rules route', 'Handed off'])
+  })
+
+  it('keeps the in-art labels short enough for the drawing', () => {
+    for (const label of [...HOME.exhibit.checkpoints.map((checkpoint) => checkpoint.label), HOME.exhibit.branchLabel, HOME.exhibit.retryLabel, HOME.exhibit.heldLabel, HOME.exhibit.alertLabel]) {
+      expect(label.length, label).toBeLessThanOrEqual(12)
     }
   })
-
-  it('states each verification as a mono status line', () => {
-    for (const item of HOME.console) expect(item.verification).toMatch(/^VERIFIED · /)
-  })
 })
 
-describe('rules of reliability', () => {
-  it('has the four rules in order', () => {
-    expect(HOME.bento.map((rule) => rule.title)).toEqual(['Persist Before Delivery', 'Visible Failures', 'Deterministic Routing', 'Human Handoff'])
-    for (const rule of HOME.bento) expect(words(rule.text)).toBeGreaterThan(5)
-  })
-})
-
-describe('start here', () => {
-  it('offers the audit with three deliverables and the principal spotlight', () => {
+describe('offer, founder and close', () => {
+  it('offers the audit with three deliverables and its own label', () => {
     expect(HOME.audit.title).toBe(OFFER_AUDIT.title)
-    expect(HOME.audit.deliverables).toEqual(['End-to-end bottleneck map', 'Recommended architecture', 'Prioritised build roadmap'])
-    expect(HOME.principal.eyebrow).toBe('Principal engineer')
-    expect(HOME.principal.linkLabel).toBe('Read the profile')
+    expect(HOME.audit.deliverables).toHaveLength(3)
+    expect(HOME.audit.primary).toEqual({ label: CTA.audit, href: OFFER_AUDIT.contactHref })
+  })
+
+  it('names only the markets the owner confirmed (Q-07: PH, US, AU)', () => {
+    expect(HOME.founder.markets).toMatch(/the Philippines, the United States and Australia/)
+  })
+
+  it('closes with the primary conversation', () => {
+    expect(HOME.final.primary).toEqual({ label: CTA.primary, href: CTA.primaryHref })
   })
 })
 
@@ -80,12 +82,16 @@ describe('home voice', () => {
     for (const [path, text] of all.filter(([path]) => /heading|title/i.test(path))) expect(text.trim(), path).not.toMatch(/\?$/)
   })
 
-  it('names the founder at most once', () => {
+  it('names the founder exactly once', () => {
     const count = all.reduce((total, [, text]) => total + (text.match(/Stephen Rey Agustinez/g) || []).length, 0)
-    expect(count).toBeLessThanOrEqual(1)
+    expect(count).toBe(1)
   })
 
   it('never uses an exclamation mark', () => {
     for (const [path, text] of all) expect(text, path).not.toMatch(/!/)
+  })
+
+  it('keeps the home copy within its budget', () => {
+    expect(all.reduce((total, [, text]) => total + words(text), 0)).toBeLessThanOrEqual(600)
   })
 })

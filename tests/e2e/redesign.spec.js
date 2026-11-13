@@ -63,7 +63,7 @@ for (const width of [320, 390, 820, 1440]) {
     const header = page.locator('header.dl-nav')
     expect((await header.boundingBox()).height).toBeLessThanOrEqual(64)
     // Phones get the short label so the header stays on one line at 320 px.
-    const cta = header.getByRole('link', { name: width < 640 ? 'Contact us' : /^discuss your system$/i })
+    const cta = header.getByRole('link', { name: width < 640 ? 'Contact' : 'Talk to us', exact: true })
     await expect(cta).toBeInViewport()
     expect((await cta.boundingBox()).height).toBeLessThanOrEqual(48)
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)

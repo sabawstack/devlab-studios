@@ -7,7 +7,6 @@
 import { getScene } from '../../config/scenes'
 import type { ProjectData } from './projects'
 
-const DEFAULT_SCENE = 'build-in-layers'
 
 export interface WorkEntry {
   slug: string
@@ -52,7 +51,8 @@ export function buildWorkEntries(items: Record<string, unknown>[], projects: Pro
       outcomes: (Array.isArray(project.outcomeStatements) ? project.outcomeStatements : [])
         .map((statement) => String(statement || '').trim())
         .filter(Boolean),
-      sceneId: getScene(diagram) ? diagram : DEFAULT_SCENE,
+      // Spec H.1: a write-up shows its own project diagram or none (no generic S5).
+      sceneId: getScene(diagram) ? diagram : '',
       evidenceNote: String(project.evidenceNote || ''),
       situation: String(project.situation || ''),
       decisions: (Array.isArray(project.decisions) ? project.decisions : [])

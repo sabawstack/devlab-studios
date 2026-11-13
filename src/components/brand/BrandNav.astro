@@ -8,13 +8,15 @@
  */
 import type { SiteSettingsData } from '../../lib/content/siteSettings'
 import { safeHref } from '../../lib/safeHref'
+import { CTA } from '../../config/ctas.js'
 
 interface Props { siteSettings: SiteSettingsData; currentPath: string }
 const { siteSettings, currentPath } = Astro.props
 const links = (siteSettings.navigation || [])
   .map((item) => ({ label: item.label, href: safeHref(item.href) }))
   .filter((item) => item.href !== '/' && item.href !== '#')
-const ctaLabel = siteSettings.ctas?.navbarContactLabel || 'Discuss your system'
+const ctaLabel = siteSettings.ctas?.navbarContactLabel || CTA.header
+const phoneLabel = siteSettings.ctas?.mobileContactLabel || CTA.headerPhone
 const isCurrent = (href: string) => currentPath === href || (href !== '/' && currentPath.startsWith(`${href}/`))
 ---
 <header class="dl-nav border-b border-dl-rule">
@@ -31,7 +33,7 @@ const isCurrent = (href: string) => currentPath === href || (href !== '/' && cur
       </ul>
     </nav>
     <div class="flex items-center gap-3">
-      <a href="/contact?type=business_system" class="dl-button-primary dl-button-primary--compact" data-cta-id="navbar-contact" data-cta-variant="primary"><span class="sm:hidden">Contact us</span><span class="hidden sm:inline">{ctaLabel}</span></a>
+      <a href="/contact?type=business_system" class="dl-button-primary dl-button-primary--compact" data-cta-id="navbar-contact" data-cta-variant="primary"><span class="sm:hidden">{phoneLabel}</span><span class="hidden sm:inline">{ctaLabel}</span></a>
       <button type="button" class="dl-menu-button lg:hidden" aria-expanded="false" aria-controls="dl-mobile-menu" data-menu-open>
         <span class="label">Menu</span>
       </button>

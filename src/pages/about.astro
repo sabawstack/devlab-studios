@@ -1,4 +1,5 @@
 ---
+import { CTA } from '../config/ctas.js'
 /**
  * About (audit UX-10 / BR.9): who we are, where we are, what we hold to and
  * how a project runs. /process redirects to #how-we-work here.
@@ -21,7 +22,7 @@ const jsonLd = [getOrganizationSchema(), getBreadcrumbSchema([{ name: 'Home', pa
 
 <BrandLayout title="About · DevLab Studios" seo={seo} jsonLd={jsonLd}>
   <PageHeader eyebrow={ABOUT.eyebrow} heading={ABOUT.heading} lead={ABOUT.lead}>
-    <a href="/contact?type=business_system" class="dl-button-primary" data-cta-id="about-hero-primary" data-inquiry-type="business_system">Discuss your system</a>
+    <a href="/contact?type=business_system" class="dl-button-primary" data-cta-id="about-hero-primary" data-inquiry-type="business_system">{CTA.primary}</a>
     <a href={COMPANY.founder.profilePath} class="dl-button-quiet" data-cta-id="about-hero-profile">Founder profile</a>
     <div slot="aside" class="flex flex-col gap-6">
       <Portrait size={160} loading="eager" />
@@ -68,7 +69,7 @@ const jsonLd = [getOrganizationSchema(), getBreadcrumbSchema([{ name: 'Home', pa
   <section id="about-cta" aria-labelledby="about-cta-heading" class="dl-band">
     <div class="mx-auto max-w-container px-[var(--gutter)] py-[calc(var(--section-rhythm)*0.6)]">
       <h2 id="about-cta-heading" class="max-w-3xl text-step-3">Tell us about the system you need.</h2>
-      <a href="/contact?type=business_system" class="dl-button-primary mt-8" data-cta-id="about-final-primary" data-inquiry-type="business_system">Discuss your system</a>
+      <a href="/contact?type=business_system" class="dl-button-primary mt-8" data-cta-id="about-final-primary" data-inquiry-type="business_system">{CTA.primary}</a>
     </div>
   </section>
 </BrandLayout>

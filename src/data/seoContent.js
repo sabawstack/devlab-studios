@@ -7,15 +7,15 @@ export const seoContent = {
     {
       "id": "seo-home",
       "pageSlug": "home",
-      "metaTitle": "DevLab Studios · Operations software that holds up",
-      "metaDescription": "We build and run the systems behind your inquiries, handoffs and reports: lead intake, workflow and AI automation, and custom operations software.",
+      "metaTitle": "Business systems that don't quietly lose work · DevLab",
+      "metaDescription": "We design, build and run the software that connects your inquiries, records and tools, so nothing falls between them and someone always owns the next step.",
       "metaKeywords": "business automation systems, lead intake automation, workflow automation, CRM integration, custom business software, AI automation for business, backend integration, internal tools, DevLab Studios",
       "canonicalUrl": "https://www.devlabstudios.com/",
-      "ogTitle": "DevLab Studios · Operations software that holds up",
-      "ogDescription": "We build and run the systems behind your inquiries, handoffs and reports: lead intake, workflow and AI automation, and custom operations software.",
+      "ogTitle": "Business systems that don't quietly lose work · DevLab",
+      "ogDescription": "We design, build and run the software that connects your inquiries, records and tools, so nothing falls between them and someone always owns the next step.",
       "ogImage": "https://www.devlabstudios.com/og/home.png",
-      "twitterTitle": "DevLab Studios · Operations software that holds up",
-      "twitterDescription": "We build and run the systems behind your inquiries, handoffs and reports: lead intake, workflow and AI automation, and custom operations software.",
+      "twitterTitle": "Business systems that don't quietly lose work · DevLab",
+      "twitterDescription": "We design, build and run the software that connects your inquiries, records and tools, so nothing falls between them and someone always owns the next step.",
       "twitterImage": "https://www.devlabstudios.com/og/home.png"
     },
     {

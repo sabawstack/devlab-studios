@@ -1,0 +1,22 @@
+---
+/**
+ * A real screenshot on a white mount (spec J.3, N.6): the image at its own
+ * aspect, a "Fig. 0N" caption in the label face, and an optional "what you are
+ * looking at" line. Screenshots are real systems with client data removed.
+ */
+import type { OptimizedPicture } from '../../lib/images/optimizeImage'
+
+interface Props { picture: NonNullable<OptimizedPicture>; caption: string; number?: number; looking?: string; class?: string }
+const { picture, caption, number, looking, class: className = '' } = Astro.props
+---
+<figure class={`proof-mount rounded-dl-s border border-dl-rule bg-dl-paper-2 p-2 ${className}`} data-proof-mount>
+  <picture>
+    <source type="image/avif" srcset={picture.avifSrcSet} />
+    <source type="image/webp" srcset={picture.webpSrcSet} />
+    <img src={picture.src} width={picture.width} height={picture.height} alt={caption} loading="lazy" decoding="async" class="h-auto w-full rounded-dl-xs" />
+  </picture>
+  <figcaption class="px-2 pb-1 pt-3 text-step--1 text-dl-ink-2">
+    {number && <span class="fig-label mr-2 text-dl-ink">Fig. {String(number).padStart(2, '0')}</span>}{caption}
+    {looking && <span class="mt-1 block text-dl-ink-3">{looking}</span>}
+  </figcaption>
+</figure>

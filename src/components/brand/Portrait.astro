@@ -1,22 +1,24 @@
 ---
 /**
- * The founder portrait (audit BR.11): AVIF/WebP from the Images binding, a
- * fixed box so nothing shifts, and real alt text.
+ * The founder portrait (audit BR.11; WEB-03): AVIF/WebP from the Images
+ * binding, a fixed box so nothing shifts, a paper fill so the frame never
+ * reads as empty while the image loads, and real alt text.
  */
 import { optimizeImage } from '../../lib/images/optimizeImage'
 import photo from '../../assets/recent-photo.png'
 
-interface Props { size?: number; class?: string; loading?: 'lazy' | 'eager' }
-const { size = 160, class: className = '', loading = 'lazy' } = Astro.props
-const picture = await optimizeImage(photo, { width: size, height: size, fit: 'cover' })
+interface Props { size?: number; height?: number; class?: string; loading?: 'lazy' | 'eager' }
+// Square by default; pass `height` for a portrait crop (spec N.7: 3:4 on the home founder strip).
+const { size = 160, height = size, class: className = '', loading = 'lazy' } = Astro.props
+const picture = await optimizeImage(photo, { width: size, height, fit: 'cover' })
 const alt = 'Stephen Rey Agustinez, founder of DevLab Studios'
 ---
 {picture ? (
   <picture class={className}>
     <source type="image/avif" srcset={picture.avifSrcSet} />
     <source type="image/webp" srcset={picture.webpSrcSet} />
-    <img src={picture.src} width={size} height={size} alt={alt} loading={loading} decoding="async" class="rounded-dl-m border border-dl-rule object-cover" />
+    <img src={picture.src} width={size} height={height} alt={alt} loading={loading} decoding="async" class="portrait rounded-dl-m border border-dl-rule bg-dl-paper-2 object-cover" />
   </picture>
 ) : (
-  <img src={photo.src} width={size} height={size} alt={alt} loading={loading} decoding="async" class={`rounded-dl-m border border-dl-rule object-cover ${className}`} />
+  <img src={photo.src} width={size} height={height} alt={alt} loading={loading} decoding="async" class={`portrait rounded-dl-m border border-dl-rule bg-dl-paper-2 object-cover ${className}`} />
 )}

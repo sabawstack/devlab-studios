@@ -57,8 +57,8 @@ describe('honesty and writing standards (TEST-01; spec C.3, I.2)', () => {
     expect(legalStrings.length).toBeGreaterThan(5)
   })
 
-  // Fixed by CONTENT-01 (home copy) and CONTENT-03 (honesty labels).
-  it.fails('content.js uses no forbidden label or cliché (CONTENT-01, CONTENT-03)', () => {
+  // CONTENT-01 (home copy) and CONTENT-03 (honesty labels).
+  it('content.js uses no forbidden label or cliché', () => {
     expect(violations(contentStrings)).toEqual([])
   })
 
@@ -76,14 +76,9 @@ describe('honesty and writing standards (TEST-01; spec C.3, I.2)', () => {
     })
     .filter((path) => /\.(astro|jsx)$/.test(path) && !/\.test\./.test(path))
   const LABELS = [/VERIFIED ·/, /\bLIVE\b/, /\bNOMINAL\b/, /\bSYS-/]
-  const labelled = sources.filter((path) => LABELS.some((pattern) => pattern.test(readFileSync(path, 'utf8'))))
 
-  it.each(sources.filter((path) => !labelled.includes(path)))('%s carries no self-issued status label', (path) => {
-    for (const pattern of LABELS) expect(readFileSync(path, 'utf8')).not.toMatch(pattern)
-  })
-
-  // Fixed by UX-01, which removes the spec-sheet cards (WEB-01 deletes the file).
-  it.fails.each(labelled)('%s carries no self-issued status label (UX-01)', (path) => {
+  // UX-01 removed the spec-sheet cards (CaseStudyShowcase.astro is deleted).
+  it.each(sources)('%s carries no self-issued status label', (path) => {
     for (const pattern of LABELS) expect(readFileSync(path, 'utf8')).not.toMatch(pattern)
   })
 })
@@ -122,21 +117,20 @@ function contactCtas() {
 describe('call-to-action labels (TEST-01; spec K.3)', () => {
   it('finds the contact CTAs', () => expect(contactCtas().length).toBeGreaterThan(5))
 
-  // Fixed by CONTENT-02 (site-wide labels; Q-15).
-  it.fails('every link to the contact form uses an approved label (CONTENT-02)', () => {
+  // CONTENT-02 (site-wide labels; Q-15, approved 2026-11-13).
+  it('every link to the contact form uses an approved label', () => {
     const wrong = contactCtas().filter(({ label }) => !CONTACT_CTA_LABELS.has(label)).map(({ path, label }) => `${path}: "${label}"`)
     expect(wrong).toEqual([])
   })
 
   it('the audit request link always says "Request the audit"', () => {
     for (const { path, label } of contactCtas().filter(({ href }) => /type=workflow_audit/.test(href))) {
-      if (path === 'HOME.hero.primary') continue // replaced by CONTENT-01; checked below
       expect(label, path).toBe('Request the audit')
     }
   })
 
-  // Fixed by CONTENT-01 (the home hero becomes "Talk to us about your system").
-  it.fails('the home hero uses an approved label (CONTENT-01)', () => {
+  // CONTENT-01: the home hero says "Talk to us about your system".
+  it('the home hero uses an approved label', () => {
     expect(CONTACT_CTA_LABELS.has(CONTENT.HOME.hero.primary.label)).toBe(true)
   })
 })

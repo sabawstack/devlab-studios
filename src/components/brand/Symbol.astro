@@ -1,0 +1,7 @@
+---
+/** One symbol from the scene library at UI size (24 px by default), decorative. */
+import Glyph, { type GlyphName } from './Glyph.astro'
+interface Props { name: GlyphName; size?: number; class?: string }
+const { name, size = 24, class: className = '' } = Astro.props
+---
+<svg viewBox="0 0 48 48" width={size} height={size} class={`shrink-0 text-dl-ink ${className}`} aria-hidden="true" focusable="false"><Glyph name={name} x={0} y={0} /></svg>

@@ -1,12 +1,14 @@
 ---
 /**
- * Work index (audit UX-08 / BR.9): real systems, honestly described. Each
- * entry is a numbered figure with the problem, the system and a link to its
- * own write-up. Starter templates are not shown (WEB-07 / BUS-F04).
+ * Work index (spec K.2, CASE-02): systems we have built, described honestly.
+ * Each entry: the problem, what it does, the scope line when written, a real
+ * screenshot on a white mount, and one link to its write-up (the "talk to us
+ * about something similar" action lives on the write-up). Starter templates
+ * are not shown (WEB-07 / BUS-F04).
  */
 import BrandLayout from '../layouts/BrandLayout.astro'
 import PageHeader from '../components/brand/PageHeader.astro'
-import Figure from '../components/brand/Figure.astro'
+import ProofMount from '../components/brand/ProofMount.astro'
 import { createFigureCounter } from '../components/brand/figures'
 import { getBreadcrumbSchema } from '../config/schema.js'
 import { loadPageSeo } from '../lib/content/seo'
@@ -36,21 +38,11 @@ const jsonLd = [getBreadcrumbSchema([{ name: 'Home', path: '/' }, { name: 'Work'
               <dl class="mt-5 grid gap-4">
                 <div><dt class="label text-dl-ink-3">The problem</dt><dd class="mt-1 text-dl-ink-2">{entry.problem}</dd></div>
                 <div><dt class="label text-dl-ink-3">What it does</dt><dd class="mt-1 text-dl-ink-2">{entry.value}</dd></div>
+                {entry.scope && <div data-scope-line><dt class="label text-dl-ink-3">Scope</dt><dd class="mt-1 text-dl-ink-2">{entry.scope}</dd></div>}
               </dl>
-              <div class="mt-6 flex flex-wrap gap-x-6 gap-y-3">
-                <a href={`/work/${entry.slug}`} class="dl-button-primary" data-cta-id="work-read">Read the write-up<span class="sr-only">: {entry.project.title}</span></a>
-                <a href={`/contact?type=business_system&case=${encodeURIComponent(entry.project.id)}`} class="dl-button-quiet" data-cta-id="work-similar" data-case-study-id={entry.project.id}>Discuss something similar</a>
-              </div>
+              <a href={`/work/${entry.slug}`} class="dl-button-quiet mt-6" data-cta-id="work-read">Read the write-up<span class="sr-only">: {entry.project.title}</span></a>
             </div>
-            <Figure number={figures.next()} caption={`${entry.project.title}: the workflow as built.`}>
-              {picture ? (
-                <picture>
-                  <source type="image/avif" srcset={picture.avifSrcSet} />
-                  <source type="image/webp" srcset={picture.webpSrcSet} />
-                  <img src={picture.src} width={picture.width} height={picture.height} alt={`Screenshot of ${entry.project.title}`} loading={index ? 'lazy' : 'eager'} decoding="async" class="aspect-[4/3] w-full object-cover" />
-                </picture>
-              ) : <div class="aspect-[4/3]" />}
-            </Figure>
+            {picture && <ProofMount picture={picture} caption={`${entry.project.title}: the workflow as built.`} number={figures.next()} />}
           </li>
         )
       })}

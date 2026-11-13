@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 const pages = [
-  { path: '/', heading: "Systems that don't silently fail" },
+  { path: '/', heading: "Business systems that don't quietly lose work" },
   { path: '/about', heading: 'A small studio that builds operational software' },
   { path: '/solutions', heading: 'Operational software, built to be run' },
   { path: '/solutions/lead-intake-and-follow-up', heading: 'Lead intake and follow-up' },
@@ -13,8 +13,8 @@ const pages = [
   { path: '/insights', heading: 'Notes on the problems behind operations work' },
   { path: '/privacy', heading: 'Privacy Policy' },
   { path: '/terms', heading: 'Terms of Service' },
-  { path: '/work', heading: 'Real systems, honestly described' },
-  { path: '/contact', heading: 'Describe the problem. A person reads it.' },
+  { path: '/work', heading: 'Systems we have built, described honestly' },
+  { path: '/contact', heading: 'Tell us what is going wrong. A person reads it.' },
   { path: '/offers/lead-intake-checklist', heading: 'Lead Intake and Follow-up Systems Checklist' },
 ]
 
@@ -145,7 +145,7 @@ test('the header CTA is a single business call to action', async ({ page }) => {
   // The CTA sits beside the nav on desktop and inside the panel on mobile, so
   // the menu has to be open before it can be found on a phone viewport.
   await headerNav(page)
-  const headerCta = page.getByRole('banner').getByRole('link', { name: /^discuss your system$/i }).first()
+  const headerCta = page.getByRole('banner').getByRole('link', { name: /^(talk to us|contact)$/i }).first()
   await expect(headerCta).toHaveAttribute('href', '/contact?type=business_system')
 })
 
@@ -162,8 +162,8 @@ test('the homepage does not ask visitors to classify themselves', async ({ page 
 test('the homepage hero leads with business outcomes, not an employment pitch', async ({ page }) => {
   await page.goto('/')
   const hero = page.locator('main > header').first()
-  await expect(hero.getByRole('link', { name: 'Request a Workflow Audit' })).toHaveAttribute('href', '/contact?type=workflow_audit&solution=workflow-systems-audit')
-  await expect(hero.getByRole('link', { name: 'Explore Production Systems' })).toBeVisible()
+  await expect(hero.getByRole('link', { name: 'Talk to us about your system' })).toHaveAttribute('href', '/contact?type=business_system')
+  await expect(hero.getByRole('link', { name: 'See the work' })).toHaveAttribute('href', '/work')
   await expect(hero).not.toContainText(/available for (?:full-time|part-time) employment/i)
   await expect(hero.getByRole('link', { name: /resume|résumé/i })).toHaveCount(0)
 })
@@ -171,8 +171,8 @@ test('the homepage hero leads with business outcomes, not an employment pitch', 
 test('the homepage follows the business conversion order', async ({ page }) => {
   await page.goto('/')
   const positions = await page.evaluate(() => {
-    // ADR 0014: failure modes, rules of reliability, production systems, what we build, how to start, then the final CTA.
-    const idsInOrder = ['home-problems', 'home-reliability', 'home-work', 'home-solutions', 'home-start', 'home-cta']
+    // Spec N.10: problems, the exhibit, what we build, the audit, the founder, then the closing CTA.
+    const idsInOrder = ['home-problems', 'home-exhibit', 'home-solutions', 'home-start', 'home-founder', 'home-cta']
     return idsInOrder.map((id) => {
       const element = document.getElementById(id)
       return element ? element.getBoundingClientRect().top + window.scrollY : -1
@@ -261,19 +261,20 @@ test('the sitemap lists canonical routes and no redirect sources', async ({ requ
 test('homepage presents DevLab Studios as a business and routes visitors to Work', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/')
-  await expect(page.getByRole('heading', { level: 1, name: "Systems that don't silently fail" })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Explore Production Systems' })).toHaveAttribute('href', '/work')
+  await expect(page.getByRole('heading', { level: 1, name: "Business systems that don't quietly lose work" })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'See the work' })).toHaveAttribute('href', '/work')
   const heroBox = await page.locator('main > header').first().boundingBox()
   expect(Math.abs(heroBox.x)).toBeLessThanOrEqual(1)
   expect(Math.abs(heroBox.width - 1440)).toBeLessThanOrEqual(1)
 })
 
-test('homepage shows the four failure modes as a diagnostic console', async ({ page }) => {
+test('homepage shows four ways work gets lost, all visible at once, with no console or self-issued badges', async ({ page }) => {
   await page.goto('/')
   const problems = page.locator('#home-problems')
-  await expect(problems.getByRole('tab')).toHaveCount(4)
-  await expect(problems.getByRole('tab', { name: /Unowned lead intake/ })).toHaveAttribute('aria-selected', 'true')
-  await expect(problems.getByRole('tabpanel')).toContainText('VERIFIED')
+  await expect(problems.locator('[data-problem-id]')).toHaveCount(4)
+  for (const item of await problems.locator('[data-problem-id]').all()) await expect(item).toBeVisible()
+  await expect(page.getByRole('tab')).toHaveCount(0)
+  await expect(page.locator('main')).not.toContainText(/VERIFIED ·|SYS-\d|live schematic|Nominal/i)
 })
 
 test('homepage presents the three service lines with links to their own pages', async ({ page }) => {
@@ -287,7 +288,8 @@ test('homepage presents the three service lines with links to their own pages', 
     await expect(card).toContainText(title)
     await expect(card.getByRole('link', { name: /What this includes/ })).toHaveAttribute('href', `/solutions/${slug}`)
   }
-  await expect(page.locator('#home-solutions').getByRole('link', { name: /Workflow Systems Audit/ })).toHaveAttribute('href', '/solutions/workflow-systems-audit')
+  await expect(page.locator('#home-start').getByRole('link', { name: 'What you receive' })).toHaveAttribute('href', '/solutions/workflow-systems-audit')
+  await expect(page.locator('#home-start').getByRole('link', { name: 'Request the audit' })).toHaveAttribute('href', /type=workflow_audit/)
 })
 
 test('old Solutions anchors still land on the matching service line', async ({ page }) => {
@@ -326,9 +328,17 @@ test('Work publishes selected systems as business proof, each with its own write
   await expect(page.getByText('What it does', { exact: true })).toHaveCount(3)
   // Starter templates are not presented as work (BUS-F04).
   await expect(page.getByText(/landing page/i)).toHaveCount(0)
+  // CASE-02: one link per entry; the "something similar" action lives on the write-up.
+  const destinations = await entries.first().getByRole('link').evaluateAll((links) => [...new Set(links.map((link) => link.getAttribute('href')))])
+  expect(destinations).toHaveLength(1)
+  expect(destinations[0]).toMatch(/^\/work\//)
   await entries.first().getByRole('link', { name: /Read the write-up/ }).click()
   await expect(page).toHaveURL(/\/work\/[a-z0-9-]+$/)
-  await expect(page.getByRole('heading', { level: 2, name: 'What it verifiably does in operation' })).toBeVisible()
+  // CASE-01: the K.2 order.
+  for (const name of ['What was going wrong', 'The system', 'What it verifiably does', 'Who built and runs what']) {
+    await expect(page.getByRole('heading', { level: 2, name })).toBeVisible()
+  }
+  await expect(page.locator('[data-scope]')).not.toBeEmpty()
   await expect(page.getByRole('link', { name: 'Founder profile' })).toHaveAttribute('href', '/profile')
 })
 
@@ -337,9 +347,10 @@ test('Work states its evidence standard instead of showing invented metrics', as
   await expect(page.getByText(/Client names, revenue figures and percentage improvements/i)).toBeVisible()
 })
 
-test('each Work entry offers a business next step carrying its own context', async ({ page }) => {
+test('each write-up offers a business next step carrying its own context', async ({ page }) => {
   await page.goto('/work')
-  const cta = page.getByRole('link', { name: 'Discuss something similar' }).first()
+  await page.locator('[data-work-entry]').first().getByRole('link', { name: /Read the write-up/ }).click()
+  const cta = page.getByRole('link', { name: 'Talk to us about something similar' }).first()
   await expect(cta).toHaveAttribute('href', /\/contact\?type=business_system&case=/)
 })
 

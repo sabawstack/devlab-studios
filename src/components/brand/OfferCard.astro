@@ -1,0 +1,33 @@
+---
+/**
+ * The audit offer card (spec H.2 screen 5, N.6): title, what you receive as
+ * three numbered lines, the price line from site settings (CMS-02), two
+ * actions, and Node holding a slate at 96 px from 768 px up.
+ */
+import NodeMascot from './NodeMascot.jsx'
+
+interface Props {
+  title: string
+  text: string
+  deliverables: string[]
+  priceLine: string
+  primary: { label: string; href: string }
+  secondary: { label: string; href: string }
+}
+const { title, text, deliverables, priceLine, primary, secondary } = Astro.props
+---
+<article class="relative rounded-dl-s border border-dl-rule bg-dl-paper-2 p-8" data-audit-card aria-labelledby="offer-heading">
+  <div class="absolute right-8 top-8 hidden md:block"><NodeMascot state="holding" id="offer-node" /></div>
+  <h3 id="offer-heading" class="text-step-2 md:pr-28">{title}</h3>
+  <p class="mt-3 max-w-prose text-dl-ink-2 md:pr-28">{text}</p>
+  <ol class="mt-6 space-y-2 border-t border-dl-rule pt-5">
+    {deliverables.map((deliverable, position) => (
+      <li class="flex gap-3"><span class="fig-label pt-0.5 text-dl-redline" aria-hidden="true">{String(position + 1).padStart(2, '0')}</span><span>{deliverable}</span></li>
+    ))}
+  </ol>
+  <p class="mt-6 font-semibold" data-audit-price>{priceLine}</p>
+  <div class="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
+    <a href={primary.href} class="dl-button-primary" data-cta-id="home-audit-primary" data-inquiry-type="workflow_audit">{primary.label}</a>
+    <a href={secondary.href} class="dl-button-quiet" data-cta-id="home-audit-details">{secondary.label}</a>
+  </div>
+</article>

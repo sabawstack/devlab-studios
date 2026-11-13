@@ -13,6 +13,7 @@
 // since 2.4.0 (see docs/content-model.md).
 
 import { COMPANY } from '../../config/company.js'
+import { CTA } from '../../config/ctas.js'
 
 export const OFFER_AUDIT = {
   slug: 'workflow-systems-audit',
@@ -46,7 +47,7 @@ export const SERVICE_LINES = [
       'Failure alerts when a delivery does not go through',
     ],
     inquiryType: 'business_system',
-    ctaLabel: 'Discuss your intake',
+    ctaLabel: CTA.line.intake,
     workProjectId: 'p10-automated-lead-qualification',
     faq: [
       { question: 'Do we have to replace our CRM?', answer: 'Usually not. The system records every inquiry first, then keeps the tools you already use in step.' },
@@ -70,7 +71,7 @@ export const SERVICE_LINES = [
       'Notifications that say what happened, not just that something did',
     ],
     inquiryType: 'business_system',
-    ctaLabel: 'Discuss your workflow',
+    ctaLabel: CTA.line.workflow,
     workProjectId: 'p6-messenger-ai-agent',
     faq: [
       { question: 'Where does AI make decisions?', answer: 'It does not. AI drafts and summarises; rules you can read decide routing, and people approve what matters.' },
@@ -94,7 +95,7 @@ export const SERVICE_LINES = [
       'Ongoing care once it is live',
     ],
     inquiryType: 'software_project',
-    ctaLabel: 'Discuss your build',
+    ctaLabel: CTA.line.build,
     // No client write-up yet: the proof is a product we built and run ourselves.
     workProjectId: '',
     productProof: {
@@ -124,122 +125,75 @@ export const DELIVERY_STEPS = [
 ]
 
 /**
- * Home (Blueprint, ADR 0014). Voice: declarative, no rhetorical questions,
- * no filler; the founder is named once (in `principal`). Stack names are
- * allowed here only as tags on the production-system cards, which come from
- * the CMS. Shape and voice are guarded by homeContent.test.js.
+ * Home (spec N.10, I.4; copy approved by the owner 2026-11-13). Outcome before
+ * mechanism, plain words, the founder named once (in `founder`). The reply
+ * window, hours and audit price line come from site settings (CMS-02), not
+ * from here. Shape and voice are guarded by homeContent.test.js and
+ * contentGuards.test.js.
  */
 export const HOME = {
   hero: {
-    eyebrow: 'DevLab Studios',
-    heading: "Systems that don't silently fail.",
-    lead: 'Custom web interfaces, backend services, and AI workflows engineered end-to-end by one senior architect. No outsourced handoffs. No brittle wrappers.',
-    primary: { label: 'Request a Workflow Audit', href: OFFER_AUDIT.contactHref },
-    secondary: { label: 'Explore Production Systems', href: '/work' },
+    heading: "Business systems that don't quietly lose work.",
+    lead: 'We design, build and run the software that connects your inquiries, records and tools, so nothing falls between them and someone always owns the next step.',
+    primary: { label: CTA.primary, href: CTA.primaryHref },
+    secondary: { label: 'See the work', href: '/work' },
+    sceneCaption: 'Inquiries arriving through four channels into four tools, with nobody owning them.',
   },
-  /** The hero schematic. Client-side only: the outage toggle never calls the network. */
-  pipeline: {
-    caption: 'Inquiry pipeline · live schematic',
+  problems: {
+    eyebrow: 'The problem',
+    heading: 'Four ways work gets lost.',
+    /** @type {{ id: string, symbol: 'inbox' | 'clock' | 'sheet' | 'form', problem: string, fix: string }[]} */
+    items: [
+      { id: 'sits', symbol: 'inbox', problem: 'An inquiry comes in and sits.', fix: 'We record every inquiry once, give it an owner, and keep it visible until it is handled.' },
+      { id: 'night', symbol: 'clock', problem: 'A scheduled job fails at night.', fix: 'We log every attempt and alert a person, so a failure is found by you, not by a customer.' },
+      { id: 'versions', symbol: 'sheet', problem: 'Three tools hold three versions of the customer.', fix: 'We keep one system of record and move data between tools by code.' },
+      { id: 'retyped', symbol: 'form', problem: 'The same details are typed in twice.', fix: 'We let people approve what needs approval and never re-type what the system already knows.' },
+    ],
+  },
+  /** The inquiry exhibit: an illustration, labelled as one. Client-side only: the toggle never calls the network. */
+  exhibit: {
+    eyebrow: 'How it works',
+    heading: 'Saved first, then delivered, then handed to a person.',
+    title: 'How an inquiry moves through a DevLab system (illustration)',
+    caption: 'It is saved first, then delivered, then handed to a person. If a delivery fails, the inquiry is kept and retried, and someone is told. This site\'s own form works this way.',
     checkpoints: [
       { id: 'intake', index: '01', label: 'Intake' },
-      { id: 'persist', index: '02', label: 'SQL persist' },
-      { id: 'route', index: '03', label: 'Deterministic route' },
-      { id: 'handoff', index: '04', label: 'Human handoff' },
+      { id: 'persist', index: '02', label: 'Saved first' },
+      { id: 'route', index: '03', label: 'Rules route' },
+      { id: 'handoff', index: '04', label: 'Handed off' },
     ],
     branchLabel: 'Webhook',
     retryLabel: 'Retry queue',
-    toggleLabel: 'Simulate outage',
+    heldLabel: 'Inquiry kept',
+    alertLabel: 'Person told',
+    toggleLabel: 'Show what happens when a webhook fails',
     status: {
-      nominal: 'Nominal: payload persisted, delivered, handed off.',
-      outage: 'Outage: webhook failed. Payload persisted in SQL, retry queued, operator alerted.',
+      nominal: 'In this simulation, the inquiry is saved, delivered and handed to a person.',
+      outage: 'In this simulation, the webhook fails: the inquiry stays saved, a retry is queued and a person is told.',
     },
-  },
-  problems: {
-    eyebrow: 'Failure modes',
-    heading: 'Four ways operations fail quietly.',
-    text: 'Each one is invisible until a customer finds it. Select a failure vector to see the architecture that closes it.',
-    labels: { vector: 'Failure vector', architecture: 'DevLab architecture', verification: 'Node verification' },
-  },
-  console: [
-    {
-      id: 'unowned-intake',
-      title: 'Unowned lead intake',
-      vector: 'Inquiries arrive by form, inbox, chat and phone and land in four tools with no owner.',
-      architecture: 'Every inquiry is written once to SQL with a status and a named owner, then routed by rules that can be read.',
-      verification: 'VERIFIED · one record per inquiry · owner assigned at write time',
-    },
-    {
-      id: 'silent-drops',
-      title: 'Silent automation drops',
-      vector: 'A scheduled job fails at 02:00 and nobody learns until a customer asks.',
-      architecture: 'Every delivery attempt is recorded with its outcome. Failures alert an operator and stay retryable from the admin.',
-      verification: 'VERIFIED · attempt log · retry queue · operator alert',
-    },
-    {
-      id: 'data-silos',
-      title: 'Fragmented data silos',
-      vector: 'The CRM, the spreadsheet and the billing tool each hold a different version of the customer.',
-      architecture: 'One system of record with documented integration points; other tools are kept in step by deterministic sync, never by hand.',
-      verification: 'VERIFIED · single source of record · typed integration contracts',
-    },
-    {
-      id: 'manual-reentry',
-      title: 'Manual re-entry bottlenecks',
-      vector: 'The same details are typed into three tools, and the gaps between them are where work is lost.',
-      architecture: 'Data moves between tools by code. People approve what needs approval and never retype what the system already knows.',
-      verification: 'VERIFIED · zero re-keying on the audited path',
-    },
-  ],
-  reliability: {
-    eyebrow: 'Rules of reliability',
-    heading: 'Four rules every system ships with.',
-    text: 'This site runs on the same rules: its own inquiry form saves before it sends, and every delivery is logged.',
-  },
-  /** The delivery log drawn in the first rule's card: what "persist before delivery" looks like during an outage. */
-  persistLog: [
-    { step: 'write', target: 'inquiry saved', result: 'ok' },
-    { step: 'deliver', target: 'crm webhook', result: 'retry' },
-    { step: 'deliver', target: 'crm webhook', result: 'ok' },
-  ],
-  bento: [
-    { id: 'persist', title: 'Persist Before Delivery', text: 'Every submission writes to SQL before any external webhook, CRM, or email API fires. Outages leave work queued, never lost.' },
-    { id: 'visible', title: 'Visible Failures', text: 'Every delivery attempt records its outcome and retry eligibility. Broken integrations alert operators immediately, never customers.' },
-    { id: 'deterministic', title: 'Deterministic Routing', text: 'AI summarizes and drafts; permissions, state transitions, and delivery rules are governed by testable code.' },
-    { id: 'handoff', title: 'Human Handoff', text: 'Ambiguous or high-impact decisions always terminate at a verified human operator, never an unmonitored black box.' },
-  ],
-  work: {
-    eyebrow: 'Production systems',
-    heading: 'Systems in production.',
-    text: 'Specification cards for systems running today. Each links to the full engineering write-up.',
-    linkLabel: 'Inspect the write-up',
-    productBadge: 'Product · live',
-    productLinkLabel: 'Open the product',
+    proofLabel: 'A system we built',
   },
   solutions: {
     eyebrow: 'What we build',
-    heading: 'Three service lines. One entry point.',
+    heading: 'Three kinds of system, one way of working.',
     linkLabel: 'What this includes',
-  },
-  start: {
-    eyebrow: 'Start here',
-    heading: 'Start with one workflow.',
   },
   audit: {
     title: OFFER_AUDIT.title,
-    text: 'A fixed-scope diagnostic of one workflow, end to end.',
-    deliverables: ['End-to-end bottleneck map', 'Recommended architecture', 'Prioritised build roadmap'],
-    primary: { label: 'Request the audit', href: OFFER_AUDIT.contactHref },
+    text: 'A fixed-scope review of one workflow, ending in a written recommendation you can act on, with or without us.',
+    deliverables: ['A map of the workflow and where it stalls', 'A recommended system, drawn', 'A roadmap in priority order'],
+    primary: { label: CTA.audit, href: OFFER_AUDIT.contactHref },
     secondary: { label: 'What you receive', href: OFFER_AUDIT.path },
   },
-  principal: {
-    eyebrow: 'Principal engineer',
-    text: 'Stephen Rey Agustinez designs the schema, writes the API, documents the failure paths and answers the email. No account managers, no handoffs between teams, one person accountable for the system in production.',
-    linkLabel: 'Read the profile',
+  founder: {
+    eyebrow: 'Who you work with',
+    text: 'Stephen Rey Agustinez designs the system, writes the code, documents the failure paths and answers your email.',
+    markets: 'DevLab Studios is his studio in Cebu, Philippines, working with businesses in the Philippines, the United States and Australia.',
+    profileLabel: 'Founder profile',
   },
   final: {
-    heading: 'Describe the system you need.',
-    text: 'Every inquiry is persisted before it is delivered, and a person reads it.',
-    primary: { label: 'Discuss your system', href: '/contact?type=business_system' },
+    heading: 'Tell us what is going wrong.',
+    primary: { label: CTA.primary, href: CTA.primaryHref },
   },
 }
 
@@ -321,14 +275,14 @@ export const PRODUCTS = {
 
 export const CONTACT_PAGE = {
   eyebrow: 'Contact',
-  heading: 'Describe the problem. A person reads it.',
-  lead: 'Use your own words; no jargon needed. Nothing is auto-replied and closed.',
+  heading: 'Tell us what is going wrong. A person reads it.',
+  lead: 'Use your own words; no jargon needed. You get an automatic receipt; the reply itself comes from a person.',
   persistence: 'Your inquiry is saved before anything else happens, so it cannot be lost on the way to us.',
 }
 
 export const WORK_INDEX = {
   eyebrow: 'Work',
-  heading: 'Real systems, honestly described.',
+  heading: 'Systems we have built, described honestly.',
   lead: 'Each write-up states the problem, the system built for it and what that system verifiably does. Where a result is not something we can evidence, it is not claimed.',
 }
 

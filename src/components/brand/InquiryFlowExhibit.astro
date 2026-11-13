@@ -1,65 +1,59 @@
 ---
 /**
- * The home hero's live schematic (ADR 0014): an inquiry moving through four
- * checkpoints, 01 Intake → 02 SQL persist → 03 Deterministic route → 04 Human
- * handoff, with a webhook branch off 03. Node sits on the spine at 03 as the
- * router.
- *
- * "Simulate outage" flips the root's data-state between nominal and outage;
- * CSS does all the state styling and the status line is announced politely.
- * The toggle is client-side only and never calls the network. With JS off the
- * nominal diagram renders and the toggle stays hidden. Data packets are SMIL,
- * run for 4.8 s and then rest (WCAG 2.2.2), and are hidden under reduced
- * motion and paused by src/lib/motion.ts.
+ * How an inquiry moves through a DevLab system (spec H.2 screen 3, UX-02):
+ * the inquiry flow as an illustration inside an Exhibit, labelled as one.
+ * "Show what happens when a webhook fails" flips the root's data-state
+ * between nominal and outage, client-side only (it never calls the network),
+ * and plays Node's "receive" once per click; it also plays once when the
+ * exhibit scrolls into view. With JavaScript off the nominal drawing renders
+ * and the toggle stays hidden. Packets are SMIL that stops by 4.8 s, hidden
+ * under reduced motion and paused by src/lib/motion.ts.
  */
+import Exhibit from './Exhibit.astro'
 import NodeMascot from './NodeMascot.jsx'
 import { isNodeReady } from '../../config/node.js'
 import { HOME } from '../../data/site/content.js'
 
-const pipeline = HOME.pipeline
-// Spine y for each checkpoint; 03 (index 2) is Node, not a square.
-// Node marks the route step once the owner has approved the state; until then a plain checkpoint square.
+const flow = HOME.exhibit
+// Node marks the route step once the owner has approved the state; otherwise a plain checkpoint square.
 const nodeReady = isNodeReady('holding')
 const Y = [40, 118, 196, 274]
 const ROUTE = 2
 ---
-<figure
-  class="pipeline ink-panel rounded-dl-m border border-dl-rule"
+<Exhibit
+  title={flow.title}
+  class="pipeline"
   data-pipeline
   data-state="nominal"
-  data-status-nominal={pipeline.status.nominal}
-  data-status-outage={pipeline.status.outage}
+  data-status-nominal={flow.status.nominal}
+  data-status-outage={flow.status.outage}
 >
-  <figcaption class="label flex items-center justify-between gap-3 border-b border-dl-rule px-4 py-3 text-dl-ink-3">
-    <span>{pipeline.caption}</span>
-    <span class="pipeline__mode" aria-hidden="true"><span class="pipeline__mode-nominal">Nominal</span><span class="pipeline__mode-outage">Outage</span></span>
-  </figcaption>
   <svg viewBox="0 0 316 304" class="pipeline__svg" role="img" aria-labelledby="pipeline-title" data-motion-root>
-    <title id="pipeline-title">Inquiry pipeline: intake, SQL persist, deterministic route with a webhook branch, then human handoff.</title>
+    <title id="pipeline-title">An inquiry is taken in, saved first, routed by rules with a webhook branch, then handed to a person.</title>
 
     <path class="pl-spine" d={`M36 ${Y[0]}V${Y[3]}`} />
     <path class="pl-branch" d={`M60 ${Y[ROUTE]}H218`} />
     <path class="pl-fail" d={`M132 ${Y[ROUTE] - 6}l12 12M144 ${Y[ROUTE] - 6}l-12 12`} />
     <path class="pl-retry-link" d={`M263 ${Y[ROUTE] + 16}V${Y[ROUTE] + 44}`} />
 
-    {pipeline.checkpoints.map((checkpoint, index) => (
+    {flow.checkpoints.map((checkpoint, index) => (
       <g class={`pl-checkpoint pl-checkpoint--${checkpoint.id}`}>
         {(index !== ROUTE || !nodeReady) && <rect class="pl-square" x="29" y={Y[index] - 7} width="14" height="14" rx="2" />}
         <text class="pl-index" x="72" y={index === ROUTE ? Y[index] - 22 : Y[index] - 4}>{checkpoint.index}</text>
         <text class="pl-label" x="72" y={index === ROUTE ? Y[index] - 8 : Y[index] + 12}>{checkpoint.label.toUpperCase()}</text>
       </g>
     ))}
-    <text class="pl-note pl-note--persisted" x="72" y={Y[1] + 26}>PAYLOAD HELD</text>
-    <text class="pl-note pl-note--alerted" x="72" y={Y[3] + 26}>OPERATOR ALERTED</text>
+    <text class="pl-note pl-note--persisted" x="72" y={Y[1] + 26}>{flow.heldLabel.toUpperCase()}</text>
+    <text class="pl-note pl-note--alerted" x="72" y={Y[3] + 26}>{flow.alertLabel.toUpperCase()}</text>
 
     <g class="pl-webhook">
       <rect class="pl-box" x="218" y={Y[ROUTE] - 16} width="92" height="32" rx="3" />
-      <text class="pl-box-label" x="227" y={Y[ROUTE] + 4}>{pipeline.branchLabel.toUpperCase()}</text>
+      <text class="pl-box-label" x="227" y={Y[ROUTE] + 4}>{flow.branchLabel.toUpperCase()}</text>
       <circle class="pl-led" cx="298" cy={Y[ROUTE]} r="4" />
     </g>
     <g class="pl-retrybox">
       <rect class="pl-box" x="218" y={Y[ROUTE] + 44} width="92" height="32" rx="3" />
-      <text class="pl-box-label" x="227" y={Y[ROUTE] + 64}>{pipeline.retryLabel.toUpperCase()}</text>
+      <text class="pl-box-label" x="227" y={Y[ROUTE] + 64}>{flow.retryLabel.toUpperCase()}</text>
     </g>
 
     <g class="pl-packets">
@@ -77,20 +71,17 @@ const ROUTE = 2
       </g>
     )}
   </svg>
-  <div class="flex flex-wrap items-center justify-between gap-3 border-t border-dl-rule px-4 py-3">
-    <p class="pipeline__status label text-dl-ink-2" aria-live="polite" data-pipeline-status>{pipeline.status.nominal}</p>
-    <button type="button" class="dl-button-outline" aria-pressed="false" data-pipeline-toggle data-needs-js hidden>{pipeline.toggleLabel}</button>
+  <div slot="controls" class="flex w-full flex-wrap items-center justify-between gap-3">
+    <p class="pipeline__status text-step--1 text-dl-ink-2" aria-live="polite" data-pipeline-status>{flow.status.nominal}</p>
+    <button type="button" class="pipeline__toggle dl-button-outline" aria-pressed="false" data-pipeline-toggle data-needs-js hidden>{flow.toggleLabel}</button>
   </div>
-</figure>
+</Exhibit>
 
 <style>
-  .pipeline { overflow: hidden; }
-  .pipeline__svg { display: block; width: 100%; height: auto; padding: 0.5rem 0.75rem; }
-  .pipeline__status { max-width: 34ch; text-transform: none; letter-spacing: 0.02em; }
-  .pipeline__mode-outage,
-  [data-state='outage'] .pipeline__mode-nominal { display: none; }
-  [data-state='outage'] .pipeline__mode-outage { display: inline; color: var(--amber); }
-  .pipeline__mode-nominal { color: var(--ok); }
+  .pipeline__svg { display: block; width: 100%; min-width: 300px; height: auto; padding: 0.5rem 0.75rem; }
+  .pipeline__status { max-width: 40ch; }
+  /* The pressed toggle is visibly on: filled, not only aria-pressed (spec N.5). */
+  .pipeline__toggle[aria-pressed='true'] { background: var(--exhibit-paper-2); border-color: var(--amber); }
 
   .pl-spine,
   .pl-branch,

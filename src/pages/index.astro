@@ -1,102 +1,113 @@
 ---
 /**
- * Home (Blueprint, ADR 0014). The hero states the promise beside a live
- * schematic of an inquiry pipeline, then: §01 the four quiet failure modes as
- * a diagnostic console, §02 the four rules every system ships with, §03 the
- * systems in production, §04 the three service lines, §05 the audit beside
- * the principal engineer, and the final call to action. Copy lives in
- * src/data/site/content.js (HOME); Work entries come from the CMS through
- * loadWorkEntries. No section calls /api.
+ * Home (spec N.10, H.2; UX-01; copy approved by the owner 2026-11-13): the
+ * graphite hero band with S1, four ways work gets lost, the inquiry exhibit
+ * beside a real screenshot, the three service lines, the audit offer with the
+ * price line, the founder strip, and the closing call to action with the reply
+ * window. Copy lives in src/data/site/content.js (HOME); the reply window,
+ * hours and price line come from site settings (CMS-02). No section calls /api.
  */
 import BrandLayout from '../layouts/BrandLayout.astro'
 import PageHeader from '../components/brand/PageHeader.astro'
 import Section from '../components/brand/Section.astro'
-import HeroPipelineVisualizer from '../components/brand/HeroPipelineVisualizer.astro'
-import FailureDiagnosticConsole from '../components/brand/FailureDiagnosticConsole.astro'
-import ReliabilityBentoGrid from '../components/brand/ReliabilityBentoGrid.astro'
-import CaseStudyShowcase from '../components/brand/CaseStudyShowcase.astro'
-import PrincipalSpotlight from '../components/brand/PrincipalSpotlight.astro'
-import NodeMascot from '../components/brand/NodeMascot.jsx'
+import SceneFrame from '../components/brand/SceneFrame.astro'
+import InquiryFlowExhibit from '../components/brand/InquiryFlowExhibit.astro'
+import ProofMount from '../components/brand/ProofMount.astro'
+import OfferCard from '../components/brand/OfferCard.astro'
+import FounderStrip from '../components/brand/FounderStrip.astro'
+import Symbol from '../components/brand/Symbol.astro'
 import { getOrganizationSchema, getWebsiteSchema } from '../config/schema.js'
+import { businessHoursLine, replyWindowLine } from '../config/business.js'
 import { loadPageSeo } from '../lib/content/seo'
+import { loadSiteSettings } from '../lib/content/siteSettings'
 import { loadWorkEntries } from '../lib/content/work'
-import { HOME, OFFER_AUDIT, SERVICE_LINES } from '../data/site/content.js'
+import { HOME, SERVICE_LINES } from '../data/site/content.js'
 
 const seo = await loadPageSeo('home')
-const work = (await loadWorkEntries()).slice(0, 3)
+const { business } = await loadSiteSettings()
+const proof = (await loadWorkEntries()).find((entry) => entry.project.optimizedImageFull)
 const jsonLd = [getOrganizationSchema(), getWebsiteSchema()]
-const index = (position: number) => String(position + 1).padStart(2, '0')
+const LINE_SYMBOLS = { 'lead-intake-and-follow-up': 'inbox', 'workflow-and-ai-automation': 'process', 'custom-software-and-operations': 'api' } as const
 ---
 
-<BrandLayout title="DevLab Studios · Systems that don't silently fail" seo={seo} jsonLd={jsonLd}>
-  <PageHeader eyebrow={HOME.hero.eyebrow} heading={HOME.hero.heading} lead={HOME.hero.lead} ink>
-    <a href={HOME.hero.primary.href} class="dl-button-primary" data-cta-id="home-hero-primary" data-cta-variant="primary" data-inquiry-type="workflow_audit">{HOME.hero.primary.label}</a>
-    <a href={HOME.hero.secondary.href} class="dl-button-outline" data-cta-id="home-hero-secondary" data-cta-variant="secondary">{HOME.hero.secondary.label}</a>
+<BrandLayout title="Business systems that don't quietly lose work · DevLab" seo={seo} jsonLd={jsonLd}>
+  <PageHeader heading={HOME.hero.heading} lead={HOME.hero.lead} ink>
+    <a href={HOME.hero.primary.href} class="dl-button-primary" data-cta-id="home-hero-primary" data-cta-variant="primary" data-inquiry-type="business_system">{HOME.hero.primary.label}</a>
+    <a href={HOME.hero.secondary.href} class="dl-button-quiet" data-cta-id="home-hero-secondary" data-cta-variant="secondary">{HOME.hero.secondary.label}</a>
     <div slot="aside">
-      <HeroPipelineVisualizer />
+      <SceneFrame sceneId="fragmented-intake" caption={HOME.hero.sceneCaption} />
     </div>
   </PageHeader>
 
-  <Section id="home-problems" eyebrow={HOME.problems.eyebrow} heading={HOME.problems.heading} intro={HOME.problems.text}>
-    <div class="mt-10">
-      <FailureDiagnosticConsole />
+  <Section id="home-problems" eyebrow={HOME.problems.eyebrow} heading={HOME.problems.heading}>
+    <ul class="mt-10 grid gap-x-8 gap-y-10 md:grid-cols-2 lg:grid-cols-4" data-problems>
+      {HOME.problems.items.map((item) => (
+        <li class="border-t border-dl-rule pt-5" data-problem-id={item.id}>
+          <Symbol name={item.symbol} />
+          <h3 class="mt-4 text-step-1">{item.problem}</h3>
+          <p class="mt-2 text-dl-ink-2">{item.fix}</p>
+        </li>
+      ))}
+    </ul>
+  </Section>
+
+  <Section id="home-exhibit" eyebrow={HOME.exhibit.eyebrow} heading={HOME.exhibit.heading} class="border-t border-dl-rule">
+    <p class="mt-4 max-w-prose text-step-1 text-dl-ink-2">{HOME.exhibit.caption}</p>
+    <div class="mt-10 grid gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start">
+      <InquiryFlowExhibit />
+      {proof?.project.optimizedImageFull && (
+        <div>
+          <p class="label text-dl-ink-3">{HOME.exhibit.proofLabel}</p>
+          <ProofMount
+            class="mt-3"
+            picture={proof.project.optimizedImageFull}
+            caption={`${proof.project.title}: the workflow as built.`}
+            looking="A real screenshot, with client data removed."
+          />
+          <a href={`/work/${proof.slug}`} class="dl-button-quiet mt-4" data-cta-id="home-proof-writeup">Read the write-up<span class="sr-only">: {proof.project.title}</span></a>
+        </div>
+      )}
     </div>
   </Section>
 
-  <Section id="home-reliability" eyebrow={HOME.reliability.eyebrow} heading={HOME.reliability.heading} intro={HOME.reliability.text} class="border-t border-dl-rule">
-    <ReliabilityBentoGrid />
-  </Section>
-
-  <Section id="home-work" eyebrow={HOME.work.eyebrow} heading={HOME.work.heading} intro={HOME.work.text} class="border-t border-dl-rule">
-    <CaseStudyShowcase entries={work} />
-  </Section>
-
   <Section id="home-solutions" eyebrow={HOME.solutions.eyebrow} heading={HOME.solutions.heading} class="border-t border-dl-rule">
-    <ol class="mt-10 grid gap-px overflow-hidden rounded-dl-m border border-dl-rule bg-dl-rule md:grid-cols-3">
-      {SERVICE_LINES.map((line, position) => (
-        <li class="flex flex-col bg-dl-paper p-6" data-solution-id={line.solutionId}>
-          <p class="label text-dl-ink-3">{index(position)}</p>
-          <h3 class="mt-3 text-step-1">{line.title}</h3>
-          <p class="mt-3 text-dl-ink-2">{line.outcome}</p>
-          <a href={`/solutions/${line.slug}`} class="dl-button-quiet mt-auto self-start pt-6" data-cta-id={`home-solution-${line.slug}`}>
+    <ul class="mt-10 grid gap-x-8 gap-y-10 md:grid-cols-3">
+      {SERVICE_LINES.map((line) => (
+        <li class="flex flex-col border-t border-dl-rule pt-5" data-solution-id={line.solutionId}>
+          <Symbol name={LINE_SYMBOLS[line.slug as keyof typeof LINE_SYMBOLS] ?? 'process'} />
+          <h3 class="mt-4 text-step-1">{line.title}</h3>
+          <p class="mt-2 text-dl-ink-2">{line.problem}</p>
+          <a href={`/solutions/${line.slug}`} class="dl-button-quiet mt-4 self-start" data-cta-id={`home-solution-${line.slug}`}>
             {HOME.solutions.linkLabel}<span class="sr-only">: {line.title}</span>
           </a>
         </li>
       ))}
-    </ol>
-    <p class="mt-6 text-dl-ink-2">
-      If the right line is unclear, <a href={OFFER_AUDIT.path} data-cta-id="home-solutions-audit">start with the {OFFER_AUDIT.title}</a>.
-    </p>
+    </ul>
   </Section>
 
-  <Section id="home-start" eyebrow={HOME.start.eyebrow} heading={HOME.start.heading} class="border-t border-dl-rule">
-    <div class="mt-10 grid gap-6 lg:grid-cols-2 lg:items-stretch">
-      <div class="dl-gradient-border flex flex-col p-6 sm:p-8" data-audit-card>
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <h3 class="text-step-2">{HOME.audit.title}</h3>
-            <p class="mt-2 text-dl-ink-2">{HOME.audit.text}</p>
-          </div>
-          <NodeMascot state="holding" size={56} id="home-audit-node" className="shrink-0" />
-        </div>
-        <ul class="mt-6 space-y-2 border-t border-dl-rule pt-5">
-          {HOME.audit.deliverables.map((deliverable, position) => (
-            <li class="flex gap-3"><span class="label pt-0.5 text-dl-magenta">{index(position)}</span><span>{deliverable}</span></li>
-          ))}
-        </ul>
-        <div class="mt-auto flex flex-wrap gap-x-6 gap-y-3 pt-8">
-          <a href={HOME.audit.primary.href} class="dl-button-primary" data-cta-id="home-audit-primary" data-inquiry-type="workflow_audit">{HOME.audit.primary.label}</a>
-          <a href={HOME.audit.secondary.href} class="dl-button-quiet" data-cta-id="home-audit-details">{HOME.audit.secondary.label}</a>
-        </div>
-      </div>
-      <PrincipalSpotlight />
+  <Section id="home-start" eyebrow="Start here" heading="Start with one workflow." class="border-t border-dl-rule">
+    <div class="mt-10">
+      <OfferCard
+        title={HOME.audit.title}
+        text={HOME.audit.text}
+        deliverables={HOME.audit.deliverables}
+        priceLine={business.auditPriceLine}
+        primary={HOME.audit.primary}
+        secondary={HOME.audit.secondary}
+      />
     </div>
   </Section>
 
-  <section id="home-cta" aria-labelledby="home-cta-heading" class="dl-band border-t border-dl-rule">
+  <Section id="home-founder" eyebrow={HOME.founder.eyebrow} heading="One engineer, start to finish." class="border-t border-dl-rule">
+    <div class="mt-10"><FounderStrip /></div>
+  </Section>
+
+  <section id="home-cta" aria-labelledby="home-cta-heading" class="dl-band">
     <div class="mx-auto max-w-container px-[var(--gutter)] py-[calc(var(--section-rhythm)*0.75)]">
       <h2 id="home-cta-heading" class="max-w-3xl text-step-3">{HOME.final.heading}</h2>
-      <p class="mt-4 text-step-1 text-dl-ink-2">{HOME.final.text}</p>
+      <p class="mt-4 max-w-prose text-step-1 text-dl-ink-2" data-reply-window>
+        You get a receipt right away; a person replies {replyWindowLine(business)}. Hours: {businessHoursLine(business)}.
+      </p>
       <a href={HOME.final.primary.href} class="dl-button-primary mt-8" data-cta-id="home-final-primary" data-cta-variant="primary" data-inquiry-type="business_system">{HOME.final.primary.label}</a>
     </div>
   </section>

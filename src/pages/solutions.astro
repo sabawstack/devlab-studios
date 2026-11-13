@@ -1,4 +1,5 @@
 ---
+import { CTA } from '../config/ctas.js'
 /**
  * Solutions index (audit UX-07 / G.1 / BR.9): three service lines and one way
  * to start. Each line links to its own page under /solutions/<slug>; the old
@@ -23,8 +24,8 @@ const jsonLd = [
 
 <BrandLayout title="Solutions · DevLab Studios" seo={seo} jsonLd={jsonLd}>
   <PageHeader eyebrow={SOLUTIONS_INDEX.eyebrow} heading={SOLUTIONS_INDEX.heading} lead={SOLUTIONS_INDEX.lead}>
-    <a href={OFFER_AUDIT.path} class="dl-button-primary" data-cta-id="solutions-hero-audit">Start with the audit</a>
-    <a href="/contact?type=business_system" class="dl-button-quiet" data-cta-id="solutions-hero-contact">Discuss your system</a>
+    <a href={OFFER_AUDIT.path} class="dl-button-primary" data-cta-id="solutions-hero-audit">What the audit includes</a>
+    <a href="/contact?type=business_system" class="dl-button-quiet" data-cta-id="solutions-hero-contact">{CTA.primary}</a>
   </PageHeader>
 
   {SERVICE_LINES.map((line, index) => (
