@@ -706,14 +706,15 @@ export async function replaceResourcesContent(db, payload) {
 }
 
 export async function getSiteSettingsContent(db, { includeDrafts = false } = {}) {
-  const [navigation, footer, ctas, analytics] = await Promise.all([
+  const [navigation, footer, ctas, analytics, business] = await Promise.all([
     listNavigationItems(db, { includeDrafts }),
     getSiteSetting(db, 'site_footer', {}),
     getSiteSetting(db, 'site_ctas', {}),
     getSiteSetting(db, 'site_analytics', {}),
+    getSiteSetting(db, 'site_business', {}),
   ])
 
-  return { navigation, footer, ctas, analytics }
+  return { navigation, footer, ctas, analytics, business }
 }
 
 export async function replaceSiteSettingsContent(db, payload) {
@@ -721,6 +722,8 @@ export async function replaceSiteSettingsContent(db, payload) {
   await setSiteSetting(db, 'site_footer', payload.footer || {})
   await setSiteSetting(db, 'site_ctas', payload.ctas || {})
   if (payload.analytics) await setSiteSetting(db, 'site_analytics', payload.analytics)
+  // CMS-02: business details; only written when the editor sends them.
+  if (payload.business) await setSiteSetting(db, 'site_business', payload.business)
   return getSiteSettingsContent(db, { includeDrafts: true })
 }
 

@@ -87,6 +87,9 @@ const navigationItemInputSchema = z.object({
   status: z.string().optional(),
 })
 
+/** A channel link: https only, or blank for "not offered". */
+const httpsLinkOrBlank = z.string().trim().regex(/^(https:\/\/\S+)?$/i, 'Use a full https:// link, or leave it blank.').optional().default('')
+
 export const siteSettingsContentSchema = z.object({
   navigation: z.array(navigationItemInputSchema).optional().default([]),
   footer: z.record(z.string(), z.unknown()).optional().default({}),
@@ -95,6 +98,16 @@ export const siteSettingsContentSchema = z.object({
   analytics: z.object({
     enabled: z.boolean().optional().default(true),
     gaMeasurementId: z.string().trim().toUpperCase().regex(/^(G-[A-Z0-9]{4,16})?$/, 'Use a GA4 measurement id like G-XXXXXXX, or leave it blank.').optional().default(''),
+  }).optional(),
+  // CMS-02: business details shown to buyers; blank fields use the defaults in src/config/business.js.
+  business: z.object({
+    replyWindowDays: z.number().int().min(1, 'Reply window is 1 to 10 business days.').max(10, 'Reply window is 1 to 10 business days.').nullable().optional(),
+    businessHours: z.string().trim().max(80).optional().default(''),
+    timeZoneLabel: z.string().trim().max(40).optional().default(''),
+    schedulingUrl: httpsLinkOrBlank,
+    messengerUrl: httpsLinkOrBlank,
+    whatsappUrl: httpsLinkOrBlank,
+    auditPriceLine: z.string().trim().max(80).optional().default(''),
   }).optional(),
 }).superRefine(refineSafeLinks)
 

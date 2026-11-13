@@ -4,6 +4,7 @@ import { getEnv } from '../env'
 import { sanitizeLinkFields } from '../safeHref'
 import { COMPANY, scrubPersonalContacts } from '../../config/company.js'
 import { resolveGaMeasurementId } from '../../config/analytics.js'
+import { resolveBusinessSettings } from '../../config/business.js'
 
 /**
  * '' when there is no real tagline: unset, a test placeholder, or the retired
@@ -30,6 +31,8 @@ export interface SiteSettingsData {
   }
   /** GA4 measurement id to render ('' = analytics off); unset means the default (OPS-05). */
   gaMeasurementId?: string
+  /** Business details (CMS-02): stored values over the defaults in src/config/business.js. */
+  business: ReturnType<typeof resolveBusinessSettings>
 }
 
 /**
@@ -40,14 +43,15 @@ export interface SiteSettingsData {
  */
 export async function loadSiteSettings(): Promise<SiteSettingsData> {
   const env = getEnv()
-  if (!env.DB) return siteSettingsContent
+  const fallback = { ...siteSettingsContent, business: resolveBusinessSettings(undefined) }
+  if (!env.DB) return fallback
 
   try {
     // D1 content is sanitised again here, not only validated on save: a row
     // that predates the link-scheme rule must still render inert.
     // ...and scrubbed of personal mailboxes, which never belong on a public page (BUS-05).
     const data = scrubPersonalContacts(sanitizeLinkFields(await getSiteSettingsContent(env.DB)))
-    if (!data) return siteSettingsContent
+    if (!data) return fallback
 
     const footer = (data.footer || {}) as SiteSettingsData['footer']
     return {
@@ -62,8 +66,9 @@ export async function loadSiteSettings(): Promise<SiteSettingsData> {
         legalLinks: footer.legalLinks?.length ? footer.legalLinks : siteSettingsContent.footer.legalLinks,
       },
       gaMeasurementId: resolveGaMeasurementId((data as { analytics?: unknown }).analytics),
+      business: resolveBusinessSettings((data as { business?: unknown }).business),
     }
   } catch {
-    return siteSettingsContent
+    return fallback
   }
 }

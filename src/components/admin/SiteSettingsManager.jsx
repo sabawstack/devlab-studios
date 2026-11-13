@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ChevronDown, ChevronUp, Plus, RotateCw, Save, Trash2 } from '../icons/icons'
 import siteSettingsContent from '../../data/siteSettingsContent'
+import { BUSINESS_DEFAULTS } from '../../config/business.js'
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value))
@@ -113,8 +114,20 @@ function ArrayEditor({ title, description, items, onChange, createItem, fields }
   )
 }
 
+const businessInputClass = 'rounded-md border border-slate-300 px-3 py-2 text-sm font-normal text-slate-800 outline-none transition focus:border-slate-500'
+/** CMS-02: the business details an admin can change (defaults in src/config/business.js). */
+const BUSINESS_TEXT_FIELDS = [
+  { key: 'businessHours', label: 'Business hours', maxLength: 80 },
+  { key: 'timeZoneLabel', label: 'Time zone label', maxLength: 40 },
+  { key: 'auditPriceLine', label: 'Audit price line', maxLength: 80 },
+  { key: 'schedulingUrl', label: 'Scheduling link (optional)', type: 'url', placeholder: 'https://… (blank = not offered)' },
+  { key: 'messengerUrl', label: 'Messenger link (optional)', type: 'url', placeholder: 'https://m.me/… (blank = not offered)' },
+  { key: 'whatsappUrl', label: 'WhatsApp link (optional)', type: 'url', placeholder: 'https://wa.me/… (blank = not offered)' },
+]
+
 export default function SiteSettingsManager() {
   const [value, setValue] = useState(clone(siteSettingsContent))
+  const setBusiness = (key, next) => setValue((current) => ({ ...current, business: { ...(current.business || {}), [key]: next } }))
   const [status, setStatus] = useState('Loading site settings...')
   const [isSaving, setIsSaving] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
@@ -299,6 +312,40 @@ export default function SiteSettingsManager() {
               />
               Analytics on
             </label>
+          </div>
+        </section>
+
+        <section className="rounded-md border border-slate-200 bg-white" data-business-settings>
+          <SectionHeader
+            title="Business details"
+            description="Shown on Contact, the home page and the inquiry receipt. Leave a field blank to use the default shown in grey. A chat or scheduling link appears only once it is filled in."
+          />
+          <div className="grid gap-4 px-5 py-5 md:grid-cols-2">
+            <label className="grid gap-1.5 text-sm font-semibold text-slate-800">
+              Reply window (business days)
+              <input
+                type="number"
+                min={1}
+                max={10}
+                value={value.business?.replyWindowDays ?? ''}
+                placeholder={String(BUSINESS_DEFAULTS.replyWindowDays)}
+                onChange={(event) => setBusiness('replyWindowDays', event.target.value === '' ? null : Number(event.target.value))}
+                className={businessInputClass}
+              />
+            </label>
+            {BUSINESS_TEXT_FIELDS.map((field) => (
+              <label key={field.key} className="grid gap-1.5 text-sm font-semibold text-slate-800">
+                {field.label}
+                <input
+                  type={field.type || 'text'}
+                  value={value.business?.[field.key] || ''}
+                  placeholder={BUSINESS_DEFAULTS[field.key] || field.placeholder}
+                  maxLength={field.maxLength}
+                  onChange={(event) => setBusiness(field.key, event.target.value)}
+                  className={businessInputClass}
+                />
+              </label>
+            ))}
           </div>
         </section>
 

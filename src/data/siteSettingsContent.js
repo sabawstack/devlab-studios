@@ -42,6 +42,12 @@ export const siteSettingsContent = {
     ],
     copyright: '© 2026 DevLab Studios. All rights reserved.',
   },
+  /**
+   * Business details (CMS-02). Empty here on purpose: every field falls back
+   * to src/config/business.js (the owner's decisions), and an admin overrides
+   * a field in Site Settings, stored as site_settings `site_business`.
+   */
+  business: {},
 }
 
 export default siteSettingsContent

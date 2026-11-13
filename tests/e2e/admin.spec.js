@@ -170,6 +170,35 @@ test.describe('site settings', () => {
     await expect(page.getByLabel(/tagline/i).first()).toHaveValue(marker)
   })
 
+  // CMS-02: business details round-trip, then go back to blank (the defaults).
+  test('business details save, persist across reload, and clear back to the defaults', async ({ page, baseURL }) => {
+    await login(page)
+    await openAdminNavGroup(page, 'Site Management')
+    await page.getByRole('navigation').getByRole('link', { name: 'Navigation & Footer' }).click()
+    const section = page.locator('[data-business-settings]')
+    await expect(section.getByLabel('Reply window (business days)')).toHaveAttribute('placeholder', '1')
+    await expect(section.getByLabel('Audit price line')).toHaveAttribute('placeholder', 'Quoted after a 30-minute call')
+
+    await section.getByLabel('Reply window (business days)').fill('2')
+    await section.getByLabel('Audit price line').fill('Synthetic price line')
+    await page.getByRole('button', { name: /^save/i }).first().click()
+    await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10_000 })
+    const stored = await (await page.request.get(`${baseURL}/api/admin/content/site-settings`)).json()
+    expect(stored.business).toMatchObject({ replyWindowDays: 2, auditPriceLine: 'Synthetic price line' })
+
+    await page.reload()
+    await openAdminNavGroup(page, 'Site Management')
+    await page.getByRole('navigation').getByRole('link', { name: 'Navigation & Footer' }).click()
+    await expect(section.getByLabel('Reply window (business days)')).toHaveValue('2')
+
+    await section.getByLabel('Reply window (business days)').fill('')
+    await section.getByLabel('Audit price line').fill('')
+    await page.getByRole('button', { name: /^save/i }).first().click()
+    await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10_000 })
+    const cleared = await (await page.request.get(`${baseURL}/api/admin/content/site-settings`)).json()
+    expect(cleared.business).toMatchObject({ replyWindowDays: null, auditPriceLine: '' })
+  })
+
   test('site settings changes are versioned and a prior version can be restored', async ({ page }) => {
     await login(page)
     await openAdminNavGroup(page, 'Site Management')
