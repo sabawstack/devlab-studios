@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { isNodeReady } from '../../src/config/node.js'
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
@@ -80,10 +81,15 @@ test('a complete business inquiry submits and reports that it was saved', async 
 
   await page.getByRole('button', { name: 'Send inquiry' }).click()
   await expect(page.getByRole('status')).toContainText(/received and saved/i)
-  // ADR 0014: Node confirms the save, decoratively, and the error state never shows it.
+  // Spec G.3: Node confirms the save, decoratively, once the owner has approved
+  // the state; until then a check mark. The message carries the meaning.
   const node = page.getByRole('status').locator('svg.node-mascot')
-  await expect(node).toHaveAttribute('data-state', 'active')
-  await expect(node).toHaveAttribute('aria-hidden', 'true')
+  if (isNodeReady('confirming')) {
+    await expect(node).toHaveAttribute('data-state', 'confirming')
+    await expect(node).toHaveAttribute('aria-hidden', 'true')
+  } else {
+    await expect(node).toHaveCount(0)
+  }
   await expect(page.getByRole('status')).toHaveAttribute('data-status', 'success')
 })
 

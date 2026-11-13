@@ -3,6 +3,7 @@
 import BrandLayout from '../layouts/BrandLayout.astro'
 import PageHeader from '../components/brand/PageHeader.astro'
 import { ERROR_MESSAGES } from '../config/errorMessages.js'
+import NodeMascot from '../components/brand/NodeMascot.jsx'
 
 Astro.response.status = 404
 const { title, message } = ERROR_MESSAGES.NOT_FOUND
@@ -17,6 +18,8 @@ const routes = [
 <BrandLayout title={`${title} · DevLab Studios`} robots="noindex, follow">
   <PageHeader eyebrow="404" heading={title} lead={message}>
     <a href="/" class="dl-button-primary">Go to the home page</a>
+    <!-- Node, idle (spec G.3 placement); renders only once the owner has approved the state. -->
+    <NodeMascot slot="aside" state="idle" id="not-found-node" className="mx-auto" />
   </PageHeader>
   <nav aria-label="Main sections" class="mx-auto max-w-container px-[var(--gutter)] py-12">
     <ul class="grid gap-px overflow-hidden rounded-dl-s border border-dl-rule bg-dl-rule sm:grid-cols-2 lg:grid-cols-4">

@@ -9,7 +9,6 @@
  * the first panel; the others carry `hidden`. With JS off the tabs are inert,
  * so a <noscript> style shows every panel stacked and hides the tab list.
  */
-import NodeMascot from './NodeMascot.jsx'
 import { HOME } from '../../data/site/content.js'
 
 const items = HOME.console
@@ -50,7 +49,6 @@ const index = (position: number) => String(position + 1).padStart(2, '0')
           <div class="console__row">
             <dt class="label text-dl-amber">{labels.vector}</dt>
             <dd class="console__value">
-              <NodeMascot state="diagnostic" size={28} decorative id={`console-node-vector-${item.id}`} className="shrink-0" />
               <span>{item.vector}</span>
             </dd>
           </div>
@@ -61,7 +59,6 @@ const index = (position: number) => String(position + 1).padStart(2, '0')
           <div class="console__row">
             <dt class="label text-dl-ok">{labels.verification}</dt>
             <dd class="console__value">
-              <NodeMascot state="active" size={28} decorative id={`console-node-verify-${item.id}`} className="shrink-0" />
               <code class="console__status">{item.verification}</code>
             </dd>
           </div>

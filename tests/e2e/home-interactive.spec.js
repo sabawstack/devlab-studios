@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { isNodeReady } from '../../src/config/node.js'
 
 // The interactive pieces of the Blueprint home page (ADR 0014): the failure
 // console's tabs, the hero's client-side outage toggle, reduced motion and
@@ -81,11 +82,19 @@ test.describe('hero pipeline', () => {
     expect(apiCalls).toEqual([])
   })
 
-  test('shows Node as the router, hidden from assistive technology', async ({ page }) => {
+  // Spec G.3: one Node at the route step, decorative, once the owner has
+  // approved it; until then the route step is a plain checkpoint square.
+  test('marks the route step with Node, or a checkpoint until Node is approved', async ({ page }) => {
     await page.goto('/')
-    const node = page.locator('[data-pipeline] .pl-node-nominal svg.node-mascot')
-    await expect(node).toHaveAttribute('aria-hidden', 'true')
-    await expect(node).toHaveAttribute('data-state', 'active')
+    const node = page.locator('[data-pipeline] svg.node-mascot')
+    if (isNodeReady('holding')) {
+      await expect(node).toHaveCount(1)
+      await expect(node).toHaveAttribute('aria-hidden', 'true')
+      await expect(node).toHaveAttribute('data-state', 'holding')
+    } else {
+      await expect(node).toHaveCount(0)
+      await expect(page.locator('[data-pipeline] .pl-checkpoint--route .pl-square')).toHaveCount(1)
+    }
   })
 })
 

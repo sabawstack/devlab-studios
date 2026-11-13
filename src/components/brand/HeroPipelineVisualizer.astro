@@ -13,10 +13,13 @@
  * motion and paused by src/lib/motion.ts.
  */
 import NodeMascot from './NodeMascot.jsx'
+import { isNodeReady } from '../../config/node.js'
 import { HOME } from '../../data/site/content.js'
 
 const pipeline = HOME.pipeline
 // Spine y for each checkpoint; 03 (index 2) is Node, not a square.
+// Node marks the route step once the owner has approved the state; until then a plain checkpoint square.
+const nodeReady = isNodeReady('holding')
 const Y = [40, 118, 196, 274]
 const ROUTE = 2
 ---
@@ -41,7 +44,7 @@ const ROUTE = 2
 
     {pipeline.checkpoints.map((checkpoint, index) => (
       <g class={`pl-checkpoint pl-checkpoint--${checkpoint.id}`}>
-        {index !== ROUTE && <rect class="pl-square" x="29" y={Y[index] - 7} width="14" height="14" rx="2" />}
+        {(index !== ROUTE || !nodeReady) && <rect class="pl-square" x="29" y={Y[index] - 7} width="14" height="14" rx="2" />}
         <text class="pl-index" x="72" y={index === ROUTE ? Y[index] - 22 : Y[index] - 4}>{checkpoint.index}</text>
         <text class="pl-label" x="72" y={index === ROUTE ? Y[index] - 8 : Y[index] + 12}>{checkpoint.label.toUpperCase()}</text>
       </g>
@@ -68,10 +71,11 @@ const ROUTE = 2
       </circle>
     </g>
 
-    <g transform={`translate(12 ${Y[ROUTE] - 28})`}>
-      <g class="pl-node-nominal"><NodeMascot state="active" size={48} decorative id="hero-node-active" /></g>
-      <g class="pl-node-outage"><NodeMascot state="diagnostic" size={48} decorative id="hero-node-diagnostic" /></g>
-    </g>
+    {nodeReady && (
+      <g transform={`translate(12 ${Y[ROUTE] - 28})`}>
+        <NodeMascot state="holding" size={48} id="hero-node" />
+      </g>
+    )}
   </svg>
   <div class="flex flex-wrap items-center justify-between gap-3 border-t border-dl-rule px-4 py-3">
     <p class="pipeline__status label text-dl-ink-2" aria-live="polite" data-pipeline-status>{pipeline.status.nominal}</p>
@@ -108,7 +112,6 @@ const ROUTE = 2
   .pl-led { fill: var(--ok); }
   .pl-retrybox { opacity: 0; }
   .pl-packet { fill: var(--ink); }
-  .pl-node-outage { display: none; }
 
   [data-state='outage'] .pl-branch { stroke: var(--danger); stroke-dasharray: 5 5; }
   [data-state='outage'] .pl-fail,
@@ -119,9 +122,9 @@ const ROUTE = 2
   [data-state='outage'] .pl-webhook .pl-box { stroke: var(--danger); }
   [data-state='outage'] .pl-led { fill: var(--danger); }
   [data-state='outage'] .pl-checkpoint--persist .pl-square { stroke: var(--amber); fill: var(--amber); }
-  [data-state='outage'] .pl-packet--branch,
-  [data-state='outage'] .pl-node-nominal { display: none; }
-  [data-state='outage'] .pl-node-outage { display: inline; }
+  [data-state='outage'] .pl-packet--branch { display: none; }
+  /* In the outage Node waits for a person: the amber lamp (exhibit only). */
+  [data-state='outage'] :global(.node-lamp) { fill: var(--amber); }
 
   .pl-fail,
   .pl-retry-link,
@@ -134,7 +137,7 @@ const ROUTE = 2
 </style>
 
 <script>
-  import { respectReducedMotion } from '../../lib/motion'
+  import { pauseWhenHidden, replayNode, respectReducedMotion } from '../../lib/motion'
 
   // Client-side only: the outage is a drawing, never a request.
   for (const root of document.querySelectorAll<HTMLElement>('[data-pipeline]')) {
@@ -142,7 +145,18 @@ const ROUTE = 2
     const status = root.querySelector<HTMLElement>('[data-pipeline-status]')
     if (!button || !status) continue
     button.hidden = false
+    // Node's "receive" runs once when the exhibit scrolls into view and once per toggle (spec G.4).
+    const node = root.querySelector<SVGSVGElement>('.node-mascot')
+    if (node && 'IntersectionObserver' in window) {
+      const observer = new IntersectionObserver((entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return
+        replayNode(node, 'receive')
+        observer.disconnect()
+      }, { threshold: 0.5 })
+      observer.observe(root)
+    }
     button.addEventListener('click', () => {
+      if (node) replayNode(node, 'receive')
       const outage = root.dataset.state !== 'outage'
       root.dataset.state = outage ? 'outage' : 'nominal'
       button.setAttribute('aria-pressed', String(outage))
@@ -150,4 +164,5 @@ const ROUTE = 2
     })
   }
   respectReducedMotion()
+  pauseWhenHidden()
 </script>

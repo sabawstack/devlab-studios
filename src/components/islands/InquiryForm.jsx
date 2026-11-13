@@ -18,8 +18,9 @@ import {
   isBusinessInquiry,
   isEmploymentInquiry,
 } from '../../lib/schemas/inquiry'
-import { AlertCircle, ArrowLeft, ArrowRight, Loader2, Send, ShieldCheck } from '../icons/icons'
+import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle2, Loader2, Send, ShieldCheck } from '../icons/icons'
 import NodeMascot from '../brand/NodeMascot.jsx'
+import { isNodeReady } from '../../config/node.js'
 
 /**
  * The structured inquiry form.
@@ -642,8 +643,12 @@ function InquiryForm({
             }`}
           >
             {status.type === 'success' ? (
-              // Node confirms the save (ADR 0014); decorative, the message carries the meaning.
-              <NodeMascot state="active" size={40} decorative id="inquiry-success-node" className="flex-shrink-0" />
+              // Node confirms the save (spec G.3) once the owner has approved the
+              // confirming state; until then a check mark. Decorative either way:
+              // the message carries the meaning.
+              isNodeReady('confirming')
+                ? <NodeMascot state="confirming" size={40} id="inquiry-success-node" className="flex-shrink-0" />
+                : <CheckCircle2 size={18} className="mt-0.5 flex-shrink-0" aria-hidden="true" />
             ) : (
               <AlertCircle size={18} className="mt-0.5 flex-shrink-0" aria-hidden="true" />
             )}
