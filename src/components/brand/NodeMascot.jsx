@@ -1,30 +1,43 @@
 /**
- * Node, the DevLab routing engine (ADR 0014): a secondary figure built from
- * the logo's `< | >` traces. Left plate magenta, centre plate the brand
- * gradient, right plate blue, each topped by a ring terminal; a visor across
- * the centre plate; terminal "hands" at the tips.
+ * Node, the DevLab router (spec G.3 / G.4; MASCOT-01, MASCOT-02). The part of
+ * every DevLab system that receives, holds, checks and hands off. Three plates
+ * from the logo's `< | >` traces form the body (the centre plate 1.6 times the
+ * width of each side plate); one round signal lamp is the head; two shoulder
+ * terminals; terminal dots for hands. Ink lines on paper, inverted inside
+ * `.ink-panel`; the lamp is the only filled accent.
  *
- *   idle        visor blue → magenta, still
- *   active      visor pulses, three data packets travel the plate edges
- *   diagnostic  amber visor, holds a slate
+ *   idle          lamp unlit (outline)
+ *   holding       lamp magenta, a slate in hand
+ *   confirming    lamp green, the slate stamped with a check
+ *   needs-person  lamp amber (exhibits only), a person beside
  *
- * Hook-free so it renders from .astro files as static markup and inside the
- * inquiry form island alike. Colours come from classes in brand.css (tokens
- * only; no inline styles, which the CSP would block). Every id is prefixed so
- * two instances on a page never collide; pass `id` where the markup must be
- * stable between server and client.
+ * Tiers: `mark` (24 px: centre plate, lamp, two side strokes), `figure`
+ * (96 px), `scene` (240 px: the figure plus the hand-off path to a person).
  *
- * Motion: everything stops within 5 s (WCAG 2.2.2): three visor pulses (CSS,
- * also stopped by the global reduced-motion rule) and packets that end at
- * 4.8 s (SMIL; hidden under reduced motion and paused by src/lib/motion.ts).
+ * Motion is CSS only (brand.css), one run per trigger, never on its own:
+ * `run="receive"` moves a packet into the body along the centre plate (600 ms);
+ * `run="handoff"` (scene tier) moves it to the person (800 ms), then the lamp
+ * turns green (200 ms). The packet is drawn at its final position, so reduced
+ * motion and no-JS show the last frame. Re-trigger by removing and re-adding
+ * `data-run` (src/lib/motion.ts `replayNode`).
+ *
+ * Hook-free, so it renders from .astro files as static markup and inside the
+ * inquiry form island alike. No inline styles (CSP), no hex, no SMIL.
+ * Approval: an unapproved state renders nothing unless `review` is set (the
+ * /brand page); see src/config/node.js.
  */
+import { NODE_STATES, NODE_TIERS, isNodeReady } from '../../config/node.js'
 
-const STATES = new Set(['idle', 'active', 'diagnostic'])
+const TITLES = {
+  idle: 'Node, the DevLab router',
+  holding: 'Node, the DevLab router, holding an inquiry',
+  confirming: 'Node, the DevLab router, handing an inquiry to a person',
+  'needs-person': 'Node, the DevLab router, waiting for a person',
+}
 
 /*
  * A page-wide counter, not useId: each Astro component renders in its own
- * React root, where useId restarts and two figures on one page would share
- * gradient ids. Callers that hydrate pass `id` instead.
+ * React root, where useId restarts. Callers that hydrate pass `id` instead.
  */
 let counter = 0
 function nextPrefix() {
@@ -32,88 +45,94 @@ function nextPrefix() {
   return `node-${counter}`
 }
 
+function Mark() {
+  return (
+    <>
+      <path className="node-line" d="M7 10 3 18l4 8M17 10l4 8-4 8" />
+      <rect className="node-plate node-plate--centre" x="10" y="10" width="4" height="16" rx="1" />
+      <circle className="node-lamp" cx="12" cy="5" r="3.5" />
+    </>
+  )
+}
+
+function Body({ state }) {
+  return (
+    <>
+      <path className="node-line" d="M48 27v7M31 33v3M65 33v3M14 66h-2.5M82 66h2.5" />
+      <circle className="node-terminal" cx="31" cy="30" r="3" />
+      <circle className="node-terminal" cx="65" cy="30" r="3" />
+      <polygon className="node-plate node-plate--left" points="26,36 36,36 24,66 36,96 26,96 14,66" />
+      <polygon className="node-plate node-plate--right" points="70,36 60,36 72,66 60,96 70,96 82,66" />
+      <rect className="node-plate node-plate--centre" x="40" y="34" width="16" height="62" rx="2" />
+      <circle className="node-lamp" cx="48" cy="20" r="7" />
+      <circle className="node-hand" cx="9" cy="66" r="2.5" />
+      <circle className="node-hand" cx="87" cy="66" r="2.5" />
+      {(state === 'holding' || state === 'confirming') && (
+        <g data-node-slate="">
+          <rect className="node-slate" x="80" y="72" width="14" height="17" rx="1.5" />
+          {state === 'holding'
+            ? <path className="node-line" d="M83 77h8M83 81h6M83 85h7" />
+            : <path className="node-line node-stamp" data-node-stamp="" d="m83.5 80.5 3 3 5.5-6" />}
+        </g>
+      )}
+      {state === 'needs-person' && (
+        <g data-node-person="">
+          <circle className="node-person" cx="7" cy="88" r="3" />
+          <path className="node-person" d="M1.5 102c0-6 2.5-9 5.5-9s5.5 3 5.5 9" />
+        </g>
+      )}
+      <circle className="node-packet node-packet--receive" cx="48" cy="64" r="2" />
+    </>
+  )
+}
+
+function Handoff({ state }) {
+  return (
+    <g data-node-handoff="" {...(state === 'needs-person' ? { 'data-node-person': '' } : {})}>
+      <path className="node-line node-path" d="M92 66h54" />
+      <circle className="node-person" cx="160" cy="52" r="6" />
+      <path className="node-person" d="M148 80c0-10 5-16 12-16s12 6 12 16" />
+      <circle className="node-packet node-packet--handoff" cx="150" cy="66" r="2" />
+    </g>
+  )
+}
+
 /**
  * @param {object} props
- * @param {'idle'|'active'|'diagnostic'} [props.state]
- * @param {number} [props.size] rendered width in px; height keeps the 96:112 ratio
- * @param {string} [props.title] accessible name (ignored when decorative)
- * @param {boolean} [props.decorative] hide from assistive technology
- * @param {string} [props.id] id prefix for the gradients and title
+ * @param {'idle'|'holding'|'confirming'|'needs-person'} [props.state]
+ * @param {'mark'|'figure'|'scene'} [props.tier]
+ * @param {number} [props.size] rendered width in px; height keeps the tier ratio
+ * @param {'receive'|'handoff'} [props.run] the one sequence to play on render
+ * @param {boolean} [props.decorative] hidden from assistive technology (default)
+ * @param {string} [props.title] overrides the state's accessible name
+ * @param {string} [props.id] id prefix for the title
+ * @param {boolean} [props.review] render an unapproved state (the /brand page)
  * @param {string} [props.className]
  */
-export default function NodeMascot({ state = 'idle', size = 96, title = 'Node, the DevLab routing engine', decorative = false, id, className = '' }) {
-  const mode = STATES.has(state) ? state : 'idle'
-  const prefix = id || nextPrefix()
-  const body = `${prefix}-gradient`
-  const visor = `${prefix}-visor`
-  const titleId = `${prefix}-title`
+export default function NodeMascot({ state = 'idle', tier = 'figure', size, run, decorative = true, title, id, review = false, className = '' }) {
+  const mode = NODE_STATES.includes(state) ? state : 'idle'
+  if (!review && !isNodeReady(mode)) return null
+  const level = NODE_TIERS[tier] ? tier : 'figure'
+  const [width, height] = NODE_TIERS[level].viewBox
+  const renderedWidth = size ?? NODE_TIERS[level].size
+  const titleId = `${id || nextPrefix()}-title`
   const a11y = decorative ? { 'aria-hidden': 'true', focusable: 'false' } : { role: 'img', 'aria-labelledby': titleId }
 
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 96 112"
-      width={size}
-      height={Math.round((size * 112) / 96)}
-      className={`node-mascot ${className}`.trim()}
+      viewBox={`0 0 ${width} ${height}`}
+      width={renderedWidth}
+      height={Math.round((renderedWidth * height) / width)}
+      className={`node-mascot node-mascot--${level} ${className}`.trim()}
       data-state={mode}
-      data-motion-root=""
+      data-tier={level}
+      {...(run && level !== 'mark' ? { 'data-run': run } : {})}
       {...a11y}
     >
-      {!decorative && <title id={titleId}>{title}</title>}
-      <defs>
-        <linearGradient id={body} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" className="node-stop-magenta" />
-          <stop offset="0.5" className="node-stop-violet" />
-          <stop offset="1" className="node-stop-blue" />
-        </linearGradient>
-        <linearGradient id={visor} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" className="node-stop-blue" />
-          <stop offset="1" className="node-stop-magenta" />
-        </linearGradient>
-      </defs>
-
-      <g className="node-wire">
-        <path d="M34 18v10M48 12v12M62 18v10M44 88l-2 12M52 88l2 12M16 56h-4M80 56h4" />
-      </g>
-      <circle className="node-ring node-ring--left" cx="34" cy="14" r="4" />
-      <circle className="node-ring node-ring--centre" cx="48" cy="8" r="4" />
-      <circle className="node-ring node-ring--right" cx="62" cy="14" r="4" />
-
-      <polygon className="node-plate node-plate--left" points="30,28 37,28 23,56 37,84 30,84 16,56" />
-      <polygon className="node-plate node-plate--right" points="66,28 59,28 73,56 59,84 66,84 80,56" />
-      <rect className="node-torso" x="40" y="24" width="16" height="64" rx="3" fill={`url(#${body})`} />
-
-      <rect className={`node-visor${mode === 'diagnostic' ? ' node-visor--amber' : ''}`} x="35" y="38" width="26" height="9" rx="4.5" fill={`url(#${visor})`} />
-      <rect className="node-eye" x="40" y="41.5" width="16" height="2" rx="1" />
-
-      <circle className="node-hand" cx="9" cy="56" r="3.5" />
-      <circle className="node-hand" cx="87" cy="56" r="3.5" />
-      <circle className="node-hand" cx="42" cy="102" r="3" />
-      <circle className="node-hand" cx="54" cy="102" r="3" />
-
-      {mode === 'diagnostic' && (
-        <g data-node-slate="">
-          <rect className="node-slate" x="76" y="62" width="16" height="20" rx="2" />
-          <path className="node-slate-line" d="M79 68h10M79 72h7M79 76h9" />
-        </g>
-      )}
-
-      {mode === 'active' && (
-        <g className="node-packets">
-          {/* Each packet starts at its plate's top terminal; the motion paths are relative to it.
-              All motion ends at 4.8 s and the packets rest at the terminals (WCAG 2.2.2). */}
-          <circle className="node-packet" r="2" cx="30" cy="28">
-            <animateMotion dur="2.4s" repeatCount="indefinite" end="4.8s" path="M0 0L-14 28L0 56" />
-          </circle>
-          <circle className="node-packet" r="2" cx="48" cy="24">
-            <animateMotion dur="2.4s" begin="0.8s" repeatCount="indefinite" end="4.8s" path="M0 0V64" />
-          </circle>
-          <circle className="node-packet" r="2" cx="66" cy="28">
-            <animateMotion dur="2.4s" begin="1.6s" repeatCount="indefinite" end="4.8s" path="M0 0L14 28L0 56" />
-          </circle>
-        </g>
-      )}
+      {!decorative && <title id={titleId}>{title || TITLES[mode]}</title>}
+      {level === 'mark' ? <Mark /> : <Body state={mode} />}
+      {level === 'scene' && <Handoff state={mode} />}
     </svg>
   )
 }

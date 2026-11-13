@@ -25,6 +25,12 @@ import Table from '../components/brand/Table.astro'
 import Field from '../components/brand/Field.astro'
 import { createFigureCounter } from '../components/brand/figures'
 import NodeMascot from '../components/brand/NodeMascot.jsx'
+import { NODE_STATES, NODE_TIERS, isNodeReady } from '../config/node.js'
+
+type NodeState = 'idle' | 'holding' | 'confirming' | 'needs-person'
+type NodeTier = 'mark' | 'figure' | 'scene'
+const nodeStates = NODE_STATES as NodeState[]
+const nodeTiers = Object.keys(NODE_TIERS) as NodeTier[]
 
 export const prerender = false
 
@@ -108,21 +114,47 @@ const sceneFigures = SCENES.map((scene) => ({ scene, number: figures.next() }))
         </div>
       </section>
 
-      <section aria-labelledby="node-heading">
+      <section aria-labelledby="node-heading" data-node-review>
         <p class="label text-dl-ink-3">Node</p>
-        <h2 id="node-heading" class="mt-2 text-step-3">Node, in its three states</h2>
-        <ul class="mt-8 flex flex-wrap items-end gap-10" data-node-states>
-          {(['idle', 'active', 'diagnostic'] as const).map((state) => (
-            <li class="flex flex-col items-center gap-3">
-              <NodeMascot state={state} size={96} id={`brand-node-${state}`} title={`Node, ${state}`} />
-              <p class="label text-dl-ink-3">{state}</p>
+        <h2 id="node-heading" class="mt-2 text-step-3">Node, the DevLab router: four states, three tiers</h2>
+        <p class="mt-4 text-dl-ink-2">
+          For owner review (spec G.3, MASCOT-01). Approved states: {NODE_STATES.filter(isNodeReady).join(', ') || 'none yet'}.
+          Unapproved states render nothing on public pages. Approve in <code>src/config/node.js</code> and record it in <code>docs/brand/node.md</code>.
+        </p>
+        <h3 class="mt-8 text-step-1">Silhouette test at 24 px</h3>
+        <p class="mt-2 text-dl-ink-2">Filled solid. It should read as a lantern between two bookends, not a bug, a key or a USB plug.</p>
+        <ul class="mt-4 flex flex-wrap items-end gap-8" data-node-silhouettes>
+          {(['mark', 'figure'] as const).map((tier) => (
+            <li class="flex flex-col items-center gap-2">
+              <NodeMascot review state="idle" tier={tier} size={24} className="node-silhouette" id={`brand-node-silhouette-${tier}`} />
+              <p class="label text-dl-ink-3">{tier} at 24 px</p>
             </li>
           ))}
-          <li class="flex flex-col items-center gap-3">
-            <NodeMascot state="active" size={40} id="brand-node-small" decorative />
-            <p class="label text-dl-ink-3">40 px</p>
-          </li>
         </ul>
+        {[{ surface: 'On stone', ink: false }, { surface: 'On a graphite exhibit', ink: true }].map(({ surface, ink }) => (
+          <div class={`mt-10 ${ink ? 'ink-panel rounded-dl-m p-6 sm:p-10' : ''}`}>
+            <h3 class="text-step-1">{surface}</h3>
+            {nodeTiers.map((tier) => (
+              <ul class="mt-6 flex flex-wrap items-end gap-10" data-node-tier={tier}>
+                {nodeStates.map((state) => (
+                  <li class="flex flex-col items-center gap-3">
+                    <NodeMascot review state={state} tier={tier} decorative={false} id={`brand-node-${ink ? 'ink' : 'paper'}-${state}-${tier}`} />
+                    <p class="label text-dl-ink-3">{state} · {tier}</p>
+                  </li>
+                ))}
+              </ul>
+            ))}
+          </div>
+        ))}
+        <h3 class="mt-10 text-step-1">Motion, one run per click</h3>
+        <div class="mt-4 flex flex-wrap items-end gap-10">
+          <NodeMascot review state="holding" tier="figure" id="brand-node-run-receive" className="node-replay" />
+          <NodeMascot review state="confirming" tier="scene" id="brand-node-run-handoff" className="node-replay" />
+        </div>
+        <div class="mt-4 flex flex-wrap gap-3">
+          <button type="button" class="dl-button-outline" data-node-play="receive">Play receive</button>
+          <button type="button" class="dl-button-outline" data-node-play="handoff">Play hand-off</button>
+        </div>
       </section>
 
       <section aria-labelledby="panels-heading">
@@ -171,8 +203,15 @@ const sceneFigures = SCENES.map((scene) => ({ scene, number: figures.next() }))
       </section>
     </main>
     <script>
-      import { respectReducedMotion } from '../lib/motion'
+      import { pauseWhenHidden, replayNode, respectReducedMotion } from '../lib/motion'
       respectReducedMotion()
+      pauseWhenHidden()
+      for (const button of document.querySelectorAll<HTMLButtonElement>('[data-node-play]')) {
+        const run = button.dataset.nodePlay as 'receive' | 'handoff'
+        const svg = document.querySelector<SVGSVGElement>(`#brand-node-run-${run}-title`)?.closest('svg')
+          ?? document.querySelectorAll<SVGSVGElement>('.node-replay')[run === 'receive' ? 0 : 1]
+        button.addEventListener('click', () => { if (svg) replayNode(svg, run) })
+      }
     </script>
   </body>
 </html>

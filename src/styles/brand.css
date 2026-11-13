@@ -458,32 +458,68 @@ body.brand {
 .dl-form .form-surface [role='status'][data-status='error'] { color: var(--ink); border-color: var(--danger); }
 .dl-form .form-surface [role='status'][data-status='error'] > svg { color: var(--danger); }
 
-/* ---- Node, the routing engine (NodeMascot.jsx, ADR 0014) ---- */
-.node-mascot { overflow: visible; }
-.node-stop-magenta { stop-color: var(--redline); }
-.node-stop-violet { stop-color: var(--violet); }
-.node-stop-blue { stop-color: var(--link); }
-.node-wire { fill: none; stroke: var(--ink-3); stroke-width: 1.5; stroke-linecap: round; }
-.node-ring { fill: var(--paper); stroke-width: 2; }
-.node-ring--left { stroke: var(--redline); }
-.node-ring--centre { stroke: var(--ink); }
-.node-ring--right { stroke: var(--link); }
-.node-plate { stroke-width: 2; stroke-linejoin: round; }
-.node-plate--left { fill: var(--redline); fill-opacity: 0.22; stroke: var(--redline); }
-/* Blue is dim on navy, so its plate is filled more strongly to read at small sizes. */
-.node-plate--right { fill: var(--link); fill-opacity: 0.45; stroke: var(--link); }
-.node-visor { stroke: var(--paper); stroke-width: 1.5; }
-.node-visor--amber { fill: var(--amber); }
-.node-eye { fill: var(--ink); }
-.node-hand { fill: var(--paper); stroke: var(--ink-2); stroke-width: 1.5; }
-.node-slate { fill: var(--paper-2); stroke: var(--amber); stroke-width: 1.5; }
-.node-slate-line { fill: none; stroke: var(--ink-3); stroke-width: 1.2; stroke-linecap: round; }
-.node-packet { fill: var(--ink); }
-@keyframes node-pulse {
-  50% { opacity: 0.55; }
+/* ---- Node, the DevLab router (NodeMascot.jsx; spec G.3, G.4) ----
+   Ink lines on paper (inverted inside .ink-panel); the lamp is the only filled
+   accent. Motion is one run per trigger (data-run), never on its own. */
+.node-mascot { overflow: visible; color: var(--ink); }
+.node-line,
+.node-plate,
+.node-terminal,
+.node-slate,
+.node-person {
+  fill: var(--paper);
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
-/* Three pulses (4.8 s), then still: WCAG 2.2.2 allows motion that stops within 5 s. */
-.node-mascot[data-state='active'] .node-visor { animation: node-pulse 1.6s ease-in-out 3; }
+.node-line { fill: none; }
+.node-mascot--mark .node-line,
+.node-mascot--mark .node-plate { stroke-width: 1.75; }
+.node-path { stroke: var(--ink-3); stroke-dasharray: 2 3; }
+.node-hand,
+.node-packet { fill: currentColor; }
+.node-lamp {
+  fill: var(--paper);
+  stroke: currentColor;
+  stroke-width: 1.5;
+  transition: fill var(--duration-ui) var(--ease-draw);
+}
+.node-mascot[data-state='holding'] .node-lamp { fill: var(--redline); }
+.node-mascot[data-state='confirming'] .node-lamp { fill: var(--ok); }
+.node-mascot[data-state='confirming'] .node-stamp { stroke: var(--ok); }
+/* Needs a person: amber lives only inside exhibits (spec N.1); on stone the lamp is solid ink. */
+.node-mascot[data-state='needs-person'] .node-lamp { fill: currentColor; }
+.ink-panel .node-mascot[data-state='needs-person'] .node-lamp { fill: var(--amber); }
+
+/* The /brand silhouette test: every shape filled solid. */
+.node-silhouette :is(.node-line, .node-plate, .node-terminal, .node-lamp, .node-hand, .node-slate, .node-person) { fill: currentColor; }
+
+/* receive: a packet enters along the centre plate (600 ms). */
+@keyframes node-receive {
+  from { opacity: 0; transform: translateY(44px); }
+  20% { opacity: 1; }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* hand-off: the packet moves from the body to the person (800 ms)... */
+@keyframes node-handoff {
+  from { transform: translateX(-102px); }
+  to { transform: translateX(0); }
+}
+/* ...then the lamp turns from holding to confirmed (200 ms). */
+@keyframes node-lamp-confirm {
+  from { fill: var(--redline); }
+  to { fill: var(--ok); }
+}
+.node-mascot:not([data-run]) .node-packet--handoff,
+.node-mascot[data-run='receive'] .node-packet--handoff { opacity: 0; }
+.node-mascot[data-run='receive'] .node-packet--receive { animation: node-receive 600ms var(--ease-draw) 1 both; }
+.node-mascot[data-run='handoff'] .node-packet--receive { opacity: 0; }
+.node-mascot[data-run='handoff'] .node-packet--handoff { animation: node-handoff 800ms var(--ease-draw) 1 both; }
+.node-mascot[data-run='handoff'][data-state='confirming'] .node-lamp { animation: node-lamp-confirm 200ms 800ms var(--ease-draw) 1 both; }
+/* Paused while the tab is hidden (src/lib/motion.ts sets data-page-hidden). */
+[data-page-hidden] .node-mascot * { animation-play-state: paused; }
+/* Reduced motion: the sequence does not start; the final frame shows. */
 @media (prefers-reduced-motion: reduce) {
-  .node-packets { display: none; }
+  .node-mascot * { animation: none; }
 }

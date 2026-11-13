@@ -31,3 +31,29 @@ export function respectReducedMotion(): void {
   if (document.readyState !== 'complete') window.addEventListener('load', apply, { once: true })
   query.addEventListener('change', apply)
 }
+
+/**
+ * Plays one Node sequence (spec G.4) by removing and re-adding `data-run`, so
+ * the CSS animation restarts. One run per call; nothing repeats on its own.
+ * Under reduced motion the CSS keeps the final frame, so this is harmless.
+ */
+export function replayNode(svg: SVGSVGElement, run: 'receive' | 'handoff'): void {
+  svg.removeAttribute('data-run')
+  // Reading layout commits the removal before the attribute comes back.
+  void svg.getBoundingClientRect()
+  svg.setAttribute('data-run', run)
+}
+
+let watchingVisibility = false
+
+/** Marks the page hidden while its tab is in the background, so CSS pauses Node's sequences. */
+export function pauseWhenHidden(): void {
+  if (watchingVisibility) return
+  watchingVisibility = true
+  const apply = () => {
+    if (document.hidden) document.documentElement.dataset.pageHidden = ''
+    else delete document.documentElement.dataset.pageHidden
+  }
+  apply()
+  document.addEventListener('visibilitychange', apply)
+}

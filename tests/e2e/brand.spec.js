@@ -58,3 +58,27 @@ test('the brand page is never indexed', async ({ request }) => {
   expect(response.headers()['x-robots-tag']).toMatch(/noindex/)
   expect(await response.text()).toContain('<meta name="robots" content="noindex, nofollow"')
 })
+
+// MASCOT-01/02: /brand shows every Node state in every tier, on stone and on
+// graphite, the 24 px silhouettes, and plays each sequence once per click.
+test('the review page shows Node in four states, three tiers, on both surfaces', async ({ page }) => {
+  await page.goto('/brand')
+  const review = page.locator('[data-node-review]')
+  for (const tier of ['mark', 'figure', 'scene']) {
+    await expect(review.locator(`[data-node-tier="${tier}"] svg.node-mascot`)).toHaveCount(8)
+  }
+  await expect(review.locator('[data-node-silhouettes] svg.node-mascot')).toHaveCount(2)
+  await expect(review.locator('svg.node-mascot [class*="visor"]')).toHaveCount(0)
+  const replay = review.locator('.node-replay').first()
+  await review.getByRole('button', { name: 'Play receive' }).click()
+  await expect(replay).toHaveAttribute('data-run', 'receive')
+  const animations = await replay.evaluate((svg) => svg.getAnimations({ subtree: true }).map((animation) => ({
+    iterations: animation.effect.getTiming().iterations,
+    total: Number(animation.effect.getTiming().duration) + Number(animation.effect.getTiming().delay),
+  })))
+  expect(animations.length).toBeGreaterThan(0)
+  for (const animation of animations) {
+    expect(animation.iterations).toBe(1)
+    expect(animation.total).toBeLessThanOrEqual(1200)
+  }
+})

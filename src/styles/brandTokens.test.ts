@@ -210,9 +210,8 @@ describe('Direction B guards (TEST-01)', () => {
     expect(contrast(token(':root', 'ink-3'), token(':root', 'paper'))).toBeGreaterThanOrEqual(4.5)
   })
 
-  // Amber is an exhibit colour: only inside `.ink-panel`. Fixed by BRAND-01 and
-  // MASCOT-01 (Node's amber visor and slate today sit on the open page).
-  it.fails('amber is used only inside .ink-panel (BRAND-01, MASCOT-01)', () => {
+  // Amber is an exhibit colour: only inside `.ink-panel`.
+  it('amber is used only inside .ink-panel', () => {
     const wrong = rules.filter(({ selector, body }) => /var\(--(?:accent-)?amber\)/.test(body) && !/\.ink-panel/.test(selector))
     expect(wrong.map(({ selector }) => selector)).toEqual([])
   })
