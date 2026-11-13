@@ -283,7 +283,7 @@ through `development` → preview → owner sign-off → `main`.
 | 4 Data | CMS-01, CMS-02, CMS-03 | done (PR #61, production at `4961cf6`, 2026-11-13) |
 | 5 Pages I | UX-02, UX-01, WEB-03, CONTENT-01, CONTENT-02, CONTENT-03, CASE-01, CASE-02 | done (PR #64, production at `2185c6a`, 2026-11-13) |
 | 6 Pages II | UX-03, UX-04, UX-05, CONTENT-04…06, CONVERT-01…04, WEB-02, BUS-01, BUS-02, BUS-05, PROFILE-01, CASE-03 | in progress: conversion, links, About, schema done; UX-03 figure sizing, UX-04 (Products screenshot, Maintenance), CONTENT-04 (Profile voice), CONTENT-05 (write-up leads) remain |
-| 7 Shell consolidation | BRAND-04, WEB-01, WEB-05, SEC-03 | not started |
+| 7 Shell consolidation | BRAND-04, WEB-01, WEB-05, SEC-03 | done locally (`8c9a5bb`); PR, preview, production in progress |
 | 8 Conditional and owner items | BUS-03, BUS-04, CONVERT-05, CASE-04, WEB-04, SEO-01, SEO-04, MASCOT-05 | not started |
 | 9 Verification and release | TEST-02…05, OPS-03, OPS-04, CMS-04, release | not started |
 
@@ -420,3 +420,19 @@ Group 5 promotion: PR #64 CI green; preview (31/31 legacy URLs; new hero, CTA, p
 Done: CONVERT-01 (Contact aside: S8, reply window and hours from settings, email alternative, channels only when set; e2e), CONVERT-02 (graphite success exhibit, Node hand-off once, I.4 text with the visitor's own address; contact-form e2e updated), CONVERT-03 (receipt email reply window and hours; 3 new unit tests, 417 worker tests green incl. persist-before-deliver guards), BUS-01, BUS-05 (price line on the offer card, audit page and FAQ), BUS-02 (About "What working with us looks like"; Terms ownership line, owner-approved wording only), CONTENT-06 (delivery steps only on About), WEB-02 (footer hiring link, Insights audit link, offers CTA, digest label), PROFILE-01 (byline), CASE-03 (`CreativeWork`; 3 schema tests), CONVERT-04 (existing click events cover it; measurement note in `docs/operations.md`).
 
 Remaining in Group 6: UX-03 figure sizing on Solutions and line pages, UX-04 (Products screenshot with synthetic data, Maintenance on the brand shell — joins BRAND-04), CONTENT-04 (Profile third person, merged tags, bullet grammar), CONTENT-05 (≤ 30-word write-up leads; needs the CMS narrative rows).
+
+Group 6 part 1 promotion: PR #65 green; preview verified (Contact aside, audit price, About section, no "auto-replied"); `main` → `9d28af1` (MERGED); production smoke: 31/31 legacy, health 200, `/brand` 404, hashed CSP, noindex admin, 0 personal-data hits, Contact shows the reply window.
+
+### Group 7 — Shell consolidation (log)
+
+Owner (2026-11-13, mid-work): "ensure all sections and paths cover the new brand"; "remove the Who you work with section".
+
+| Req | Evidence |
+|---|---|
+| BRAND-04, WEB-05 | Offers, daily digest, crawler, maintenance rebuilt with brand components; three pickleball marketing pages in the brand shell with a product band. New e2e visits every sitemap URL plus unlisted pages: all on the brand shell, 0 underlined elements, 0 Google Fonts requests (pickleball app screens exempt) |
+| WEB-01 | Deleted `Layout.astro`, `Navbar`, `Footer`, `PublicBackdrop`, `VectorField`, `SectionHeader`, `ProofStrip` (no references). Earlier: console, bento, spec cards, spotlight. `PrimaryButton`, `GlassCard`, `AnimatedIcon` stay (forms and UI states use them) |
+| SEC-03 | Plus Jakarta Sans self-hosted for the app shell; Google hosts removed from `securityHeaders.ts`, `public/_headers`, `astro.config.mjs`; tests RED → GREEN |
+| UX-04 (maintenance) | Brand shell, no fixed return time |
+| Owner change | Home founder strip removed; markets moved to About facts and `areaServed` (BUS-04, schema test) |
+
+Verification: lint 0 errors, typecheck 0, unit 3,006 passed / 1 skipped, build OK, static e2e all green (incl. the every-path guard), worker e2e for pickleball, public pages and forms 52/52.
