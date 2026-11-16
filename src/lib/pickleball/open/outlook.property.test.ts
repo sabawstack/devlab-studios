@@ -11,7 +11,12 @@
 // scores (sudden death, deuce, a blowout) and the proposal compared.
 // The run also asserts that nextUp names four some of the time, so the gate
 // cannot quietly go dead.
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+// Deterministic (fixed seeds) but CPU-heavy: about 1.3 s per test locally, and
+// once over vitest's 5 s default on a busy CI runner (PR #74, 2026-11-16). The
+// budget absorbs a slow runner; it does not hide a hang.
+vi.setConfig({ testTimeout: 60_000 })
 import { queueOutlook } from './outlook'
 import { queueOrder } from './fairness'
 import { Clock, createDriver, randomScore, scoresFor, setKey, step, type Driver } from './testing/reducerSim'

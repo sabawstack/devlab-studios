@@ -51,6 +51,10 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+### Fixed
+
+- Tests: the Pickleball `nextUp` property and queue-prediction simulation tests have a 60-second budget. They are deterministic but CPU-heavy (about 1.3 s each locally) and once passed vitest's 5-second default on a busy CI runner; the invariant itself held.
+
 ## [2.7.0] - 2026-11-16
 
 ### Added

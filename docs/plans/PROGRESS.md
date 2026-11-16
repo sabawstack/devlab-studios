@@ -26,7 +26,7 @@ money, legal wording or a real data deletion are skipped and listed under
 | 12 | Docs + release | v2.3.0 (PR #53) and **v2.4.0 released 2026-11-12** (PR #55); ADRs 0011–0013; full docs refresh (OPS-08) still open |
 | 13 | Blueprint rebrand | done (PR #57, production at `3874835`, v2.5.0 tagged; GitHub Release entry pending, see Phase 13 Open) |
 | 14 | Brand, UX and architecture spec (`devlab-complete-b2b-brand-ux-architecture-spec.md`) | done: all nine groups, release 2.6.0 (2026-11-13; see Phase 14) |
-| 15 | Admin and Pickleball: queue clarity, defects, brand alignment (`devlab-admin-pickleball-brand-alignment-audit.md`) | all 7 groups on preview (PRs #68–#74, `development` at Group 6); production waits for the owner |
+| 15 | Admin and Pickleball: queue clarity, defects, brand alignment (`devlab-admin-pickleball-brand-alignment-audit.md`) | done: release 2.7.0 in production 2026-11-16 (PRs #68–#74, `main` at `e71ef4b`) |
 
 ## Blockers (owner)
 
@@ -605,4 +605,16 @@ Not verified on preview, with reasons:
 
 - **Signed-in Admin screens.** Need the owner's preview admin credentials; none were provided or guessed. Covered locally by the worker e2e (348 passing).
 - **A live Pickleball session on three windows.** Creating a session on preview requires passing Cloudflare Turnstile; a headless browser stops at "Completing secure verification…", and getting past bot protection with automation was not attempted. Covered locally by the e2e (queue, status card, TV, realtime). Owner step: start a session on the preview, then open the host link, the player board and `/tv` on three devices and walk a game through proposed → started → finished, a skip and a break.
+
+### Phase 15 — Production (2026-11-16, owner-approved)
+
+Owner: "Approve production, make all production useful, decide what's best."
+
+- **Release 2.7.0** (`e71ef4b`, MINOR: new capability and one additive API field): `package.json` and the two root `package-lock.json` version fields only (diff checked), `[Unreleased]` → `[2.7.0] - 2026-11-16`. On `development` first: CI 43835948331 and Deploy Preview 43835947352 green (deploy, performance budget, visual capture).
+- **Dry run:** production build + `wrangler deploy --dry-run` (3,910.93 KiB / gzip 993.70 KiB; `DEPLOYMENT_ENV` "production" bound).
+- **Promotion:** `main` fast-forwarded `2984387` → `e71ef4b` (PRs #68–#74 merged by the fast-forward). Main CI: validate and tag-release success; **v2.7.0** tag and GitHub Release published by CI. Workers Builds production deploy: success.
+- **Smoke (production):** 200 for `/api/health`, `/`, `/admin`, `/branding/logo-only.svg`, `/pickleball`, `/pickleball/new`, `/products`, `/work`, `/contact`, `/solutions`; `/api/admin/session` unauthenticated 401; `/admin` noindex, title "DevLab Workspace", badge "Production", no vector field, no page errors; Pickleball app in Space Grotesk with the endorsement, no page errors; 31/31 legacy URLs answer 200/301/308; `/pickleball` title "Free Pickleball Open Play Manager: DevLab Pickleball".
+- **Production D1** (`devlab-studios-cms`): Time Travel bookmark `00005bb4-00000000-00005125-ddfabd8225de4eb4d1ec15da008f7eb5`; read first with NULL-safe checks: 11 SEO rows, none mention Pickleball (those pages use the code fallback, already correct), 0 settings or sections with the old casing; `2026-11-16-devlab-pickleball-casing.sql` applied: 0 rows written. Preview re-read NULL-safe: `products` row has the new casing, none old.
+- **Found after promotion:** the PR #74 CI run (pull_request event) timed out once on the `nextUp` property test (5.2 s against vitest's 5 s default; the invariant held, the two other runs on the same commit passed). Fixed with a 60 s budget for the two deterministic heavy test files.
+- Still for the owner, as before: a live three-device Pickleball session on production or preview (Turnstile needs a person), and a signed-in Admin walk-through.
 

@@ -1,6 +1,6 @@
 # DevLab Admin and Pickleball: queue clarity, defects and brand alignment
 
-**Status:** specification, being implemented (Phase 15 in `PROGRESS.md`).
+**Status:** implemented; released as 2.7.0 and in production since 2026-11-16 (Phase 15 in `PROGRESS.md`).
 **Written:** 2026-11-16 at `2984387` (release 2.6.0). `main`, `origin/main`
 and `origin/development` were all at that commit when work started.
 **Scope:** DevLab Pickleball (highest priority: a player must always know
@@ -268,4 +268,4 @@ the network returned. Production and real phones not measured (see Not done).
 
 - **CMS-01/02 (P2), partly.** The four legacy editors (`ContentManager`, `ProjectsManager`, `SeoManager`, `SiteSettingsManager`, about 3,000 lines) still use their own button and status-message markup. Their inputs pick up the workspace styles from `admin.css` and their repeated controls are named (CMS-04), but converting roughly a hundred buttons and messages without a visual pass on each editor risked regressions for a P2 item. The raw-colour ratchet now counts what is left (Admin 5 hex, 35 legacy utilities) so the conversion can only move forward.
 - **Admin preview walkthrough signed in.** Preview admin sign-in needs the owner's preview credentials, which were not provided and were not guessed. Unauthenticated preview checks were done (see PROGRESS.md).
-- **Production.** Nothing promoted; `2026-11-16-devlab-pickleball-casing.sql` not applied to production D1.
+- **Production walk-through by a person.** Released 2026-11-16 (v2.7.0). The production database needed no casing change (0 rows). A live three-device Pickleball session and a signed-in Admin pass still need a person: Turnstile and the admin credentials.
