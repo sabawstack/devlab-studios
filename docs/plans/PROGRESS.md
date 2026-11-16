@@ -565,3 +565,28 @@ Branch `feat/pb-admin-5-brand-foundation` (stacked on Group 4), commits `6dee54d
 
 Verification: lint 0 errors (1 pre-existing warning), typecheck 0, unit 3,105 passed / 1 skipped, build OK, static e2e 245 + the updated sign-in guard passing (the old vector-field assertion replaced), worker e2e 340 passed / 2 failed (known SEO slug and Lead CRM sources seed). Visual: TV 16 courts with 40-character names at 1920, Admin login at 390 and CRM dashboard at 1440 (local, not committed).
 
+### Group 6 — Admin workspace (log)
+
+Branch `feat/pb-admin-6-workspace` (stacked on Group 5), commit `8b3fe20`.
+
+| Req | Status | Evidence |
+|---|---|---|
+| ADMIN-06 | done | `primitives/` (13 pieces) + `confirmAction`/`ConfirmHost`; Lead CRM `shared.jsx`/`format.js` re-export them; 14 native dialogs replaced; confirmation added to project delete, draft discard, page-block remove, do-not-contact (domain choice, decision 7); typed confirmation for privacy erase; Production named in destructive confirmations; mobile nav is a dialog. E2e: typed confirm + Escape, do-not-contact domain, drawer Escape and focus return; existing tests answer the new dialog |
+| ADMIN-01 | done (Group 5) | Sign-in card; axe clean (`public-pages.spec.js`) |
+| ADMIN-02 | done | Header page title, per-route document titles (`routeTitles.js`, unit), 404 inside the workspace, route error screen |
+| ADMIN-03 | done | Six areas (`adminNav.js`, unit); routes unchanged; attention counts as descriptions; nav e2e in three specs updated |
+| ADMIN-04 | done | Home: "Needs attention" first from three endpoints in parallel with per-area states (e2e with the mailbox endpoint failing); totals with "Inquiries"; activity with an error state |
+| ADMIN-07 | done | `LoadState` on Conversations, Sources, Suppression, Activity (timeline and jobs), Settings (two panels), Leads, Home activity |
+| ADMIN-09 | done | `DEPLOYMENT_ENV` in both wrangler environments + `.env.example` + `env.d.ts`; `deploymentEnvironment` (unit); session `environment` (e2e: `local`); "Open live/preview/local site" |
+| ADMIN-10 | done | Keyboard-reachable lead rows; placeholder-only inputs labelled (scan finds none left); pressed state on the Activity view switch; Feedback live roles |
+| CRM-03 | done | Paging (100/page) and `?lead=` (e2e with a stubbed 250-lead list) |
+| CRM-05 | done | Editing starts from the current draft in both editors; e2e RED ("Draft 1 body") then GREEN |
+| CRM-06, CRM-07 | done | `useDebouncedValue` on Activity and Suppression; router `Link` in the switched-off notice |
+| MAIL-02..04 | done | Compose on the Dialog primitive with a clearing Discard; rail badges on Diagnostics; `compose.ts` comment corrected. (MAIL-05 was not a separate item in the spec's list beyond these three.) |
+| CMS-03, CMS-04 | done | "Site settings" in nav, heading and registry; named Up/Down/Remove in `ContentManager`, `SiteSettingsManager`, page builder |
+| CMS-01, CMS-02 | partly | Inputs styled through `admin.css`; legacy buttons and messages not converted (Not done in the spec) |
+
+Also: ratchet lowered to Admin 5 hex / 35 legacy (from 6 / 44); "Home page" for the website's home in the nav (two links were both called "Home").
+
+Verification: lint 0 errors (1 pre-existing warning), typecheck 0, unit 3,118 passed / 1 skipped, build OK, static e2e 246 passed / 1 skipped, worker e2e 348 passed / 4 failed (SEO slug, Lead CRM sources seed, two mailbox transmitter callbacks: the known pre-existing local set).
+
