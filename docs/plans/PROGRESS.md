@@ -26,6 +26,7 @@ money, legal wording or a real data deletion are skipped and listed under
 | 12 | Docs + release | v2.3.0 (PR #53) and **v2.4.0 released 2026-11-12** (PR #55); ADRs 0011–0013; full docs refresh (OPS-08) still open |
 | 13 | Blueprint rebrand | done (PR #57, production at `3874835`, v2.5.0 tagged; GitHub Release entry pending, see Phase 13 Open) |
 | 14 | Brand, UX and architecture spec (`devlab-complete-b2b-brand-ux-architecture-spec.md`) | done: all nine groups, release 2.6.0 (2026-11-13; see Phase 14) |
+| 15 | Admin and Pickleball: queue clarity, defects, brand alignment (`devlab-admin-pickleball-brand-alignment-audit.md`) | in progress (see Phase 15) |
 
 ## Blockers (owner)
 
@@ -464,3 +465,28 @@ Group 7 promotion: PR #66 green; preview: migrated pages on the brand shell, CSP
 | CMS-04 | ADR 0015; ADR 0014 marked superseded in part; `CURRENT_STATE.md`, `scenes.md`, `node.md`, `operations.md` updated |
 
 Verification: lint 0 errors, typecheck 0, unit 3,016 passed / 1 skipped (207 files), build OK, static e2e 246 passed / 1 skipped, worker + admin-auth 323 passed / 2 failed / 1 skipped. The two failures (SEO slug editor, Lead CRM sources) need seeded local data, fail the same on `main`, are outside this spec and are not run in CI; left as local-environment follow-ups.
+
+## Phase 15 — Admin and Pickleball: queue clarity, defects, brand alignment
+
+Spec: `docs/plans/devlab-admin-pickleball-brand-alignment-audit.md` (written
+2026-11-16 at `2984387`). Binding: preview only; production waits for the
+owner's explicit approval. One stacked branch and PR per group
+(`feat/pb-admin-<n>-<slug>`), each fast-forwarded onto `development` after its
+local suite passes; `main` is not pushed.
+
+Start state (2026-11-16): `git fetch`; `main`, `origin/main`,
+`origin/development` all at `2984387`. Baseline on untouched `main`: lint 0
+errors, typecheck 0 errors (19 hints), unit 3,016 passed / 1 skipped (207 files).
+
+"Before" screenshots: `scripts/visual/capture-apps.mjs` against the local
+fixture stack (wrangler dev, synthetic sessions), 390 / 820 / 1440 (and 1920
+for the TV), motion on and reduced motion: 144 images, kept in the session
+scratchpad, not committed (admin pages can show local fixture data).
+
+### Group 0 — Specification (log)
+
+| Req | Evidence |
+|---|---|
+| Spec | `docs/plans/devlab-admin-pickleball-brand-alignment-audit.md` created with every requirement ID, the owner decisions, the `nextUp` contract and gate, and the testing matrix |
+| Tooling | `scripts/visual/capture-apps.mjs` (Admin and Pickleball captures on the local stack) |
+
