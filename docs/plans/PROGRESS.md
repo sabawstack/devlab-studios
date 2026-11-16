@@ -518,3 +518,21 @@ Branch `feat/pb-admin-2-queue-model` (stacked on Group 1), commit `b0856e1`.
 
 Verification: lint 0 errors (1 pre-existing warning), typecheck 0, unit 3,051 passed / 1 skipped (210 files), build OK. Worker e2e 326 passed / 4 failed (SEO slug, Lead CRM sources seed, two poster-share emulations: the known pre-existing set). Static e2e: the first run after the worker suite failed 4 public-page tests (Work entries and sitemap) because the worker suite's admin tests leave projects in the local D1 the static snapshot copies; the local state was moved aside to `.wrangler/state-backup-2026-11-16` (kept) and the rerun on fresh state passed 246 / 1 skipped, as CI runs.
 
+### Group 3 — Pickleball queue interface (log)
+
+Branch `feat/pb-admin-3-queue-ui` (stacked on Group 2), commit `ff8f0ad`.
+
+| Req | Status | Evidence |
+|---|---|---|
+| PB-QUEUE-01 | done | `lib/queueVocabulary.js` imported by the board, TV, host card, roster, host queue panel, captain panel and tournament "Coming up"; unit tests |
+| PB-QUEUE-02 | done | `StatusCard` (a "Who are you?" prompt before a name is picked; one line per state; `NEXT_FOUR` kind; no place number); e2e on a 390 px phone for PICK, PLAYING, UP_NEXT, WAITING, BREAK, NEXT_FOUR |
+| PB-QUEUE-03 | done | Board order status → calls → courts → next four → "Waiting (N)", unnumbered, rule in words, "decided when a game ends" (e2e checks positions and text) |
+| PB-QUEUE-04 | done | TV "Waiting" panel, "Next four", "and N more" instead of silently hidden rows, compact queue below `lg`; 16-court / long-name fit tests pass (container query, see Deviations) |
+| PB-QUEUE-05 | done | `HostQueuePanel` on the Courts tab; roster numbering removed; e2e |
+| PB-QUEUE-07 | done | `role="status" aria-live="polite"` card text changes once per status change; every status is words; no animation on chips or next four; reduced motion was already honoured in `pickleball-open.css` |
+| PB-UX | done | `Sheet`: Escape, focus trap, focus return (falls back to the opener's menu button); `ConfirmSheet` replaces the two `window.confirm` in `HostConsole`; captain queue panel |
+
+Visual check (local, synthetic sessions; not committed): board at 390 in every state, TV with 2 and 16 courts and 40-character names at 1920, host at 390. Before/after sets in the session scratchpad.
+
+Verification: lint 0 errors (1 pre-existing warning), typecheck 0, unit 3,064 passed / 1 skipped, build OK, static e2e 246 passed / 1 skipped (fresh state), worker e2e 336 passed / 2 failed (SEO slug, Lead CRM sources seed: known pre-existing).
+
