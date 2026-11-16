@@ -51,6 +51,8 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+## [2.7.1] - 2026-11-16
+
 ### Changed
 
 - **DevLab Pickleball is on the DevLab brand, not its old navy and lime.**
