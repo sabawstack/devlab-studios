@@ -53,7 +53,7 @@ export function buildDuprEmail(input: DuprEmailInput): DuprEmail {
     '',
     reply,
     '',
-    'Devlab Pickleball · devlabstudios.com/pickleball',
+    'DevLab Pickleball · devlabstudios.com/pickleball',
   ].join('\n')
 
   const font = "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;"
@@ -68,7 +68,7 @@ export function buildDuprEmail(input: DuprEmailInput): DuprEmail {
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f5fa;"><tr><td align="center" style="padding:32px 16px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background-color:#ffffff;border:1px solid #e4e7f2;border-radius:14px;">
 <tr><td style="padding:28px 32px;${font}font-size:15px;line-height:1.6;color:#3c4356;">
-<p style="margin:0 0 6px 0;font-size:12px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#5b6478;">Devlab Pickleball</p>
+<p style="margin:0 0 6px 0;font-size:12px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#5b6478;">DevLab Pickleball</p>
 <h1 style="margin:0 0 14px 0;font-size:22px;line-height:1.25;color:#111321;">${escapeHtml(subject)}</h1>
 <p style="margin:0 0 14px 0;">Hi ${escapeHtml(input.hostName)},</p>
 <p style="margin:0 0 14px 0;">${escapeHtml(intro)}</p>

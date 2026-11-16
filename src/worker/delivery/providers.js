@@ -30,7 +30,7 @@ async function fetchWithTimeout(url, init) {
 
 /**
  * Transactional email via Resend — the studio's existing provider.
- * `fromName` labels the sender (Devlab Pickleball mail says so); `attachments`
+ * `fromName` labels the sender (DevLab Pickleball mail says so); `attachments`
  * are Resend's `{ filename, content }` with base64 content.
  */
 export function createResendProvider(env, { name = 'resend', fromName = 'DevLab Studios' } = {}) {

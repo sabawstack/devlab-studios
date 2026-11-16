@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 
 const VARIANTS = {
-  primary: 'bg-brand text-white hover:bg-[#3a00d6]',
+  primary: 'pb-action',
   neon: 'bg-pickle-neon text-ink hover:brightness-95',
   ghost: 'border border-navy-700 text-white hover:bg-navy-900',
   quiet: 'text-pickle-neon hover:underline',

@@ -169,7 +169,7 @@ describe('posterLayout', () => {
     expect(layout.rest.more.y).toBeLessThan(layout.summary.y)
     expect(layout.summary.y).toBeLessThan(layout.band.top)
     expect(layout.band.top).toBe(POSTER.height - POSTER.bandHeight)
-    expect(layout.band.text.lines).toEqual(['Made with Devlab Pickleball', 'Free open play & tournaments', 'devlabstudios.com/pickleball'])
+    expect(layout.band.text.lines).toEqual(['Made with DevLab Pickleball', 'Free open play & tournaments', 'devlabstudios.com/pickleball'])
   })
   it('a 1,1,3 tie puts both names in one row on the wide gold step', () => {
     const layout = posterLayout(posterModel(results({ podium: [step(1, ['Ana', 'Ben']), step(3, ['Cy'])] }), { hostName: 'M', dateText: 'd' }), measure)

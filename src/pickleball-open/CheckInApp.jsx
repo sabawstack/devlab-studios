@@ -6,6 +6,7 @@ import { writeMe } from './lib/me'
 import ExpiredNotice from './components/ExpiredNotice.jsx'
 import { Button, Panel } from './components/ui.jsx'
 import Welcome from './components/Welcome.jsx'
+import Endorsement from './components/Endorsement.jsx'
 
 const field = 'w-full rounded-xl border border-navy-700 bg-navy-900 px-3 py-3 text-base text-white placeholder:text-mist/70 focus:border-pickle-neon focus:outline-none'
 const MESSAGES = {
@@ -71,7 +72,7 @@ export default function CheckInApp({ code }) {
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-pickle-neon">Checked in</p>
         <h1 className="text-3xl font-bold">{done.alreadyCheckedIn ? `${done.name} is already on the list.` : `You're in, ${done.name}.`}</h1>
         <p className="text-mist">The board shows when you're up. This phone remembers it's you.</p>
-        <a href={`/pickleball/s/${code}`} className="inline-flex min-h-12 items-center justify-center rounded-xl bg-brand px-6 text-lg font-bold text-white hover:bg-[#3a00d6]">See the board</a>
+        <a href={`/pickleball/s/${code}`} className="inline-flex min-h-12 items-center justify-center rounded-xl pb-action px-6 text-lg font-bold">See the board</a>
       </main>
     )
   }
@@ -108,6 +109,7 @@ export default function CheckInApp({ code }) {
         {error && <p role="alert" className="rounded-xl bg-rose-500/15 px-4 py-3 text-rose-100">{error}</p>}
         <Button type="submit" variant="primary" className="text-lg" disabled={busy || !form.name.trim()}>{busy ? 'Checking in…' : 'Check in'}</Button>
       </form>
+      <footer className="pt-2 text-center"><Endorsement /></footer>
     </main>
   )
 }

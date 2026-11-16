@@ -549,3 +549,19 @@ Also: `hostSession.test.ts` used host id `h1`, which a random 43-character cooki
 
 Verification: lint 0 errors (1 pre-existing warning), typecheck 0, unit 3,062 passed / 1 skipped, build OK, static e2e 246 / 1 skipped, worker e2e 340 passed / 2 failed (known SEO slug and Lead CRM sources seed).
 
+### Group 5 — Brand foundation (log)
+
+Branch `feat/pb-admin-5-brand-foundation` (stacked on Group 4), commits `6dee54d` (BRAND-01) and `6dee54d`.
+
+| Req | Status | Evidence |
+|---|---|---|
+| BRAND-01 | done | `brand-tokens.css` split out; `brand.css` imports it; built CSS chunks (`brand.*.css`, `src.*.css`) byte-identical with the same hashes before and after; `brandTokens.test.ts` retargeted, all assertions kept, 2 added |
+| BRAND-02 | done | `admin.css` (`--ws-*` on `.admin-page`); `.admin-*` rules out of `index.css`; `AdminVectorField` deleted; shell on semantic classes; active nav = selected token |
+| BRAND-03 | done | `pickleball-app.css` (`--pb-*` on `.pb-app`), app shell only; primary button and five links moved from `#4500ff` to the brand indigo; Space Grotesk (TV fit e2e 55/55, visual check) |
+| BRAND-04 | done (preview data) | "DevLab Workspace" (shell, login, title); "DevLab Pickleball" in 34 files incl. `og:site_name`, poster band, DUPR email, SEO/privacy fallbacks, tests, live docs; historical plans/CHANGELOG/applied SQL left as written; OG card draws the name in capitals (PNG unchanged). Endorsement in board, create, check-in and My sessions footers. `2026-11-16-devlab-pickleball-casing.sql`: preview D1 read first (1 row: `products`), applied (1 row written), read back (0 left). Production not touched |
+| BRAND-05 | done | `/branding/logo-only.svg` |
+| BRAND-06 | done | `productThemes.test.ts` (36 tests) + `themeRatchet.json` (Admin 6 hex / 44 legacy, Pickleball 17 / 0) |
+| ADR 0016 | done | `docs/architecture/decisions/0016-product-themes-on-shared-brand-tokens.md`, indexed |
+
+Verification: lint 0 errors (1 pre-existing warning), typecheck 0, unit 3,105 passed / 1 skipped, build OK, static e2e 245 + the updated sign-in guard passing (the old vector-field assertion replaced), worker e2e 340 passed / 2 failed (known SEO slug and Lead CRM sources seed). Visual: TV 16 courts with 40-character names at 1920, Admin login at 390 and CRM dashboard at 1440 (local, not committed).
+

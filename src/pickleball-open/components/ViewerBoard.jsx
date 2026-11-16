@@ -17,6 +17,7 @@ import { ConfirmedCalls, NextFour, WaitingList } from './QueueLists.jsx'
 import StandingsTable from './StandingsTable.jsx'
 import StatusCard, { NamePicker } from './StatusCard.jsx'
 import Welcome from './Welcome.jsx'
+import Endorsement from './Endorsement.jsx'
 import { Panel, TeamNames } from './ui.jsx'
 
 const clock = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -138,6 +139,7 @@ export default function ViewerBoard({ viewer, lastSnapshotAt = null, lastContact
       <footer className="grid gap-3 pt-2 text-center">
         <p className="text-xs text-mist">Results are deleted from the live service 7 days after the last change to this session ({expires}). No sign-up; this phone only remembers which name you picked.</p>
         <a href="/pickleball/new" className="mx-auto inline-flex min-h-11 items-center rounded-xl border border-navy-700 px-5 hover:bg-navy-900">Run your own games, free</a>
+        <Endorsement />
       </footer>
     </main>
   )

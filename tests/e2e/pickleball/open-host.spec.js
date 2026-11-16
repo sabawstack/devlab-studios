@@ -340,7 +340,7 @@ test.describe('the DUPR sheet (screens)', () => {
     await page.getByRole('button', { name: 'Email me the DUPR export' }).click()
     const sheet = page.getByRole('dialog', { name: 'Email me the DUPR export' })
     const signInLink = sheet.getByRole('link', { name: 'Sign in with Google' })
-    const news = sheet.getByLabel('Email me occasional Devlab Pickleball news')
+    const news = sheet.getByLabel('Email me occasional DevLab Pickleball news')
     await expect(news).not.toBeChecked()
     await expect(signInLink).toHaveAttribute('href', `/api/pickleball/open/host/sign-in?return=%2Fpickleball%2Fs%2F${code}`)
     await news.check()

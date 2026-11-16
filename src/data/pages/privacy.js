@@ -48,7 +48,7 @@ Email sent to our devlabconnect.com addresses is received and stored in our own 
 
 We research businesses that may need our services, using information those businesses publish themselves (for example on their websites). We do not send automated email: any message is written or approved by a person, includes a way to opt out, and an opt-out is honoured permanently. To make sure we never contact you again after you opt out, we keep a minimal suppression record of the address or domain.
 
-## Devlab Pickleball host accounts
+## DevLab Pickleball host accounts
 
 Hosts who sign in to save sessions do so with Google, which gives us your Google account identifier, name and email. You may add a DUPR club ID for exports. A sign-in lasts 30 days. Session data is described in the open-play section below.
 

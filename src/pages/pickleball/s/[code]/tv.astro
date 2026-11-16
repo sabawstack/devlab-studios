@@ -6,6 +6,6 @@ import { normalizePublicCode } from '../../../../lib/pickleball/open/codes'
 
 const code = normalizePublicCode(Astro.params.code ?? '') ?? ''
 ---
-<PickleballAppShell title="TV board — Devlab Pickleball">
+<PickleballAppShell title="TV board — DevLab Pickleball">
   <TvBoard code={code} client:only="react" />
 </PickleballAppShell>

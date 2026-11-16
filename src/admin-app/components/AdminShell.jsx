@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { brandingAssets } from '../../config/branding'
-import AdminVectorField from './AdminVectorField'
+import { currentEnvironment } from '../lib/environment'
+import EnvironmentBadge from './EnvironmentBadge'
 import { PRIMARY_PUBLIC_SURFACES, SUPPORTING_PUBLIC_SURFACES } from '../../config/publicSurfaces'
 import {
   BadgeCheck,
@@ -136,15 +137,8 @@ function readOpenGroups(activeGroupKey) {
   return new Set(activeGroupKey ? [activeGroupKey] : [])
 }
 
-function getEnvironmentLabel() {
-  const hostname = window.location.hostname
-  if (hostname === 'localhost' || hostname === '127.0.0.1') return { label: 'Local', tone: 'bg-slate-200 text-slate-700' }
-  if (hostname === 'www.devlabstudios.com' || hostname === 'devlabstudios.com') return { label: 'Production', tone: 'bg-rose-100 text-rose-700' }
-  return { label: 'Preview', tone: 'bg-amber-100 text-amber-700' }
-}
-
 function AdminShell({ session, onLogout }) {
-  const env = getEnvironmentLabel()
+  const environment = currentEnvironment(session)
   const location = useLocation()
   const activeGroupKey = NAV_GROUPS.find((group) => group.heading && group.items.some((item) => routeMatches(location.pathname, item)))?.key
   const [isMobileOpen, setIsMobileOpen] = useState(false)
@@ -185,9 +179,9 @@ function AdminShell({ session, onLogout }) {
 
     return (
       <>
-        <div className={`flex h-16 flex-shrink-0 items-center border-b border-white/10 ${compact ? 'justify-center px-2' : 'gap-2 px-4'}`}>
+        <div className={`admin-sidebar-rule flex h-16 flex-shrink-0 items-center border-b ${compact ? 'justify-center px-2' : 'gap-2 px-4'}`}>
           <img src={brandingAssets.logoOnlyUrl} alt="DevLab Studios" className="h-8 w-8 rounded object-contain" />
-          <span className={compact ? 'sr-only' : 'text-sm font-semibold text-white'}>DevLab Studios CMS</span>
+          <span className={compact ? 'sr-only' : 'text-sm font-semibold'}>DevLab Workspace</span>
         </div>
         <nav aria-label="Admin navigation" className={`flex-1 overflow-y-auto py-4 ${compact ? 'space-y-4 px-2' : 'space-y-3 px-3'}`}>
           {NAV_GROUPS.map((group) => {
@@ -196,16 +190,14 @@ function AdminShell({ session, onLogout }) {
             const groupId = `${idPrefix}-admin-nav-${group.key}`
 
             return (
-              <div key={group.key} className={compact && group.heading ? 'border-t border-white/10 pt-4' : ''}>
+              <div key={group.key} className={compact && group.heading ? 'admin-sidebar-rule border-t pt-4' : ''}>
                 {group.heading && !compact ? (
                   <button
                     type="button"
                     aria-expanded={isOpen}
                     aria-controls={groupId}
                     onClick={() => toggleGroup(group.key)}
-                    className={`group mb-1 flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs font-semibold uppercase tracking-[0.14em] transition ${
-                      isCurrentGroup ? 'bg-white/[0.04] text-slate-300' : 'text-slate-500 hover:bg-white/[0.04] hover:text-slate-300'
-                    }`}
+                    className={`admin-nav-group group mb-1 flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs font-semibold transition ${isCurrentGroup ? 'font-bold' : ''}`}
                   >
                     <span>{group.heading}</span>
                     <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
@@ -228,7 +220,7 @@ function AdminShell({ session, onLogout }) {
                           }}
                           className={({ isActive }) =>
                             `admin-nav-link flex min-h-10 items-center gap-3 px-3 py-2.5 text-sm font-medium transition ${compact ? 'justify-center' : ''} ${
-                              isActive ? 'admin-nav-link--active text-white' : 'text-slate-400 hover:bg-white/[0.05] hover:text-white'
+                              isActive ? 'admin-nav-link--active' : ''
                             }`
                           }
                         >
@@ -248,9 +240,9 @@ function AdminShell({ session, onLogout }) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f5f6fc] text-slate-900">
+    <div className="admin-canvas flex h-screen overflow-hidden">
       <aside
-        className={`relative hidden shrink-0 flex-col border-r border-white/10 bg-[#080a18] transition-[width] duration-200 motion-reduce:transition-none md:flex ${
+        className={`admin-sidebar relative hidden shrink-0 flex-col border-r transition-[width] duration-200 motion-reduce:transition-none md:flex ${
           isSidebarCollapsed ? 'w-[4.5rem]' : 'w-64'
         }`}
       >
@@ -259,7 +251,7 @@ function AdminShell({ session, onLogout }) {
           type="button"
           onClick={toggleSidebar}
           aria-label={isSidebarCollapsed ? 'Expand admin navigation' : 'Collapse admin navigation'}
-          className="flex min-h-11 flex-shrink-0 items-center justify-center gap-2 border-t border-white/10 px-3 text-xs font-semibold text-slate-400 transition hover:bg-white/[0.05] hover:text-white"
+          className="admin-nav-group admin-sidebar-rule flex min-h-11 flex-shrink-0 items-center justify-center gap-2 border-t px-3 text-xs font-semibold transition"
         >
           {isSidebarCollapsed ? <ChevronRight className="h-4 w-4" aria-hidden="true" /> : <ChevronLeft className="h-4 w-4" aria-hidden="true" />}
           {isSidebarCollapsed ? null : 'Collapse navigation'}
@@ -268,32 +260,29 @@ function AdminShell({ session, onLogout }) {
 
       {isMobileOpen ? (
         <div className="fixed inset-0 z-50 md:hidden">
-          <button type="button" aria-label="Close admin navigation" className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={() => setIsMobileOpen(false)} />
-          <aside className="relative flex h-full w-72 max-w-[88vw] flex-col bg-[#080a18] shadow-2xl">
+          <button type="button" aria-label="Close admin navigation" className="admin-dialog-backdrop absolute inset-0" onClick={() => setIsMobileOpen(false)} />
+          <aside className="admin-sidebar relative flex h-full w-72 max-w-[88vw] flex-col shadow-2xl">
             {renderNavigation({ mobile: true })}
           </aside>
         </div>
       ) : null}
 
-      <div className="flex flex-1 flex-col">
-        <header className="flex h-16 flex-shrink-0 items-center justify-between border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur-xl sm:px-6">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="admin-header flex h-16 flex-shrink-0 items-center justify-between border-b px-4 sm:px-6">
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => setIsMobileOpen(true)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600 md:hidden" aria-label="Open admin navigation"><Menu className="h-5 w-5" /></button>
-            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${env.tone}`}>{env.label}</span>
+            <EnvironmentBadge environment={environment} />
           </div>
           <div className="flex items-center gap-4 text-sm">
-            <a href="/" target="_blank" rel="noreferrer" className="hidden font-medium text-slate-600 transition hover:text-brand-teal sm:inline">Preview Site</a>
+            <a href="/" target="_blank" rel="noreferrer" className="admin-link hidden sm:inline">Preview Site</a>
             <span className="hidden text-slate-500 lg:inline">{session.email}</span>
-            <button type="button" onClick={onLogout} className="font-semibold text-brand-teal hover:underline">
+            <button type="button" onClick={onLogout} className="admin-link">
               Log Out
             </button>
           </div>
         </header>
         <main className="admin-workspace relative isolate flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <AdminVectorField />
-          <div className="relative z-10">
-            <Outlet />
-          </div>
+          <Outlet />
         </main>
       </div>
     </div>

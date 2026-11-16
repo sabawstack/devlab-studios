@@ -7,14 +7,14 @@ const email = { subject: 'DUPR export: Sunday (2026-10-12)', text: 'Hi Mo', html
 const message = { to: 'mo@example.com', email, filename: 'dupr-sunday-2026-10-12.csv', csv: 'matchType,event\r\nD,Café' }
 
 describe('sendDuprExport', () => {
-  it('attaches the CSV as base64 and sends from Devlab Pickleball with a reply-to', async () => {
+  it('attaches the CSV as base64 and sends from DevLab Pickleball with a reply-to', async () => {
     const fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ id: 'e1' }) })
     vi.stubGlobal('fetch', fetch)
     const result = await sendDuprExport({ RESEND_API_KEY: 'k', RESEND_FROM_EMAIL: 'hello@devlabstudios.com' }, message)
     expect(result).toEqual({ delivery: 'SENT' })
     const body = JSON.parse(fetch.mock.calls[0][1].body)
     expect(body).toMatchObject({
-      from: 'Devlab Pickleball <hello@devlabstudios.com>', to: ['mo@example.com'], reply_to: 'hello@devlabstudios.com',
+      from: 'DevLab Pickleball <hello@devlabstudios.com>', to: ['mo@example.com'], reply_to: 'hello@devlabstudios.com',
       subject: email.subject, text: email.text, html: email.html,
       attachments: [{ filename: 'dupr-sunday-2026-10-12.csv', content: base64Utf8(message.csv) }],
     })

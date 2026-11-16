@@ -111,9 +111,9 @@ export default function DuprSheet({ code, hostKey, version, send, commandError =
             <>
               <label className="flex min-h-11 items-center gap-3 text-sm">
                 <input type="checkbox" checked={optIn} onChange={(event) => setOptIn(event.target.checked)} className="h-5 w-5" />
-                Email me occasional Devlab Pickleball news
+                Email me occasional DevLab Pickleball news
               </label>
-              <a href={signInHref(`/pickleball/s/${code}`, optIn)} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 font-semibold text-white hover:bg-[#3a00d6]">Sign in with Google</a>
+              <a href={signInHref(`/pickleball/s/${code}`, optIn)} className="inline-flex min-h-11 items-center justify-center rounded-xl pb-action px-4 font-semibold">Sign in with Google</a>
             </>
           ) : <p role="alert" className="rounded-xl bg-amber-400/15 px-4 py-3 text-amber-100">{NO_STORAGE}</p>}
         </div>

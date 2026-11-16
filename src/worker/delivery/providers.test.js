@@ -22,10 +22,10 @@ describe('createResendProvider', () => {
 
   it('names another sender and passes attachments and reply-to through', async () => {
     const fetch = stubFetch()
-    await createResendProvider({ RESEND_API_KEY: 'k' }, { name: 'resend-dupr', fromName: 'Devlab Pickleball' })
+    await createResendProvider({ RESEND_API_KEY: 'k' }, { name: 'resend-dupr', fromName: 'DevLab Pickleball' })
       .send({ to: 'a@example.com', replyTo: 'hello@devlabstudios.com', subject: 's', text: 't', html: 'h', attachments: [{ filename: 'x.csv', content: 'YQ==' }] })
     expect(sentBody(fetch)).toMatchObject({
-      from: 'Devlab Pickleball <hello@devlabstudios.com>', reply_to: 'hello@devlabstudios.com',
+      from: 'DevLab Pickleball <hello@devlabstudios.com>', reply_to: 'hello@devlabstudios.com',
       attachments: [{ filename: 'x.csv', content: 'YQ==' }],
     })
   })

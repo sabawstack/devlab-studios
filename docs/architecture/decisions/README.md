@@ -21,5 +21,6 @@ have to re-derive from git archaeology.
 13. [Code-composed marketing pages; the CMS keeps the content that changes](./0013-code-composed-marketing-pages.md)
 14. ["Blueprint" palette, interactive home page and the Node mascot](./0014-blueprint-palette.md) (superseded in part by 15)
 15. ["Graphite on stone" brand system, Node as a character, CMS retained](./0015-graphite-on-stone.md)
+16. [Product themes on shared brand tokens](./0016-product-themes-on-shared-brand-tokens.md)
 
 (0010 is reserved for the product-Worker split, written with that change.)

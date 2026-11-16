@@ -1,6 +1,6 @@
-# Devlab Pickleball — Runbook
+# DevLab Pickleball — Runbook
 
-Devlab Pickleball is the free, no-login session tool at `/pickleball`
+DevLab Pickleball is the free, no-login session tool at `/pickleball`
 (`architecture.md`, `schema.md`, `realtime.md`). The logged-in operator app that
 came before it was retired in 2.0.0; "Retire the legacy tables" below records how
 its data was removed.

@@ -1,4 +1,4 @@
-# Devlab Pickleball — Schema
+# DevLab Pickleball — Schema
 
 D1 database `PICKLEBALL_DB` (production `devlab-pickleball`, preview
 `devlab-pickleball-preview`), migrations in `migrations/pickleball/`. Every

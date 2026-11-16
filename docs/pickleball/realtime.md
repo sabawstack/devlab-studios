@@ -1,4 +1,4 @@
-# Devlab Pickleball — Realtime
+# DevLab Pickleball — Realtime
 
 One `OpenSessionDO` per free session (`src/worker/pickleball/open/OpenSessionDO.ts`,
 binding `OPEN_SESSION`, `idFromName(publicCode)`) serializes every command and

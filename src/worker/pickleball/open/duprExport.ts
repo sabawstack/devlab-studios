@@ -39,7 +39,7 @@ export async function sendDuprExport(
   if (env.PICKLEBALL_TEST_AUTH_ENABLED === 'true') {
     return { delivery: 'SUPPRESSED', outbox: { to: message.to, subject, text: message.email.text, filename: message.filename, csv: message.csv } }
   }
-  const provider = createResendProvider(env, { name: 'resend-dupr', fromName: 'Devlab Pickleball' })
+  const provider = createResendProvider(env, { name: 'resend-dupr', fromName: 'DevLab Pickleball' })
   if (!provider.isConfigured) {
     console.log(JSON.stringify({ event: 'pickleball_open.dupr_email', outcome: 'skipped', reason: 'missing_api_key' }))
     return { delivery: 'FAILED', reason: 'missing_api_key' }

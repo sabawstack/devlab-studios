@@ -7,6 +7,7 @@ import { Button, Panel } from '../components/ui.jsx'
 import ClubIdForm from './ClubIdForm.jsx'
 import HostAccount from './HostAccount.jsx'
 import { readSignInResult, SIGN_IN_MESSAGES, signInHref } from './duprSteps'
+import Endorsement from '../components/Endorsement.jsx'
 
 const errorText = (failure, fallback) => (failure instanceof Error && failure.message ? failure.message : fallback)
 const dateOf = (iso) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
@@ -62,7 +63,7 @@ export default function MySessionsApp() {
   return (
     <main className="mx-auto grid max-w-2xl gap-5 px-4 py-8">
       <header>
-        <a href="/pickleball" className="text-sm text-mist underline">Devlab Pickleball</a>
+        <a href="/pickleball" className="text-sm text-mist underline">DevLab Pickleball</a>
         <h1 className="mt-2 text-3xl font-bold">My sessions</h1>
         <p className="mt-1 text-mist">Sessions you linked to your Google account for the DUPR export. Open one as host from any device.</p>
       </header>
@@ -80,9 +81,9 @@ export default function MySessionsApp() {
           <p>Sign in with the Google account you used for a DUPR export. Running a session never needs an account; only sessions you linked show here.</p>
           <label className="flex min-h-11 items-center gap-3 text-sm">
             <input type="checkbox" checked={optIn} onChange={(event) => setOptIn(event.target.checked)} className="h-5 w-5" />
-            Email me occasional Devlab Pickleball news
+            Email me occasional DevLab Pickleball news
           </label>
-          <a href={signInHref('/pickleball/my-sessions', optIn)} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 font-semibold text-white hover:bg-[#3a00d6]">Sign in with Google</a>
+          <a href={signInHref('/pickleball/my-sessions', optIn)} className="inline-flex min-h-11 items-center justify-center rounded-xl pb-action px-4 font-semibold">Sign in with Google</a>
         </Panel>
       )}
 
@@ -108,6 +109,7 @@ export default function MySessionsApp() {
           </Panel>
         </>
       )}
+      <footer className="pt-6 text-center"><Endorsement /></footer>
     </main>
   )
 }

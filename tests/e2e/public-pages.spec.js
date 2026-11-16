@@ -384,12 +384,20 @@ test('profile certificates have descriptive alt text and load lazily', async ({ 
   await expect(page.getByText('Cebu, Philippines').first()).toBeVisible()
 })
 
-test('CMS decorative vector fields remain behind content and outside the accessibility tree', async ({ page }) => {
+// BRAND-02 / ADMIN-01: the decorative vector field, gradients and blur are gone;
+// sign-in is one card on the stone canvas, saying which workspace and deployment.
+test('the workspace sign-in is one quiet card with no decorative background', async ({ page }) => {
   await page.goto('/admin')
-  const field = page.locator('.admin-vector-field')
-  await expect(field).toHaveCount(1)
-  await expect(field).toHaveAttribute('aria-hidden', 'true')
-  await expect(field.locator('.admin-vector-field__icon')).toHaveCount(6)
+  await expect(page.locator('.admin-vector-field')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Sign in', level: 1 })).toBeVisible()
+  await expect(page.getByText('DevLab Workspace', { exact: true })).toBeVisible()
+  await expect(page.getByTestId('environment-badge')).toHaveText('Local')
+  await expect(page).toHaveTitle('DevLab Workspace')
+  const background = await page.locator('body').evaluate((el) => getComputedStyle(el).backgroundColor)
+  expect(background).toBe('rgb(240, 239, 243)')
+  const decorated = await page.evaluate(() => [...document.querySelectorAll('body *')]
+    .filter((el) => { const style = getComputedStyle(el); return /gradient/.test(style.backgroundImage) || /blur/.test(style.filter) || /blur/.test(style.backdropFilter) }).length)
+  expect(decorated).toBe(0)
 })
 
 test('security headers apply to real, server-rendered responses, not just static assets', async ({ request }) => {

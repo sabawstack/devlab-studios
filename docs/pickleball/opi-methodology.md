@@ -1,4 +1,4 @@
-# Devlab Pickleball — OPI Methodology
+# DevLab Pickleball — OPI Methodology
 
 > **Retired (2.0.0).** OPI and its public page (`/pickleball/methodology`) were removed with the logged-in app. One idea survives: free-session standings break ties by the same per-game share of points won (`src/lib/pickleball/open/standings.ts`). The rest of this document is history.
 

@@ -1,0 +1,142 @@
+/*
+ * DevLab Workspace (the Admin) on the shared brand tokens (BRAND-02, ADR 0016).
+ *
+ * A quiet operational workspace: stone canvas, white surfaces, a graphite
+ * sidebar from the exhibit tokens, indigo actions and links, one focus ring,
+ * and shared status colours. Everything is scoped to `.admin-page` (the Admin
+ * document's body), so nothing here reaches the public site or Pickleball.
+ * No gradient (the brand allows it in three public places only), no blur, no
+ * decorative background. Guarded by src/styles/productThemes.test.ts.
+ */
+@import './brand-tokens.css';
+
+.admin-page {
+  /* Semantic layer: Admin code uses these, never the palette directly. */
+  --ws-canvas: var(--paper);
+  --ws-surface: var(--paper-2);
+  --ws-ink: var(--ink);
+  --ws-ink-2: var(--ink-2);
+  --ws-ink-3: var(--ink-3);
+  --ws-rule: var(--rule);
+  --ws-action: var(--link);
+  --ws-action-hover: var(--ink);
+  --ws-action-ink: var(--paper-2);
+  --ws-link: var(--link);
+  --ws-selected: var(--selected);
+  --ws-focus: var(--focus-ring);
+  --ws-ok: var(--ok);
+  --ws-warning: var(--amber);
+  --ws-danger: var(--danger);
+  --ws-info: var(--link);
+  --ws-sidebar: var(--exhibit-paper);
+  --ws-sidebar-ink: var(--exhibit-ink);
+  --ws-sidebar-ink-2: var(--exhibit-ink-2);
+  --ws-sidebar-rule: var(--exhibit-rule);
+  --ws-sidebar-selected: var(--exhibit-rule);
+  --ws-radius: var(--radius-m);
+
+  font-family: var(--font-display);
+  background: var(--ws-canvas);
+  color: var(--ws-ink);
+}
+
+/* The Admin page has no dot mesh (index.css body::before). */
+body.admin-page::before {
+  display: none;
+}
+
+/* Labels and identifiers (ids, keys, environment names) in the label face. */
+.admin-page .ws-mono {
+  font-family: var(--font-label);
+}
+
+/* ---- Shell ---- */
+.admin-canvas {
+  background: var(--ws-canvas);
+  color: var(--ws-ink);
+}
+.admin-sidebar {
+  background: var(--ws-sidebar);
+  color: var(--ws-sidebar-ink);
+  border-color: var(--ws-sidebar-rule);
+}
+.admin-sidebar .admin-sidebar-rule {
+  border-color: var(--ws-sidebar-rule);
+}
+.admin-header {
+  background: var(--ws-surface);
+  border-color: var(--ws-rule);
+}
+
+.admin-nav-link {
+  position: relative;
+  border-radius: var(--ws-radius);
+  color: var(--ws-sidebar-ink-2);
+}
+.admin-nav-link:hover {
+  background: var(--ws-sidebar-selected);
+  color: var(--ws-sidebar-ink);
+}
+/* The current item is a filled row in the selected token: no gradient, no bar. */
+.admin-nav-link--active,
+.admin-nav-link--active:hover {
+  background: var(--ws-sidebar-selected);
+  color: var(--ws-sidebar-ink);
+  font-weight: 600;
+}
+.admin-nav-group {
+  color: var(--ws-sidebar-ink-2);
+}
+.admin-nav-group:hover {
+  background: var(--ws-sidebar-selected);
+  color: var(--ws-sidebar-ink);
+}
+
+.admin-link {
+  color: var(--ws-link);
+  font-weight: 600;
+}
+.admin-link:hover {
+  color: var(--ws-ink);
+}
+
+/* One focus ring for the whole workspace; the graphite sidebar uses its light ink. */
+.admin-page :focus-visible {
+  outline: 2px solid var(--ws-focus);
+  outline-offset: 2px;
+}
+.admin-sidebar :focus-visible {
+  outline-color: var(--ws-sidebar-ink);
+}
+
+/* ---- Form fields inside the workspace ---- */
+.admin-workspace {
+  background: var(--ws-canvas);
+}
+.admin-workspace input:not([type='checkbox']):not([type='radio']),
+.admin-workspace textarea,
+.admin-workspace select {
+  border-color: var(--ws-rule);
+  background-color: var(--ws-surface);
+  transition: border-color var(--duration-ui), box-shadow var(--duration-ui);
+}
+.admin-workspace input:focus,
+.admin-workspace textarea:focus,
+.admin-workspace select:focus {
+  border-color: var(--ws-focus);
+  box-shadow: 0 0 0 3px var(--ws-selected);
+  outline: none;
+}
+.admin-workspace table { border-color: var(--ws-rule); }
+.admin-workspace thead { background: var(--ws-canvas); }
+
+/* ---- Dialogs (primitives/Dialog.jsx) ---- */
+.admin-dialog-backdrop { background: rgba(21, 20, 42, 0.55); }
+.admin-dialog { background: var(--ws-surface); color: var(--ws-ink); box-shadow: 0 24px 60px rgba(21, 20, 42, 0.28); outline: none; }
+.admin-dialog-description { color: var(--ws-ink-2); }
+.admin-dialog-close { color: var(--ws-ink-2); }
+.admin-dialog-close:hover { background: var(--ws-selected); }
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-page * { transition: none !important; }
+}

@@ -1,0 +1,46 @@
+/*
+ * DevLab Pickleball app screens on the shared brand tokens (BRAND-03, ADR 0016).
+ *
+ * Imported only by the app shell (src/layouts/PickleballAppShell.astro), never
+ * by the public Pickleball pages inside the brand shell. Navy and lime stay:
+ * they are the game, legible across a hall. What is not the game moves onto
+ * the brand: the type face, the indigo non-game action and the radius scale.
+ * The app is a dark surface, so its focus ring is the light play colour, the
+ * same rule the brand applies to graphite (.ink-panel uses its light ink).
+ * Guarded by src/styles/productThemes.test.ts.
+ */
+@import './brand-tokens.css';
+
+.pb-app {
+  /* Play (product-owned): the court colours. */
+  --pb-canvas: #0b1426;
+  --pb-surface: #11214d;
+  --pb-ink: #ffffff;
+  --pb-ink-2: #b5c4e1;
+  --pb-play: #c6ff2e;
+  --pb-team-b: #8d9bff;
+  /* Not play (inherited from the brand): actions, focus, radius, type. */
+  --pb-action: var(--link);
+  --pb-action-hover: #4f46e5;
+  --pb-action-ink: #ffffff;
+  --pb-focus: var(--pb-play);
+  --pb-radius: var(--radius-m);
+
+  font-family: var(--font-display);
+  background: var(--pb-canvas);
+  color: var(--pb-ink);
+}
+
+.pb-app :focus-visible {
+  outline: 2px solid var(--pb-focus);
+  outline-offset: 2px;
+}
+
+/* The non-game primary action (create, sign in, open the board): brand indigo, not the legacy #4500ff. */
+.pb-action {
+  background: var(--pb-action);
+  color: var(--pb-action-ink);
+}
+.pb-action:hover {
+  background: var(--pb-action-hover);
+}

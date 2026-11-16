@@ -99,7 +99,7 @@ export const SERVICE_LINES = [
     // No client write-up yet: the proof is a product we built and run ourselves.
     workProjectId: '',
     productProof: {
-      title: 'Devlab Pickleball',
+      title: 'DevLab Pickleball',
       text: 'A live product we built and operate: accounts, real-time boards, tournaments and exports, on the same practices offered here.',
       href: '/products',
     },
@@ -263,7 +263,7 @@ export const PRODUCTS = {
   heading: 'What we build and run ourselves.',
   lead: 'Alongside client work, we build small products. One is live. A few more are ideas we want to test with the businesses that would use them.',
   live: {
-    title: 'Devlab Pickleball',
+    title: 'DevLab Pickleball',
     status: 'Live · free',
     text: 'Run open play and small tournaments from a phone: fair rotation, a live board for players, and an export for DUPR.',
     href: '/pickleball?ref=products',

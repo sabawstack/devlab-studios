@@ -17,7 +17,7 @@ export const REST_LIMIT = Object.freeze({ maxPlace: 10, maxRows: 7 })
 const LINE = 1.16
 
 /** The credit band's words, always on the poster. */
-export const BAND_LINES = Object.freeze(['Made with Devlab Pickleball', 'Free open play & tournaments', 'devlabstudios.com/pickleball'])
+export const BAND_LINES = Object.freeze(['Made with DevLab Pickleball', 'Free open play & tournaments', 'devlabstudios.com/pickleball'])
 export const QR_CAPTION = 'Scan to host yours'
 const FLOOR = 10
 

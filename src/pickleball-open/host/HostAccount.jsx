@@ -43,7 +43,7 @@ export default function HostAccount({ host, onChanged, showMySessions = true }) 
       <p className="text-mist">Signed in as <span className="break-all font-semibold text-white">{host.email}</span>. We keep your Google account ID, name and email, your DUPR Club ID and your news choice until you delete your account.</p>
       <label className="flex min-h-11 items-center gap-3">
         <input type="checkbox" checked={host.marketingOptIn} disabled={busy} onChange={toggleNews} className="h-5 w-5" />
-        Email me occasional Devlab Pickleball news
+        Email me occasional DevLab Pickleball news
       </label>
       {error && <p role="alert" className="text-rose-200">{error}</p>}
       <div className="flex flex-wrap gap-2">

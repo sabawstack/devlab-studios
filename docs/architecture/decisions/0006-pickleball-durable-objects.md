@@ -4,7 +4,7 @@
 Accepted (amended 2026-10, see "Amendment" at the end)
 
 ## Context
-Devlab Pickleball's Open Play queue needs concurrency-safe court assignment:
+DevLab Pickleball's Open Play queue needs concurrency-safe court assignment:
 two facilitators (or two courts finishing at once) must never be able to
 assign the same player to two courts. The design spec (§16) requires this
 to be solved by construction, not by client-side button-disabling.

@@ -5,6 +5,6 @@ import { resolveTurnstileSiteKey } from '../../lib/turnstileSiteKey'
 
 const siteKey = resolveTurnstileSiteKey(Astro.request.url)
 ---
-<PickleballAppShell title="Start a free session — Devlab Pickleball" description="Start a free pickleball open play session. No sign-up." indexable>
+<PickleballAppShell title="Start a free session — DevLab Pickleball" description="Start a free pickleball open play session. No sign-up." indexable>
   <CreateSessionApp siteKey={siteKey} client:only="react" />
 </PickleballAppShell>

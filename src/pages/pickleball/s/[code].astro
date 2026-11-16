@@ -32,6 +32,6 @@ async function readPreview(): Promise<PreviewMeta | null> {
 
 const preview = await readPreview()
 ---
-<PickleballAppShell title={preview ? preview.title : 'Live board — Devlab Pickleball'} description={preview?.description} og={preview ?? undefined}>
+<PickleballAppShell title={preview ? preview.title : 'Live board — DevLab Pickleball'} description={preview?.description} og={preview ?? undefined}>
   <SessionApp code={code} client:only="react" />
 </PickleballAppShell>

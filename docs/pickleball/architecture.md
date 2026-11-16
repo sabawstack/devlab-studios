@@ -1,6 +1,6 @@
-# Devlab Pickleball — Architecture
+# DevLab Pickleball — Architecture
 
-Devlab Pickleball is a free public web tool for running doubles open play and
+DevLab Pickleball is a free public web tool for running doubles open play and
 casual tournaments with no account: a host creates a session, players follow a
 live QR board on their own phones, and everything about a session is deleted 7
 days after its last activity. The only accounts are optional Google sign-ins

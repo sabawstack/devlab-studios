@@ -69,7 +69,7 @@ test.describe('Pickleball public pages', () => {
   // present in server-rendered HTML.
   const artPages = [
     { path: '/pickleball', htmlMarker: 'Run every court from one phone.', viewBox: '0 0 480 300' },
-    { path: '/pickleball/how-it-works', htmlMarker: 'How to run open play with Devlab Pickleball', viewBox: '0 0 220 200' },
+    { path: '/pickleball/how-it-works', htmlMarker: 'How to run open play with DevLab Pickleball', viewBox: '0 0 220 200' },
     { path: '/pickleball/rotation', htmlMarker: 'How fair rotation works', viewBox: '0 0 360 200' },
   ]
 
@@ -282,9 +282,9 @@ test.describe('Pickleball public pages', () => {
   // seoContent.js when the CMS has no row — this asserts the fallback is
   // wired, which is what a fresh environment actually serves.
   for (const [path, slugTitle] of [
-    ['/pickleball', 'Free Pickleball Open Play Manager: Devlab Pickleball'],
-    ['/pickleball/how-it-works', 'How to Run Pickleball Open Play: Devlab Pickleball Guide'],
-    ['/pickleball/rotation', 'How Fair Rotation Works: Devlab Pickleball'],
+    ['/pickleball', 'Free Pickleball Open Play Manager: DevLab Pickleball'],
+    ['/pickleball/how-it-works', 'How to Run Pickleball Open Play: DevLab Pickleball Guide'],
+    ['/pickleball/rotation', 'How Fair Rotation Works: DevLab Pickleball'],
   ]) {
     test(`serves share metadata (${path})`, async ({ page }) => {
       const html = await (await page.request.get(path)).text()
@@ -354,7 +354,7 @@ test.describe('Pickleball public pages', () => {
   test('the products page promotes the free pickleball app', async ({ page }) => {
     await page.goto('/products')
     const live = page.locator('#products-live')
-    await expect(live.getByRole('heading', { name: 'Devlab Pickleball' })).toBeVisible()
+    await expect(live.getByRole('heading', { name: 'DevLab Pickleball' })).toBeVisible()
     await expect(live.getByRole('link', { name: 'Start a free session' })).toHaveAttribute('href', '/pickleball?ref=products')
     await expect(live).not.toContainText(/beta|pilot/i)
   })
@@ -362,7 +362,7 @@ test.describe('Pickleball public pages', () => {
   test('the footer links to the pickleball app from the business pages', async ({ page }) => {
     for (const path of ['/', '/solutions']) {
       await page.goto(path)
-      await expect(page.getByRole('contentinfo').getByRole('link', { name: 'Devlab Pickleball' })).toHaveAttribute('href', '/pickleball?ref=footer')
+      await expect(page.getByRole('contentinfo').getByRole('link', { name: 'DevLab Pickleball' })).toHaveAttribute('href', '/pickleball?ref=footer')
     }
   })
 })

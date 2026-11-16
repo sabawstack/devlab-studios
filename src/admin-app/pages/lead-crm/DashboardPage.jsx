@@ -74,7 +74,7 @@ function ReadinessGroup({ capabilities, title, tone }) {
             <br />
             <span>Missing: </span>
             {capability.missing.map((name) => (
-              <code key={name} className={`mr-1 rounded px-1 ${styles.code}`}>
+              <code key={name} className={`ws-mono mr-1 inline-block break-all rounded px-1 ${styles.code}`}>
                 {name}
               </code>
             ))}

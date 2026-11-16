@@ -72,7 +72,7 @@ export default function HostLinkPanel({ code, hostKey, name }) {
           <p className="mt-2 text-xl font-bold tracking-[0.08em] text-pickle-neon">{formatPublicCode(code)}</p>
         </div>
       </Panel>
-      <a href={`/pickleball/s/${code}#host=${hostKey}`} className="md:col-span-2 inline-flex min-h-12 items-center justify-center rounded-xl bg-brand px-6 text-lg font-bold text-white hover:bg-[#3a00d6]">
+      <a href={`/pickleball/s/${code}#host=${hostKey}`} className="md:col-span-2 inline-flex min-h-12 items-center justify-center rounded-xl pb-action px-6 text-lg font-bold">
         I saved it — go to courts
       </a>
     </div>

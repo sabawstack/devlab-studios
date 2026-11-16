@@ -11,6 +11,7 @@ import { ModePicker } from './components/ModePicker.jsx'
 import { MODE_HELP } from '../lib/pickleball/open/modes/info'
 import { FormatPicker } from './tournament/Choice.jsx'
 import { Button, Panel } from './components/ui.jsx'
+import Endorsement from './components/Endorsement.jsx'
 
 const TARGETS = [11, 15, 21]
 const KINDS = [
@@ -83,7 +84,7 @@ export default function CreateSessionApp({ siteKey }) {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-6 md:py-12">
-      <a href="/pickleball" className="text-sm text-mist hover:text-white">← Devlab Pickleball</a>
+      <a href="/pickleball" className="text-sm text-mist hover:text-white">← DevLab Pickleball</a>
       <h1 className="mt-3 text-3xl font-bold md:text-4xl">{step === 'details' ? 'New session' : 'Add players'}</h1>
       <p className="mt-1 text-mist">Step {step === 'details' ? 1 : 2} of 2 · free, no sign-up</p>
 
@@ -196,6 +197,7 @@ export default function CreateSessionApp({ siteKey }) {
           </div>
         </div>
       )}
+      <footer className="pt-6 text-center"><Endorsement /></footer>
     </main>
   )
 }
