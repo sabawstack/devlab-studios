@@ -172,6 +172,11 @@ body.public-page::before { display: none; }
   outline: none;
 }
 .admin-workspace table { border-color: var(--border-subtle); }
+.admin-dialog-backdrop { background: rgba(9, 11, 24, 0.55); }
+.admin-dialog { background: #fff; color: var(--text-primary); box-shadow: 0 24px 60px rgba(9, 11, 24, 0.28); outline: none; }
+.admin-dialog-description { color: var(--text-secondary); }
+.admin-dialog-close { color: var(--text-secondary); }
+.admin-dialog-close:hover { background: var(--surface-subtle); }
 .admin-workspace thead { background: var(--devlab-light-100); }
 
 .admin-workspace {

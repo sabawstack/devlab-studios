@@ -219,6 +219,7 @@ function ThreadView({ threadId, onChanged }) {
     skip: !threadId,
   })
   const [busy, setBusy] = useState(false)
+  const [stateError, setStateError] = useState(null)
 
   if (!threadId) return <EmptyState title="Select a conversation." />
   if (state === 'loading') return <p className="text-sm text-slate-500">Loading…</p>
@@ -227,10 +228,14 @@ function ThreadView({ threadId, onChanged }) {
 
   async function setThreadState(next) {
     setBusy(true)
+    setStateError(null)
     try {
       await adminApi.post(`/api/admin/mailbox/threads/${threadId}/state`, next)
       reload()
       onChanged?.()
+    } catch (error) {
+      // MAIL-01: a refused or failed change used to vanish silently.
+      setStateError(error.message || 'The conversation could not be updated.')
     } finally {
       setBusy(false)
     }
@@ -270,6 +275,12 @@ function ThreadView({ threadId, onChanged }) {
           </button>
         </div>
       </div>
+
+      {stateError ? (
+        <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+          {stateError}
+        </p>
+      ) : null}
 
       {thread.leadId ? (
         <p className="text-xs text-slate-500">

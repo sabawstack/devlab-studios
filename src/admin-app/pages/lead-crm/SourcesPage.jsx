@@ -39,8 +39,10 @@ function SourceRow({ source, onChanged }) {
       const result = await adminApi.patch(`/api/admin/lead-crm/sources?slug=${encodeURIComponent(source.slug)}`, changes)
       onChanged(result.source)
       setFeedback({ tone: 'ok', message })
+      return true
     } catch (error) {
       setFeedback({ tone: 'error', message: error.message })
+      return false
     } finally {
       setBusy(false)
     }
@@ -133,9 +135,10 @@ function SourceRow({ source, onChanged }) {
                   disabled={busy}
                   className={status === 'approved' ? primaryButtonClass : buttonClass}
                   onClick={() =>
-                    patch({ policyStatus: status, policyNotes: notes }, `Policy recorded as ${status}.`).then(() =>
-                      setIsEditing(false),
-                    )
+                    // CRM-02: a failed save keeps the editor open with the error and the typed notes.
+                    patch({ policyStatus: status, policyNotes: notes }, `Policy recorded as ${status}.`).then((saved) => {
+                      if (saved) setIsEditing(false)
+                    })
                   }
                 >
                   Mark {status}

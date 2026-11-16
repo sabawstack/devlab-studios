@@ -1,3 +1,4 @@
+import { adminFetch } from '../../../admin-app/lib/adminApi'
 /**
  * Uploads every "pending" (not-yet-persisted) gallery item to R2 via the
  * existing media upload endpoint, returning a new array where pending items
@@ -22,7 +23,7 @@ export async function uploadPendingGalleryImages(galleryImages, onProgress) {
     formData.append('folder', 'projects')
     formData.append('file', item.file)
 
-    const response = await fetch('/api/admin/media', { method: 'POST', body: formData })
+    const response = await adminFetch('/api/admin/media', { method: 'POST', body: formData })
     const data = await response.json()
 
     if (!response.ok) {

@@ -199,6 +199,7 @@ function SuppressionPage() {
                           value={removalReason}
                           onChange={(event) => setRemovalReason(event.target.value)}
                           placeholder="Why is this being removed?"
+                          aria-label="Reason for removing this entry"
                           className={`${inputClass} w-56`}
                         />
                         <button type="button" className={dangerButtonClass} onClick={() => remove(entry.id)}>

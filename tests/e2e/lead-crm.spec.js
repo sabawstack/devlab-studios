@@ -261,4 +261,47 @@ test.describe('Lead CRM admin screens', () => {
     await expect(page.getByText('Automation allowed', { exact: true })).toHaveCount(0)
     await expect(page.getByText('Crawl allowed', { exact: true })).toHaveCount(0)
   })
+
+  // CRM-01: removing a suppression from the screen always answered 400,
+  // because the client dropped the written reason the route requires.
+  test('a suppression can be removed with a reason and is kept as removed', async ({ page }, testInfo) => {
+    const value = `remove-e2e-${testInfo.workerIndex}-${Date.now()}@example.org`
+    await page.goto('/admin/lead-crm/suppression')
+    await page.getByLabel('Value').fill(value)
+    await page.getByRole('button', { name: 'Suppress' }).click()
+    await expect(page.getByText('Added to the suppression list.')).toBeVisible()
+
+    const row = page.getByRole('row').filter({ hasText: value })
+    await row.getByRole('button', { name: 'Remove' }).click()
+    await row.getByLabel('Reason for removing this entry').fill('Added by mistake in an e2e test')
+    await row.getByRole('button', { name: 'Confirm' }).click()
+    await expect(page.getByText('Suppression removed and recorded.')).toBeVisible()
+    await expect(page.getByRole('row').filter({ hasText: value })).toHaveCount(0)
+
+    await page.getByLabel('Show removed entries').check()
+    const removed = page.getByRole('row').filter({ hasText: value })
+    await expect(removed.getByText(/^Removed /)).toBeVisible()
+    await expect(removed.getByText(/^Removed /)).toHaveAttribute('title', 'Added by mistake in an e2e test')
+  })
+
+  // CRM-02: a failed policy save closed the editor and threw the notes away.
+  test('a failed policy review keeps the editor open with the error', async ({ page }) => {
+    // A synthetic source, so the check does not depend on the lead-engine seed
+    // being applied to the local D1; the save is made to fail.
+    const source = {
+      slug: 'synthetic-directory', name: 'Synthetic directory', type: 'api', policyStatus: 'unreviewed', policyNotes: '',
+      enabled: false, automationAllowed: false, recordCount: 0, parserVersion: 1, lastRunAt: null, lastRunError: null,
+      baseUrl: null, lastPolicyReviewedAt: null, lastPolicyReviewedBy: null,
+    }
+    await page.route('**/api/admin/lead-crm/sources*', (route) => (route.request().method() === 'PATCH'
+      ? route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'The policy could not be saved.' }) })
+      : route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ sources: [source] }) })))
+    await page.goto('/admin/lead-crm/sources')
+    await page.getByRole('button', { name: 'Record a policy review' }).first().click()
+    const notes = page.getByPlaceholder("What do this source's terms say about automated access?")
+    await notes.fill('Terms allow API access with attribution.')
+    await page.getByRole('button', { name: 'Mark restricted' }).click()
+    await expect(page.getByText('The policy could not be saved.')).toBeVisible()
+    await expect(notes).toHaveValue('Terms allow API access with attribution.')
+  })
 })

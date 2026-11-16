@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ChevronDown, ChevronUp, Plus, RotateCw, Save, Trash2 } from '../icons/icons'
 import siteSettingsContent from '../../data/siteSettingsContent'
 import { BUSINESS_DEFAULTS } from '../../config/business.js'
+import { adminFetch } from '../../admin-app/lib/adminApi'
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value))
@@ -134,10 +135,10 @@ export default function SiteSettingsManager() {
 
   const loadContent = useCallback(async () => {
     try {
-      const response = await fetch('/api/admin/content/site-settings')
+      const response = await adminFetch('/api/admin/content/site-settings')
       if (response.status === 401) {
         setIsLoaded(false)
-        setStatus('Admin API is protected. Sign in through Cloudflare Access before editing site settings.')
+        setStatus('Your admin session ended. Sign in again to edit.')
         return
       }
       // Unlocked only when the form holds something safe to save over D1: the
@@ -178,7 +179,7 @@ export default function SiteSettingsManager() {
     setStatus('Saving site settings...')
 
     try {
-      const response = await fetch('/api/admin/content/site-settings', {
+      const response = await adminFetch('/api/admin/content/site-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(value),

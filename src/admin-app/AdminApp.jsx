@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import AdminShell from './components/AdminShell'
+import SessionExpiredDialog from './components/SessionExpiredDialog'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import ContentTypePage from './pages/ContentTypePage'
@@ -96,10 +97,14 @@ function AdminApp() {
     }
   }, [])
 
-  async function handleLogout() {
+  const handleLogout = useCallback(async () => {
     await fetch('/api/admin/logout', { method: 'POST', credentials: 'include' }).catch(() => {})
     setSession(null)
-  }
+  }, [])
+
+  // Built once per sign-in, never per render: a rebuilt router remounts every
+  // page and loses whatever the admin was editing (ADMIN-05 relies on this).
+  const router = useMemo(() => (session ? buildRouter(session, handleLogout) : null), [session, handleLogout])
 
   if (isCheckingSession) {
     return <div className="flex min-h-screen items-center justify-center bg-slate-100 text-sm font-semibold text-slate-500">Loading admin session…</div>
@@ -109,7 +114,12 @@ function AdminApp() {
     return <LoginPage onLogin={setSession} />
   }
 
-  return <RouterProvider router={buildRouter(session, handleLogout)} />
+  return (
+    <>
+      <RouterProvider router={router} />
+      <SessionExpiredDialog email={session.email} onSignedOut={() => setSession(null)} />
+    </>
+  )
 }
 
 export default AdminApp

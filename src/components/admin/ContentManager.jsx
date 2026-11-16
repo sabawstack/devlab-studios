@@ -15,6 +15,7 @@ import { validateAndConvertToWebP } from '../../utils/imageUpload'
 import ArticleEditorialFields from './ArticleEditorialFields'
 import PreviewDraftButton from '../../admin-app/components/PreviewDraftButton'
 import MarkdownPreview from '../../admin-app/components/MarkdownPreview'
+import { adminFetch } from '../../admin-app/lib/adminApi'
 
 function deepClone(value) {
   return JSON.parse(JSON.stringify(value))
@@ -782,7 +783,7 @@ function ResourcesEditor({ value, onChange, onSave, onStatusChange, isSaving, is
       formData.append('file', prepared.file)
 
       onStatusChange?.(`Uploading ${prepared.file.name} to R2...`)
-      const response = await fetch('/api/admin/media', {
+      const response = await adminFetch('/api/admin/media', {
         method: 'POST',
         body: formData,
       })
@@ -1642,10 +1643,10 @@ export default function ContentManager({ contentType }) {
 
   const loadContent = useCallback(async ({ preserveStatus = false } = {}) => {
     try {
-      const response = await fetch(config.endpoint)
+      const response = await adminFetch(config.endpoint)
       if (response.status === 401) {
         setIsReadOnlyPreview(true)
-        setStatus('Admin API is protected. Sign in through Cloudflare Access before editing content.')
+        setStatus('Your admin session ended. Sign in again to edit.')
         return
       }
       if (response.status === 503) {
@@ -1687,7 +1688,7 @@ export default function ContentManager({ contentType }) {
 
   async function saveContent() {
     if (isReadOnlyPreview) {
-      setStatus('Read-only preview mode. Configure Cloudflare Access, D1, and the admin API before saving CMS content.')
+      setStatus('Read-only preview mode: the admin API is not reachable, so content cannot be saved.')
       return
     }
 
@@ -1695,7 +1696,7 @@ export default function ContentManager({ contentType }) {
     setStatus(`Saving ${config.title.toLowerCase()}...`)
 
     try {
-      const response = await fetch(config.endpoint, {
+      const response = await adminFetch(config.endpoint, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(value),

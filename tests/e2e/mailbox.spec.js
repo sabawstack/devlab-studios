@@ -448,6 +448,17 @@ test.describe('the mail client, with mail in it', () => {
     await expect(frame.locator('img[src^="https://"]')).toHaveCount(1)
   })
 
+  // MAIL-01: a refused state change used to vanish without a word.
+  test('a failed archive says so instead of failing silently', async ({ page }) => {
+    await page.route('**/api/admin/mailbox/threads/*/state', (route) => route.fulfill({
+      status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'The conversation could not be archived.' }),
+    }))
+    await page.goto('/admin/mailbox/inbox')
+    await page.getByText('Following up on our booking portal').first().click()
+    await page.getByRole('button', { name: 'Archive', exact: true }).click()
+    await expect(page.getByRole('alert').filter({ hasText: 'The conversation could not be archived.' })).toBeVisible()
+  })
+
   test("the sender's formatting survives, and their script does not", async ({ page }) => {
     await page.goto('/admin/mailbox/inbox')
     await page.getByText('Following up on our booking portal').first().click()

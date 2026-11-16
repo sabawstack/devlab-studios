@@ -18,6 +18,7 @@ import GalleryImageRow from './projects/GalleryImageRow'
 import ThumbnailPicker from './projects/ThumbnailPicker'
 import { uploadPendingGalleryImages } from './projects/projectImageUpload'
 import ProjectEditorialFields from './projects/ProjectEditorialFields'
+import { adminFetch } from '../../admin-app/lib/adminApi'
 
 const PAGE_SIZE = 6
 
@@ -147,9 +148,9 @@ export default function ProjectsManager() {
 
   const loadProjects = useCallback(async ({ preserveStatus = false } = {}) => {
     try {
-      const response = await fetch('/api/admin/projects')
+      const response = await adminFetch('/api/admin/projects')
       if (response.status === 401) {
-        setStatus('Admin API is protected. Configure Cloudflare Access for /admin and /api/admin/*, then sign in with the allowed email.')
+        setStatus('Your admin session ended. Sign in again to edit.')
         return
       }
       if (response.status === 503) {
@@ -200,7 +201,7 @@ export default function ProjectsManager() {
   async function saveProject(event) {
     event.preventDefault()
     if (isReadOnlyPreview) {
-      setStatus('Read-only preview mode. Configure Cloudflare Worker, Access, D1, and R2 to save changes.')
+      setStatus('Read-only preview mode: the admin API is not reachable, so changes cannot be saved.')
       return
     }
 
@@ -232,7 +233,7 @@ export default function ProjectsManager() {
     const url = method === 'PUT' ? `/api/admin/projects/${payload.id}` : '/api/admin/projects'
 
     try {
-      const response = await fetch(url, {
+      const response = await adminFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -266,7 +267,7 @@ export default function ProjectsManager() {
     setStatus('Deleting project...')
 
     try {
-      const response = await fetch(`/api/admin/projects/${selectedProject.id}`, { method: 'DELETE' })
+      const response = await adminFetch(`/api/admin/projects/${selectedProject.id}`, { method: 'DELETE' })
       if (!response.ok) {
         const data = await response.json()
         setStatus(data.error || `Delete failed (${response.status}).`)

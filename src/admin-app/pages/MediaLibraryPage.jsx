@@ -7,6 +7,7 @@ import { validateAndConvertToWebP } from '../../utils/imageUpload'
 import MediaAssetGrid from '../components/MediaAssetGrid'
 import MediaAssetTable from '../components/MediaAssetTable'
 import MediaDeleteConflictDialog from '../components/MediaDeleteConflictDialog'
+import { adminFetch } from '../lib/adminApi'
 
 // Deliberately not adminApi.request: these send FormData, which must not get
 // a JSON Content-Type header. The content-type guard below is borrowed from
@@ -14,7 +15,7 @@ import MediaDeleteConflictDialog from '../components/MediaDeleteConflictDialog'
 // calling response.json() on that throws a SyntaxError that replaces the real
 // failure with "Unexpected token '<'".
 async function mediaRequest(method, body, query = '') {
-  const response = await fetch(`/api/admin/media${query}`, { method, body, credentials: 'include' })
+  const response = await adminFetch(`/api/admin/media${query}`, { method, body, credentials: 'include' })
   const isJson = response.headers.get('content-type')?.includes('application/json')
   const data = isJson ? await response.json() : null
 

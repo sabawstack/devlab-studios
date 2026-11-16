@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { buildCidMap, hasDeferredRemoteImages, resolveMessageHtml } from './resolveImages'
+import { adminFetch } from '../../lib/adminApi'
 
 /**
  * Renders the body of an inbound message.
@@ -162,7 +163,7 @@ function useInlineImages(message, active) {
 
       for (const entry of wanted) {
         try {
-          const response = await fetch(`/api/admin/mailbox/attachments/${entry.id}`, {
+          const response = await adminFetch(`/api/admin/mailbox/attachments/${entry.id}`, {
             credentials: 'same-origin',
           })
           if (!response.ok) continue

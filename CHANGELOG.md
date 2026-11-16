@@ -55,6 +55,12 @@ decided against that surface specifically:
 
 - Specification for the Admin and Pickleball queue, defect and brand alignment work (`docs/plans/devlab-admin-pickleball-brand-alignment-audit.md`), logged as Phase 15 in `docs/plans/PROGRESS.md`, and `scripts/visual/capture-apps.mjs`, which captures the Admin and Pickleball screens on the local stack with synthetic sessions at 390, 820, 1440 and 1920 px (output stays outside the repository).
 
+### Fixed
+
+- Admin: removing a suppression from the Lead CRM screen always failed with a 400, because the client dropped the written reason the route requires; `adminApi.delete` now sends an optional JSON body and every other caller is unchanged (CRM-01).
+- Admin: a session that expires or is revoked while a page is open now shows a "Sign in again" dialog over the current screen instead of failing request by request; the page stays mounted, so unsaved edits survive, and the refused request is sent again after signing in. The legacy CMS editors' direct calls go through the same handler, and their "Sign in through Cloudflare Access" messages are replaced (ADMIN-05). The admin router is now built once per sign-in rather than on every render.
+- Admin: a failed source-policy save in Lead CRM → Sources keeps the editor open with the error and the typed notes (CRM-02); a failed mark-read, unread or archive in the mailbox shows its error instead of failing silently (MAIL-01).
+
 ## [2.6.0] - 2026-11-13
 
 ### Added

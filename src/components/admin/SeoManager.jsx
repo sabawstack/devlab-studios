@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RotateCw, Save } from '../icons/icons'
 import seoContent from '../../data/seoContent'
 import { OG_IMAGE_VARIANTS } from '../../config/ogVariants.js'
+import { adminFetch } from '../../admin-app/lib/adminApi'
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value))
@@ -47,10 +48,10 @@ export default function SeoManager() {
 
   const loadContent = useCallback(async () => {
     try {
-      const response = await fetch('/api/admin/content/seo')
+      const response = await adminFetch('/api/admin/content/seo')
       if (response.status === 401) {
         setIsLoaded(false)
-        setStatus('Admin API is protected. Sign in through Cloudflare Access before editing SEO.')
+        setStatus('Your admin session ended. Sign in again to edit.')
         return
       }
       // Same rule as SiteSettingsManager: unlocked only when the form holds
@@ -89,7 +90,7 @@ export default function SeoManager() {
     setStatus('Saving SEO content...')
 
     try {
-      const response = await fetch('/api/admin/content/seo', {
+      const response = await adminFetch('/api/admin/content/seo', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(value),

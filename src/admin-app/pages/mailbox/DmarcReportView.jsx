@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { decompressReport, parseDmarcReport } from '../../../mailbox/inbound/dmarcReport.js'
+import { adminFetch } from '../../lib/adminApi'
 
 /**
  * Renders a DMARC aggregate report instead of leaving it as a zip to download.
@@ -32,7 +33,7 @@ function DmarcReportView({ attachment }) {
 
     async function load() {
       try {
-        const response = await fetch(`/api/admin/mailbox/attachments/${attachment.id}`, {
+        const response = await adminFetch(`/api/admin/mailbox/attachments/${attachment.id}`, {
           credentials: 'same-origin',
         })
         if (!response.ok) throw new Error(`Could not read the report (${response.status}).`)
