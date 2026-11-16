@@ -26,7 +26,7 @@ money, legal wording or a real data deletion are skipped and listed under
 | 12 | Docs + release | v2.3.0 (PR #53) and **v2.4.0 released 2026-11-12** (PR #55); ADRs 0011–0013; full docs refresh (OPS-08) still open |
 | 13 | Blueprint rebrand | done (PR #57, production at `3874835`, v2.5.0 tagged; GitHub Release entry pending, see Phase 13 Open) |
 | 14 | Brand, UX and architecture spec (`devlab-complete-b2b-brand-ux-architecture-spec.md`) | done: all nine groups, release 2.6.0 (2026-11-13; see Phase 14) |
-| 15 | Admin and Pickleball: queue clarity, defects, brand alignment (`devlab-admin-pickleball-brand-alignment-audit.md`) | in progress (see Phase 15) |
+| 15 | Admin and Pickleball: queue clarity, defects, brand alignment (`devlab-admin-pickleball-brand-alignment-audit.md`) | all 7 groups on preview (PRs #68–#74, `development` at Group 6); production waits for the owner |
 
 ## Blockers (owner)
 
@@ -589,4 +589,20 @@ Branch `feat/pb-admin-6-workspace` (stacked on Group 5), commit `8b3fe20`.
 Also: ratchet lowered to Admin 5 hex / 35 legacy (from 6 / 44); "Home page" for the website's home in the nav (two links were both called "Home").
 
 Verification: lint 0 errors (1 pre-existing warning), typecheck 0, unit 3,118 passed / 1 skipped, build OK, static e2e 246 passed / 1 skipped, worker e2e 348 passed / 4 failed (SEO slug, Lead CRM sources seed, two mailbox transmitter callbacks: the known pre-existing local set).
+
+### Phase 15 — Preview verification (2026-11-16)
+
+`development` fast-forwarded group by group (Groups 0–1, 2, 3, 4, 5, 6) after each PR's CI passed; every `deploy-preview.yml` run succeeded. Final run 43834412007 (`development` = Group 6 head): deploy, performance-budget and visual-capture all success. `main` and production not touched.
+
+Checked on the preview URL:
+
+- Routes 200: `/api/health`, `/admin`, `/branding/logo-only.svg`, `/pickleball`, `/pickleball/new`, `/products`, `/`. `GET /api/admin/session` without a session: 401.
+- Admin sign-in (390 px, browser): title "DevLab Workspace", environment badge "Preview" (server-side `DEPLOYMENT_ENV` for preview), no vector field, stone canvas `rgb(240, 239, 243)`.
+- BRAND-04 data: `/products` meta description reads "DevLab Pickleball" from preview D1; 0 occurrences of "Devlab Pickleball"; `/pickleball/new` title "Start a free session — DevLab Pickleball".
+- Pickleball create page renders (after hydration).
+
+Not verified on preview, with reasons:
+
+- **Signed-in Admin screens.** Need the owner's preview admin credentials; none were provided or guessed. Covered locally by the worker e2e (348 passing).
+- **A live Pickleball session on three windows.** Creating a session on preview requires passing Cloudflare Turnstile; a headless browser stops at "Completing secure verification…", and getting past bot protection with automation was not attempted. Covered locally by the e2e (queue, status card, TV, realtime). Owner step: start a session on the preview, then open the host link, the player board and `/tv` on three devices and walk a game through proposed → started → finished, a skip and a break.
 
