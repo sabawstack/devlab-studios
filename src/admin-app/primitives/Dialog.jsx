@@ -55,7 +55,7 @@ export function Dialog({ open, title, description, onClose, dismissible = true, 
     document.addEventListener('keydown', onKeyDown, true)
     return () => {
       document.removeEventListener('keydown', onKeyDown, true)
-      if (opener instanceof HTMLElement && document.contains(opener)) opener.focus()
+      if (opener instanceof HTMLElement && opener !== document.body && document.contains(opener)) opener.focus()
     }
   }, [open, dismissible, initialFocusRef])
 

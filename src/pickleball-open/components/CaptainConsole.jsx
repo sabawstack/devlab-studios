@@ -9,6 +9,7 @@ import GameOverDialog from './GameOverDialog.jsx'
 import ResultsList from './ResultsList.jsx'
 import StandingsTable from './StandingsTable.jsx'
 import UndoToast from './UndoToast.jsx'
+import { NEXT_FOUR, NEXT_FOUR_WHEN, UP_NEXT, WAITING } from '../lib/queueVocabulary'
 import { Panel } from './ui.jsx'
 
 export default function CaptainConsole({ code, captainKey, snapshot, status, onSnapshot, signInNotice = null }) {
@@ -60,6 +61,21 @@ export default function CaptainConsole({ code, captainKey, snapshot, status, onS
           <ResultsList finished={snapshot.finished} nameOf={nameOf} courtLabel={courtLabel} onEdit={(match) => setDialog({ type: 'editResult', match })} />
         </Panel>
       </div>
+      {/* PB-UX: queue context for the court, in the shared vocabulary. */}
+      {snapshot.viewer.kind !== 'TOURNAMENT' && !ended && (
+        <Panel as="section" aria-label="Queue" data-testid="captain-queue" className="lg:col-span-2">
+          <h2 className="text-lg font-bold">Queue</h2>
+          <p className="mt-1 text-sm">
+            {court.match?.status === 'PROPOSED'
+              ? <><b className="text-pickle-neon">{UP_NEXT}</b> on {court.label}: {[...court.match.teamA, ...court.match.teamB].map(nameOf).join(', ')}. Tap Start once they are on court.</>
+              : court.match?.status === 'IN_PROGRESS' ? `${court.label} is playing. The next four are called when a game ends.` : `${court.label} has no game yet.`}
+          </p>
+          <p className="mt-1 text-sm text-mist">{WAITING}: {snapshot.viewer.waiting.length} player{snapshot.viewer.waiting.length === 1 ? '' : 's'}.</p>
+          {snapshot.viewer.nextUp && (
+            <p className="mt-1 text-sm">{NEXT_FOUR} <span className="text-mist">· {NEXT_FOUR_WHEN}</span>: {snapshot.viewer.nextUp.players.map((p) => p.name).join(', ')}</p>
+          )}
+        </Panel>
+      )}
       <Panel><h2 className="mb-2 text-lg font-bold">Standings</h2><StandingsTable rows={snapshot.viewer.standings} /></Panel>
       <p className="text-center text-xs text-mist lg:col-span-2">This link runs {court.label} only. The host can turn it off at any time.</p>
 

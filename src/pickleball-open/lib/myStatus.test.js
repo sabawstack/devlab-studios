@@ -1,6 +1,6 @@
 // src/pickleball-open/lib/myStatus.test.js
 import { describe, expect, it } from 'vitest'
-import { myStatus, statusText } from './myStatus'
+import { myStatus, statusLine, statusText } from './myStatus'
 
 const viewer = {
   roster: [{ id: 'a', name: 'Ana' }, { id: 'b', name: 'Ben' }, { id: 'c', name: 'Cyd' }, { id: 'd', name: 'Dex' }],
@@ -10,15 +10,24 @@ const viewer = {
   ],
   waiting: [{ id: 'q', name: 'Q' }, { id: 'c', name: 'Cyd' }],
   onBreak: [{ id: 'd', name: 'Dex' }],
+  nextUp: null,
 }
 
 describe('myStatus', () => {
   it('finds where a viewer is', () => {
     expect(myStatus(viewer, 'a')).toEqual({ kind: 'PLAYING', court: 'Court 1' })
     expect(myStatus(viewer, 'b')).toEqual({ kind: 'UP_NEXT', court: 'Court 3' })
-    expect(myStatus(viewer, 'c')).toEqual({ kind: 'WAITING', place: 2 })
+    // PB-QUEUE-02: no place number. The waiting list is a priority order, not a promise.
+    expect(myStatus(viewer, 'c')).toEqual({ kind: 'WAITING' })
     expect(myStatus(viewer, 'd')).toEqual({ kind: 'BREAK' })
     expect(myStatus(viewer, 'zz')).toEqual({ kind: 'NONE' })
+  })
+
+  it('is NEXT_FOUR only when the server named the player in nextUp', () => {
+    const fixed = { ...viewer, nextUp: { players: [{ id: 'c', name: 'Cyd' }, { id: 'q', name: 'Q' }] } }
+    expect(myStatus(fixed, 'c')).toEqual({ kind: 'NEXT_FOUR' })
+    // A confirmed call wins over everything else.
+    expect(myStatus({ ...fixed, nextUp: { players: [{ id: 'b', name: 'Ben' }] } }, 'b')).toEqual({ kind: 'UP_NEXT', court: 'Court 3' })
   })
 })
 
@@ -92,19 +101,42 @@ describe('myStatus once a pair has no game placed', () => {
   })
 })
 
+describe('statusLine: the shared vocabulary', () => {
+  it('uses one label per state', () => {
+    expect(statusLine({ kind: 'PLAYING', court: 'Court 2' })).toBe('Playing · Court 2')
+    expect(statusLine({ kind: 'UP_NEXT', court: 'Court 2' })).toBe('Up next · Court 2 · walk on now')
+    expect(statusLine({ kind: 'NEXT_FOUR' })).toBe('Next four · when a court opens')
+    expect(statusLine({ kind: 'WAITING' })).toBe('Waiting · order can change')
+    expect(statusLine({ kind: 'BREAK' })).toBe('On break')
+    expect(statusLine({ kind: 'NONE' })).toBeNull()
+  })
+
+  it('never promises a place in line', () => {
+    for (const kind of ['WAITING', 'NEXT_FOUR']) expect(statusLine({ kind, place: 3 })).not.toMatch(/#|\d/)
+  })
+
+  // PB-REALTIME-02: on data that may be stale, nothing tells the player to walk on.
+  it('drops the instruction and says "Last known" when freshness is unknown', () => {
+    expect(statusLine({ kind: 'UP_NEXT', court: 'Court 2' }, { fresh: false, lastKnown: '10:42' })).toBe('Last known (10:42): Up next · Court 2')
+    expect(statusLine({ kind: 'NEXT_FOUR' }, { fresh: false, lastKnown: '10:42' })).toBe('Last known (10:42): Next four')
+    expect(statusLine({ kind: 'PLAYING', court: 'Court 1' }, { fresh: false, lastKnown: '10:42' })).toBe('Last known (10:42): Playing · Court 1')
+  })
+})
+
 describe('statusText: the personal hello', () => {
-  it('greets the player by first name in every open-play status', () => {
-    expect(statusText({ kind: 'WAITING', place: 3 }, 'Ana Cruz')).toBe("Hi Ana! You're #3 in line")
-    expect(statusText({ kind: 'UP_NEXT', court: 'Court 2' }, 'Ana')).toBe("Hi Ana, you're up on Court 2: walk on")
-    expect(statusText({ kind: 'PLAYING', court: 'Court 2' }, 'Ana')).toBe("Hi Ana, you're playing on Court 2")
-    expect(statusText({ kind: 'BREAK' }, '  Ana  ')).toBe("Hi Ana, you're on a break")
+  it('greets the player by first name in front of the shared line', () => {
+    expect(statusText({ kind: 'WAITING' }, 'Ana Cruz')).toBe('Hi Ana. Waiting · order can change')
+    expect(statusText({ kind: 'UP_NEXT', court: 'Court 2' }, 'Ana')).toBe('Hi Ana. Up next · Court 2 · walk on now')
+    expect(statusText({ kind: 'PLAYING', court: 'Court 2' }, 'Ana')).toBe('Hi Ana. Playing · Court 2')
+    expect(statusText({ kind: 'BREAK' }, '  Ana  ')).toBe('Hi Ana. On break')
+    expect(statusText({ kind: 'NEXT_FOUR' }, 'Ana')).toBe('Hi Ana. Next four · when a court opens')
   })
 
   it('prefixes the tournament statuses the same way', () => {
-    expect(statusText({ kind: 'NEXT_GAME', label: 'Semi-final 1' }, 'Ben')).toBe('Hi Ben, your next game: Semi-final 1')
-    expect(statusText({ kind: 'WAITING_POOLS' }, 'Ben')).toBe('Hi Ben, waiting for the pools to finish')
-    expect(statusText({ kind: 'WAITING_RESULTS' }, 'Ben')).toBe('Hi Ben, waiting for other results to set your next game')
-    expect(statusText({ kind: 'DONE' }, 'Ben')).toBe('Hi Ben! Your games are done. Thanks for playing!')
+    expect(statusText({ kind: 'NEXT_GAME', label: 'Semi-final 1' }, 'Ben')).toBe('Hi Ben. Your next game: Semi-final 1')
+    expect(statusText({ kind: 'WAITING_POOLS' }, 'Ben')).toBe('Hi Ben. Waiting for the pools to finish')
+    expect(statusText({ kind: 'WAITING_RESULTS' }, 'Ben')).toBe('Hi Ben. Waiting for other results to set your next game')
+    expect(statusText({ kind: 'DONE' }, 'Ben')).toBe('Hi Ben. Your games are done. Thanks for playing!')
   })
 
   it('has nothing to say when the player is not placed', () => {

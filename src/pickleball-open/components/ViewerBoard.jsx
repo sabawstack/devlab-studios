@@ -3,23 +3,24 @@ import { useState } from 'react'
 import { MODE_INFO } from '../../lib/pickleball/open/modes/info'
 import { finishLine, showsFinalResults } from '../../lib/pickleball/open/results'
 import { viewerLink } from '../lib/hostKeys'
-import { readMe, writeMe } from '../lib/me'
-import { myStatus, statusText } from '../lib/myStatus'
+import { readMe } from '../lib/me'
+import { myStatus } from '../lib/myStatus'
+import { courtStateLabel } from '../lib/queueVocabulary'
 import { useNow } from '../lib/useNow'
 import { BOARD_TABS } from '../tournament/tabs'
 import BracketView from '../tournament/BracketView.jsx'
 import ChampionAnnouncer from '../tournament/ChampionAnnouncer.jsx'
 import TournamentPanels from '../tournament/TournamentPanels.jsx'
 import ResultsScreen from './results/ResultsScreen.jsx'
+import { ConfirmedCalls, NextFour, WaitingList } from './QueueLists.jsx'
 import StandingsTable from './StandingsTable.jsx'
+import StatusCard, { NamePicker } from './StatusCard.jsx'
 import Welcome from './Welcome.jsx'
 import { Panel, TeamNames } from './ui.jsx'
 
 // Polling keeps the board current when the socket can't open, so "live" means fresh data, not an open socket.
 const STALE_MS = 15_000
 const clock = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-
-const COURT_STATE = { PLAYING: 'Playing', UP_NEXT: 'Walk on now', WAITING_FOR_PLAYERS: 'Waiting for players', OFF: 'Off' }
 
 function MeBanner({ text }) {
   if (!text) return null
@@ -48,7 +49,7 @@ export default function ViewerBoard({ viewer, status, lastSnapshotAt = null, inv
         <article key={`${court.id}-${court.teamA.join()}`} className={`pb-flip rounded-2xl p-4 ${court.state === 'UP_NEXT' ? 'border-2 border-pickle-neon' : 'bg-navy-900'}`}>
           <div className="flex items-baseline justify-between">
             <h2 className="text-2xl font-bold text-pickle-neon">{court.label}</h2>
-            <span className={`text-xs ${court.state === 'UP_NEXT' ? 'font-bold text-pickle-neon' : 'text-mist'}`}>{COURT_STATE[court.state]}</span>
+            <span className={`text-xs ${court.state === 'UP_NEXT' ? 'font-bold text-pickle-neon' : 'text-mist'}`}>{courtStateLabel(court, { fresh })}</span>
           </div>
           {court.fixtureLabel && <p className="text-xs font-bold uppercase tracking-[0.08em] text-mist">{court.fixtureLabel}</p>}
           {court.teamA.length > 0 && (
@@ -82,18 +83,12 @@ export default function ViewerBoard({ viewer, status, lastSnapshotAt = null, inv
             <a href={`/pickleball/s/${viewer.code}/check-in`} className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-pickle-neon underline underline-offset-4">Not on the list? Check in</a>
           )}
         </div>
-        <label className="grid gap-1 text-xs text-mist">I'm…
-          <select value={me} onChange={(e) => { setMe(e.target.value); writeMe(viewer.code, e.target.value) }}
-            className="min-h-11 rounded-xl border border-navy-700 bg-navy-900 px-3 text-base text-white">
-            <option value="">Pick your name</option>
-            {viewer.roster.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </label>
       </header>
 
       {tournament && <ChampionAnnouncer champion={tournament.champion} />}
       {final ? (
         <>
+          <NamePicker viewer={viewer} me={me} onPick={setMe} label="Who are you?" className="rounded-2xl bg-navy-900 p-4" />
           <MeBanner text={finishLine(viewer, me)} />
           <ResultsScreen viewer={viewer} boardUrl={viewerLink(window.location.origin, viewer.code)} highlightIds={highlightIds} />
           {tournament && (
@@ -105,7 +100,7 @@ export default function ViewerBoard({ viewer, status, lastSnapshotAt = null, inv
         </>
       ) : (
       <>
-      <MeBanner text={statusText(mine, myName)} />
+      <StatusCard viewer={viewer} me={me} onPick={setMe} status={mine} fresh={fresh} lastSnapshotAt={lastSnapshotAt} />
 
       <div className="grid grid-cols-3 gap-1 rounded-xl bg-navy-900 p-1 lg:hidden" role="tablist" aria-label="Board sections">
         {tabs.map(([key, label]) => (
@@ -116,15 +111,12 @@ export default function ViewerBoard({ viewer, status, lastSnapshotAt = null, inv
 
       {tournament ? <TournamentPanels viewer={viewer} courtsGrid={courtsGrid} me={me} section={section} /> : (
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
-        <section className={section('courts')} aria-label="Courts">
+        {/* PB-QUEUE-03: confirmed calls, courts, the next four (when fixed), then everyone waiting. */}
+        <section className={`${section('courts')} grid content-start gap-4`} aria-label="Courts">
+          <ConfirmedCalls viewer={viewer} myName={myName} fresh={fresh} />
           {courtsGrid}
-          <Panel className="mt-4">
-            <h2 className="font-bold">Waiting</h2>
-            <ol className="mt-2 flex flex-wrap gap-1.5 text-sm">
-              {viewer.waiting.map((w, i) => <li key={w.id} className={`rounded-full px-3 py-1 ${w.id === me ? 'bg-pickle-neon font-bold text-ink' : 'bg-navy-800'}`}>{i + 1} · {w.name}</li>)}
-              {viewer.onBreak.map((p) => <li key={p.id} className="rounded-full bg-navy-900 px-3 py-1 text-mist">{p.name} · break</li>)}
-            </ol>
-          </Panel>
+          <NextFour viewer={viewer} me={me} />
+          <WaitingList viewer={viewer} me={me} />
         </section>
         <aside className="grid content-start gap-4">
           <Panel className={section('standings')}><h2 className="mb-2 text-lg font-bold">Standings</h2><StandingsTable rows={viewer.standings} highlightId={me} /></Panel>

@@ -1,3 +1,5 @@
+import { nextFourLabel, NEXT_FOUR, ON_BREAK, playingLabel, upNextLabel, waitingLabel } from './queueVocabulary'
+
 // src/pickleball-open/lib/myStatus.js
 const OVER = new Set(['FINISHED', 'BYE'])
 /** Bracket losses a pair can take before it is out (pool games never knock a pair out). */
@@ -42,23 +44,41 @@ export function myStatus(viewer, playerId) {
   }
   if (viewer.onBreak.some((p) => p.id === playerId)) return { kind: 'BREAK' }
   if (viewer.tournament) return tournamentStatus(viewer.tournament, playerId)
-  const place = viewer.waiting.findIndex((w) => w.id === playerId)
-  if (place >= 0) return { kind: 'WAITING', place: place + 1 }
+  // PB-QUEUE-02: the next four only when the server fixed them; never a place in line.
+  if (viewer.nextUp?.players?.some((p) => p.id === playerId)) return { kind: 'NEXT_FOUR' }
+  if (viewer.waiting.some((w) => w.id === playerId)) return { kind: 'WAITING' }
   return { kind: 'NONE' }
 }
 
-/** The status banner, greeting the player by first name ("Hi Ana! You're #3 in line"); null when there is nothing to say. */
-export function statusText(status, name) {
+/**
+ * The player's status in the shared vocabulary (queueVocabulary.js); null when
+ * there is nothing to say. With `fresh: false` the data may be stale, so the
+ * line starts "Last known" and never tells the player to walk on
+ * (PB-REALTIME-02).
+ */
+export function statusLine(status, { fresh = true, lastKnown = null } = {}) {
+  const line = (() => {
+    switch (status.kind) {
+      case 'PLAYING': return playingLabel(status.court)
+      case 'UP_NEXT': return upNextLabel(status.court, { fresh })
+      case 'NEXT_FOUR': return fresh ? nextFourLabel() : NEXT_FOUR
+      case 'WAITING': return waitingLabel()
+      case 'BREAK': return ON_BREAK
+      case 'NEXT_GAME': return `Your next game: ${status.label}`
+      case 'WAITING_POOLS': return 'Waiting for the pools to finish'
+      case 'WAITING_RESULTS': return 'Waiting for other results to set your next game'
+      case 'DONE': return 'Your games are done. Thanks for playing!'
+      default: return null
+    }
+  })()
+  if (line === null) return null
+  return fresh ? line : `Last known${lastKnown ? ` (${lastKnown})` : ''}: ${line}`
+}
+
+/** The status card's line, greeting the player by first name ("Hi Ana. Waiting · order can change"). */
+export function statusText(status, name, options) {
+  const line = statusLine(status, options)
+  if (line === null) return null
   const first = String(name ?? '').trim().split(/\s+/)[0] || 'there'
-  switch (status.kind) {
-    case 'PLAYING': return `Hi ${first}, you're playing on ${status.court}`
-    case 'UP_NEXT': return `Hi ${first}, you're up on ${status.court}: walk on`
-    case 'WAITING': return `Hi ${first}! You're #${status.place} in line`
-    case 'BREAK': return `Hi ${first}, you're on a break`
-    case 'NEXT_GAME': return `Hi ${first}, your next game: ${status.label}`
-    case 'WAITING_POOLS': return `Hi ${first}, waiting for the pools to finish`
-    case 'WAITING_RESULTS': return `Hi ${first}, waiting for other results to set your next game`
-    case 'DONE': return `Hi ${first}! Your games are done. Thanks for playing!`
-    default: return null
-  }
+  return `Hi ${first}. ${line}`
 }

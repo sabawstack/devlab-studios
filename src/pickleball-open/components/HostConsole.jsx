@@ -10,6 +10,7 @@ import CourtCard from './CourtCard.jsx'
 import EditMatchDialog from './EditMatchDialog.jsx'
 import FairnessPanel from './FairnessPanel.jsx'
 import GameOverDialog from './GameOverDialog.jsx'
+import HostQueuePanel from './HostQueuePanel.jsx'
 import ModeSheet from './ModePicker.jsx'
 import PlayersPanel from './PlayersPanel.jsx'
 import ResultsList from './ResultsList.jsx'
@@ -22,7 +23,7 @@ import { TOURNAMENT_TABS } from '../tournament/tabs'
 import TournamentHost from '../tournament/TournamentHost.jsx'
 import DuprSheet from '../host/DuprSheet.jsx'
 import { readSignInResult } from '../host/duprSteps'
-import { Button, Panel } from './ui.jsx'
+import { Button, ConfirmSheet, Panel } from './ui.jsx'
 
 const countLabel = (n, noun) => `${n} ${noun}${n === 1 ? '' : 's'}`
 
@@ -56,6 +57,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
   const playing = useMemo(() => new Set(host.courts.flatMap((c) => (c.match?.status === 'IN_PROGRESS' ? [...c.match.teamA, ...c.match.teamB] : []))), [host.courts])
   const dismissUndo = useCallback(() => setUndo(null), [])
   const banner = useRef(null)
+  const moreButton = useRef(null)
   const shownError = actionError ?? error
 
   // The sign-in outcome is read once (above); keep it out of the address bar and of a reload.
@@ -92,12 +94,10 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
   }
 
   function endSession() {
-    if (!window.confirm('End this session? Courts stop getting new matches. Games in progress can still be saved.')) return
     send({ type: 'END_SESSION' })
   }
 
   async function remove() {
-    if (!window.confirm('Delete this session and all its results now? This cannot be undone.')) return
     try {
       await deleteSession(code, hostKey)
     } catch (err) {
@@ -137,15 +137,15 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
         {/* The menu is placed against the header, not the button: on a phone More wraps to the
             left edge, and a menu anchored to its right side ran off the screen. */}
         <div>
-          <Button variant="ghost" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>More</Button>
+          <Button ref={moreButton} variant="ghost" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>More</Button>
           {menuOpen && (
             <div className="absolute right-0 z-40 mt-2 grid w-56 gap-1 rounded-2xl bg-navy-950 p-2 shadow-elevated">
               <Button variant="ghost" onClick={() => { setMenuOpen(false); setDialog({ type: 'announcement' }) }}>Edit welcome message</Button>
               <Button variant="ghost" onClick={() => { setMenuOpen(false); setDialog({ type: 'captains' }) }}>Court captains</Button>
               <Button variant="ghost" onClick={() => { setMenuOpen(false); download() }}>Download results (CSV)</Button>
               <Button variant="ghost" onClick={() => { setMenuOpen(false); clearError(); setDialog({ type: 'dupr' }) }}>Email me the DUPR export</Button>
-              {viewer.status === 'ACTIVE' && <Button variant="ghost" onClick={() => { setMenuOpen(false); endSession() }}>End session</Button>}
-              <Button variant="danger" onClick={() => { setMenuOpen(false); remove() }}>Delete now</Button>
+              {viewer.status === 'ACTIVE' && <Button variant="ghost" onClick={() => { setMenuOpen(false); setDialog({ type: 'confirmEnd' }) }}>End session</Button>}
+              <Button variant="danger" onClick={() => { setMenuOpen(false); setDialog({ type: 'confirmDelete' }) }}>Delete now</Button>
             </div>
           )}
         </div>
@@ -195,21 +195,14 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
                 onEdit={(match) => setDialog({ type: 'edit', match })} />
             ))}
           </div>
-          <Panel className="mt-4">
-            <h2 className="font-bold">Waiting</h2>
-            {viewer.waiting.length === 0 ? <p className="mt-1 text-sm text-mist">Everyone is on court.</p> : (
-              <ol className="mt-2 flex flex-wrap gap-1.5 text-sm">
-                {viewer.waiting.map((w, i) => <li key={w.id} className="rounded-full bg-navy-800 px-3 py-1">{i + 1} · {w.name}</li>)}
-              </ol>
-            )}
-          </Panel>
+          <div className="mt-4"><HostQueuePanel host={host} nameOf={nameOf} /></div>
           <div className="mt-4"><FairnessPanel fairness={host.fairness} /></div>
         </section>
         )}
 
         <aside className="grid content-start gap-5">
           <div className={`${section('players')} grid gap-5`}>
-            <PlayersPanel players={host.players} waiting={viewer.waiting} playing={playing} showSkill={host.settings.mode === 'BALANCED'} send={send} />
+            <PlayersPanel players={host.players} playing={playing} showSkill={host.settings.mode === 'BALANCED'} send={send} />
             <RulesPanel rules={host.settings.rules} players={host.players} send={send} />
           </div>
           <div className={section('results')}>
@@ -229,6 +222,14 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
         ))}
       </nav>
 
+      {dialog?.type === 'confirmEnd' && (
+        <ConfirmSheet title="End this session?" body="Courts stop getting new games. Games in progress can still be saved."
+          confirmLabel="End session" onConfirm={endSession} onClose={() => setDialog(null)} returnFocusRef={moreButton} />
+      )}
+      {dialog?.type === 'confirmDelete' && (
+        <ConfirmSheet title="Delete this session now?" body="The session and all its results are deleted. This cannot be undone." danger
+          confirmLabel="Delete now" onConfirm={remove} onClose={() => setDialog(null)} returnFocusRef={moreButton} />
+      )}
       {dialog?.type === 'mode' && <ModeSheet mode={host.settings.mode} onPick={pickMode} onClose={() => setDialog(null)} />}
       {dialog?.type === 'gameOver' && (
         <GameOverDialog title={`${courtLabel(dialog.match.courtId)} · who won?`} match={dialog.match} nameOf={nameOf} settings={host.settings}

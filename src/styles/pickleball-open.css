@@ -58,3 +58,14 @@
   color: #f7f7fc;
 }
 .pb-marketing :focus-visible { outline: 2px solid #c6ff2e; outline-offset: 2px; }
+
+/* TV court tiles (PB-QUEUE-01/04): "Up next · walk on now" when it fits on one
+   line beside the court name, else "Up next", so a narrow tile keeps its names
+   large. Measured in the tile's own (fitted) type size. */
+.tv-court { container-type: inline-size; }
+.tv-state-short { display: none; }
+@container (max-width: 16em) {
+  .tv-state-long { display: none; }
+  .tv-state-short { display: inline; }
+}
+

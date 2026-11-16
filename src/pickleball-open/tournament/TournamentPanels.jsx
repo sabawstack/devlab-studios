@@ -5,6 +5,7 @@
 // ends) the board shows the final results instead (ResultsScreen).
 import { Panel } from '../components/ui.jsx'
 import BracketView, { GameCard } from './BracketView.jsx'
+import { HELD_LABEL } from '../lib/queueVocabulary'
 import { nextGames } from './bracketLayout'
 import PairStandings from './PairStandings.jsx'
 
@@ -22,9 +23,9 @@ export default function TournamentPanels({ viewer, courtsGrid, me, section }) {
           {coming.length > 0 && (
             // Bordered rather than a filled panel, so the game cards inside stand out from it.
             <div className="mt-4 rounded-2xl border border-navy-800 p-3">
-              <h2 className="mb-2 font-bold">Coming up</h2>
+              <h2 className="mb-2 font-bold">Coming up <span className="font-normal text-mist">· in the order free courts take them</span></h2>
               <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(min(100%,15rem),1fr))]">
-                {coming.map((game) => <GameCard key={game.id} fixture={game} highlight={myPair} />)}
+                {coming.map((game) => <GameCard key={game.id} fixture={game} highlight={myPair} note={HELD_LABEL[game.held] ?? null} />)}
               </div>
             </div>
           )}

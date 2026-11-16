@@ -36,8 +36,8 @@ function Side({ fixture, side, onSlot, selected, highlight }) {
   return <div className="flex min-h-9 items-center gap-2 px-2">{text}</div>
 }
 
-export function GameCard({ fixture, onSlot, selected, highlight }) {
-  const state = fixture.court ? `${fixture.court.label} · ${fixture.court.live ? 'playing' : 'up next'}` : null
+export function GameCard({ fixture, onSlot, selected, highlight, note = null }) {
+  const state = fixture.court ? `${fixture.court.label} · ${fixture.court.live ? 'playing' : 'up next'}` : note
   return (
     <article className={`rounded-xl p-2 text-[15px] ${fixture.court?.live ? 'border border-pickle-neon bg-ink' : 'bg-navy-900'}`} data-testid="draw-game" aria-label={fixture.label}>
       <p className="flex justify-between gap-2 px-2 text-xs text-mist"><span>{fixture.label}</span>{state && <span className="font-bold text-pickle-neon">{state}</span>}</p>

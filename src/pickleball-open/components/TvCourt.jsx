@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-
-const STATE_LABEL = { PLAYING: 'Playing', UP_NEXT: 'Walk on now', WAITING_FOR_PLAYERS: 'Waiting for players' }
+import { courtStateLabel } from '../lib/queueVocabulary'
 const MAX_PX = 110
 const HARD_MIN_PX = 10
 const WIDE = '(min-width: 1024px)'
@@ -34,11 +33,11 @@ function Team({ players, color }) {
 }
 
 /** One court on the TV: one player per line, type as large as the card allows (a very long name can push it small, but nothing is cut off). */
-export default function TvCourt({ court }) {
+export default function TvCourt({ court, fresh = true }) {
   const card = useRef(null)
   const content = useRef(null)
   const [size, setSize] = useState(null)
-  const signature = `${court.label}|${court.state}|${court.fixtureLabel ?? ''}|${court.teamA.join('/')}|${court.teamB.join('/')}`
+  const signature = `${court.label}|${court.state}|${court.idle ?? ''}|${fresh}|${court.fixtureLabel ?? ''}|${court.teamA.join('/')}|${court.teamB.join('/')}`
   useEffect(() => {
     let frame = 0
     const refit = () => {
@@ -64,13 +63,22 @@ export default function TvCourt({ court }) {
     <article
       ref={card}
       style={size ? { fontSize: `${size}px` } : undefined}
-      className={`flex min-h-0 flex-col justify-center overflow-hidden rounded-[0.8em] p-[0.5em] text-xl leading-[1.2] lg:text-[1.2vw] ${court.state === 'UP_NEXT' ? 'border-4 border-pickle-neon bg-ink' : 'bg-navy-900'}`}
+      className={`tv-court flex min-h-0 flex-col justify-center overflow-hidden rounded-[0.8em] p-[0.5em] text-xl leading-[1.2] lg:text-[1.2vw] ${court.state === 'UP_NEXT' ? 'border-4 border-pickle-neon bg-ink' : 'bg-navy-900'}`}
       data-testid="tv-court"
     >
       <div ref={content} className="shrink-0">
         <div className="flex flex-wrap items-baseline justify-between gap-x-[0.5em]">
           <h2 className="text-[1.1em] font-bold text-pickle-neon">{court.label}</h2>
-          <span className={`text-[0.55em] font-bold uppercase tracking-[0.08em] ${live ? 'text-mist' : 'text-pickle-neon'}`}>{STATE_LABEL[court.state]}</span>
+          {/* The full label where it fits on one line; a narrow tile (16 courts on a small TV) keeps
+              the names large and says only "Up next" (tv-court-state rules in pickleball-open.css). */}
+          <span className={`text-[0.55em] font-bold uppercase tracking-[0.08em] ${live ? 'text-mist' : 'text-pickle-neon'}`}>
+            {court.state === 'UP_NEXT' && fresh ? (
+              <>
+                <span className="tv-state-long">{courtStateLabel(court, { fresh })}</span>
+                <span className="tv-state-short" aria-hidden="true">{courtStateLabel(court, { fresh: false })}</span>
+              </>
+            ) : courtStateLabel(court, { fresh })}
+          </span>
         </div>
         {court.fixtureLabel && <p className="text-[0.55em] font-bold uppercase tracking-[0.08em] text-mist">{court.fixtureLabel}</p>}
         {court.teamA.length > 0 && (

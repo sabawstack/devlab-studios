@@ -238,16 +238,26 @@ test.describe('open play UI', () => {
     const { code, hostKey } = await createSession(request)
     await page.goto(`/pickleball/s/${code}#host=${hostKey}`)
     await expect(page.getByTestId('court-1')).toBeVisible()
-    const prompts = []
-    page.once('dialog', (dialog) => { prompts.push(dialog.message()); dialog.dismiss() })
-    await page.getByRole('button', { name: 'More' }).click()
+    // PB-UX: a sheet, not window.confirm. Cancel and Escape leave the session running.
+    const more = page.getByRole('button', { name: 'More' })
+    await more.click()
     await page.getByRole('button', { name: 'End session' }).click()
-    expect(prompts[0]).toContain('End this session?')
+    const sheet = page.getByRole('dialog', { name: 'End this session?' })
+    await expect(sheet).toBeVisible()
+    await sheet.getByRole('button', { name: 'Cancel' }).click()
+    await expect(sheet).toHaveCount(0)
     await expect(page.getByText('· Ended')).toHaveCount(0)
 
-    page.once('dialog', (dialog) => dialog.accept())
-    await page.getByRole('button', { name: 'More' }).click()
+    await more.click()
     await page.getByRole('button', { name: 'End session' }).click()
+    await page.keyboard.press('Escape')
+    await expect(sheet).toHaveCount(0)
+    // Focus goes back to the menu button that opened it, not lost on the page.
+    await expect(more).toBeFocused()
+
+    await more.click()
+    await page.getByRole('button', { name: 'End session' }).click()
+    await sheet.getByRole('button', { name: 'End session' }).click()
     await expect(page.getByText('· Ended')).toBeVisible()
   })
 
@@ -412,7 +422,7 @@ test.describe('self check-in', () => {
     await page.getByRole('button', { name: 'Check in' }).click()
     await expect(page.getByRole('heading', { name: "You're in, Zoe." })).toBeVisible()
     await page.getByRole('link', { name: 'See the board' }).click()
-    await expect(page.getByLabel("I'm…").locator('option:checked')).toHaveText('Zoe')
+    await expect(page.getByTestId('status-card')).toContainText('Hi Zoe.')
   })
 
   test('the host shares a check-in QR and can turn check-in off from the share sheet', async ({ page, request }) => {
@@ -847,8 +857,8 @@ test.describe('welcome message', () => {
     await expect(page.getByTestId('welcome')).toContainText(GREETING)
     await expect(page.getByTestId('welcome-message')).toHaveText(DEFAULT)
     // The status banner says hello by first name once a player picks theirs.
-    await page.getByLabel("I'm…").selectOption({ label: 'Ana' })
-    await expect(page.getByRole('status').filter({ hasText: /^Hi Ana, you're up on Court \d: walk on$/ })).toBeVisible()
+    await page.getByLabel('Who are you?').selectOption({ label: 'Ana' })
+    await expect(page.getByRole('status').filter({ hasText: /^Hi Ana\. Up next · Court \d · walk on now$/ })).toBeVisible()
   })
 
   test('a session can start with the host’s own message, or none', async ({ request }) => {
@@ -1034,9 +1044,9 @@ test.describe('final results', () => {
   test('a player who picked their name sees where they finished, or thanks for coming', async ({ page, request }) => {
     const { code, gold, benched } = await playedAndEnded(request)
     await page.goto(`/pickleball/s/${code}`)
-    await page.getByLabel("I'm…").selectOption({ label: gold[0] })
+    await page.getByLabel('Who are you?').selectOption({ label: gold[0] })
     await expect(page.getByRole('status').filter({ hasText: `Hi ${gold[0]}! You tied for 1st of 8 🎉` })).toBeVisible()
-    await page.getByLabel("I'm…").selectOption({ label: benched[0] })
+    await page.getByLabel('Who are you?').selectOption({ label: benched[0] })
     await expect(page.getByRole('status').filter({ hasText: `Hi ${benched[0]}! Thanks for coming 👋` })).toBeVisible()
   })
 

@@ -1,3 +1,4 @@
+import { UP_NEXT, WALK_ON } from '../lib/queueVocabulary'
 import { Button, TeamNames } from './ui.jsx'
 
 function minutesSince(iso) {
@@ -25,7 +26,7 @@ export default function CourtCard({ court, nameOf, ended = false, onStart, onGam
     <article key={match.id} className={`pb-flip flex flex-col gap-3 rounded-2xl p-4 ${proposed ? 'border-2 border-dashed border-pickle-neon bg-ink' : 'bg-navy-900'}`} data-testid={testId}>
       <div className="flex items-baseline justify-between">
         <h3 className="text-lg font-bold">{court.label}</h3>
-        <span className={`text-xs ${proposed ? 'font-bold text-pickle-neon' : 'text-mist'}`}>{proposed ? 'Up next' : `${minutesSince(match.startedAt)} min`}</span>
+        <span className={`text-xs ${proposed ? 'font-bold text-pickle-neon' : 'text-mist'}`}>{proposed ? `${UP_NEXT} · ${WALK_ON}` : `Playing · ${minutesSince(match.startedAt)} min`}</span>
       </div>
       {court.fixtureLabel && <p className="-mt-2 text-xs font-bold uppercase tracking-[0.08em] text-pickle-neon">{court.fixtureLabel}</p>}
       <div className="grid gap-1 text-[15px]">

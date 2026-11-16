@@ -19,6 +19,7 @@ import QrCode from './components/QrCode.jsx'
 import TvCourt from './components/TvCourt.jsx'
 import TvMarquee from './components/TvMarquee.jsx'
 import { nextGames } from './tournament/bracketLayout'
+import { HELD_LABEL, NEXT_FOUR, NEXT_FOUR_WHEN, QUEUE_RULE, WAITING, waitingNote } from './lib/queueVocabulary'
 import ResultsScreen from './components/results/ResultsScreen.jsx'
 import ChampionAnnouncer from './tournament/ChampionAnnouncer.jsx'
 
@@ -85,9 +86,12 @@ function Standings({ viewer }) {
   return <FitList rows={rows} className="mt-1 grid gap-1 text-[clamp(1rem,1.3vw,1.75rem)]" />
 }
 
-/** A tournament's next games from the draw, in the order courts take them. */
+/** A tournament's next games, in the server's order (tournament.comingUp), with why a game waits. */
 function ComingUp({ tournament }) {
-  const rows = nextGames(tournament, 6).map((game) => ({ key: game.id, content: <span className={WRAP}><b>{game.label}</b>: {game.nameA} vs {game.nameB}</span> }))
+  const rows = nextGames(tournament, 6).map((game) => ({
+    key: game.id,
+    content: <span className={WRAP}><b>{game.label}</b>: {game.nameA} vs {game.nameB}{game.held && <span className="text-mist"> · {HELD_LABEL[game.held]}</span>}</span>,
+  }))
   return (
     <section aria-label="Coming up" className="flex max-h-[30vh] min-h-0 shrink flex-col">
       <h2 className={H2}>Coming up</h2>
@@ -98,15 +102,58 @@ function ComingUp({ tournament }) {
   )
 }
 
-/** Who walks on next: only as many whole names as the space left allows, so the fairness numbers below always show. */
-function UpNext({ viewer }) {
-  const rows = viewer.waiting.slice(0, 8).map((w, i) => ({ key: w.id, content: `${i + 1} · ${w.name}` }))
+const more = (n) => <span className="text-[clamp(0.9rem,1.1vw,1.5rem)] text-mist">and {n} more on the player board</span>
+
+/**
+ * The open-play queue on the TV (PB-QUEUE-04): the next four when the server
+ * has fixed them, then everyone waiting, unnumbered. Confirmed calls stay on
+ * the court tiles. Rows that do not fit are counted, never dropped silently.
+ */
+function TvQueue({ viewer }) {
+  const note = waitingNote(viewer)
+  const chip = `rounded-2xl bg-navy-800 px-3 py-1 ${WRAP}`
+  const waiting = viewer.waiting.map((w) => ({ key: w.id, content: w.name }))
   return (
-    <section aria-label="Up next" className="flex max-h-[26vh] min-h-0 shrink flex-col">
-      <h2 className={H2}>Up next</h2>
-      {rows.length === 0
-        ? <p className="mt-1 text-[clamp(1rem,1.3vw,1.75rem)] text-mist">Everyone is on court</p>
-        : <FitList rows={rows} className="mt-1 flex flex-wrap gap-2 text-[clamp(1rem,1.3vw,1.75rem)]" rowClassName={`rounded-2xl bg-navy-800 px-3 py-1 ${WRAP}`} />}
+    <>
+      {viewer.nextUp && (
+        <section aria-label="Next four" data-testid="tv-next-four" className="shrink-0">
+          <h2 className={H2}>{NEXT_FOUR} <span className="text-mist">· {NEXT_FOUR_WHEN}</span></h2>
+          <ul className="mt-1 flex flex-wrap gap-2 text-[clamp(1rem,1.3vw,1.75rem)]">
+            {viewer.nextUp.players.map((p) => <li key={p.id} className={`rounded-2xl border-2 border-dashed border-pickle-neon px-3 py-1 ${WRAP}`}>{p.name}</li>)}
+          </ul>
+        </section>
+      )}
+      <section aria-label="Waiting" data-testid="tv-waiting" className="flex max-h-[26vh] min-h-0 shrink flex-col">
+        <h2 className={H2}>{WAITING} ({viewer.waiting.length})</h2>
+        <p className="text-[clamp(0.8rem,0.9vw,1.25rem)] text-mist">{QUEUE_RULE}</p>
+        {waiting.length === 0
+          ? <p className="mt-1 text-[clamp(1rem,1.3vw,1.75rem)] text-mist">Everyone is on court</p>
+          : <FitList rows={waiting} className="mt-1 flex flex-wrap gap-2 text-[clamp(1rem,1.3vw,1.75rem)]" rowClassName={chip} more={more} />}
+        {note && <p className="shrink-0 text-[clamp(0.9rem,1.1vw,1.5rem)] font-semibold">{note}</p>}
+      </section>
+    </>
+  )
+}
+
+/** Below lg the side panel is hidden, so the queue follows the courts in a plain scrolling list (PB-QUEUE-04). */
+function CompactQueue({ viewer }) {
+  const note = waitingNote(viewer)
+  return (
+    <section aria-label="Queue" data-testid="tv-compact-queue" className="grid gap-3 rounded-2xl bg-navy-900 p-4 text-lg lg:hidden">
+      {viewer.nextUp && (
+        <div>
+          <h2 className="font-bold text-pickle-neon">{NEXT_FOUR} <span className="font-normal text-mist">· {NEXT_FOUR_WHEN}</span></h2>
+          <p className={WRAP}>{viewer.nextUp.players.map((p) => p.name).join(' · ')}</p>
+        </div>
+      )}
+      <div>
+        <h2 className="font-bold text-pickle-neon">{WAITING} ({viewer.waiting.length})</h2>
+        <p className="text-sm text-mist">{QUEUE_RULE}</p>
+        <ul className="mt-1 flex flex-wrap gap-2">
+          {viewer.waiting.map((w) => <li key={w.id} className={`rounded-2xl bg-navy-800 px-3 py-1 ${WRAP}`}>{w.name}</li>)}
+        </ul>
+        {note && <p className="mt-1 font-semibold">{note}</p>}
+      </div>
     </section>
   )
 }
@@ -182,8 +229,9 @@ export default function TvBoard({ code }) {
           </div>
         )}
         {!overlay && courts.length === 0 && <p className="grid place-items-center rounded-2xl bg-navy-900 p-8 text-center text-[clamp(1.5rem,3.5vw,4rem)] font-bold text-mist lg:col-span-full lg:row-span-full">No courts are in play right now</p>}
-        {!overlay && courts.map((court) => <TvCourt key={court.id} court={court} />)}
+        {!overlay && courts.map((court) => <TvCourt key={court.id} court={court} fresh={live} />)}
       </section>
+      {!overlay && !tournament && <CompactQueue viewer={viewer} />}
       <aside className="hidden min-h-0 flex-col gap-[1vw] overflow-hidden lg:flex">
         <header>
           <p className="text-[clamp(0.9rem,1.1vw,1.5rem)] font-bold text-pickle-neon"><LiveState viewer={viewer} live={live} lastAt={lastSnapshotAt} /> · {modeLabel}</p>
@@ -197,7 +245,7 @@ export default function TvBoard({ code }) {
             <p className="whitespace-nowrap text-[clamp(1rem,1.5vw,2.25rem)] font-bold tracking-[0.04em] text-pickle-neon">{formatPublicCode(code)}</p>
           </div>
         </div>
-        {!overlay && (tournament ? <ComingUp tournament={tournament} /> : <UpNext viewer={viewer} />)}
+        {!overlay && (tournament ? <ComingUp tournament={tournament} /> : <TvQueue viewer={viewer} />)}
         {/* Fairness is about open-play rotation; a tournament's draw decides who plays. The final results already rank everyone. */}
         {!tournament && overlay !== 'results' && <div className="shrink-0"><FairnessPanel fairness={viewer.fairness} tv /></div>}
         {overlay !== 'results' && (

@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react'
+
 const VARIANTS = {
   primary: 'bg-brand text-white hover:bg-[#3a00d6]',
   neon: 'bg-pickle-neon text-ink hover:brightness-95',
@@ -42,15 +44,63 @@ export function TeamNames({ side, names, emphasis = [] }) {
   )
 }
 
-/** Bottom sheet on phones, centred panel from md up (spec §11). */
-export function Sheet({ title, onClose, children }) {
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+/**
+ * Bottom sheet on phones, centred panel from md up (spec §11). A real modal
+ * (PB-UX): focus moves in, Tab stays inside, Escape closes it, and focus goes
+ * back to whatever opened it.
+ */
+export function Sheet({ title, onClose, children, returnFocusRef = null }) {
+  const panel = useRef(null)
+  const close = useRef(onClose)
+  useEffect(() => {
+    close.current = onClose
+  }, [onClose])
+  useEffect(() => {
+    const opener = document.activeElement
+    const fallback = returnFocusRef?.current ?? null
+    const root = panel.current
+    const items = () => [...root.querySelectorAll(FOCUSABLE)].filter((el) => el.getClientRects().length > 0)
+    // The first field if there is one, else the panel itself (the close button is last in reading order).
+    const first = items().find((el) => el.getAttribute('aria-label') !== 'Close') ?? root
+    first.focus()
+    function onKeyDown(event) {
+      if (event.key === 'Escape') {
+        event.stopPropagation()
+        close.current?.()
+        return
+      }
+      if (event.key !== 'Tab') return
+      const list = items()
+      if (list.length === 0) return
+      const head = list[0]
+      const tail = list[list.length - 1]
+      if (event.shiftKey && (document.activeElement === head || !root.contains(document.activeElement))) {
+        event.preventDefault()
+        tail.focus()
+      } else if (!event.shiftKey && (document.activeElement === tail || !root.contains(document.activeElement))) {
+        event.preventDefault()
+        head.focus()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown, true)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown, true)
+      // The opener may be gone (a menu item that closed with its menu): fall back to the given control.
+      if (opener instanceof HTMLElement && opener !== document.body && document.contains(opener)) opener.focus()
+      else fallback?.focus()
+    }
+  }, [returnFocusRef])
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/60 md:items-center" role="presentation" onClick={onClose}>
       <div
+        ref={panel}
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="pb-flip max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-navy-950 p-5 shadow-elevated md:max-w-lg md:rounded-3xl"
+        tabIndex={-1}
+        className="pb-flip max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-navy-950 p-5 shadow-elevated outline-none md:max-w-lg md:rounded-3xl"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between gap-4">
@@ -60,5 +110,18 @@ export function Sheet({ title, onClose, children }) {
         {children}
       </div>
     </div>
+  )
+}
+
+/** A yes/no question in a sheet, instead of window.confirm (PB-UX). */
+export function ConfirmSheet({ title, body, confirmLabel, danger = false, onConfirm, onClose, returnFocusRef }) {
+  return (
+    <Sheet title={title} onClose={onClose} returnFocusRef={returnFocusRef}>
+      <p className="text-mist">{body}</p>
+      <div className="mt-5 grid grid-cols-2 gap-2">
+        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button variant={danger ? 'danger' : 'primary'} onClick={() => { onClose(); onConfirm() }}>{confirmLabel}</Button>
+      </div>
+    </Sheet>
   )
 }

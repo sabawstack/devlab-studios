@@ -117,7 +117,7 @@ export default function TournamentHost({ host, resultsScreen = null, send, error
 
       <aside className="grid content-start gap-5">
         <div className={section('players')}>
-          <PlayersPanel players={host.players} waiting={[]} playing={playing} showSkill send={send} />
+          <PlayersPanel players={host.players} playing={playing} showSkill send={send} />
         </div>
         <div className={section('results')}>
           <Panel><h2 className="mb-2 text-lg font-bold">Standings</h2><PairStandings rows={t.standings} /></Panel>

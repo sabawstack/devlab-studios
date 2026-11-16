@@ -419,10 +419,10 @@ test.describe('tournament board and TV (screens)', () => {
     const { code, hostKey } = await readyTournament(request, { courtCount: 1 })
     const host = await hostSnapshot(request, code, hostKey)
     await page.goto(`/pickleball/s/${code}`)
-    await page.getByLabel("I'm…").selectOption({ label: 'Cy' })
+    await page.getByLabel('Who are you?').selectOption({ label: 'Cy' })
     await expect(page.getByRole('status').filter({ hasText: 'Your next game: Semi-final 2' })).toBeVisible()
     await ok(request, code, hostKey, { type: 'RECORD_RESULT', matchId: host.courts[0].match.id, winner: 'A', scoreA: 11, scoreB: 4 })
-    await expect(page.getByRole('status').filter({ hasText: "You're up on Court 1: walk on" })).toBeVisible()
+    await expect(page.getByRole('status').filter({ hasText: 'Up next · Court 1 · walk on now' })).toBeVisible()
   })
 
   test('the TV board names the game on each court, then shows the champions', async ({ page, request }) => {
@@ -535,10 +535,10 @@ test.describe('tournament final results (screens)', () => {
     await expect(page.getByRole('region', { name: 'Draw' })).toBeVisible()
     // Each player hears how their pair finished.
     const champion = table[0].name.split(' & ')[0]
-    await page.getByLabel("I'm…").selectOption({ label: champion })
+    await page.getByLabel('Who are you?').selectOption({ label: champion })
     await expect(page.getByRole('status').filter({ hasText: `Hi ${champion}! Your pair won the tournament! 🏆` })).toBeVisible()
     const fourth = table[3].name.split(' & ')[1]
-    await page.getByLabel("I'm…").selectOption({ label: fourth })
+    await page.getByLabel('Who are you?').selectOption({ label: fourth })
     await expect(page.getByRole('status').filter({ hasText: `Hi ${fourth}! Your pair finished 4th` })).toBeVisible()
     await page.getByRole('button', { name: 'Share results' }).click()
     const wl = (row) => `${row.wins}–${row.losses}`
