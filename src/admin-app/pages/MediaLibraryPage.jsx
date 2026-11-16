@@ -8,6 +8,7 @@ import MediaAssetGrid from '../components/MediaAssetGrid'
 import MediaAssetTable from '../components/MediaAssetTable'
 import MediaDeleteConflictDialog from '../components/MediaDeleteConflictDialog'
 import { adminFetch } from '../lib/adminApi'
+import { confirmAction } from '../primitives/confirm'
 
 // Deliberately not adminApi.request: these send FormData, which must not get
 // a JSON Content-Type header. The content-type guard below is borrowed from
@@ -119,7 +120,7 @@ function MediaLibraryPage() {
   }
 
   async function remove(asset) {
-    if (!window.confirm(`Delete “${asset.filename}” from R2? This is only allowed when the image is not referenced by content.`)) return
+    if (!(await confirmAction({ title: `Delete “${asset.filename}”?`, body: 'It is removed from storage. This is only allowed when no content uses the image.', confirmLabel: 'Delete image', danger: true }))) return
     setBusyKey(asset.key)
     setMessage(null)
     try {

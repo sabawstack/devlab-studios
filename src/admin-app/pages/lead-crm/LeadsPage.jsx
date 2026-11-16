@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import LeadDetail from './LeadDetail'
 import { PRIORITY_TONES, STAGE_TONES, buttonClass, humanize, inputClass, relativeTime } from './format'
 import { Badge, EmptyState } from './shared'
+import { LoadState } from '../../primitives/index.jsx'
 import { useResource } from './useResource'
 
 /**
@@ -26,10 +27,22 @@ const FILTER_KEYS = [
   'complianceState', 'search', 'sort', 'minScore',
 ]
 
+const PAGE_SIZE = 100
+
 function LeadsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchInput, setSearchInput] = useState(searchParams.get('search') ?? '')
-  const [selectedId, setSelectedId] = useState(null)
+  // CRM-03: `?lead=` (the mailbox's "open in Lead CRM" link) opens that lead.
+  const selectedId = searchParams.get('lead')
+  const page = Math.max(1, Number(searchParams.get('page')) || 1)
+  function setSelectedId(id) {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+      if (id) next.set('lead', id)
+      else next.delete('lead')
+      return next
+    })
+  }
 
   // Typing must not fire a request per keystroke; the URL is only updated once
   // the operator has stopped.
@@ -37,8 +50,10 @@ function LeadsPage() {
     const timer = setTimeout(() => {
       setSearchParams((current) => {
         const next = new URLSearchParams(current)
+        if ((current.get('search') ?? '') === searchInput) return current
         if (searchInput) next.set('search', searchInput)
         else next.delete('search')
+        next.delete('page')
         return next
       })
     }, 300)
@@ -51,9 +66,11 @@ function LeadsPage() {
       const value = searchParams.get(key)
       if (value) params.set(key, value)
     }
-    params.set('limit', '100')
+    // CRM-03: pages of PAGE_SIZE instead of a silent cap at 100.
+    params.set('limit', String(PAGE_SIZE))
+    params.set('offset', String((page - 1) * PAGE_SIZE))
     return `?${params.toString()}`
-  }, [searchParams])
+  }, [searchParams, page])
 
   const { data, state, reload } = useResource(`/api/admin/lead-crm/leads${query}`)
   const { data: campaignData } = useResource('/api/admin/lead-crm/campaigns')
@@ -66,9 +83,24 @@ function LeadsPage() {
       const next = new URLSearchParams(current)
       if (value) next.set(key, value)
       else next.delete(key)
+      next.delete('page')
       return next
     })
   }
+
+  function setPage(nextPage) {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+      if (nextPage > 1) next.set('page', String(nextPage))
+      else next.delete('page')
+      return next
+    })
+  }
+
+  const total = data?.total ?? 0
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const first = total ? (page - 1) * PAGE_SIZE + 1 : 0
+  const last = Math.min(total, page * PAGE_SIZE)
 
   const hasFilters = FILTER_KEYS.some((key) => searchParams.get(key))
 
@@ -80,6 +112,7 @@ function LeadsPage() {
           <p className="mt-1 text-sm text-slate-500">
             {data ? `${data.total} lead${data.total === 1 ? '' : 's'}` : 'Loading…'}
             {hasFilters ? ' matching these filters' : ''}
+            {data && total > PAGE_SIZE ? ` · showing ${first}–${last}` : ''}
           </p>
         </div>
         {hasFilters ? (
@@ -177,8 +210,7 @@ function LeadsPage() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,520px)]">
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-          {state === 'loading' ? <p className="p-4 text-sm text-slate-500">Loading leads…</p> : null}
-          {state === 'error' ? <p className="p-4 text-sm text-rose-600">Leads could not be loaded.</p> : null}
+          <div className={state === 'ready' ? '' : 'p-4'}><LoadState state={state} label="leads" onRetry={reload} /></div>
 
           {state === 'ready' && leads.length === 0 ? (
             <div className="p-4">
@@ -207,10 +239,15 @@ function LeadsPage() {
                     <tr
                       key={lead.id}
                       onClick={() => setSelectedId(lead.id)}
+                      aria-selected={selectedId === lead.id}
                       className={`cursor-pointer transition hover:bg-slate-50 ${selectedId === lead.id ? 'bg-slate-50' : ''}`}
                     >
                       <td className="px-3 py-2">
-                        <p className="font-medium text-slate-800">{lead.companyName}</p>
+                        {/* ADMIN-10: the row opens from the keyboard too, through a real button. */}
+                        <button type="button" onClick={(event) => { event.stopPropagation(); setSelectedId(lead.id) }}
+                          aria-pressed={selectedId === lead.id} className="text-left font-medium text-slate-800 hover:text-[var(--ws-link)]">
+                          {lead.companyName}
+                        </button>
                         <p className="text-xs text-slate-400">
                           {lead.canonicalDomain}
                           {lead.city ? ` · ${lead.city}` : ''}
@@ -235,6 +272,13 @@ function LeadsPage() {
                 </tbody>
               </table>
             </div>
+          ) : null}
+          {pages > 1 ? (
+            <nav aria-label="Lead pages" className="flex items-center justify-between gap-3 border-t border-slate-200 px-3 py-2 text-sm">
+              <button type="button" className={buttonClass} disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</button>
+              <span>Page {page} of {pages}</span>
+              <button type="button" className={buttonClass} disabled={page >= pages} onClick={() => setPage(page + 1)}>Next</button>
+            </nav>
           ) : null}
         </div>
 

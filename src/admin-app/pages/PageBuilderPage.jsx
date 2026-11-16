@@ -8,6 +8,7 @@ import PublicUsageNotice from '../components/PublicUsageNotice'
 import PreviewDraftButton from '../components/PreviewDraftButton'
 import { PUBLIC_SURFACES } from '../../config/publicSurfaces'
 import { PAGE_STATUSES } from '../../lib/schemas/singletons'
+import { confirmAction } from '../primitives/confirm'
 
 // Only what the pages table accepts; 'archived' used to fail every save.
 const STATUS_OPTIONS = PAGE_STATUSES
@@ -66,7 +67,9 @@ function PageBuilderPage() {
     }))
   }
 
-  function removeBlock(index) {
+  async function removeBlock(index) {
+    // ADMIN-06: the block's content goes with it, so it asks first (nothing is saved until Save).
+    if (!(await confirmAction({ title: `Remove the ${BLOCK_LABELS[page.blocks[index]?.type] || 'block'} block?`, body: 'Its content is removed from this page when you save.', confirmLabel: 'Remove block', danger: true }))) return
     setPage((current) => ({ ...current, blocks: current.blocks.filter((_, i) => i !== index) }))
   }
 
@@ -176,9 +179,10 @@ function PageBuilderPage() {
             <div className="mb-3 flex items-center justify-between">
               <span className="rounded-full bg-brand-mint px-3 py-1 text-xs font-semibold text-brand-teal">{BLOCK_LABELS[block.type] || block.type}</span>
               <div className="flex gap-2 text-xs font-semibold text-slate-500">
-                <button type="button" onClick={() => moveBlock(index, -1)} className="hover:text-slate-800">Up</button>
-                <button type="button" onClick={() => moveBlock(index, 1)} className="hover:text-slate-800">Down</button>
-                <button type="button" onClick={() => removeBlock(index)} className="text-rose-600 hover:text-rose-800">Remove</button>
+                {/* CMS-04: each repeated control names its block. */}
+                <button type="button" aria-label={`Move ${BLOCK_LABELS[block.type] || block.type} block ${index + 1} up`} onClick={() => moveBlock(index, -1)} className="hover:text-slate-800">Up</button>
+                <button type="button" aria-label={`Move ${BLOCK_LABELS[block.type] || block.type} block ${index + 1} down`} onClick={() => moveBlock(index, 1)} className="hover:text-slate-800">Down</button>
+                <button type="button" aria-label={`Remove ${BLOCK_LABELS[block.type] || block.type} block ${index + 1}`} onClick={() => removeBlock(index)} className="text-rose-600 hover:text-rose-800">Remove</button>
               </div>
             </div>
             <SchemaForm

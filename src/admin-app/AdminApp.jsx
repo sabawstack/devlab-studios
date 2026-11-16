@@ -2,8 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import AdminShell from './components/AdminShell'
 import SessionExpiredDialog from './components/SessionExpiredDialog'
+import { ConfirmHost } from './primitives/ConfirmDialog'
+import { currentEnvironment } from './lib/environment'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
+import { NotFoundPage, RouteError } from './pages/NotFoundPage'
 import ContentTypePage from './pages/ContentTypePage'
 import CollectionTypePage from './pages/CollectionTypePage'
 import PageBuilderPage from './pages/PageBuilderPage'
@@ -30,6 +33,8 @@ function buildRouter(session, onLogout) {
     {
       path: '/admin',
       element: <AdminShell session={session} onLogout={onLogout} />,
+      // ADMIN-02: a screen that throws shows a recoverable error, not a blank page.
+      errorElement: <RouteError />,
       children: [
         { index: true, element: <DashboardPage /> },
         { path: 'content/:type', element: <ContentTypePage /> },
@@ -67,6 +72,8 @@ function buildRouter(session, onLogout) {
         // rebuild it, which is the flicker in a different costume.
         { path: 'mailbox', element: <MailboxPage /> },
         { path: 'mailbox/:section', element: <MailboxPage /> },
+        // ADMIN-02: any other Admin address.
+        { path: '*', element: <NotFoundPage /> },
       ],
     },
   ])
@@ -111,13 +118,25 @@ function AdminApp() {
   }
 
   if (!session) {
-    return <LoginPage onLogin={setSession} />
+    return (
+      <LoginPage
+        onLogin={(data) => {
+          setSession(data)
+          // The login answer has no environment (ADMIN-09); the session read does.
+          fetch('/api/admin/session', { credentials: 'include' })
+            .then((response) => (response.ok ? response.json() : null))
+            .then((full) => full?.environment && setSession((current) => (current ? { ...current, environment: full.environment } : current)))
+            .catch(() => {})
+        }}
+      />
+    )
   }
 
   return (
     <>
       <RouterProvider router={router} />
       <SessionExpiredDialog email={session.email} onSignedOut={() => setSession(null)} />
+      <ConfirmHost environment={currentEnvironment(session)} />
     </>
   )
 }

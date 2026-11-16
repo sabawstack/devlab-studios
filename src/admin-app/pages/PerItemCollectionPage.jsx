@@ -4,6 +4,7 @@ import { adminApi } from '../lib/adminApi'
 import { PER_ITEM_REGISTRY } from '../lib/fieldDescriptors'
 import SchemaForm from '../components/SchemaForm'
 import VersionHistoryPanel from './VersionHistoryPanel'
+import { confirmAction } from '../primitives/confirm'
 
 function PerItemCollectionPage() {
   const { type } = useParams()
@@ -63,7 +64,7 @@ function PerItemCollectionPage() {
 
   async function handleDelete() {
     if (!selected?.id) return
-    if (!window.confirm('Delete this item? This cannot be undone.')) return
+    if (!(await confirmAction({ title: 'Delete this item?', body: 'This cannot be undone.', confirmLabel: 'Delete item', danger: true }))) return
     await adminApi.delete(`${config.apiPath}/${selected.id}`)
     setItems((current) => current.filter((item) => item.id !== selected.id))
     setSelected(null)

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { formatDate, humanize, relativeTime } from './format'
 import { Badge, EmptyState, Panel } from './shared'
 import { useResource } from './useResource'
+import { LoadState } from '../../primitives/index.jsx'
 
 /**
  * Conversations — a lightweight sales inbox.
@@ -104,7 +105,7 @@ function ConversationsPage() {
         </select>
       </div>
 
-      {state === 'loading' ? <p className="text-sm text-slate-500">Loading conversations…</p> : null}
+      <LoadState state={state} label="conversations" />
       {state === 'ready' && conversations.length === 0 ? (
         <EmptyState title="No conversations yet." hint="One is created the first time you export a draft for a lead." />
       ) : null}

@@ -3,6 +3,7 @@ import { adminApi } from '../../lib/adminApi'
 import { buttonClass, formatDate, humanize, inputClass, primaryButtonClass } from './format'
 import { Badge, EmptyState, Feedback } from './shared'
 import { useResource } from './useResource'
+import { LoadState } from '../../primitives/index.jsx'
 
 /**
  * The source registry.
@@ -125,6 +126,7 @@ function SourceRow({ source, onChanged }) {
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               placeholder="What do this source's terms say about automated access?"
+              aria-label={`Policy notes for ${source.name}`}
               className={`${inputClass} w-full`}
             />
             <div className="flex flex-wrap gap-2">
@@ -178,7 +180,7 @@ function SourcesPage() {
         </p>
       </div>
 
-      {state === 'loading' ? <p className="text-sm text-slate-500">Loading sources…</p> : null}
+      <LoadState state={state} label="sources" />
       {state === 'ready' && sources.length === 0 ? (
         <EmptyState title="No sources registered." hint="Run the seed script to register the built-in adapters." />
       ) : null}

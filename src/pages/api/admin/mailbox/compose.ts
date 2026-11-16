@@ -28,11 +28,12 @@ const composeSchema = z.object({
  * Starts a new conversation from the Compose button.
  *
  * NOTHING IS SENT HERE, exactly as with a reply — this writes a
- * `mailbox_outbound` row and the configured external sender collects it. Cc,
- * Bcc and outbound attachments are deliberately absent rather than accepted and
- * ignored: `mailbox_outbound` has no columns for them, so a field the UI
- * offered would be silently dropped on the way to the wire, which is worse than
- * not offering it.
+ * `mailbox_outbound` row and the configured external sender collects it. Cc
+ * and Bcc are deliberately absent rather than accepted and ignored:
+ * `mailbox_outbound` has no columns for them, so a field the UI offered would
+ * be silently dropped on the way to the wire, which is worse than not offering
+ * it. Attachments are supported (`attachmentIds`, bound when the row is
+ * written); this comment used to say otherwise (MAIL-04).
  *
  * Suppression is re-checked inside `composeNew`. A new message gets the same
  * gates as a reply — arguably it needs them more, since nobody wrote to us

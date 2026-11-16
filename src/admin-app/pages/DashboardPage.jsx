@@ -1,195 +1,148 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { adminApi } from '../lib/adminApi'
-import {
-  BadgeCheck,
-  Briefcase,
-  FileText,
-  Link2,
-  Mail,
-  Plus,
-  RotateCw,
-  Send,
-  Trash2,
-} from '../../components/icons/icons'
 import { PRIMARY_PUBLIC_SURFACES } from '../../config/publicSurfaces'
+import { useAttention } from '../components/AttentionContext'
+import { Button, LoadState, PageHeader, Panel } from '../primitives/index.jsx'
 
-const STAT_CARDS = [
-  { key: 'projects', label: 'Projects', to: '/admin/content/projects', icon: Briefcase },
-  { key: 'articles', label: 'Insights', to: '/admin/content/resources', icon: FileText },
-  { key: 'certifications', label: 'Certifications', to: '/admin/collections/certifications', icon: BadgeCheck },
-  { key: 'redirects', label: 'Redirects', to: '/admin/collections/redirects', icon: Link2 },
-  { key: 'leads', label: 'Leads', to: '/admin/leads', icon: Mail },
+// Content totals (below "Needs attention"): the same endpoints as before; the
+// inquiry tile is called Inquiries, as everywhere else in the workspace.
+const TOTALS = [
+  { key: 'projects', label: 'Projects', to: '/admin/content/projects', path: '/api/admin/projects', count: (data) => data.length },
+  { key: 'articles', label: 'Insight articles', to: '/admin/content/resources', path: '/api/admin/content/resources', count: (data) => data.posts?.length ?? 0 },
+  { key: 'certifications', label: 'Certifications', to: '/admin/collections/certifications', path: '/api/admin/collections/certifications', count: (data) => data.length },
+  { key: 'redirects', label: 'Redirects', to: '/admin/collections/redirects', path: '/api/admin/collections/redirects', count: (data) => data.length },
+  { key: 'inquiries', label: 'Inquiries', to: '/admin/leads', path: '/api/admin/leads', count: (data) => data.length },
 ]
 
-const ACTION_ICONS = {
-  create: Plus,
-  update: RotateCw,
-  replace: RotateCw,
-  restore: RotateCw,
-  delete: Trash2,
-  retry_delivery: Send,
-}
+const AREAS = [
+  { key: 'inquiries', title: 'Inquiries', description: 'People who contacted DevLab Studios.', to: '/admin/leads' },
+  { key: 'leadCrm', title: 'Lead CRM', description: 'Businesses the engine found, and their replies.', to: '/admin/lead-crm' },
+  { key: 'mailbox', title: 'Mailbox', description: 'hello@ and the replies waiting to go out.', to: '/admin/mailbox' },
+]
 
-function formatRelativeTime(isoString) {
-  const then = new Date(isoString).getTime()
-  const now = Date.now()
-  const diffSeconds = Math.round((now - then) / 1000)
-
-  if (diffSeconds < 60) return 'just now'
-  const diffMinutes = Math.round(diffSeconds / 60)
-  if (diffMinutes < 60) return `${diffMinutes}m ago`
-  const diffHours = Math.round(diffMinutes / 60)
-  if (diffHours < 24) return `${diffHours}h ago`
-  const diffDays = Math.round(diffHours / 24)
-  if (diffDays < 30) return `${diffDays}d ago`
+function relative(isoString) {
+  const seconds = Math.round((Date.now() - new Date(isoString).getTime()) / 1000)
+  if (seconds < 60) return 'just now'
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m ago`
+  if (seconds < 86_400) return `${Math.round(seconds / 3600)}h ago`
+  if (seconds < 2_592_000) return `${Math.round(seconds / 86_400)}d ago`
   return new Date(isoString).toLocaleDateString()
 }
 
-async function fetchCount(path, extract) {
-  try {
-    const data = await adminApi.get(path)
-    return extract(data)
-  } catch {
-    return null
-  }
+/** One area of "Needs attention", with its own loading and failure state. */
+function AttentionCard({ area, entry, onRetry }) {
+  const value = entry.value
+  return (
+    <Panel as="section" aria-labelledby={`attention-${area.key}`} data-testid={`attention-${area.key}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 id={`attention-${area.key}`} className="text-base font-semibold"><Link to={area.to} className="admin-link">{area.title}</Link></h3>
+          <p className="text-xs text-[var(--ws-ink-3)]">{area.description}</p>
+        </div>
+        {value ? <span className="ws-mono text-2xl font-semibold" aria-label={`${value.total} need attention`}>{value.total}</span> : null}
+      </div>
+      <div className="mt-3">
+        {entry.state === 'loading' || entry.state === 'error'
+          ? <LoadState state={entry.state} label={area.title.toLowerCase()} onRetry={onRetry} />
+          : (
+            <ul className="space-y-1.5 text-sm">
+              {value.items.map((item) => (
+                <li key={item.key} className="flex items-center justify-between gap-3">
+                  <Link to={item.to} className={item.count ? 'admin-link' : 'text-[var(--ws-ink-3)]'}>{item.label}</Link>
+                  <span className="ws-mono font-semibold">{item.count}{item.capped ? '+' : ''}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        {area.key === 'leadCrm' && value && !value.engineOn ? (
+          <p className="mt-2 text-xs text-[var(--ws-ink-3)]">The engine is switched off, so nothing new arrives here.</p>
+        ) : null}
+      </div>
+    </Panel>
+  )
 }
 
 function DashboardPage() {
-  const [counts, setCounts] = useState({})
-  const [recentEvents, setRecentEvents] = useState([])
-  const [status, setStatus] = useState('loading')
+  const attention = useAttention()
+  const [totals, setTotals] = useState({})
+  const [events, setEvents] = useState({ state: 'loading', items: [] })
 
   useEffect(() => {
     let ignore = false
-
     adminApi.get('/api/admin/audit-log?limit=8')
-      .then((data) => !ignore && setRecentEvents(data))
-      .catch(() => {})
-
-    Promise.all([
-      fetchCount('/api/admin/projects', (data) => data.length),
-      fetchCount('/api/admin/content/resources', (data) => data.posts?.length ?? 0),
-      fetchCount('/api/admin/collections/certifications', (data) => data.length),
-      fetchCount('/api/admin/collections/redirects', (data) => data.length),
-      fetchCount('/api/admin/leads', (data) => data.length),
-    ]).then(([projects, articles, certifications, redirects, leads]) => {
-      if (ignore) return
-      setCounts({ projects, articles, certifications, redirects, leads })
-      setStatus('ready')
-    })
-
+      .then((data) => !ignore && setEvents({ state: 'ready', items: data }))
+      .catch(() => !ignore && setEvents({ state: 'error', items: [] }))
+    for (const total of TOTALS) {
+      adminApi.get(total.path)
+        .then((data) => !ignore && setTotals((current) => ({ ...current, [total.key]: { state: 'ready', count: total.count(data) } })))
+        .catch(() => !ignore && setTotals((current) => ({ ...current, [total.key]: { state: 'error' } })))
+    }
     return () => {
       ignore = true
     }
   }, [])
 
   return (
-    <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-2xl bg-[#0d1020] px-6 py-5 text-white shadow-md">
-        <div className="pointer-events-none absolute -right-12 -top-20 h-56 w-56 rounded-full border border-white/10" aria-hidden="true" />
-        <div className="pointer-events-none absolute right-16 top-8 h-24 w-24 rounded-full bg-violet-500/20 blur-3xl" aria-hidden="true" />
-        <div className="relative">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-200">Content operations</p>
-          <h1 className="mt-2 text-2xl font-semibold">Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-300">An overview of your content, collections, and recent activity.</p>
-        </div>
-      </div>
+    <div className="space-y-8">
+      <PageHeader title="Home" description="What is waiting for a person first, then the website at a glance." />
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-slate-900">Public Pages</h2>
-            <p className="mt-1 text-sm text-slate-500">Editors follow the same names and order visitors see on the website.</p>
-          </div>
-          <a href="/" target="_blank" rel="noreferrer" className="text-sm font-semibold text-brand-teal hover:underline">Preview public site</a>
+      {/* ADMIN-04: needs attention first, one card per area, each loading and failing on its own. */}
+      <section aria-labelledby="needs-attention" className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="needs-attention" className="text-lg font-semibold">Needs attention</h2>
+          <Button variant="quiet" onClick={attention.reload}>Refresh</Button>
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {PRIMARY_PUBLIC_SURFACES.map((surface) => {
-            const Icon = surface.icon
+        <div className="grid gap-4 lg:grid-cols-3">
+          {AREAS.map((area) => <AttentionCard key={area.key} area={area} entry={attention[area.key]} onRetry={attention.reload} />)}
+        </div>
+      </section>
+
+      <section aria-labelledby="content-totals" className="space-y-3">
+        <h2 id="content-totals" className="text-lg font-semibold">Website content</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {TOTALS.map((total) => {
+            const entry = totals[total.key]
             return (
-              <Link key={surface.key} to={surface.adminPath} className="rounded-xl border border-slate-200 p-4 transition hover:border-violet-300 hover:bg-violet-50/40">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50 text-violet-600"><Icon className="h-4 w-4" aria-hidden="true" /></span>
-                  <div>
-                    <p className="font-semibold text-slate-900">{surface.label}</p>
-                    <p className="text-xs text-slate-500">{surface.publicPath}</p>
-                  </div>
-                </div>
-                <p className="mt-3 text-xs leading-5 text-slate-500">{surface.description}</p>
+              <Link key={total.key} to={total.to} className="rounded-xl border border-[var(--ws-rule)] bg-[var(--ws-surface)] p-4 transition hover:border-[var(--ws-link)]">
+                <p className="text-sm font-semibold">{total.label}</p>
+                <p className="ws-mono mt-1 text-2xl font-semibold">
+                  {!entry ? <span className="text-[var(--ws-ink-3)]" aria-label="Loading">…</span> : entry.state === 'error' ? <span className="text-sm text-[var(--ws-danger)]">Not loaded</span> : entry.count}
+                </p>
               </Link>
             )
           })}
         </div>
       </section>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {STAT_CARDS.map((card) => {
-          const Icon = card.icon
-          const count = counts[card.key]
-          return (
-            <Link
-              key={card.to}
-              to={card.to}
-              className="group rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-teal/30 hover:shadow-md"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-brand-teal">
-                  <Icon className="h-5 w-5" aria-hidden="true" />
-                </div>
-                <span className="text-2xl font-semibold text-slate-900">
-                  {status === 'loading' ? (
-                    <span className="inline-block h-6 w-6 animate-pulse rounded bg-slate-100" />
-                  ) : (
-                    count ?? '—'
-                  )}
-                </span>
-              </div>
-              <p className="mt-2 text-sm font-semibold text-slate-700 group-hover:text-brand-ink">{card.label}</p>
-            </Link>
-          )
-        })}
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-5 py-4">
-            <h2 className="text-base font-semibold text-slate-900">Recent Activity</h2>
-          </div>
-          {recentEvents.length ? (
-            <ul className="divide-y divide-slate-100">
-              {recentEvents.map((event) => {
-                const ActionIcon = ACTION_ICONS[event.action] || RotateCw
-                return (
-                  <li key={event.id} className="flex items-center gap-3 px-5 py-3.5">
-                    <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                      <ActionIcon className="h-4 w-4" aria-hidden="true" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-brand-teal">{event.entityType} · {event.action.replace('_', ' ')}</p>
-                      <p className="mt-0.5 truncate text-sm font-medium text-slate-800">{event.entityId || event.entityType}</p>
-                      {event.metadata?.summary ? <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">{event.metadata.summary}</p> : null}
-                      {event.actorEmail ? <p className="mt-0.5 truncate text-xs text-slate-400">{event.actorEmail}</p> : null}
-                    </div>
-                    <span className="flex-shrink-0 text-xs text-slate-400">{formatRelativeTime(event.createdAt)}</span>
-                  </li>
-                )
-              })}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <Panel title="Recent activity" description="The latest changes in the workspace, from the audit log.">
+          {events.state !== 'ready' ? <LoadState state={events.state} label="recent activity" onRetry={() => window.location.reload()} /> : events.items.length ? (
+            <ul className="divide-y divide-[var(--ws-rule)]">
+              {events.items.map((event) => (
+                <li key={event.id} className="flex items-start justify-between gap-3 py-2.5">
+                  <div className="min-w-0">
+                    <p className="ws-mono text-[0.7rem] text-[var(--ws-ink-3)]">{event.entityType} · {event.action.replace('_', ' ')}</p>
+                    <p className="truncate text-sm font-medium">{event.entityId || event.entityType}</p>
+                    {event.metadata?.summary ? <p className="line-clamp-2 text-xs text-[var(--ws-ink-3)]">{event.metadata.summary}</p> : null}
+                  </div>
+                  <span className="shrink-0 text-xs text-[var(--ws-ink-3)]">{relative(event.createdAt)}</span>
+                </li>
+              ))}
             </ul>
-          ) : (
-            <p className="px-5 py-6 text-sm text-slate-500">No activity yet — changes made in the CMS will show up here.</p>
-          )}
-        </div>
+          ) : <p className="text-sm text-[var(--ws-ink-3)]">No activity yet. Changes made in the workspace show up here.</p>}
+        </Panel>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-base font-semibold text-slate-900">Quick Links</h2>
-          <div className="mt-3 divide-y divide-slate-100">
-            <Link to="/admin/pages/home" className="flex items-center justify-between py-3 text-sm font-medium text-slate-600 hover:text-brand-teal"><span>Edit homepage</span><span aria-hidden="true">→</span></Link>
-            <Link to="/admin/content/site-settings" className="flex items-center justify-between py-3 text-sm font-medium text-slate-600 hover:text-brand-teal"><span>Navigation &amp; Footer</span><span aria-hidden="true">→</span></Link>
-            <Link to="/admin/media" className="flex items-center justify-between py-3 text-sm font-medium text-slate-600 hover:text-brand-teal"><span>Media library</span><span aria-hidden="true">→</span></Link>
-            <Link to="/admin/audit-log" className="flex items-center justify-between py-3 text-sm font-medium text-slate-600 hover:text-brand-teal"><span>Audit log</span><span aria-hidden="true">→</span></Link>
-          </div>
-        </div>
+        <Panel title="Website pages" description="Same names and order visitors see.">
+          <ul className="space-y-1.5 text-sm">
+            {PRIMARY_PUBLIC_SURFACES.map((surface) => (
+              <li key={surface.key} className="flex justify-between gap-3">
+                <Link to={surface.adminPath} className="admin-link">{surface.label}</Link>
+                <span className="ws-mono text-xs text-[var(--ws-ink-3)]">{surface.publicPath}</span>
+              </li>
+            ))}
+          </ul>
+        </Panel>
       </div>
     </div>
   )

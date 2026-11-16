@@ -30,7 +30,9 @@ function freshClientIp() {
 }
 
 async function openAdminNavGroup(page, name) {
+  // ADMIN-03: Home, Inquiries and Mailbox are single links; Website, Lead CRM and Admin open.
   const group = page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name, exact: true })
+  if ((await group.count()) === 0) return
   if ((await group.getAttribute('aria-expanded')) === 'false') await group.click()
 }
 
@@ -110,17 +112,19 @@ test('the sign-in password can be revealed and re-hidden', async ({ page }) => {
 test('admin navigation mirrors public pages and hides unused collections', async ({ page }) => {
   await login(page)
   const navigation = page.getByRole('navigation', { name: 'Admin navigation' })
-  await openAdminNavGroup(page, 'Public Pages')
+  await openAdminNavGroup(page, 'Website')
   // Labels mirror src/config/publicSurfaces.js, which is also what the public
   // navigation reads — "Solutions" labels the /solutions route.
-  for (const label of ['Home', 'About', 'Solutions', 'Work', 'Insights', 'Founder Profile']) {
+  // The website's home is "Home page": "Home" is the workspace's own start page.
+  for (const label of ['Home page', 'About', 'Solutions', 'Work', 'Insights', 'Founder Profile']) {
     await expect(navigation.getByRole('link', { name: label, exact: true })).toBeVisible()
   }
   await expect(navigation.getByRole('link', { name: 'Testimonials' })).toHaveCount(0)
   await expect(navigation.getByRole('link', { name: 'Case Studies' })).toHaveCount(0)
-  await openAdminNavGroup(page, 'Site Management')
-  await navigation.getByRole('link', { name: 'Navigation & Footer' }).click()
-  await expect(page.getByRole('heading', { name: 'Site Settings', level: 2 })).toBeVisible()
+  await openAdminNavGroup(page, 'Website')
+  // CMS-03: the item and the editor's heading say the same thing.
+  await navigation.getByRole('link', { name: 'Site settings' }).click()
+  await expect(page.getByRole('heading', { name: 'Site settings', level: 2 })).toBeVisible()
 })
 
 test('media library inventories the bound R2 bucket and explains its purpose', async ({ page, baseURL }) => {
@@ -133,7 +137,7 @@ test('media library inventories the bound R2 bucket and explains its purpose', a
   expect(typeof body.summary?.objectCount).toBe('number')
   expect(typeof body.summary?.totalBytes).toBe('number')
 
-  await openAdminNavGroup(page, 'Site Management')
+  await openAdminNavGroup(page, 'Website')
   await page.getByRole('navigation').getByRole('link', { name: 'Media' }).click()
   await expect(page.getByRole('heading', { name: 'Media Library', level: 1 })).toBeVisible()
   await expect(page.getByText(/optimized public images in the current environment/i)).toBeVisible()
@@ -154,9 +158,9 @@ test.describe('site settings', () => {
 
   test('site settings save round-trip persists across reload', async ({ page }) => {
     await login(page)
-    await openAdminNavGroup(page, 'Site Management')
-    await page.getByRole('navigation').getByRole('link', { name: 'Navigation & Footer' }).click()
-    await expect(page.getByRole('heading', { name: 'Site Settings', level: 2 })).toBeVisible()
+    await openAdminNavGroup(page, 'Website')
+    await page.getByRole('navigation').getByRole('link', { name: 'Site settings' }).click()
+    await expect(page.getByRole('heading', { name: 'Site settings', level: 2 })).toBeVisible()
 
     const taglineInput = page.getByLabel(/tagline/i).first()
     const marker = `Smoke test tagline ${Date.now()}`
@@ -165,16 +169,16 @@ test.describe('site settings', () => {
     await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10_000 })
 
     await page.reload()
-    await openAdminNavGroup(page, 'Site Management')
-    await page.getByRole('navigation').getByRole('link', { name: 'Navigation & Footer' }).click()
+    await openAdminNavGroup(page, 'Website')
+    await page.getByRole('navigation').getByRole('link', { name: 'Site settings' }).click()
     await expect(page.getByLabel(/tagline/i).first()).toHaveValue(marker)
   })
 
   // CMS-02: business details round-trip, then go back to blank (the defaults).
   test('business details save, persist across reload, and clear back to the defaults', async ({ page, baseURL }) => {
     await login(page)
-    await openAdminNavGroup(page, 'Site Management')
-    await page.getByRole('navigation').getByRole('link', { name: 'Navigation & Footer' }).click()
+    await openAdminNavGroup(page, 'Website')
+    await page.getByRole('navigation').getByRole('link', { name: 'Site settings' }).click()
     const section = page.locator('[data-business-settings]')
     await expect(section.getByLabel('Reply window (business days)')).toHaveAttribute('placeholder', '1')
     await expect(section.getByLabel('Audit price line')).toHaveAttribute('placeholder', 'Quoted after a 30-minute call')
@@ -187,8 +191,8 @@ test.describe('site settings', () => {
     expect(stored.business).toMatchObject({ replyWindowDays: 2, auditPriceLine: 'Synthetic price line' })
 
     await page.reload()
-    await openAdminNavGroup(page, 'Site Management')
-    await page.getByRole('navigation').getByRole('link', { name: 'Navigation & Footer' }).click()
+    await openAdminNavGroup(page, 'Website')
+    await page.getByRole('navigation').getByRole('link', { name: 'Site settings' }).click()
     await expect(section.getByLabel('Reply window (business days)')).toHaveValue('2')
 
     await section.getByLabel('Reply window (business days)').fill('')
@@ -201,9 +205,9 @@ test.describe('site settings', () => {
 
   test('site settings changes are versioned and a prior version can be restored', async ({ page }) => {
     await login(page)
-    await openAdminNavGroup(page, 'Site Management')
-    await page.getByRole('navigation').getByRole('link', { name: 'Navigation & Footer' }).click()
-    await expect(page.getByRole('heading', { name: 'Site Settings', level: 2 })).toBeVisible()
+    await openAdminNavGroup(page, 'Website')
+    await page.getByRole('navigation').getByRole('link', { name: 'Site settings' }).click()
+    await expect(page.getByRole('heading', { name: 'Site settings', level: 2 })).toBeVisible()
 
     const taglineInput = page.getByLabel(/tagline/i).first()
 
@@ -223,8 +227,8 @@ test.describe('site settings', () => {
 
     // Entries are newest-first: index 0 is the just-saved newerMarker snapshot,
     // index 1 is the snapshot saved right before it (olderMarker).
-    page.once('dialog', (dialog) => dialog.accept())
     await versionEntries.nth(1).getByRole('button', { name: /restore/i }).click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Restore', exact: true }).click()
 
     await expect(page.getByLabel(/tagline/i).first()).toHaveValue(olderMarker)
   })
@@ -258,7 +262,7 @@ test('hidden testimonials collection remains backward compatible by direct route
 
 test('redirects collection: create, verify it actually redirects, then delete', async ({ page }) => {
   await login(page)
-  await openAdminNavGroup(page, 'Site Management')
+  await openAdminNavGroup(page, 'Website')
   await page.getByRole('navigation').getByRole('link', { name: 'Redirects' }).click()
   await expect(page.getByRole('heading', { name: 'Redirects', level: 1 })).toBeVisible()
 
@@ -279,8 +283,8 @@ test('redirects collection: create, verify it actually redirects, then delete', 
   expect(new URL(beforeDelete.headers().location, page.url()).pathname).toBe('/profile')
 
   await page.getByRole('button', { name: new RegExp(fromPath.replace('/', '\\/')) }).click()
-  page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: /^delete$/i }).click()
+  await page.getByRole('alertdialog', { name: 'Delete this item?' }).getByRole('button', { name: 'Delete item' }).click()
   await expect(page.getByRole('button', { name: new RegExp(fromPath.replace('/', '\\/')) })).not.toBeVisible()
 
   // Deleting the redirect must take effect immediately — no stale redirect left behind.
@@ -290,8 +294,8 @@ test('redirects collection: create, verify it actually redirects, then delete', 
 
 test('page builder: add a block, save, verify it persists, then remove it', async ({ page }) => {
   await login(page)
-  await openAdminNavGroup(page, 'Public Pages')
-  await page.getByRole('navigation').getByRole('link', { name: 'Home' }).click()
+  await openAdminNavGroup(page, 'Website')
+  await page.getByRole('navigation').getByRole('link', { name: 'Home page' }).click()
   await expect(page.getByRole('heading', { name: /^Page:/, level: 1 })).toBeVisible()
 
   await page.getByRole('button', { name: /^add block/i }).click()
@@ -304,7 +308,9 @@ test('page builder: add a block, save, verify it persists, then remove it', asyn
   await page.reload()
   await expect(page.locator('input[id^="block-"][id$="-heading"]').last()).toHaveValue(marker)
 
-  await page.getByRole('button', { name: 'Remove' }).last().click()
+  await page.getByRole('button', { name: /^Remove .* block \d+$/ }).last().click()
+  // ADMIN-06: removing a block asks first.
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Remove block' }).click()
   await page.getByRole('button', { name: /^save page/i }).click()
   await expect(page.getByText(/^saved/i)).toBeVisible({ timeout: 10_000 })
 })
@@ -314,7 +320,7 @@ test('page builder: add a block, save, verify it persists, then remove it', asyn
 for (const name of ['Solutions', 'Insights']) {
   test(`page builder: the ${name} page saves`, async ({ page }) => {
     await login(page)
-    await openAdminNavGroup(page, 'Public Pages')
+    await openAdminNavGroup(page, 'Website')
     await page.getByRole('navigation').getByRole('link', { name, exact: true }).click()
     await expect(page.getByRole('heading', { name: /^Page:/, level: 1 })).toBeVisible()
 
@@ -325,8 +331,8 @@ for (const name of ['Solutions', 'Insights']) {
 
 test('page builder offers only the statuses the pages table accepts', async ({ page }) => {
   await login(page)
-  await openAdminNavGroup(page, 'Public Pages')
-  await page.getByRole('navigation').getByRole('link', { name: 'Home' }).click()
+  await openAdminNavGroup(page, 'Website')
+  await page.getByRole('navigation').getByRole('link', { name: 'Home page' }).click()
   await expect(page.getByRole('heading', { name: /^Page:/, level: 1 })).toBeVisible()
   await expect(page.locator('option[value="archived"]')).toHaveCount(0)
 })
@@ -549,7 +555,7 @@ test('Work editor selects existing Projects and owns its narrative without ownin
   })
   expect(emptyWorkResponse.ok()).toBeTruthy()
 
-  await openAdminNavGroup(page, 'Public Pages')
+  await openAdminNavGroup(page, 'Website')
   await page.getByRole('navigation').getByRole('link', { name: 'Work' }).click()
   await expect(page.getByRole('heading', { name: 'Work', level: 1 })).toBeVisible()
   await expect(page.locator('input[type="file"]')).toHaveCount(0)
@@ -626,7 +632,6 @@ test('a lead persists in D1 and shows a failed delivery attempt when Resend is u
 
   // The Inquiries table lists sender/type/status rather than the subject line,
   // so the lead is found by searching for its sender and opened from its row.
-  await openAdminNavGroup(page, 'Operations')
   await page.getByRole('navigation').getByRole('link', { name: 'Inquiries' }).click()
   await page.getByLabel('Search inquiries').fill(senderEmail)
   await expect(page.getByText(senderEmail)).toBeVisible()
@@ -793,11 +798,11 @@ test('deleting a used image shows the conflict dialog and links to the project',
   await expect(page.getByText(/Project saved at/)).toBeVisible({ timeout: 15_000 })
 
   await page.goto('/admin/media')
-  page.on('dialog', (dialog) => dialog.accept())
 
   const assetCard = page.locator('article', { hasText: uploadedKey })
   await expect(assetCard).toBeVisible({ timeout: 10_000 })
   await assetCard.getByRole('button', { name: 'Delete' }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete image' }).click()
 
   await expect(page.getByText('This image is still in use')).toBeVisible()
   await page.getByRole('button', { name: 'Go to project' }).click()
@@ -1389,7 +1394,7 @@ async function playwrightSignIn(page, baseURL, email, password) {
 
 test('the Security screen refuses a wrong current password', async ({ page }) => {
   await login(page)
-  await openAdminNavGroup(page, 'Operations')
+  await openAdminNavGroup(page, 'Admin')
   await page.getByRole('navigation').getByRole('link', { name: 'Security' }).click()
   await expect(page.getByRole('heading', { name: 'Security', level: 1 })).toBeVisible()
 

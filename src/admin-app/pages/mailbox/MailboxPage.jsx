@@ -243,6 +243,11 @@ function MailboxPage() {
     { skip: isDiagnostics },
   )
 
+  // MAIL-03: Diagnostics has no folder list, but its endpoint reports the same
+  // per-mailbox unread counts, so the rail keeps its badges there too.
+  const { data: diagnostics } = useResource(isDiagnostics ? '/api/admin/mailbox/diagnostics' : null, { skip: !isDiagnostics })
+  const railCounts = isDiagnostics ? diagnostics?.unread : data?.counts
+
   const threads = data?.threads ?? []
   const messages = data?.messages ?? []
 
@@ -292,7 +297,7 @@ function MailboxPage() {
         <aside
           className={`${railOpen ? 'block' : 'hidden'} overflow-y-auto border-b border-slate-200 p-2 lg:block lg:border-b-0 lg:border-r`}
         >
-          <FolderRail counts={data?.counts} activeSection={activeSection} onNavigate={() => setRailOpen(false)} />
+          <FolderRail counts={railCounts} activeSection={activeSection} onNavigate={() => setRailOpen(false)} />
         </aside>
 
         {/* Diagnostics stays INSIDE the shell rather than replacing it. It is

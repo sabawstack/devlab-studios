@@ -192,6 +192,10 @@
 
   "vars": {
     "ADMIN_AUTH_MODE": "password",
+    // Which deployment this is, for the Admin's environment badge and its
+    // "Open live site" link (ADMIN-09). Not inherited by env.preview: set there too.
+    // A localhost request always reports "local" (wrangler dev reads these vars).
+    "DEPLOYMENT_ENV": "production",
     // "true" keeps appending static-fallback projects that production D1 lacks
     // (the pre-2.3 behaviour) until production is reconciled: run
     // `node scripts/cms/static-projects-missing-from-d1.mjs --env production`,
@@ -257,6 +261,7 @@
       // leadDelivery.js's hardcoded defaults instead of the configured values.
       "vars": {
         "ADMIN_AUTH_MODE": "password",
+        "DEPLOYMENT_ENV": "preview",
         // Preview D1 holds every static project (checked 2026-11-12), so D1 is
         // the only source here.
         "PROJECTS_STATIC_MERGE": "false",

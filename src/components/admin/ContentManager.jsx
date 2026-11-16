@@ -352,13 +352,14 @@ function SectionHeader({ title, description, action }) {
   )
 }
 
-function RowActions({ onMoveUp, onMoveDown, onRemove, disableUp, disableDown }) {
+function RowActions({ onMoveUp, onMoveDown, onRemove, disableUp, disableDown, itemLabel = 'item' }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
         onClick={onMoveUp}
         disabled={disableUp}
+        aria-label={`Move ${itemLabel} up`}
         className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <ChevronUp size={14} />
@@ -368,6 +369,7 @@ function RowActions({ onMoveUp, onMoveDown, onRemove, disableUp, disableDown }) 
         type="button"
         onClick={onMoveDown}
         disabled={disableDown}
+        aria-label={`Move ${itemLabel} down`}
         className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <ChevronDown size={14} />
@@ -376,6 +378,7 @@ function RowActions({ onMoveUp, onMoveDown, onRemove, disableUp, disableDown }) 
       <button
         type="button"
         onClick={onRemove}
+        aria-label={`Remove ${itemLabel}`}
         className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
       >
         <Trash2 size={14} />
@@ -444,6 +447,7 @@ function ServicesEditor({ value, onChange }) {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm font-semibold text-slate-900">Category {index + 1}</p>
                 <RowActions
+                  itemLabel={`solution group ${index + 1}`}
                   onMoveUp={() => onChange({ ...value, solutionGroups: moveItem(solutionGroups, index, -1) })}
                   onMoveDown={() => onChange({ ...value, solutionGroups: moveItem(solutionGroups, index, 1) })}
                   onRemove={() => onChange({ ...value, solutionGroups: solutionGroups.filter((_, itemIndex) => itemIndex !== index) })}
@@ -564,6 +568,7 @@ function ServicesEditor({ value, onChange }) {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm font-semibold text-slate-900">Step {index + 1}</p>
                 <RowActions
+                  itemLabel={`process step ${index + 1}`}
                   onMoveUp={() => onChange({ ...value, processSteps: moveItem(processSteps, index, -1) })}
                   onMoveDown={() => onChange({ ...value, processSteps: moveItem(processSteps, index, 1) })}
                   onRemove={() => onChange({ ...value, processSteps: processSteps.filter((_, itemIndex) => itemIndex !== index) })}
@@ -647,6 +652,7 @@ function ServicesEditor({ value, onChange }) {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm font-semibold text-slate-900">FAQ {index + 1}</p>
                 <RowActions
+                  itemLabel={`FAQ ${index + 1}`}
                   onMoveUp={() => onChange({ ...value, faqs: moveItem(faqs, index, -1) })}
                   onMoveDown={() => onChange({ ...value, faqs: moveItem(faqs, index, 1) })}
                   onRemove={() => onChange({ ...value, faqs: faqs.filter((_, itemIndex) => itemIndex !== index) })}
@@ -973,6 +979,7 @@ function ResourcesEditor({ value, onChange, onSave, onStatusChange, isSaving, is
                     {selectedPost.status || 'draft'}
                   </span>
                   <RowActions
+                    itemLabel={`article “${selectedPost.title || selectedPost.id}”`}
                     onMoveUp={() => {
                       const index = posts.findIndex((post) => post.id === selectedPost.id)
                       onChange({ ...value, posts: moveItem(posts, index, -1) })
@@ -1396,6 +1403,7 @@ function ProfileEditor({ value, onChange }) {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm font-semibold text-slate-900">Experience {index + 1}</p>
                 <RowActions
+                  itemLabel={`experience ${index + 1}`}
                   onMoveUp={() => onChange({ ...value, experiences: moveItem(experiences, index, -1) })}
                   onMoveDown={() => onChange({ ...value, experiences: moveItem(experiences, index, 1) })}
                   onRemove={() => onChange({ ...value, experiences: experiences.filter((_, itemIndex) => itemIndex !== index) })}
@@ -1496,6 +1504,7 @@ function ProfileEditor({ value, onChange }) {
                   />
                 </label>
               <RowActions
+                itemLabel={`tool ${index + 1}`}
                 onMoveUp={() => onChange({ ...value, tools: moveItem(tools, index, -1) })}
                 onMoveDown={() => onChange({ ...value, tools: moveItem(tools, index, 1) })}
                 onRemove={() => onChange({ ...value, tools: tools.filter((_, itemIndex) => itemIndex !== index) })}
@@ -1553,6 +1562,7 @@ function ProfileEditor({ value, onChange }) {
                   />
                 </label>
               <RowActions
+                itemLabel={`workflow pattern ${index + 1}`}
                 onMoveUp={() => onChange({ ...value, workflowPatterns: moveItem(workflowPatterns, index, -1) })}
                 onMoveDown={() => onChange({ ...value, workflowPatterns: moveItem(workflowPatterns, index, 1) })}
                 onRemove={() => onChange({ ...value, workflowPatterns: workflowPatterns.filter((_, itemIndex) => itemIndex !== index) })}
@@ -1610,6 +1620,7 @@ function ProfileEditor({ value, onChange }) {
                   />
                 </label>
               <RowActions
+                itemLabel={`system characteristic ${index + 1}`}
                 onMoveUp={() => onChange({ ...value, systemCharacteristics: moveItem(systemCharacteristics, index, -1) })}
                 onMoveDown={() => onChange({ ...value, systemCharacteristics: moveItem(systemCharacteristics, index, 1) })}
                 onRemove={() => onChange({ ...value, systemCharacteristics: systemCharacteristics.filter((_, itemIndex) => itemIndex !== index) })}

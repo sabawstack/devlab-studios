@@ -48,11 +48,6 @@ async function openAdmin(page) {
   await expect(page.getByRole('button', { name: /log ?out/i })).toBeVisible()
 }
 
-async function openAdminNavGroup(page, name) {
-  const group = page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name, exact: true })
-  if ((await group.getAttribute('aria-expanded')) === 'false') await group.click()
-}
-
 test.describe('Lead CRM API authorization', () => {
   test('every Lead CRM endpoint refuses an unauthenticated caller', async ({ request, baseURL }) => {
     for (const path of LEAD_CRM_ENDPOINTS) {
@@ -140,15 +135,14 @@ test.describe('Lead CRM admin screens', () => {
     const nav = page.getByRole('navigation', { name: 'Admin navigation' })
     await expect(nav.getByText('Lead CRM', { exact: true })).toBeVisible()
     // The pre-existing inbound inbox must still be there and still be distinct.
-    await openAdminNavGroup(page, 'Operations')
-    await expect(nav.getByRole('link', { name: 'Inquiries' })).toBeVisible()
+    await expect(nav.getByRole('link', { name: 'Inquiries', exact: true })).toBeVisible()
   })
 
   test('highlights only the exact Lead CRM destination', async ({ page }) => {
     await page.goto('/admin/lead-crm/review')
 
     const nav = page.getByRole('navigation', { name: 'Admin navigation' })
-    const review = nav.getByRole('link', { name: 'Review Queue' })
+    const review = nav.getByRole('link', { name: 'Review queue' })
     const leadDashboard = nav.locator('a[href="/admin/lead-crm"]')
 
     await expect(review).toHaveClass(/admin-nav-link--active/)
@@ -162,9 +156,9 @@ test.describe('Lead CRM admin screens', () => {
     const leadGroup = nav.getByRole('button', { name: 'Lead CRM', exact: true })
     await expect(leadGroup).toHaveAttribute('aria-expanded', 'true')
     await leadGroup.click()
-    await expect(nav.getByRole('link', { name: 'Review Queue' })).toHaveCount(0)
+    await expect(nav.getByRole('link', { name: 'Review queue' })).toHaveCount(0)
     await leadGroup.click()
-    await expect(nav.getByRole('link', { name: 'Review Queue' })).toBeVisible()
+    await expect(nav.getByRole('link', { name: 'Review queue' })).toBeVisible()
 
     await page.getByRole('button', { name: 'Collapse admin navigation' }).click()
     await expect(page.getByRole('button', { name: 'Expand admin navigation' })).toBeVisible()
@@ -260,6 +254,29 @@ test.describe('Lead CRM admin screens', () => {
     await expect(page.getByLabel('Use for automated lead discovery')).toHaveCount(2)
     await expect(page.getByText('Automation allowed', { exact: true })).toHaveCount(0)
     await expect(page.getByText('Crawl allowed', { exact: true })).toHaveCount(0)
+  })
+
+  // CRM-05: the draft editor was seeded from the first draft once, so after
+  // "Regenerate" the editor opened on the OLD text, and saving it would have
+  // overwritten the new draft. Synthetic reply; the API is stubbed.
+  test('editing a regenerated reply draft starts from the new text', async ({ page }) => {
+    const reply = (version) => ({
+      id: 'reply-synthetic-1', leadId: 'lead-synthetic-1', companyName: 'Synthetic Clinic', fromAddress: 'front-desk@example.org',
+      receivedAt: '2026-11-16T08:00:00.000Z', subject: 'Re: intake', bodyText: 'Sounds useful, tell me more.', analysis: null,
+      suggestedDraft: { id: `draft-${version}`, subject: `Draft ${version} subject`, bodyText: `Draft ${version} body`, exported: false },
+    })
+    let version = 1
+    await page.route('**/api/admin/lead-crm/replies', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ replies: [reply(version)] }) }))
+    await page.route('**/api/admin/lead-crm/replies/reply-synthetic-1', (route) => {
+      version = 2
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) })
+    })
+    await page.goto('/admin/lead-crm/replies')
+    await expect(page.getByText('Draft 1 body')).toBeVisible()
+    await page.getByRole('button', { name: 'Shorter' }).click()
+    await expect(page.getByText('Draft 2 body')).toBeVisible()
+    await page.getByRole('button', { name: 'Edit draft' }).click()
+    await expect(page.getByRole('textbox', { name: /body/i }).or(page.locator('textarea'))).toHaveValue('Draft 2 body')
   })
 
   // CRM-01: removing a suppression from the screen always answered 400,

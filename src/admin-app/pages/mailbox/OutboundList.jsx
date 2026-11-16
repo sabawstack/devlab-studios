@@ -4,6 +4,7 @@ import { adminApi } from '../../lib/adminApi'
 import { buttonClass, dangerButtonClass, formatDate, inputClass, primaryButtonClass } from '../lead-crm/format'
 import { Badge, EmptyState, Feedback } from '../lead-crm/shared'
 import { OUTBOUND_STATUS_TONES } from './folders'
+import { confirmAction } from '../../primitives/confirm'
 
 /**
  * The Drafts, Outbox and Failed folders.
@@ -33,7 +34,7 @@ function RetryButton({ item, onChanged }) {
   const [error, setError] = useState(null)
 
   async function retry() {
-    if (!window.confirm('Send this reply again? Do this only if you know the message was not transmitted.')) return
+    if (!(await confirmAction({ title: 'Send this reply again?', body: 'Do this only if you know the message was not transmitted: a reply that reached the mail server would go out twice.', confirmLabel: 'Retry this reply', danger: true }))) return
 
     setBusy(true)
     setError(null)
@@ -83,6 +84,8 @@ function DraftEditor({ item, onChanged }) {
   }
 
   async function discard() {
+    // ADMIN-06: discarding a draft cannot be undone, so it asks first.
+    if (!(await confirmAction({ title: 'Discard this draft?', body: 'The draft and its attachments are deleted. This cannot be undone.', confirmLabel: 'Discard draft', danger: true }))) return
     setBusy(true)
     setFeedback(null)
     try {

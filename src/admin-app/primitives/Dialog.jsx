@@ -15,7 +15,7 @@ function focusables(root) {
  * `dismissible: false` is for dialogs that must be answered (signing in again):
  * no Escape, no backdrop click, no close button.
  */
-export function Dialog({ open, title, description, onClose, dismissible = true, initialFocusRef, children, footer, size = 'md', role = 'dialog' }) {
+export function Dialog({ open, title, description, onClose, dismissible = true, initialFocusRef, children, footer, size = 'md', role = 'dialog', variant = 'modal' }) {
   const panel = useRef(null)
   const titleId = useId()
   const descriptionId = useId()
@@ -60,6 +60,19 @@ export function Dialog({ open, title, description, onClose, dismissible = true, 
   }, [open, dismissible, initialFocusRef])
 
   if (!open) return null
+  // A navigation drawer (ADMIN-06): the same modal behaviour, docked left in the sidebar's colours.
+  if (variant === 'drawer') {
+    return createPortal(
+      <div className="admin-dialog-backdrop fixed inset-0 z-50 flex" role="presentation"
+        onMouseDown={(event) => { if (event.target === event.currentTarget) onClose?.() }}>
+        <div ref={panel} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1}
+          className="admin-sidebar flex h-full w-72 max-w-[88vw] flex-col shadow-2xl outline-none">
+          {children}
+        </div>
+      </div>,
+      document.body,
+    )
+  }
   const width = size === 'sm' ? 'max-w-sm' : size === 'lg' ? 'max-w-2xl' : 'max-w-lg'
   return createPortal(
     <div
@@ -87,7 +100,7 @@ export function Dialog({ open, title, description, onClose, dismissible = true, 
           )}
         </div>
         {description && <p id={descriptionId} className="admin-dialog-description mt-1 text-sm">{description}</p>}
-        <div className="mt-4">{children}</div>
+        {children ? <div className="mt-4">{children}</div> : null}
         {footer && <div className="mt-6 flex flex-wrap justify-end gap-2">{footer}</div>}
       </div>
     </div>,

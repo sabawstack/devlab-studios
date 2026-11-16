@@ -15,6 +15,7 @@ import {
 } from '../../components/icons/icons'
 import { adminApi } from '../lib/adminApi'
 import VersionHistoryPanel from './VersionHistoryPanel'
+import { confirmAction } from '../primitives/confirm'
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value))
@@ -172,10 +173,10 @@ export default function WorkPageManager() {
     setMessage(`Added “${project.title}” as a draft Work entry. Its description was copied once from Projects.`)
   }
 
-  function removeProject(index) {
+  async function removeProject(index) {
     const item = featuredItems[index]
     const title = projectsById.get(item?.projectId)?.title || item?.projectId || 'this project'
-    if (!window.confirm(`Remove “${title}” from Work? The Project and its images will not be deleted.`)) return
+    if (!(await confirmAction({ title: `Remove “${title}” from Work?`, body: 'The Project and its images are not deleted.', confirmLabel: 'Remove from Work' }))) return
     updateShowcase('items', featuredItems.filter((_, itemIndex) => itemIndex !== index))
   }
 
@@ -187,11 +188,11 @@ export default function WorkPageManager() {
     updateShowcase('items', items)
   }
 
-  function resetDescription(index) {
+  async function resetDescription(index) {
     const item = featuredItems[index]
     const project = projectsById.get(item.projectId)
     if (!project) return
-    if (!window.confirm('Replace the independent Work description with the Project’s current description?')) return
+    if (!(await confirmAction({ title: 'Replace the Work description?', body: 'The independent Work description is replaced with the Project’s current description.', confirmLabel: 'Replace' }))) return
     updateFeaturedItem(index, { description: project.description || '' })
     setMessage(`Reset the Work description for “${project.title}”. Save Work to persist it.`)
   }

@@ -5,6 +5,8 @@ interface Env {
   MEDIA_BUCKET: R2Bucket
   SESSION: KVNamespace
   ADMIN_AUTH_MODE?: string
+  /** 'production' or 'preview' (wrangler.jsonc vars); the Admin's environment badge (ADMIN-09). */
+  DEPLOYMENT_ENV?: string
   /**
    * Local dev / e2e only (.dev.vars, Playwright webServer). When set, the
    * inquiry endpoints' 413 reads off the refused body first, which wrangler

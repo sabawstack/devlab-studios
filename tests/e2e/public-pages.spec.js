@@ -398,6 +398,10 @@ test('the workspace sign-in is one quiet card with no decorative background', as
   const decorated = await page.evaluate(() => [...document.querySelectorAll('body *')]
     .filter((el) => { const style = getComputedStyle(el); return /gradient/.test(style.backgroundImage) || /blur/.test(style.filter) || /blur/.test(style.backdropFilter) }).length)
   expect(decorated).toBe(0)
+  // Accessibility: the sign-in page has no serious or critical axe issues.
+  const { default: AxeBuilder } = await import('@axe-core/playwright')
+  const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()
+  expect(results.violations.filter((v) => ['serious', 'critical'].includes(v.impact)).map((v) => v.id)).toEqual([])
 })
 
 test('security headers apply to real, server-rendered responses, not just static assets', async ({ request }) => {

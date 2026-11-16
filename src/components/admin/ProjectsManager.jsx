@@ -19,6 +19,7 @@ import ThumbnailPicker from './projects/ThumbnailPicker'
 import { uploadPendingGalleryImages } from './projects/projectImageUpload'
 import ProjectEditorialFields from './projects/ProjectEditorialFields'
 import { adminFetch } from '../../admin-app/lib/adminApi'
+import { confirmAction } from '../../admin-app/primitives/confirm'
 
 const PAGE_SIZE = 6
 
@@ -259,6 +260,8 @@ export default function ProjectsManager() {
 
   async function deleteSelectedProject() {
     if (!selectedProject.id) return
+    // ADMIN-06: deleting a project had no confirmation at all.
+    if (!(await confirmAction({ title: `Delete “${selectedProject.title || 'this project'}”?`, body: 'The project is removed from the CMS and the Work page. This cannot be undone.', confirmLabel: 'Delete project', danger: true }))) return
     if (isReadOnlyPreview) {
       setStatus('Read-only preview mode. Configure the admin API before deleting projects.')
       return
@@ -284,7 +287,7 @@ export default function ProjectsManager() {
   }
 
   async function handleVersionRestored(restored) {
-    if (hasPendingImages && !window.confirm('You have unsaved image changes — restore anyway?')) return
+    if (hasPendingImages && !(await confirmAction({ title: 'Restore anyway?', body: 'You have unsaved image changes. They are lost if you restore.', confirmLabel: 'Restore' }))) return
     revokeCurrentPendingImageUrls()
     setShowHistory(false)
     setSelectedProject(toFormProject(restored))
@@ -562,8 +565,8 @@ export default function ProjectsManager() {
                   <button
                     key={project.id}
                     type="button"
-                    onClick={() => {
-                      if (hasPendingImages && !window.confirm('You have unsaved image changes — leave anyway?')) return
+                    onClick={async () => {
+                      if (hasPendingImages && !(await confirmAction({ title: 'Leave this project?', body: 'You have unsaved image changes. They are lost if you leave.', confirmLabel: 'Leave' }))) return
                       revokeCurrentPendingImageUrls()
                       setSelectedProject(toFormProject(project))
                       setShowHistory(false)
@@ -637,8 +640,8 @@ export default function ProjectsManager() {
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
-                onClick={() => {
-                  if (hasPendingImages && !window.confirm('You have unsaved image changes — refresh anyway?')) return
+                onClick={async () => {
+                  if (hasPendingImages && !(await confirmAction({ title: 'Refresh anyway?', body: 'You have unsaved image changes. They are lost if you refresh.', confirmLabel: 'Refresh' }))) return
                   revokeCurrentPendingImageUrls()
                   loadProjects()
                 }}
@@ -649,8 +652,8 @@ export default function ProjectsManager() {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  if (hasPendingImages && !window.confirm('You have unsaved image changes — leave anyway?')) return
+                onClick={async () => {
+                  if (hasPendingImages && !(await confirmAction({ title: 'Start a new project?', body: 'You have unsaved image changes. They are lost if you leave.', confirmLabel: 'Leave' }))) return
                   revokeCurrentPendingImageUrls()
                   setSelectedProject(emptyProject)
                   setShowHistory(false)

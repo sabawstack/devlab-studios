@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { adminApi } from '../lib/adminApi'
+import { confirmAction } from '../primitives/confirm'
 
 /**
  * Data-subject requests for inquiries (audit SEC-08): download everything an
@@ -12,8 +13,11 @@ function PrivacyRequestPanel() {
   const [message, setMessage] = useState(null)
 
   async function erase() {
-    const confirm = window.prompt(`Type ${email} again to erase every inquiry from it. This cannot be undone.`)
-    if (!confirm) return
+    const answer = await confirmAction({
+      title: 'Erase every inquiry from this address?', body: 'This cannot be undone.', confirmLabel: 'Erase', danger: true, typeToConfirm: email,
+    })
+    if (!answer) return
+    const confirm = answer.typed
     try {
       const result = await adminApi.delete(`/api/admin/privacy/subject?email=${encodeURIComponent(email)}&confirm=${encodeURIComponent(confirm)}`)
       setMessage(`Erased ${result.inquiries} inquiries.`)

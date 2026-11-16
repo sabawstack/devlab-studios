@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { adminApi } from '../lib/adminApi'
+import { confirmAction } from '../primitives/confirm'
 
 /**
  * Daily Digests.
@@ -139,7 +140,7 @@ function DigestsPage() {
   }
 
   async function handleDelete(digest) {
-    if (!window.confirm(`Delete the ${digest.digestDate} digest and its ${digest.itemCount} items? This cannot be undone.`)) return
+    if (!(await confirmAction({ title: `Delete the ${digest.digestDate} digest?`, body: `Its ${digest.itemCount} items go with it. This cannot be undone.`, confirmLabel: 'Delete digest', danger: true }))) return
 
     setBusy(true)
     setMessage(null)

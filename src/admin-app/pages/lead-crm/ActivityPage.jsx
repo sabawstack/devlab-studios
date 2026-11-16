@@ -4,6 +4,8 @@ import { adminApi } from '../../lib/adminApi'
 import { buttonClass, formatDate, humanize, inputClass } from './format'
 import { Badge, EmptyState, Feedback, Panel } from './shared'
 import { useResource } from './useResource'
+import { LoadState } from '../../primitives/index.jsx'
+import { useDebouncedValue } from '../../lib/useDebouncedValue'
 
 /**
  * Activity and background jobs.
@@ -80,6 +82,7 @@ function JobsView() {
 
       <Feedback feedback={feedback} />
 
+      <LoadState state={state} label="jobs" onRetry={reload} />
       {state === 'ready' && jobs.length === 0 ? <EmptyState title="Nothing here." /> : null}
 
       <ul className="mt-3 divide-y divide-slate-100">
@@ -115,7 +118,8 @@ function JobsView() {
 }
 
 function TimelineView() {
-  const [eventType, setEventType] = useState('')
+  const [eventTypeInput, setEventType] = useState('')
+  const eventType = useDebouncedValue(eventTypeInput)
   const { data, state } = useResource(`/api/admin/lead-crm/activity${eventType ? `?eventType=${eventType}` : ''}`)
   const events = data?.events ?? []
 
@@ -125,7 +129,7 @@ function TimelineView() {
       description="Append-only. Nothing in this system updates or deletes a timeline entry."
       actions={
         <input
-          value={eventType}
+          value={eventTypeInput}
           onChange={(event) => setEventType(event.target.value.toUpperCase())}
           placeholder="Filter by event type"
           aria-label="Filter by event type"
@@ -133,7 +137,7 @@ function TimelineView() {
         />
       }
     >
-      {state === 'loading' ? <p className="text-sm text-slate-500">Loading activity…</p> : null}
+      <LoadState state={state} label="activity" />
       {state === 'ready' && events.length === 0 ? <EmptyState title="No activity recorded." /> : null}
 
       <ul className="space-y-1.5">
@@ -170,6 +174,7 @@ function ActivityPage() {
               key={key}
               type="button"
               onClick={() => setSearchParams(key === 'jobs' ? { view: 'jobs' } : {})}
+              aria-pressed={view === key}
               className={
                 view === key
                   ? 'rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white'

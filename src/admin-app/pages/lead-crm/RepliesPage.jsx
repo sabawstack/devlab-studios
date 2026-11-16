@@ -3,6 +3,7 @@ import { adminApi } from '../../lib/adminApi'
 import { buttonClass, dangerButtonClass, formatDate, humanize, inputClass, primaryButtonClass } from './format'
 import { Badge, EmptyState, Feedback } from './shared'
 import { useResource } from './useResource'
+import { confirmAction } from '../../primitives/confirm'
 
 /**
  * The replies queue — the reply copilot.
@@ -201,7 +202,12 @@ function ReplyCard({ reply, onChanged }) {
         {draft && !isEditing ? (
           <>
             {!draft.exported ? (
-              <button type="button" className={buttonClass} onClick={() => setIsEditing(true)}>
+              <button type="button" className={buttonClass} onClick={() => {
+                // CRM-05: edit the draft as it is now (it may have been regenerated since this card mounted).
+                setDraftSubject(draft.subject ?? '')
+                setDraftBody(draft.bodyText ?? '')
+                setIsEditing(true)
+              }}>
                 Edit draft
               </button>
             ) : null}
@@ -271,16 +277,26 @@ function ReplyCard({ reply, onChanged }) {
           type="button"
           disabled={busy !== null}
           className={dangerButtonClass}
-          onClick={() =>
+          onClick={async () => {
+            // Decision 7: the same question as on the lead page, instead of a silent "address only".
+            const domain = String(reply.fromAddress ?? '').split('@')[1]
+            const answer = await confirmAction({
+              title: 'Mark this lead do not contact?',
+              body: 'The contact address is suppressed and the lead moves to a state it cannot leave without a privileged, audited removal.',
+              confirmLabel: 'Mark do not contact',
+              danger: true,
+              option: domain ? { label: `Also suppress every address at ${domain}`, hint: 'Use this when the whole business asked not to be contacted.' } : undefined,
+            })
+            if (!answer) return
             act('dnc', async () => {
               await adminApi.post(`/api/admin/lead-crm/leads/${reply.leadId}/actions`, {
                 action: 'do_not_contact',
                 reason: 'Marked from the replies queue.',
-                suppressDomain: false,
+                suppressDomain: Boolean(answer.option),
               })
-              return 'Marked do not contact.'
+              return answer.option ? `Marked do not contact; ${domain} suppressed.` : 'Marked do not contact.'
             })
-          }
+          }}
         >
           Mark do not contact
         </button>

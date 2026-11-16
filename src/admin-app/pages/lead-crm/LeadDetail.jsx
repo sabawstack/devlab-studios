@@ -3,6 +3,7 @@ import { adminApi } from '../../lib/adminApi'
 import { COMPLIANCE_TONES, PRIORITY_TONES, STAGE_TONES, buttonClass, dangerButtonClass, formatDate, humanize, inputClass, primaryButtonClass } from './format'
 import { Badge, EmptyState, Feedback, Field, Panel } from './shared'
 import { useResource } from './useResource'
+import { confirmAction } from '../../primitives/confirm'
 
 /**
  * The lead detail panel.
@@ -250,7 +251,12 @@ function DraftPanel({ draft, leadId, readiness, validationViolations = [], onCha
 
       <div className="flex flex-wrap gap-2">
         {!isEditing && !isExported ? (
-          <button type="button" className={buttonClass} onClick={() => setIsEditing(true)}>
+          <button type="button" className={buttonClass} onClick={() => {
+            // CRM-05: edit the draft as it is now (it may have been regenerated since this panel mounted).
+            setSubject(draft?.subject ?? '')
+            setBody(draft?.bodyText ?? '')
+            setIsEditing(true)
+          }}>
             Edit draft
           </button>
         ) : null}
@@ -573,14 +579,25 @@ function LeadDetail({ leadId, onChanged }) {
               type="button"
               disabled={busy !== null}
               className={dangerButtonClass}
-              onClick={() => runAction('do_not_contact', { suppressDomain: true })}
+              onClick={async () => {
+                // Decision 7: one dialog on both screens, which asks whether the whole domain goes too.
+                const domain = company?.canonicalDomain
+                const answer = await confirmAction({
+                  title: 'Mark this lead do not contact?',
+                  body: 'The contact address is suppressed and the lead moves to a state it cannot leave without a privileged, audited removal.',
+                  confirmLabel: 'Mark do not contact',
+                  danger: true,
+                  option: domain ? { label: `Also suppress every address at ${domain}`, hint: 'Use this when the whole business asked not to be contacted.' } : undefined,
+                })
+                if (answer) runAction('do_not_contact', { suppressDomain: Boolean(answer.option) })
+              }}
             >
               Mark do not contact
             </button>
           </div>
           <p className="text-xs text-slate-500">
-            Do-not-contact suppresses the address and its whole domain, and moves the lead to a state it cannot leave
-            without a privileged, audited removal.
+            Do-not-contact suppresses the address (and, if you choose, its whole domain) and moves the lead to a state it
+            cannot leave without a privileged, audited removal.
           </p>
         </div>
       </Panel>

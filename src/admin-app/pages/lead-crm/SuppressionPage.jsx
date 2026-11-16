@@ -3,6 +3,8 @@ import { adminApi } from '../../lib/adminApi'
 import { buttonClass, dangerButtonClass, formatDate, humanize, inputClass, primaryButtonClass } from './format'
 import { Badge, EmptyState, Feedback, Panel } from './shared'
 import { useResource } from './useResource'
+import { LoadState } from '../../primitives/index.jsx'
+import { useDebouncedValue } from '../../lib/useDebouncedValue'
 
 /**
  * The suppression registry.
@@ -88,7 +90,7 @@ function AddForm({ onAdded }) {
           {busy ? 'Adding…' : 'Suppress'}
         </button>
       </div>
-      <input value={form.notes} onChange={update('notes')} placeholder="Notes (optional)" className={`${inputClass} w-full`} />
+      <input value={form.notes} onChange={update('notes')} placeholder="Notes (optional)" aria-label="Notes (optional)" className={`${inputClass} w-full`} />
       <p className="text-xs text-slate-500">
         A domain entry suppresses every address at that domain, including ones the engine has not discovered yet.
       </p>
@@ -98,7 +100,8 @@ function AddForm({ onAdded }) {
 
 function SuppressionPage() {
   const [includeRemoved, setIncludeRemoved] = useState(false)
-  const [search, setSearch] = useState('')
+  const [searchInput, setSearch] = useState('')
+  const search = useDebouncedValue(searchInput)
   const query = new URLSearchParams()
   if (includeRemoved) query.set('includeRemoved', 'true')
   if (search) query.set('search', search)
@@ -142,7 +145,7 @@ function SuppressionPage() {
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
         <input
           type="search"
-          value={search}
+          value={searchInput}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Search address or domain"
           aria-label="Search suppression list"
@@ -156,7 +159,7 @@ function SuppressionPage() {
 
       <Feedback feedback={feedback} />
 
-      {state === 'loading' ? <p className="text-sm text-slate-500">Loading…</p> : null}
+      <LoadState state={state} label="the suppression list" onRetry={reload} />
       {state === 'ready' && entries.length === 0 ? <EmptyState title="Nothing suppressed." /> : null}
 
       {entries.length > 0 ? (

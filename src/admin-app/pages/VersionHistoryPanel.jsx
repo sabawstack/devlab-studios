@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { adminApi } from '../lib/adminApi'
+import { confirmAction } from '../primitives/confirm'
 
 function VersionHistoryPanel({ contentType, contentId = null, onRestored }) {
   const [versions, setVersions] = useState([])
@@ -25,7 +26,7 @@ function VersionHistoryPanel({ contentType, contentId = null, onRestored }) {
   }, [contentType, contentId])
 
   async function handleRestore(versionNumber) {
-    if (!window.confirm(`Restore version ${versionNumber}? This creates a new version on top of the current one — nothing is deleted.`)) return
+    if (!(await confirmAction({ title: `Restore version ${versionNumber}?`, body: 'This creates a new version on top of the current one. Nothing is deleted.', confirmLabel: 'Restore' }))) return
 
     setRestoreError(null)
     setRestoringVersion(versionNumber)

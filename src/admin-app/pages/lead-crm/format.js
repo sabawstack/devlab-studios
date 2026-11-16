@@ -1,3 +1,5 @@
+import { BUTTON, INPUT } from '../../primitives/classes'
+
 /**
  * Presentation constants and formatters for the Lead CRM screens.
  *
@@ -79,13 +81,12 @@ export function relativeTime(value) {
   return formatDate(value)
 }
 
-export const buttonClass =
-  'rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50'
+// ADMIN-06: the workspace primitives' classes, so every Lead CRM screen gets
+// the same buttons and fields as the rest of the Admin.
+export const buttonClass = BUTTON.secondary
 
-export const primaryButtonClass =
-  'rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50'
+export const primaryButtonClass = BUTTON.primary
 
-export const dangerButtonClass =
-  'rounded-lg border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50'
+export const dangerButtonClass = BUTTON.danger
 
-export const inputClass = 'rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500'
+export const inputClass = INPUT.replace('w-full ', '')

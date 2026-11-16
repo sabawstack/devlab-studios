@@ -21,13 +21,14 @@ function moveItem(items, index, direction) {
   return next
 }
 
-function RowActions({ onMoveUp, onMoveDown, onRemove, disableUp, disableDown }) {
+function RowActions({ onMoveUp, onMoveDown, onRemove, disableUp, disableDown, itemLabel = 'item' }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
         onClick={onMoveUp}
         disabled={disableUp}
+        aria-label={`Move ${itemLabel} up`}
         className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <ChevronUp size={14} />
@@ -37,6 +38,7 @@ function RowActions({ onMoveUp, onMoveDown, onRemove, disableUp, disableDown }) 
         type="button"
         onClick={onMoveDown}
         disabled={disableDown}
+        aria-label={`Move ${itemLabel} down`}
         className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
       >
         <ChevronDown size={14} />
@@ -45,6 +47,7 @@ function RowActions({ onMoveUp, onMoveDown, onRemove, disableUp, disableDown }) 
       <button
         type="button"
         onClick={onRemove}
+        aria-label={`Remove ${itemLabel}`}
         className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 transition hover:bg-red-100"
       >
         <Trash2 size={14} />
@@ -89,6 +92,7 @@ function ArrayEditor({ title, description, items, onChange, createItem, fields }
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm font-semibold text-slate-900">{title} {index + 1}</p>
               <RowActions
+                itemLabel={`link ${index + 1}`}
                 onMoveUp={() => onChange(moveItem(items, index, -1))}
                 onMoveDown={() => onChange(moveItem(items, index, 1))}
                 onRemove={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}
@@ -210,7 +214,7 @@ export default function SiteSettingsManager() {
     <div className="grid gap-6">
       <div className="flex flex-col gap-4 rounded-md border border-slate-200 bg-white px-5 py-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-slate-950">Site Settings</h2>
+          <h2 className="text-lg font-semibold text-slate-950">Site settings</h2>
           <p className="mt-1 text-sm text-slate-500">Manage navigation labels, CTA text, footer links, contact details, and social links.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">

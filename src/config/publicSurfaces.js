@@ -25,7 +25,7 @@ export const CONTENT_USAGE = {
   resources: { label: 'Insights', publicPaths: ['/insights'], description: 'Each record is an article published in the public Insights feed.' },
   profile: { label: 'Profile', publicPaths: ['/profile'], description: 'Controls the public Profile page.' },
   certifications: { label: 'Certifications', publicPaths: ['/profile'], description: 'Certification records are displayed inside Profile.' },
-  'site-settings': { label: 'Navigation & Footer', publicPaths: ['All public pages'], description: 'Controls shared navigation, calls to action, footer links, and contact details.' },
+  'site-settings': { label: 'Site settings', publicPaths: ['All public pages'], description: 'Controls shared navigation, calls to action, footer links, and contact details.' },
   seo: { label: 'SEO', publicPaths: ['All public pages'], description: 'Controls page titles, descriptions, canonical URLs, and social metadata.' },
 }
 

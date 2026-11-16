@@ -56,7 +56,9 @@ const ADMIN_ENDPOINTS = [
 ]
 
 async function openAdminNavGroup(page, name) {
+  // ADMIN-03: Home, Inquiries and Mailbox are single links; Website, Lead CRM and Admin open.
   const group = page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('button', { name, exact: true })
+  if ((await group.count()) === 0) return
   if ((await group.getAttribute('aria-expanded')) === 'false') await group.click()
 }
 
@@ -409,8 +411,11 @@ test.describe('the mail client, with mail in it', () => {
 
     // Confirmed before it acts: if the failure happened after the message
     // reached an MTA, retrying sends a second copy to a real person.
-    page.once('dialog', (dialog) => dialog.accept())
     await failedRow.getByRole('button', { name: /Retry this reply/i }).click()
+    // ADMIN-06: a workspace confirmation dialog, not window.confirm.
+    const confirm = page.getByRole('alertdialog', { name: 'Send this reply again?' })
+    await expect(confirm).toContainText('would go out twice')
+    await confirm.getByRole('button', { name: 'Retry this reply' }).click()
 
     await expect(failedRow).toHaveCount(0)
 

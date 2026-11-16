@@ -3,6 +3,7 @@ import { adminApi } from '../../lib/adminApi'
 import AttachmentPicker from './AttachmentPicker'
 import { buttonClass, dangerButtonClass, inputClass, primaryButtonClass } from '../lead-crm/format'
 import { Feedback } from '../lead-crm/shared'
+import { Dialog } from '../../primitives/Dialog'
 
 /**
  * Compose a new message.
@@ -30,7 +31,14 @@ function ComposeDialog({ open, onClose, onSent }) {
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState(null)
 
-  if (!open) return null
+  function clear() {
+    setTo('')
+    setSubject('')
+    setBody('')
+    setAttachmentIds([])
+    setPickerKey((current) => current + 1)
+    setFeedback(null)
+  }
 
   async function submit(asDraft) {
     setBusy(true)
@@ -43,11 +51,7 @@ function ComposeDialog({ open, onClose, onSent }) {
         asDraft,
         attachmentIds,
       })
-      setTo('')
-      setSubject('')
-      setBody('')
-      setAttachmentIds([])
-      setPickerKey((current) => current + 1)
+      clear()
       onSent?.(asDraft ? 'drafts' : 'outbox', result)
       onClose?.()
     } catch (error) {
@@ -57,73 +61,27 @@ function ComposeDialog({ open, onClose, onSent }) {
     }
   }
 
+  // MAIL-02: Close (and Escape) keeps what was typed for later; Discard throws it away.
+  function discard() {
+    clear()
+    onClose?.()
+  }
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-0 sm:items-center sm:p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label="New message"
-    >
-      <div className="flex max-h-full w-full flex-col overflow-hidden rounded-t-xl bg-white shadow-xl sm:max-w-2xl sm:rounded-xl">
-        <header className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-          <h2 className="text-sm font-semibold text-slate-900">New message</h2>
-          <button type="button" onClick={onClose} className="text-sm text-slate-500 hover:text-slate-800">
-            Close
+    <Dialog
+      open={open}
+      title="New message"
+      size="lg"
+      onClose={onClose}
+      footer={(
+        <>
+          <p className="mr-auto text-xs text-slate-500">Send queues it to the Outbox; it reaches Sent once transmitted.</p>
+          <button type="button" disabled={busy} onClick={discard} className={dangerButtonClass}>
+            Discard
           </button>
-        </header>
-
-        <div className="space-y-3 overflow-y-auto p-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-600" htmlFor="compose-to">
-              To
-            </label>
-            <input
-              id="compose-to"
-              type="email"
-              value={to}
-              onChange={(event) => setTo(event.target.value)}
-              placeholder="name@example.com"
-              className={`${inputClass} mt-1 w-full`}
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-600" htmlFor="compose-subject">
-              Subject
-            </label>
-            <input
-              id="compose-subject"
-              value={subject}
-              onChange={(event) => setSubject(event.target.value)}
-              className={`${inputClass} mt-1 w-full`}
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-600" htmlFor="compose-body">
-              Message
-            </label>
-            <textarea
-              id="compose-body"
-              value={body}
-              onChange={(event) => setBody(event.target.value)}
-              rows={10}
-              className={`${inputClass} mt-1 w-full font-sans`}
-            />
-          </div>
-
-          <AttachmentPicker key={pickerKey} attachmentIds={attachmentIds} onChange={setAttachmentIds} disabled={busy} />
-
-          <p className="text-xs text-slate-500">
-            Sent as hello@devlabconnect.com. The body is plain text; files travel as separate attachments. Cc and
-            Bcc are still not supported on the way out, so they are not offered here rather than being dropped
-            silently.
-          </p>
-
-          <Feedback feedback={feedback} />
-        </div>
-
-        <footer className="flex flex-wrap items-center gap-2 border-t border-slate-200 px-4 py-3">
+          <button type="button" disabled={busy || !to.trim()} onClick={() => submit(true)} className={buttonClass}>
+            Save draft
+          </button>
           <button
             type="button"
             disabled={busy || !to.trim() || !body.trim()}
@@ -132,16 +90,60 @@ function ComposeDialog({ open, onClose, onSent }) {
           >
             {busy ? 'Working…' : 'Send'}
           </button>
-          <button type="button" disabled={busy || !to.trim()} onClick={() => submit(true)} className={buttonClass}>
-            Save draft
-          </button>
-          <button type="button" disabled={busy} onClick={onClose} className={dangerButtonClass}>
-            Discard
-          </button>
-          <p className="text-xs text-slate-500">Send queues it to the Outbox; it reaches Sent once transmitted.</p>
-        </footer>
+        </>
+      )}
+    >
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs font-semibold text-slate-600" htmlFor="compose-to">
+            To
+          </label>
+          <input
+            id="compose-to"
+            type="email"
+            value={to}
+            onChange={(event) => setTo(event.target.value)}
+            placeholder="name@example.com"
+            className={`${inputClass} mt-1 w-full`}
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-600" htmlFor="compose-subject">
+            Subject
+          </label>
+          <input
+            id="compose-subject"
+            value={subject}
+            onChange={(event) => setSubject(event.target.value)}
+            className={`${inputClass} mt-1 w-full`}
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-600" htmlFor="compose-body">
+            Message
+          </label>
+          <textarea
+            id="compose-body"
+            value={body}
+            onChange={(event) => setBody(event.target.value)}
+            rows={10}
+            className={`${inputClass} mt-1 w-full font-sans`}
+          />
+        </div>
+
+        <AttachmentPicker key={pickerKey} attachmentIds={attachmentIds} onChange={setAttachmentIds} disabled={busy} />
+
+        <p className="text-xs text-slate-500">
+          Sent as hello@devlabconnect.com. The body is plain text; files travel as separate attachments. Cc and
+          Bcc are still not supported on the way out, so they are not offered here rather than being dropped
+          silently.
+        </p>
+
+        <Feedback feedback={feedback} />
       </div>
-    </div>
+    </Dialog>
   )
 }
 

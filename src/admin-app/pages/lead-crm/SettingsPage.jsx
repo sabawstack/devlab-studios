@@ -3,6 +3,8 @@ import { adminApi } from '../../lib/adminApi'
 import { buttonClass, formatDate, inputClass, primaryButtonClass } from './format'
 import { Badge, Feedback, Panel } from './shared'
 import { useResource } from './useResource'
+import { confirmAction } from '../../primitives/confirm'
+import { LoadState } from '../../primitives/index.jsx'
 
 /**
  * Lead CRM settings.
@@ -92,6 +94,7 @@ function SettingEditor({ settingKey, value, metadata, onSaved }) {
               rows={Math.min(16, draft.split('\n').length + 1)}
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
+              aria-label={`Value of ${settingKey}`}
               className={`${inputClass} w-full font-mono text-xs`}
             />
           )}
@@ -183,9 +186,9 @@ function FeatureFlagsPanel() {
     if (
       enabled &&
       item.confirm &&
-      !window.confirm(
-        'Enable unattended campaign schedules? Individual campaigns must still be armed separately.',
-      )
+      !(await confirmAction({
+        title: 'Enable unattended campaign schedules?', body: 'Individual campaigns must still be armed separately.', confirmLabel: 'Enable',
+      }))
     ) {
       return
     }
@@ -208,7 +211,7 @@ function FeatureFlagsPanel() {
       title="Operational switches"
       description="Changes take effect immediately. Worker vars remain the deployment-level emergency stop."
     >
-      {state === 'loading' ? <p className="text-sm text-slate-500">Loading switches…</p> : null}
+      <LoadState state={state} label="switches" onRetry={reload} />
       {data ? (
         <div>
           {FLAG_ROWS.map((item) => (
@@ -246,7 +249,7 @@ function SettingsPage() {
         title="Tunables"
         description="Stored overrides layered over the code defaults in src/lead-engine/config/defaults.js."
       >
-        {state === 'loading' ? <p className="text-sm text-slate-500">Loading settings…</p> : null}
+        <LoadState state={state} label="settings" onRetry={reload} />
         <div className="space-y-2">
           {Object.entries(settings).map(([key, value]) => (
             <SettingEditor key={key} settingKey={key} value={value} metadata={metadata} onSaved={reload} />

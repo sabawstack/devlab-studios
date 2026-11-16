@@ -1,122 +1,18 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { brandingAssets } from '../../config/branding'
+import { ChevronDown, ChevronLeft, ChevronRight, Globe, Inbox, LayoutDashboard, Mail, Menu, Shield, Target } from '../../components/icons/icons'
+import { activeArea, areaItems, NAV_AREAS } from '../lib/adminNav'
 import { currentEnvironment } from '../lib/environment'
+import { documentTitle, routeTitle } from '../lib/routeTitles'
+import { Dialog } from '../primitives/Dialog'
+import { AttentionCount, AttentionProvider, useAttention } from './AttentionContext'
 import EnvironmentBadge from './EnvironmentBadge'
-import { PRIMARY_PUBLIC_SURFACES, SUPPORTING_PUBLIC_SURFACES } from '../../config/publicSurfaces'
-import {
-  BadgeCheck,
-  Briefcase,
-  FileText,
-  FolderOpen,
-  Home,
-  Image,
-  Link2,
-  Lock,
-  Mail,
-  Menu,
-  Newspaper,
-  Search,
-  Settings,
-  Target,
-  Inbox,
-  MessageSquare,
-  ClipboardCheck,
-  Activity,
-  Database,
-  Filter,
-  Users,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-} from '../../components/icons/icons'
 
-const NAV_GROUPS = [
-  {
-    key: 'overview',
-    items: [{ label: 'Dashboard', to: '/admin', icon: Home }],
-  },
-  {
-    key: 'public-pages',
-    heading: 'Public Pages',
-    items: PRIMARY_PUBLIC_SURFACES.map(({ label, adminPath: to, icon }) => ({ label, to, icon })),
-  },
-  {
-    key: 'supporting-content',
-    heading: 'Supporting Content',
-    items: SUPPORTING_PUBLIC_SURFACES.map(({ label, adminPath: to, icon }) => ({ label, to, icon })),
-  },
-  {
-    key: 'content-libraries',
-    heading: 'Content Libraries',
-    items: [
-      { label: 'Projects', to: '/admin/content/projects', icon: Briefcase },
-      { label: 'Service Catalog', to: '/admin/content/services', icon: Settings },
-      { label: 'Insight Articles', to: '/admin/content/resources', icon: FileText },
-      { label: 'Daily Digests', to: '/admin/digests', icon: Newspaper },
-      { label: 'Certifications', to: '/admin/collections/certifications', icon: BadgeCheck },
-    ],
-  },
-  {
-    key: 'site-management',
-    heading: 'Site Management',
-    items: [
-      { label: 'Navigation & Footer', to: '/admin/content/site-settings', icon: Settings },
-      { label: 'SEO', to: '/admin/content/seo', icon: Search },
-      { label: 'Media', to: '/admin/media', icon: Image },
-      { label: 'Redirects', to: '/admin/collections/redirects', icon: Link2 },
-      { label: 'Audit Log', to: '/admin/audit-log', icon: FolderOpen },
-    ],
-  },
-  {
-    key: 'operations',
-    heading: 'Operations',
-    items: [
-      { label: 'Inquiries', to: '/admin/leads', icon: Mail },
-      { label: 'Security', to: '/admin/security', icon: Lock },
-    ],
-  },
-  {
-    // Outbound prospecting, kept separate from 'Inquiries' above on purpose:
-    // that one holds people who contacted US, this one holds businesses the
-    // engine found. Conflating them in the navigation would be the first step
-    // toward conflating them in someone's head.
-    key: 'lead-crm',
-    heading: 'Lead CRM',
-    items: [
-      { label: 'Dashboard', to: '/admin/lead-crm', icon: Target, end: true },
-      { label: 'Campaigns', to: '/admin/lead-crm/campaigns', icon: Briefcase },
-      { label: 'Leads', to: '/admin/lead-crm/leads', icon: Users },
-      { label: 'Review Queue', to: '/admin/lead-crm/review', icon: ClipboardCheck },
-      { label: 'Replies', to: '/admin/lead-crm/replies', icon: Inbox },
-      { label: 'Conversations', to: '/admin/lead-crm/conversations', icon: MessageSquare },
-      { label: 'Activity', to: '/admin/lead-crm/activity', icon: Activity },
-      { label: 'Sources', to: '/admin/lead-crm/sources', icon: Database },
-      { label: 'Suppression', to: '/admin/lead-crm/suppression', icon: Filter },
-      { label: 'CRM Settings', to: '/admin/lead-crm/settings', icon: Settings },
-    ],
-  },
-  {
-    // The mailbox is its own group rather than an item under Lead CRM: it
-    // receives mail from anyone, not only from leads, and filing it under
-    // outbound prospecting would imply otherwise.
-    key: 'mailbox',
-    heading: 'Mailbox',
-    // ONE entry. The folders (Inbox, Drafts, Outbox, Sent, Archive,
-    // Diagnostics) live inside the mail client itself, where a mail client's
-    // folders belong — duplicating them in the global sidebar made the same
-    // navigation exist in two places with two different behaviours.
-    items: [{ label: 'Mailbox', to: '/admin/mailbox', icon: Mail }],
-  },
-]
-
+const ICONS = { LayoutDashboard, Globe, Inbox, Target, Mail, Shield }
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'admin-sidebar-collapsed'
 const OPEN_GROUPS_STORAGE_KEY = 'admin-nav-open-groups'
-
-function routeMatches(pathname, item) {
-  if (item.end || item.to === '/admin') return pathname === item.to
-  return pathname === item.to || pathname.startsWith(`${item.to}/`)
-}
+const SITE_LINK = { production: 'Open live site', preview: 'Open preview site', local: 'Open local site' }
 
 function readCollapsedPreference() {
   try {
@@ -126,24 +22,123 @@ function readCollapsedPreference() {
   }
 }
 
-function readOpenGroups(activeGroupKey) {
+function readOpenGroups(current) {
   try {
     const stored = JSON.parse(window.localStorage.getItem(OPEN_GROUPS_STORAGE_KEY) || 'null')
-    if (Array.isArray(stored)) return new Set(activeGroupKey ? [...stored, activeGroupKey] : stored)
+    if (Array.isArray(stored)) return new Set(current ? [...stored, current] : stored)
   } catch {
-    // Storage can be unavailable or contain stale data. Current-route defaults
-    // still leave every destination reachable.
+    // Storage can be unavailable or hold stale data; the current area still opens.
   }
-  return new Set(activeGroupKey ? [activeGroupKey] : [])
+  return new Set(current ? [current] : [])
 }
 
-function AdminShell({ session, onLogout }) {
-  const environment = currentEnvironment(session)
+/** The attention count for an area (a string key) or one of its items ([area, item]). */
+function countFor(attention, key) {
+  if (!key) return 0
+  if (Array.isArray(key)) {
+    const [area, item] = key
+    return attention[area]?.value?.items?.find((entry) => entry.key === item)?.count ?? 0
+  }
+  return attention[key]?.value?.total ?? 0
+}
+
+function NavItem({ item, compact, onNavigate, attention, icon: Icon = null }) {
+  const count = countFor(attention, item.attention)
+  // The count is the link's description, so its name stays exactly the label.
+  const countId = count && !compact ? `count-${item.to.replace(/\W+/g, '-')}` : undefined
+  return (
+    <NavLink
+      to={item.to}
+      aria-describedby={countId}
+      end={item.end ?? false}
+      title={compact ? item.label : undefined}
+      aria-label={compact ? item.label : undefined}
+      onClick={onNavigate}
+      className={({ isActive }) => `admin-nav-link flex min-h-10 items-center gap-3 px-3 py-2 text-sm font-medium transition ${compact ? 'justify-center' : ''} ${isActive ? 'admin-nav-link--active' : ''}`}
+    >
+      {Icon ? <Icon className="h-4 w-4 flex-shrink-0" strokeWidth={1.7} aria-hidden="true" /> : null}
+      <span className={compact ? 'sr-only' : 'min-w-0 truncate'}>{item.label}</span>
+      {!compact ? <AttentionCount id={countId} count={count} label="need attention" /> : null}
+    </NavLink>
+  )
+}
+
+function Navigation({ compact = false, mobile = false, openGroups, onToggle, onNavigate }) {
+  const attention = useAttention()
   const location = useLocation()
-  const activeGroupKey = NAV_GROUPS.find((group) => group.heading && group.items.some((item) => routeMatches(location.pathname, item)))?.key
+  const current = activeArea(location.pathname)
+  const idPrefix = mobile ? 'mobile' : 'desktop'
+  return (
+    <>
+      <div className={`admin-sidebar-rule flex h-16 flex-shrink-0 items-center border-b ${compact ? 'justify-center px-2' : 'gap-2 px-4'}`}>
+        <img src={brandingAssets.logoOnlyUrl} alt="" className="h-8 w-8 object-contain" width="32" height="32" />
+        <span className={compact ? 'sr-only' : 'text-sm font-semibold'}>DevLab Workspace</span>
+      </div>
+      <nav aria-label="Admin navigation" className={`flex-1 overflow-y-auto py-4 ${compact ? 'space-y-2 px-2' : 'space-y-1 px-3'}`}>
+        {NAV_AREAS.map((area) => {
+          const Icon = ICONS[area.icon]
+          if (area.to) return <NavItem key={area.key} item={area} compact={compact} onNavigate={onNavigate} attention={attention} icon={Icon} />
+          // Collapsed: the area's icon links to its first page.
+          if (compact) {
+            const first = areaItems(area)[0]
+            return <NavItem key={area.key} item={{ label: area.label, to: first.to, end: false }} compact onNavigate={onNavigate} attention={attention} icon={Icon} />
+          }
+          const isOpen = openGroups.has(area.key)
+          const groupId = `${idPrefix}-admin-nav-${area.key}`
+          const total = countFor(attention, area.attention)
+          return (
+            <div key={area.key}>
+              <button
+                type="button"
+                aria-expanded={isOpen}
+                aria-controls={groupId}
+                onClick={() => onToggle(area.key)}
+                aria-describedby={total ? `count-area-${area.key}` : undefined}
+                className={`admin-nav-group flex min-h-10 w-full items-center gap-3 rounded-[var(--ws-radius)] px-3 py-2 text-left text-sm font-medium transition ${current === area.key ? 'font-semibold' : ''}`}
+              >
+                <Icon className="h-4 w-4 flex-shrink-0" strokeWidth={1.7} aria-hidden="true" />
+                <span>{area.label}</span>
+                <AttentionCount id={`count-area-${area.key}`} count={total} label="need attention" />
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${total ? '' : 'ml-auto'} ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+              </button>
+              {isOpen ? (
+                <div id={groupId} className="mb-2 ml-5 space-y-0.5 border-l border-[var(--ws-sidebar-rule)] pl-2">
+                  {area.sections.map((section, index) => (
+                    <div key={section.label ?? index} className={index ? 'pt-2' : ''}>
+                      {section.label ? <p className="ws-mono px-3 pb-1 text-[0.68rem] text-[var(--ws-sidebar-ink-2)]">{section.label}</p> : null}
+                      {section.items.map((item) => <NavItem key={item.to} item={item} compact={false} onNavigate={onNavigate} attention={attention} />)}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          )
+        })}
+      </nav>
+    </>
+  )
+}
+
+function ShellFrame({ session, onLogout }) {
+  const location = useLocation()
+  const environment = currentEnvironment(session)
+  const current = activeArea(location.pathname)
+  const { title } = routeTitle(location.pathname)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(readCollapsedPreference)
-  const [openGroups, setOpenGroups] = useState(() => readOpenGroups(activeGroupKey))
+  const [openGroups, setOpenGroups] = useState(() => readOpenGroups(current))
+
+  // ADMIN-02: every route names itself in the browser tab.
+  useEffect(() => {
+    document.title = documentTitle(location.pathname)
+  }, [location.pathname])
+
+  // The current area opens when you arrive in it (and can still be collapsed while you are there).
+  const [arrivedIn, setArrivedIn] = useState(current)
+  if (current !== arrivedIn) {
+    setArrivedIn(current)
+    if (current && !openGroups.has(current)) setOpenGroups(new Set([...openGroups, current]))
+  }
 
   useEffect(() => {
     try {
@@ -153,100 +148,31 @@ function AdminShell({ session, onLogout }) {
     }
   }, [openGroups])
 
-  function toggleGroup(groupKey) {
-    setOpenGroups((current) => {
-      const next = new Set(current)
-      if (next.has(groupKey)) next.delete(groupKey)
-      else next.add(groupKey)
+  function toggleGroup(key) {
+    setOpenGroups((groups) => {
+      const next = new Set(groups)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
       return next
     })
   }
 
   function toggleSidebar() {
-    setIsSidebarCollapsed((current) => {
-      const next = !current
+    setIsSidebarCollapsed((collapsed) => {
+      const next = !collapsed
       try {
         window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(next))
       } catch {
-        // Persistence is optional; the control still works for this session.
+        // Persistence is optional.
       }
       return next
     })
   }
 
-  function renderNavigation({ compact = false, mobile = false } = {}) {
-    const idPrefix = mobile ? 'mobile' : 'desktop'
-
-    return (
-      <>
-        <div className={`admin-sidebar-rule flex h-16 flex-shrink-0 items-center border-b ${compact ? 'justify-center px-2' : 'gap-2 px-4'}`}>
-          <img src={brandingAssets.logoOnlyUrl} alt="DevLab Studios" className="h-8 w-8 rounded object-contain" />
-          <span className={compact ? 'sr-only' : 'text-sm font-semibold'}>DevLab Workspace</span>
-        </div>
-        <nav aria-label="Admin navigation" className={`flex-1 overflow-y-auto py-4 ${compact ? 'space-y-4 px-2' : 'space-y-3 px-3'}`}>
-          {NAV_GROUPS.map((group) => {
-            const isOpen = compact || !group.heading || openGroups.has(group.key)
-            const isCurrentGroup = group.key === activeGroupKey
-            const groupId = `${idPrefix}-admin-nav-${group.key}`
-
-            return (
-              <div key={group.key} className={compact && group.heading ? 'admin-sidebar-rule border-t pt-4' : ''}>
-                {group.heading && !compact ? (
-                  <button
-                    type="button"
-                    aria-expanded={isOpen}
-                    aria-controls={groupId}
-                    onClick={() => toggleGroup(group.key)}
-                    className={`admin-nav-group group mb-1 flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-xs font-semibold transition ${isCurrentGroup ? 'font-bold' : ''}`}
-                  >
-                    <span>{group.heading}</span>
-                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
-                  </button>
-                ) : null}
-                {isOpen ? (
-                  <div id={groupId} className="space-y-1">
-                    {group.items.map((item) => {
-                      const Icon = item.icon
-                      return (
-                        <NavLink
-                          key={item.to}
-                          to={item.to}
-                          end={item.end ?? item.to === '/admin'}
-                          title={compact ? item.label : undefined}
-                          aria-label={compact ? item.label : undefined}
-                          onClick={() => {
-                            setOpenGroups((current) => new Set([...current, group.key]))
-                            setIsMobileOpen(false)
-                          }}
-                          className={({ isActive }) =>
-                            `admin-nav-link flex min-h-10 items-center gap-3 px-3 py-2.5 text-sm font-medium transition ${compact ? 'justify-center' : ''} ${
-                              isActive ? 'admin-nav-link--active' : ''
-                            }`
-                          }
-                        >
-                          <Icon className="h-4 w-4 flex-shrink-0" strokeWidth={1.7} aria-hidden="true" />
-                          <span className={compact ? 'sr-only' : ''}>{item.label}</span>
-                        </NavLink>
-                      )
-                    })}
-                  </div>
-                ) : null}
-              </div>
-            )
-          })}
-        </nav>
-      </>
-    )
-  }
-
   return (
     <div className="admin-canvas flex h-screen overflow-hidden">
-      <aside
-        className={`admin-sidebar relative hidden shrink-0 flex-col border-r transition-[width] duration-200 motion-reduce:transition-none md:flex ${
-          isSidebarCollapsed ? 'w-[4.5rem]' : 'w-64'
-        }`}
-      >
-        {renderNavigation({ compact: isSidebarCollapsed })}
+      <aside className={`admin-sidebar relative hidden shrink-0 flex-col border-r transition-[width] duration-200 motion-reduce:transition-none md:flex ${isSidebarCollapsed ? 'w-[4.5rem]' : 'w-64'}`}>
+        <Navigation compact={isSidebarCollapsed} openGroups={openGroups} onToggle={toggleGroup} />
         <button
           type="button"
           onClick={toggleSidebar}
@@ -258,34 +184,39 @@ function AdminShell({ session, onLogout }) {
         </button>
       </aside>
 
-      {isMobileOpen ? (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <button type="button" aria-label="Close admin navigation" className="admin-dialog-backdrop absolute inset-0" onClick={() => setIsMobileOpen(false)} />
-          <aside className="admin-sidebar relative flex h-full w-72 max-w-[88vw] flex-col shadow-2xl">
-            {renderNavigation({ mobile: true })}
-          </aside>
-        </div>
-      ) : null}
+      {/* ADMIN-06: on phones the navigation is a real dialog (focus kept inside, Escape closes, focus returns). */}
+      <Dialog open={isMobileOpen} variant="drawer" title="Admin navigation menu" onClose={() => setIsMobileOpen(false)}>
+        <Navigation mobile openGroups={openGroups} onToggle={toggleGroup} onNavigate={() => setIsMobileOpen(false)} />
+      </Dialog>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="admin-header flex h-16 flex-shrink-0 items-center justify-between border-b px-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={() => setIsMobileOpen(true)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600 md:hidden" aria-label="Open admin navigation"><Menu className="h-5 w-5" /></button>
+        <header className="admin-header flex h-16 flex-shrink-0 items-center justify-between gap-3 border-b px-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <button type="button" onClick={() => setIsMobileOpen(true)} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--ws-rule)] md:hidden" aria-label="Open admin navigation" aria-haspopup="dialog">
+              <Menu className="h-5 w-5" aria-hidden="true" />
+            </button>
+            <p className="truncate text-base font-semibold" data-testid="page-title">{title}</p>
             <EnvironmentBadge environment={environment} />
           </div>
-          <div className="flex items-center gap-4 text-sm">
-            <a href="/" target="_blank" rel="noreferrer" className="admin-link hidden sm:inline">Preview Site</a>
-            <span className="hidden text-slate-500 lg:inline">{session.email}</span>
-            <button type="button" onClick={onLogout} className="admin-link">
-              Log Out
-            </button>
+          <div className="flex shrink-0 items-center gap-4 text-sm">
+            <a href="/" target="_blank" rel="noreferrer" className="admin-link hidden sm:inline">{SITE_LINK[environment.key]}</a>
+            <span className="ws-mono hidden text-xs text-[var(--ws-ink-3)] lg:inline">{session.email}</span>
+            <button type="button" onClick={onLogout} className="admin-link">Log out</button>
           </div>
         </header>
-        <main className="admin-workspace relative isolate flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main className="admin-workspace relative isolate min-w-0 flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <Outlet />
         </main>
       </div>
     </div>
+  )
+}
+
+function AdminShell({ session, onLogout }) {
+  return (
+    <AttentionProvider>
+      <ShellFrame session={session} onLogout={onLogout} />
+    </AttentionProvider>
   )
 }
 

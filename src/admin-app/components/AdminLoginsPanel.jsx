@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { adminApi } from '../lib/adminApi'
+import { confirmAction } from '../primitives/confirm'
 
 /**
  * Admin logins (audit CMS-04 / SEC-02): give a collaborator their own login
@@ -35,7 +36,7 @@ function AdminLoginsPanel({ minPasswordLength = 12 }) {
   }
 
   async function remove(email) {
-    if (!window.confirm(`Remove the login for ${email}? They are signed out on their next request.`)) return
+    if (!(await confirmAction({ title: `Remove the login for ${email}?`, body: 'They are signed out on their next request.', confirmLabel: 'Remove login', danger: true }))) return
     setBusy(true)
     setStatus(null)
     try {
