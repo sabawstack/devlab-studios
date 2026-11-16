@@ -2,13 +2,31 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const css = readFileSync('src/styles/brand.css', 'utf8')
+// BRAND-01: the tokens live in brand-tokens.css (shared by the public site,
+// Admin and Pickleball); the public components stay in brand.css. Token
+// lookups read the tokens file; every rule-level guard reads both.
+const tokensCss = readFileSync('src/styles/brand-tokens.css', 'utf8')
+const componentsCss = readFileSync('src/styles/brand.css', 'utf8')
+const css = `${tokensCss}\n${componentsCss}`
 
 function block(selector: string): string {
-  const start = css.indexOf(`${selector} {`)
-  if (start < 0) throw new Error(`${selector} block missing`)
-  return css.slice(start, css.indexOf('}', start))
+  const start = tokensCss.indexOf(`${selector} {`)
+  if (start < 0) throw new Error(`${selector} block missing from brand-tokens.css`)
+  return tokensCss.slice(start, tokensCss.indexOf('}', start))
 }
+
+describe('the token file holds tokens only (BRAND-01)', () => {
+  it('brand.css imports the tokens and defines no :root tokens or font faces of its own', () => {
+    expect(componentsCss).toMatch(/@import '\.\/brand-tokens\.css';/)
+    expect(stripComments(componentsCss)).not.toMatch(/:root\s*\{|@font-face/)
+  })
+
+  it('brand-tokens.css has no element selectors and no components: only :root, @font-face and the graphite remap', () => {
+    const selectors = [...stripComments(tokensCss).matchAll(/([^{}]+)\{[^{}]*\}/g)].map(([, selector]) => selector.trim().replace(/^@media[^{]*\{\s*/, ''))
+    expect(selectors.length).toBeGreaterThan(5)
+    for (const selector of selectors) expect(selector).toMatch(/^(?::root|@font-face|\.ink-panel)$/)
+  })
+})
 
 function token(scope: string, name: string): string {
   const match = new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`).exec(block(scope))
@@ -91,7 +109,7 @@ const BRAND_PAGES = [
   'src/pages/profile.astro', 'src/pages/products.astro', 'src/pages/contact.astro', 'src/pages/privacy.astro', 'src/pages/terms.astro',
   'src/pages/404.astro',
 ]
-const BRAND_SOURCES = ['src/styles/brand.css', 'src/components/brand', 'src/assets/scenes', 'src/assets/symbols', ...BRAND_PAGES]
+const BRAND_SOURCES = ['src/styles/brand-tokens.css', 'src/styles/brand.css', 'src/components/brand', 'src/assets/scenes', 'src/assets/symbols', ...BRAND_PAGES]
 
 function files(path: string): string[] {
   if (!existsSync(path)) return []
@@ -111,8 +129,9 @@ describe('brand sources stay free of generic visual patterns (TEST-03)', () => {
     for (const pattern of FORBIDDEN) expect(text, String(pattern)).not.toMatch(pattern)
   })
 
-  // Gradients come only from var(--brand-gradient), defined once in brand.css.
-  it.each(sources.filter((path) => path !== 'src/styles/brand.css'))('%s uses no raw gradient', (path) => {
+  // Gradients come only from var(--brand-gradient), defined once in brand-tokens.css.
+  // brand.css stays exempt as before: its button scrim is a flat overlay written as a gradient.
+  it.each(sources.filter((path) => !['src/styles/brand-tokens.css', 'src/styles/brand.css'].includes(path)))('%s uses no raw gradient', (path) => {
     expect(stripComments(readFileSync(path, 'utf8'))).not.toMatch(/(?:linear|radial|conic)-gradient\(/)
   })
 
@@ -234,7 +253,7 @@ describe('no underlined text on the public site', () => {
     'src/pages/pickleball/how-it-works.astro', 'src/pages/pickleball/rotation.astro',
   ].flatMap(files).filter((path) => /\.(astro|jsx)$/.test(path) && !/\.test\./.test(path))
 
-  it('brand.css never sets an underline', () => {
+  it('brand.css and brand-tokens.css never set an underline', () => {
     expect(stripComments(css)).not.toMatch(/text-decoration(?:-line)?:\s*[^;]*underline/)
   })
 

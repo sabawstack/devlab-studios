@@ -12,159 +12,18 @@
  * colours; amber lives only inside exhibits. Nothing applies until an element
  * opts in with `.brand` or a `dl-*` utility.
  *
+ * The tokens themselves (palette, fonts, scale, the graphite remap) live in
+ * brand-tokens.css, shared with Admin and Pickleball (ADR 0016); this file is
+ * the public site's components on top of them.
+ *
  * Rules enforced by src/styles/brandTokens.test.ts: gradients only through
- * var(--brand-gradient) (defined here, once) and only on the four roles above,
+ * var(--brand-gradient) (defined once, in brand-tokens.css) and only on the four roles above,
  * never on text; no raw hex in the brand components; the contrast pairs below
  * hold WCAG AA on stone and on graphite.
  */
 
-/* ---- Fonts: self-hosted, Latin subset, SIL OFL 1.1 (licences in /public/fonts). ---- */
-@font-face {
-  font-family: 'Space Grotesk';
-  src: url('/fonts/space-grotesk-latin-wght.woff2') format('woff2-variations'),
-    url('/fonts/space-grotesk-latin-wght.woff2') format('woff2');
-  font-weight: 300 700;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
-    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'JetBrains Mono';
-  src: url('/fonts/jetbrains-mono-latin-wght.woff2') format('woff2-variations'),
-    url('/fonts/jetbrains-mono-latin-wght.woff2') format('woff2');
-  font-weight: 100 800;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
-    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-/* Long-form only (articles and write-ups): never requested on business pages. */
-@font-face {
-  font-family: 'Newsreader';
-  src: url('/fonts/newsreader-latin-wght.woff2') format('woff2-variations'),
-    url('/fonts/newsreader-latin-wght.woff2') format('woff2');
-  font-weight: 200 800;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
-    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
+@import './brand-tokens.css';
 
-/*
- * Metric-matched local fallbacks, so the swap moves nothing (CLS). Values
- * from scripts/fonts/fallback-metrics.mjs, read from the font files.
- */
-@font-face {
-  font-family: 'Space Grotesk Fallback';
-  src: local('Arial'), local('Helvetica Neue'), local('Helvetica');
-  size-adjust: 126.64%;
-  ascent-override: 77.7%;
-  descent-override: 23.06%;
-  line-gap-override: 0%;
-}
-@font-face {
-  font-family: 'JetBrains Mono Fallback';
-  src: local('Courier New'), local('Courier');
-  size-adjust: 100.32%;
-  ascent-override: 101.68%;
-  descent-override: 29.91%;
-  line-gap-override: 0%;
-}
-@font-face {
-  font-family: 'Newsreader Fallback';
-  src: local('Times New Roman'), local('Times');
-  size-adjust: 131.84%;
-  ascent-override: 55.75%;
-  descent-override: 20.1%;
-  line-gap-override: 0%;
-}
-
-/* ---- Tokens ---- */
-:root {
-  --font-display: 'Space Grotesk', 'Space Grotesk Fallback', system-ui, sans-serif;
-  --font-label: 'JetBrains Mono', 'JetBrains Mono Fallback', ui-monospace, monospace;
-  --font-longform: 'Newsreader', 'Newsreader Fallback', Georgia, serif;
-
-  /* Colour roles used by every dl-* class (spec N.1). */
-  --paper: #f0eff3; /* canvas: cool stone, not white, not lavender */
-  --paper-2: #ffffff; /* mounts, form fields */
-  --ink: #15142a; /* graphite indigo: headings, body */
-  --ink-2: #3f3d5a; /* secondary text */
-  --ink-3: #6b6984; /* captions, labels (>= 0.875rem); spec #6d6b87 measured 4.47:1, darkened to 4.62:1 */
-  --rule: #d5d3df; /* hairlines */
-  --redline: #b800d1; /* diagram redline: the one wrong thing; spec #c400de measured 4.17:1, darkened to 4.63:1 for its few label uses */
-  --link: #4338ca; /* links, current nav item, focus ring (6.90:1 on stone, 7.90:1 on white) */
-  --violet: #7b2cbf; /* diagram numerals and secondary strokes only */
-  --ok: #1f7a4d; /* verified / connected, always beside a word */
-  --amber: #b45309; /* exhibits only */
-  --danger: #9f1239; /* form errors, with the warning symbol */
-  /* Selected and hover fill: the current nav item, link hover and focus (indigo text 5.8:1 on it). */
-  --selected: #dddbf3;
-  --focus-ring: var(--link);
-  --brand-gradient: linear-gradient(135deg, #e100ff 0%, #7b2cbf 50%, #0048ba 100%);
-  /* Over the gradient so white text holds 4.5:1 at the magenta end: 12 % at
-     rest is the smallest value that passes (4.55:1); 18 % on hover (5.05:1). */
-  --button-scrim: rgba(21, 20, 42, 0.12);
-  --button-scrim-hover: rgba(21, 20, 42, 0.18);
-
-  /* Graphite surface for the home hero band and exhibits, applied by .ink-panel. */
-  --exhibit-paper: #14122b;
-  --exhibit-paper-2: #1d1b36;
-  --exhibit-ink: #f2f1f6;
-  --exhibit-ink-2: #c6c4d6;
-  --exhibit-ink-3: #9492ad;
-  --exhibit-rule: #2b2947;
-  --exhibit-link: #a5b4fc;
-  /* Not in spec N.1: its green and amber are dark-on-light values that fail as
-     text on graphite (3.6:1), so exhibits swap in light variants. */
-  --exhibit-ok: #4ade80;
-  --exhibit-amber: #f59e0b;
-
-  /* Fluid type scale. */
-  --step--1: clamp(0.875rem, 0.84rem + 0.2vw, 1rem);
-  --step-0: clamp(1rem, 0.95rem + 0.3vw, 1.125rem);
-  --step-1: clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem);
-  --step-2: clamp(1.5rem, 1.3rem + 1vw, 2rem);
-  --step-3: clamp(2rem, 1.6rem + 2vw, 3rem);
-  --step-4: clamp(2.75rem, 2rem + 3.75vw, 4.5rem);
-  --step-5: clamp(3.5rem, 2.4rem + 5.5vw, 6rem);
-
-  /* Space, radii, motion. "Balanced" density: one idea per laptop screen. */
-  --section-rhythm: clamp(4rem, 7vw, 7rem);
-  --container: 72rem;
-  --gutter: 1rem;
-  --radius-xs: 2px;
-  --radius-s: 4px;
-  --radius-m: 6px;
-  --ease-draw: cubic-bezier(0.2, 0.7, 0.2, 1);
-  --duration-ui: 200ms;
-  --duration-draw: 600ms;
-}
-@media (min-width: 768px) {
-  :root { --gutter: 1.5rem; }
-}
-@media (min-width: 1280px) {
-  :root { --gutter: 2rem; }
-}
-
-/* Graphite: the home hero band and the exhibits. Every role takes its exhibit value. */
-.ink-panel {
-  --paper: var(--exhibit-paper);
-  --paper-2: var(--exhibit-paper-2);
-  --ink: var(--exhibit-ink);
-  --ink-2: var(--exhibit-ink-2);
-  --ink-3: var(--exhibit-ink-3);
-  --rule: var(--exhibit-rule);
-  --link: var(--exhibit-link);
-  --selected: var(--exhibit-rule);
-  --ok: var(--exhibit-ok);
-  --amber: var(--exhibit-amber);
-  --focus-ring: var(--exhibit-ink);
-  background: var(--paper);
-  color: var(--ink);
-  color-scheme: dark;
-}
 /* A light band that sets a closing call to action or the footer apart from the stone canvas. */
 .dl-band {
   background: var(--paper-2);

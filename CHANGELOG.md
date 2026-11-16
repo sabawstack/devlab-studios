@@ -68,6 +68,8 @@ decided against that surface specifically:
 
 - Pickleball board and TV: "LIVE" now means recent server contact, not an open socket, so a phone that wakes with a dead socket no longer shows stale data as live. An open socket sends a heartbeat the Workers runtime answers without waking the Durable Object (`setWebSocketAutoResponse`); no reply within 5 s drops the socket and falls back to polling and reconnecting. Coming back to the page or back online polls at once and asks the socket to resync. Stale data reads "Last known (time): …" and never says "walk on now". Timings live in `src/pickleball-open/lib/realtimeConfig.js`; measurements are in `docs/pickleball/realtime.md` (PB-REALTIME-01, 02).
 
+- Brand: the tokens (self-hosted font faces, the `:root` palette, type scale, radii, motion and the graphite `.ink-panel` remap) moved from `brand.css` into `src/styles/brand-tokens.css`, which `brand.css` imports and Admin and Pickleball can import without the public components. The built public CSS is byte-identical before and after; `brandTokens.test.ts` reads the tokens file and keeps every assertion, plus two new ones (the tokens file holds tokens only; `brand.css` defines none of its own) (BRAND-01).
+
 ### Fixed
 
 - Pickleball: a host-login unit test failed about one run in a hundred because its random cookie token could contain the two-character host id it checked for; the id is now one a token cannot contain by chance.
