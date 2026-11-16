@@ -11,9 +11,9 @@ import { statusText } from '../lib/myStatus'
 const clock = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
 const TONE = {
-  UP_NEXT: 'bg-pickle-neon text-ink',
-  PLAYING: 'border-2 border-pickle-neon bg-navy-900 text-white',
-  NEXT_FOUR: 'border-2 border-dashed border-pickle-neon bg-navy-900 text-white',
+  UP_NEXT: 'bg-pb-play text-pb-canvas',
+  PLAYING: 'border-2 border-pb-play bg-pb-surface text-white',
+  NEXT_FOUR: 'border-2 border-dashed border-pb-play bg-pb-surface text-white',
 }
 
 /** A short line under the status, where one helps. */
@@ -30,7 +30,7 @@ export function NamePicker({ viewer, me, onPick, className = '', label = 'Who ar
     <div className={className}>
       <label htmlFor={id} className="block text-sm font-bold">{label}</label>
       <select id={id} value={me} onChange={(e) => { onPick(e.target.value); writeMe(viewer.code, e.target.value) }}
-        className="mt-1 min-h-12 w-full max-w-sm rounded-xl border border-navy-700 bg-navy-950 px-3 text-base text-white">
+        className="mt-1 min-h-12 w-full max-w-sm rounded-xl border border-pb-rule bg-pb-sunken px-3 text-base text-white">
         <option value="">Pick your name</option>
         {viewer.roster.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
       </select>
@@ -42,9 +42,9 @@ export default function StatusCard({ viewer, me, onPick, status, fresh, lastSnap
   const myName = viewer.roster.find((p) => p.id === me)?.name
   if (!myName) {
     return (
-      <section aria-label="Your status" data-testid="status-card" data-kind="PICK" className="rounded-2xl border-2 border-pickle-neon bg-navy-900 p-4">
+      <section aria-label="Your status" data-testid="status-card" data-kind="PICK" className="rounded-2xl border-2 border-pb-play bg-pb-surface p-4">
         <NamePicker viewer={viewer} me="" onPick={onPick} label="Who are you?" />
-        <p className="mt-2 text-sm text-mist">Pick your name to see whether you are playing, called next or waiting. Only this phone remembers it.</p>
+        <p className="mt-2 text-sm text-pb-ink-2">Pick your name to see whether you are playing, called next or waiting. Only this phone remembers it.</p>
       </section>
     )
   }
@@ -53,12 +53,12 @@ export default function StatusCard({ viewer, me, onPick, status, fresh, lastSnap
   const line = note(status.kind)
   return (
     <section aria-label="Your status" data-testid="status-card" data-kind={status.kind}
-      className={`rounded-2xl p-4 ${fresh ? TONE[status.kind] ?? 'bg-navy-900 text-white' : 'bg-navy-900 text-white'}`}>
+      className={`rounded-2xl p-4 ${fresh ? TONE[status.kind] ?? 'bg-pb-surface text-white' : 'bg-pb-surface text-white'}`}>
       {/* Announced once per change: the text only changes when the status does. */}
       <p role="status" aria-live="polite" className="text-lg font-bold [overflow-wrap:anywhere] sm:text-xl">{text ?? `Hi ${myName.split(/\s+/)[0]}. You're not in a game right now.`}</p>
-      {line && fresh && <p className={`mt-1 text-sm ${status.kind === 'UP_NEXT' ? 'text-ink/80' : 'text-mist'}`}>{line}</p>}
+      {line && fresh && <p className={`mt-1 text-sm ${status.kind === 'UP_NEXT' ? 'text-pb-canvas/80' : 'text-pb-ink-2'}`}>{line}</p>}
       <details key={me} className="mt-2 text-sm">
-        <summary className={`inline-flex min-h-11 cursor-pointer items-center ${status.kind === 'UP_NEXT' && fresh ? 'text-ink' : 'text-mist'}`}>Not {myName}?</summary>
+        <summary className={`inline-flex min-h-11 cursor-pointer items-center ${status.kind === 'UP_NEXT' && fresh ? 'text-pb-canvas' : 'text-pb-ink-2'}`}>Not {myName}?</summary>
         <NamePicker viewer={viewer} me={me} onPick={onPick} label="Pick your name" className="pt-1" />
       </details>
     </section>

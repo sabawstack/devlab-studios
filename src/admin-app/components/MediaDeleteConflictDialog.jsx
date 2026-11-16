@@ -49,7 +49,7 @@ export default function MediaDeleteConflictDialog({ references, onClose }) {
                 <button
                   type="button"
                   onClick={() => navigate(`/admin/content/projects?projectId=${encodeURIComponent(reference.id)}`)}
-                  className="mt-2 text-sm font-semibold text-violet-700 hover:underline"
+                  className="mt-2 text-sm font-semibold text-[var(--ws-link)] hover:underline"
                 >
                   Go to project
                 </button>

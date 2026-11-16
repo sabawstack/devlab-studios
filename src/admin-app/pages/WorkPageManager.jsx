@@ -49,7 +49,7 @@ function blockOf(page, type) {
 }
 
 function Field({ label, value, onChange, type = 'text', rows = 4, help = '' }) {
-  const className = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/10'
+  const className = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-[var(--ws-link)] focus:ring-2 focus:ring-[var(--ws-selected)]'
   return (
     <label className="grid gap-1.5 text-sm font-semibold text-slate-800">
       {label}
@@ -223,7 +223,7 @@ export default function WorkPageManager() {
     <div className="space-y-5">
       <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm xl:flex-row xl:items-start xl:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-teal">Pages</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ws-link)]">Pages</p>
           <h1 className="mt-1 text-2xl font-semibold text-slate-950">Work</h1>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">Select existing Projects, order their presentation, and maintain Work-specific narrative. Images remain managed exclusively under Projects.</p>
         </div>
@@ -253,7 +253,7 @@ export default function WorkPageManager() {
           <Field label="Page title" value={page.title} onChange={(value) => setPage((current) => ({ ...current, title: value }))} />
           <label className="grid gap-1.5 text-sm font-semibold text-slate-800">
             Page status
-            <select value={page.status} onChange={(event) => setPage((current) => ({ ...current, status: event.target.value }))} className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-brand-teal">
+            <select value={page.status} onChange={(event) => setPage((current) => ({ ...current, status: event.target.value }))} className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-[var(--ws-link)]">
               <option value="draft">Draft</option>
               <option value="published">Published</option>
             </select>
@@ -276,7 +276,7 @@ export default function WorkPageManager() {
       <Section
         title="Selected Projects"
         description="Each entry links to its Project title, stack, links, cover, and full ordered gallery. Only the narrative below is owned by Work."
-        action={<Link to="/admin/content/projects" className="inline-flex items-center gap-2 text-sm font-semibold text-brand-teal hover:underline"><Image size={16} /> Manage Project images</Link>}
+        action={<Link to="/admin/content/projects" className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ws-link)] hover:underline"><Image size={16} /> Manage Project images</Link>}
       >
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="Section heading" value={showcase?.props?.heading} onChange={(value) => updateShowcase('heading', value)} />
@@ -296,7 +296,7 @@ export default function WorkPageManager() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-brand-teal">Featured project {index + 1}</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--ws-link)]">Featured project {index + 1}</p>
                         <h3 className="mt-1 text-lg font-semibold text-slate-950">{project?.title || `Missing project: ${item.projectId}`}</h3>
                         <p className="mt-1 text-xs text-slate-500">{project?.type || 'Unknown type'} · {mediaCount(project)} image(s) · Project status: {project?.status || 'missing'}</p>
                       </div>
@@ -313,14 +313,14 @@ export default function WorkPageManager() {
                     <div className="mt-4 grid gap-4">
                       <Field label="Work description" type="textarea" rows={4} value={item.description} onChange={(value) => updateFeaturedItem(index, { description: value })} help="Copied from Projects only when first selected. Later Project edits do not overwrite this wording." />
                       <div>
-                        <button type="button" onClick={() => resetDescription(index)} disabled={!project} className="text-xs font-semibold text-brand-teal hover:underline disabled:opacity-40">Reset from current Project description</button>
+                        <button type="button" onClick={() => resetDescription(index)} disabled={!project} className="text-xs font-semibold text-[var(--ws-link)] hover:underline disabled:opacity-40">Reset from current Project description</button>
                       </div>
                       <Field label="Challenge" type="textarea" rows={4} value={item.challenge} onChange={(value) => updateFeaturedItem(index, { challenge: value })} />
                       <Field label="System Architecture" type="textarea" rows={4} value={item.systemArchitecture} onChange={(value) => updateFeaturedItem(index, { systemArchitecture: value })} />
                       <Field label="Delivery Value" type="textarea" rows={4} value={item.deliveryValue} onChange={(value) => updateFeaturedItem(index, { deliveryValue: value })} />
                       <label className="grid gap-1.5 text-sm font-semibold text-slate-800">
                         Work entry status
-                        <select value={item.status || 'draft'} onChange={(event) => updateFeaturedItem(index, { status: event.target.value })} className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-brand-teal">
+                        <select value={item.status || 'draft'} onChange={(event) => updateFeaturedItem(index, { status: event.target.value })} className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-[var(--ws-link)]">
                           <option value="draft">Draft</option>
                           <option value="published" disabled={project?.status !== 'published'}>Published</option>
                         </select>
@@ -335,15 +335,15 @@ export default function WorkPageManager() {
         </div>
 
         <div className="mt-7 rounded-xl border border-slate-200 bg-white p-4">
-          <div className="flex items-center gap-2"><Plus size={17} className="text-brand-teal" /><h3 className="font-semibold text-slate-950">Add an existing Project</h3></div>
+          <div className="flex items-center gap-2"><Plus size={17} className="text-[var(--ws-link)]" /><h3 className="font-semibold text-slate-950">Add an existing Project</h3></div>
           <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2">
             <Search size={16} className="text-slate-400" />
             <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search title, type, ID, or technology" className="w-full border-0 bg-transparent text-sm outline-none" />
           </div>
           <div className="mt-3 grid max-h-80 gap-2 overflow-y-auto sm:grid-cols-2">
             {availableProjects.map((project) => (
-              <button key={project.id} type="button" onClick={() => addProject(project)} className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 text-left transition hover:border-brand-teal/40 hover:bg-brand-mint/20">
-                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-brand-teal"><Briefcase size={18} /></span>
+              <button key={project.id} type="button" onClick={() => addProject(project)} className="flex items-center gap-3 rounded-lg border border-slate-200 p-3 text-left transition hover:border-[var(--ws-link)] hover:bg-[var(--ws-selected)]">
+                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[var(--ws-link)]"><Briefcase size={18} /></span>
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-semibold text-slate-900">{project.title}</span>
                   <span className="block text-xs text-slate-500">{project.type} · {mediaCount(project)} image(s) · {project.status}</span>

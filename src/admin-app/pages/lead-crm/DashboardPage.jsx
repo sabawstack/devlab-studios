@@ -122,7 +122,7 @@ function ActionCard({ title, count, hint, to, children, tone = 'border-slate-200
       {hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
       {children}
       {to && count > 0 ? (
-        <Link to={to} className="mt-3 inline-block text-xs font-semibold text-brand-teal hover:underline">
+        <Link to={to} className="mt-3 inline-block text-xs font-semibold text-[var(--ws-link)] hover:underline">
           Open →
         </Link>
       ) : null}

@@ -6,11 +6,14 @@
 import QRCode from 'qrcode'
 import logoAsset from '../../assets/devlabstudios-logo-only.png'
 import { posterLayout, posterText } from './posterLayout'
+import { PB } from '../../config/pickleballPalette'
 
-const FAMILY = '"Plus Jakarta Sans", Inter, system-ui, sans-serif'
+// The brand display face (ADR 0016), already loaded by the app shell.
+const FAMILY = '"Space Grotesk", system-ui, sans-serif'
+// Pickleball colours (src/config/pickleballPalette.js); the credit band is the brand's stone and graphite.
 const C = {
-  ink: '#0b1426', navy950: '#0b1b34', navy900: '#11214d', navy800: '#152b66', brand: '#4500ff',
-  neon: '#c6ff2e', teamb: '#8d9bff', mist: '#b5c4e1', white: '#ffffff', shell: '#f5f5fc', slate: '#3b4566',
+  ink: PB.canvas, navy950: PB.sunken, navy900: PB.surface, navy800: PB.raised, brand: PB.action,
+  neon: PB.play, teamb: PB.teamB, mist: PB.ink2, white: '#ffffff', shell: '#f0eff3', slate: '#3f3d5a',
   gold: '#f4c542', silver: '#d3dbea', bronze: '#d98b4f',
 }
 const MEDAL = { 1: C.gold, 2: C.silver, 3: C.bronze }

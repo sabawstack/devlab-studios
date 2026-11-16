@@ -6,19 +6,19 @@ import { podiumDisplayOrder, podiumStepColumns, recordWithPoints } from '../../.
 
 const PLACE = { 1: '1st', 2: '2nd', 3: '3rd' }
 
-// Step colours: 1st neon with ink text, 2nd team-B violet with ink text, 3rd navy with white text.
+// Step colours: 1st play (indigo) with canvas text, 2nd team B (magenta) with canvas text, 3rd raised graphite with white text.
 // On the TV the names and steps scale with --pb-fit (set by the TV, so a big tie still fits).
 const STEP = {
-  1: { tone: 'bg-pickle-neon text-ink', height: 'h-24 sm:h-28', tvHeight: 'lg:h-[calc(var(--pb-fit,1)*12vh)]', delay: '300ms' },
-  2: { tone: 'bg-pickle-teamb text-ink', height: 'h-16 sm:h-20', tvHeight: 'lg:h-[calc(var(--pb-fit,1)*9vh)]', delay: '150ms' },
-  3: { tone: 'border-2 border-b-0 border-pickle-teamb/60 bg-navy-800 text-white', height: 'h-12 sm:h-14', tvHeight: 'lg:h-[calc(var(--pb-fit,1)*6.5vh)]', delay: '0ms' },
+  1: { tone: 'bg-pb-play text-pb-canvas', height: 'h-24 sm:h-28', tvHeight: 'lg:h-[calc(var(--pb-fit,1)*12vh)]', delay: '300ms' },
+  2: { tone: 'bg-pb-team-b text-pb-canvas', height: 'h-16 sm:h-20', tvHeight: 'lg:h-[calc(var(--pb-fit,1)*9vh)]', delay: '150ms' },
+  3: { tone: 'border-2 border-b-0 border-pb-team-b/60 bg-pb-raised text-white', height: 'h-12 sm:h-14', tvHeight: 'lg:h-[calc(var(--pb-fit,1)*6.5vh)]', delay: '0ms' },
 }
 
 function Entry({ entry, highlight, tv }) {
   return (
-    <li className={`grid gap-0.5 ${highlight ? 'text-pickle-neon' : ''}`}>
+    <li className={`grid gap-0.5 ${highlight ? 'text-pb-play' : ''}`}>
       <span className={`font-bold leading-tight [overflow-wrap:anywhere] ${tv ? 'text-[calc(var(--pb-fit,1)*clamp(1.2rem,1.9vw,3rem))]' : 'text-base sm:text-lg'}`}>{entry.name}</span>
-      <span className={`tabular-nums text-mist ${tv ? 'text-[clamp(1.05rem,1.35vw,2rem)]' : 'text-sm'}`}>{recordWithPoints(entry)}</span>
+      <span className={`tabular-nums text-pb-ink-2 ${tv ? 'text-[clamp(1.05rem,1.35vw,2rem)]' : 'text-sm'}`}>{recordWithPoints(entry)}</span>
     </li>
   )
 }

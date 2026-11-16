@@ -14,7 +14,7 @@ function ChangeDetails({ metadata }) {
 
   return (
     <details className="mt-2">
-      <summary className="cursor-pointer text-xs font-semibold text-violet-700 hover:underline">View {changes.length} field change{changes.length === 1 ? '' : 's'}</summary>
+      <summary className="cursor-pointer text-xs font-semibold text-[var(--ws-link)] hover:underline">View {changes.length} field change{changes.length === 1 ? '' : 's'}</summary>
       <div className="mt-2 max-w-xl overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
         {changes.map((change) => (
           <div key={change.path} className="grid gap-1 border-b border-slate-200 px-3 py-2 text-xs last:border-0 sm:grid-cols-[140px_1fr]">

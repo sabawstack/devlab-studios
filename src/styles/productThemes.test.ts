@@ -95,9 +95,15 @@ describe('Pickleball app layer (BRAND-03)', () => {
     ['action', 'var(--link)'], ['focus', 'var(--pb-play)'], ['radius', 'var(--radius-m)'],
   ])('--pb-%s maps to %s', (name, value) => expect(layer.get(`--pb-${name}`)).toBe(value))
 
-  it('play stays navy and lime', () => {
-    expect(layer.get('--pb-canvas')).toBe('#0b1426')
-    expect(layer.get('--pb-play')).toBe('#c6ff2e')
+  it('sits on the brand graphite surface and inks', () => {
+    for (const [name, token] of [['canvas', '--exhibit-paper'], ['surface', '--exhibit-paper-2'], ['ink', '--exhibit-ink'], ['ink-2', '--exhibit-ink-2']]) {
+      expect(layer.get(`--pb-${name}`)).toBe(`var(${token})`)
+    }
+  })
+
+  it('has no navy, lime or legacy brand blue left', () => {
+    const text = stripComments(pickleball).toLowerCase()
+    for (const old of ['#0b1426', '#11214d', '#c6ff2e', '#8d9bff', '#b5c4e1', '#4500ff']) expect(text).not.toContain(old)
   })
 
   it('uses the brand type face and imports the shared tokens', () => {
@@ -113,6 +119,18 @@ describe('Pickleball app layer (BRAND-03)', () => {
     expect(contrast(color('ink-2'), color('surface'))).toBeGreaterThanOrEqual(4.5)
     expect(contrast(color('focus'), color('canvas'))).toBeGreaterThanOrEqual(3)
     expect(contrast(color('focus'), color('surface'))).toBeGreaterThanOrEqual(3)
+    for (const bg of ['canvas', 'sunken', 'surface', 'raised']) {
+      expect(contrast(color('ink-2'), color(bg)), `ink-2 on ${bg}`).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(color('play'), color(bg)), `play on ${bg}`).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(color('team-b'), color(bg)), `team-b on ${bg}`).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(color('field'), color(bg)), `field border on ${bg}`).toBeGreaterThanOrEqual(3)
+    }
+    // Text on a play fill (the selected choice, "you're on") is the canvas colour.
+    expect(contrast(color('canvas'), color('play'))).toBeGreaterThanOrEqual(7)
+  })
+
+  it('tells the two teams apart by lightness, not hue alone', () => {
+    expect(contrast(color('play'), color('team-b'))).toBeGreaterThanOrEqual(1.5)
   })
 })
 

@@ -11,7 +11,7 @@ export default function Welcome({ announcement, className = '' }) {
   const now = useNow(MINUTE)
   return (
     <div className={`grid gap-0.5 ${className}`} data-testid="welcome">
-      <p className="font-semibold text-pickle-neon">{greetingFor(new Date(now))}</p>
+      <p className="font-semibold text-pb-play">{greetingFor(new Date(now))}</p>
       {announcement && <p className="[overflow-wrap:anywhere] text-white" data-testid="welcome-message">{announcement}</p>}
     </div>
   )

@@ -25,7 +25,7 @@ import ResultsScreen from './components/results/ResultsScreen.jsx'
 import ChampionAnnouncer from './tournament/ChampionAnnouncer.jsx'
 
 const WRAP = '[overflow-wrap:anywhere]'
-const H2 = 'text-[clamp(1rem,1.4vw,1.75rem)] font-bold uppercase tracking-[0.12em] text-pickle-neon'
+const H2 = 'text-[clamp(1rem,1.4vw,1.75rem)] font-bold uppercase tracking-[0.12em] text-pb-play'
 
 function subscribeResize(callback) {
   window.addEventListener('resize', callback)
@@ -53,16 +53,16 @@ function TvNotice({ title, body }) {
     <main className="grid min-h-screen place-items-center p-8 text-center">
       <div className="max-w-5xl">
         <h1 className="text-[clamp(2rem,5vw,6rem)] font-bold leading-tight">{title}</h1>
-        {body && <p className="mt-4 text-[clamp(1.1rem,2.2vw,2.5rem)] text-mist">{body}</p>}
+        {body && <p className="mt-4 text-[clamp(1.1rem,2.2vw,2.5rem)] text-pb-ink-2">{body}</p>}
       </div>
     </main>
   )
 }
 
 function LiveState({ viewer, live, lastAt }) {
-  if (viewer.status !== 'ACTIVE') return <span className="text-mist">ENDED</span>
-  if (showsFinalResults(viewer)) return <span className="text-mist">FINISHED</span>
-  if (live) return <span className="inline-flex items-center gap-2"><span className="pb-pulse h-3 w-3 rounded-full bg-pickle-neon" aria-hidden="true" />LIVE</span>
+  if (viewer.status !== 'ACTIVE') return <span className="text-pb-ink-2">ENDED</span>
+  if (showsFinalResults(viewer)) return <span className="text-pb-ink-2">FINISHED</span>
+  if (live) return <span className="inline-flex items-center gap-2"><span className="pb-pulse h-3 w-3 rounded-full bg-pb-play" aria-hidden="true" />LIVE</span>
   return <span className="text-amber-200">Offline · showing data from {clock(lastAt)}</span>
 }
 
@@ -70,9 +70,9 @@ function LiveState({ viewer, live, lastAt }) {
 function PairTable({ tournament }) {
   const rows = tournament.standings.filter((row) => row.played > 0).slice(0, 16).map((row) => ({
     key: row.entrantId,
-    content: <span className="flex justify-between gap-2"><span className={WRAP}><b className="text-pickle-neon">{row.rank}</b> {row.name}</span><span className="shrink-0 text-mist">{row.wins}–{row.losses}</span></span>,
+    content: <span className="flex justify-between gap-2"><span className={WRAP}><b className="text-pb-play">{row.rank}</b> {row.name}</span><span className="shrink-0 text-pb-ink-2">{row.wins}–{row.losses}</span></span>,
   }))
-  if (rows.length === 0) return <p className="mt-1 text-mist">No games finished yet</p>
+  if (rows.length === 0) return <p className="mt-1 text-pb-ink-2">No games finished yet</p>
   return <FitList rows={rows} className="mt-1 grid gap-1 text-[clamp(1rem,1.3vw,1.75rem)]" />
 }
 
@@ -80,9 +80,9 @@ function Standings({ viewer }) {
   if (viewer.tournament) return <PairTable tournament={viewer.tournament} />
   const rows = viewer.standings.filter((row) => row.rank !== null).slice(0, 16).map((row) => ({
     key: row.playerId,
-    content: <span className="flex justify-between gap-2"><span className={WRAP}><b className="text-pickle-neon">{row.rank}</b> {row.name}</span><span className="shrink-0 text-mist">{row.wins}–{row.losses}</span></span>,
+    content: <span className="flex justify-between gap-2"><span className={WRAP}><b className="text-pb-play">{row.rank}</b> {row.name}</span><span className="shrink-0 text-pb-ink-2">{row.wins}–{row.losses}</span></span>,
   }))
-  if (rows.length === 0) return <p className="mt-1 text-mist">No games finished yet</p>
+  if (rows.length === 0) return <p className="mt-1 text-pb-ink-2">No games finished yet</p>
   return <FitList rows={rows} className="mt-1 grid gap-1 text-[clamp(1rem,1.3vw,1.75rem)]" />
 }
 
@@ -90,19 +90,19 @@ function Standings({ viewer }) {
 function ComingUp({ tournament }) {
   const rows = nextGames(tournament, 6).map((game) => ({
     key: game.id,
-    content: <span className={WRAP}><b>{game.label}</b>: {game.nameA} vs {game.nameB}{game.held && <span className="text-mist"> · {HELD_LABEL[game.held]}</span>}</span>,
+    content: <span className={WRAP}><b>{game.label}</b>: {game.nameA} vs {game.nameB}{game.held && <span className="text-pb-ink-2"> · {HELD_LABEL[game.held]}</span>}</span>,
   }))
   return (
     <section aria-label="Coming up" className="flex max-h-[30vh] min-h-0 shrink flex-col">
       <h2 className={H2}>Coming up</h2>
       {rows.length === 0
-        ? <p className="mt-1 text-[clamp(1.125rem,1.4vw,1.75rem)] text-mist">Waiting for results</p>
+        ? <p className="mt-1 text-[clamp(1.125rem,1.4vw,1.75rem)] text-pb-ink-2">Waiting for results</p>
         : <FitList rows={rows} className="mt-1 grid gap-1 text-[clamp(1.125rem,1.4vw,1.75rem)]" />}
     </section>
   )
 }
 
-const more = (n) => <span className="text-[clamp(0.9rem,1.1vw,1.5rem)] text-mist">and {n} more on the player board</span>
+const more = (n) => <span className="text-[clamp(0.9rem,1.1vw,1.5rem)] text-pb-ink-2">and {n} more on the player board</span>
 
 /**
  * The open-play queue on the TV (PB-QUEUE-04): the next four when the server
@@ -111,23 +111,23 @@ const more = (n) => <span className="text-[clamp(0.9rem,1.1vw,1.5rem)] text-mist
  */
 function TvQueue({ viewer }) {
   const note = waitingNote(viewer)
-  const chip = `rounded-2xl bg-navy-800 px-3 py-1 ${WRAP}`
+  const chip = `rounded-2xl bg-pb-raised px-3 py-1 ${WRAP}`
   const waiting = viewer.waiting.map((w) => ({ key: w.id, content: w.name }))
   return (
     <>
       {viewer.nextUp && (
         <section aria-label="Next four" data-testid="tv-next-four" className="shrink-0">
-          <h2 className={H2}>{NEXT_FOUR} <span className="text-mist">· {NEXT_FOUR_WHEN}</span></h2>
+          <h2 className={H2}>{NEXT_FOUR} <span className="text-pb-ink-2">· {NEXT_FOUR_WHEN}</span></h2>
           <ul className="mt-1 flex flex-wrap gap-2 text-[clamp(1rem,1.3vw,1.75rem)]">
-            {viewer.nextUp.players.map((p) => <li key={p.id} className={`rounded-2xl border-2 border-dashed border-pickle-neon px-3 py-1 ${WRAP}`}>{p.name}</li>)}
+            {viewer.nextUp.players.map((p) => <li key={p.id} className={`rounded-2xl border-2 border-dashed border-pb-play px-3 py-1 ${WRAP}`}>{p.name}</li>)}
           </ul>
         </section>
       )}
       <section aria-label="Waiting" data-testid="tv-waiting" className="flex max-h-[26vh] min-h-0 shrink flex-col">
         <h2 className={H2}>{WAITING} ({viewer.waiting.length})</h2>
-        <p className="text-[clamp(0.8rem,0.9vw,1.25rem)] text-mist">{QUEUE_RULE}</p>
+        <p className="text-[clamp(0.8rem,0.9vw,1.25rem)] text-pb-ink-2">{QUEUE_RULE}</p>
         {waiting.length === 0
-          ? <p className="mt-1 text-[clamp(1rem,1.3vw,1.75rem)] text-mist">Everyone is on court</p>
+          ? <p className="mt-1 text-[clamp(1rem,1.3vw,1.75rem)] text-pb-ink-2">Everyone is on court</p>
           : <FitList rows={waiting} className="mt-1 flex flex-wrap gap-2 text-[clamp(1rem,1.3vw,1.75rem)]" rowClassName={chip} more={more} />}
         {note && <p className="shrink-0 text-[clamp(0.9rem,1.1vw,1.5rem)] font-semibold">{note}</p>}
       </section>
@@ -139,18 +139,18 @@ function TvQueue({ viewer }) {
 function CompactQueue({ viewer }) {
   const note = waitingNote(viewer)
   return (
-    <section aria-label="Queue" data-testid="tv-compact-queue" className="grid gap-3 rounded-2xl bg-navy-900 p-4 text-lg lg:hidden">
+    <section aria-label="Queue" data-testid="tv-compact-queue" className="grid gap-3 rounded-2xl bg-pb-surface p-4 text-lg lg:hidden">
       {viewer.nextUp && (
         <div>
-          <h2 className="font-bold text-pickle-neon">{NEXT_FOUR} <span className="font-normal text-mist">· {NEXT_FOUR_WHEN}</span></h2>
+          <h2 className="font-bold text-pb-play">{NEXT_FOUR} <span className="font-normal text-pb-ink-2">· {NEXT_FOUR_WHEN}</span></h2>
           <p className={WRAP}>{viewer.nextUp.players.map((p) => p.name).join(' · ')}</p>
         </div>
       )}
       <div>
-        <h2 className="font-bold text-pickle-neon">{WAITING} ({viewer.waiting.length})</h2>
-        <p className="text-sm text-mist">{QUEUE_RULE}</p>
+        <h2 className="font-bold text-pb-play">{WAITING} ({viewer.waiting.length})</h2>
+        <p className="text-sm text-pb-ink-2">{QUEUE_RULE}</p>
         <ul className="mt-1 flex flex-wrap gap-2">
-          {viewer.waiting.map((w) => <li key={w.id} className={`rounded-2xl bg-navy-800 px-3 py-1 ${WRAP}`}>{w.name}</li>)}
+          {viewer.waiting.map((w) => <li key={w.id} className={`rounded-2xl bg-pb-raised px-3 py-1 ${WRAP}`}>{w.name}</li>)}
         </ul>
         {note && <p className="mt-1 font-semibold">{note}</p>}
       </div>
@@ -212,10 +212,10 @@ export default function TvBoard({ code }) {
     <main className={`pb-fit grid grid-cols-1 gap-4 p-4 lg:h-screen lg:grid-cols-[minmax(0,1fr)_minmax(18rem,26vw)] lg:gap-[1.2vw] lg:overflow-hidden lg:p-[1.2vw] ${announcement ? 'lg:grid-rows-[minmax(0,1fr)_auto]' : ''}`}>
       {/* Below lg there is no side panel, so the essentials sit in a compact header. */}
       <header className="lg:hidden">
-        <p className="text-sm font-bold text-pickle-neon"><LiveState viewer={viewer} live={live} lastAt={lastSnapshotAt} /> · {modeLabel}</p>
+        <p className="text-sm font-bold text-pb-play"><LiveState viewer={viewer} live={live} lastAt={lastSnapshotAt} /> · {modeLabel}</p>
         <h1 className={`text-2xl font-bold ${WRAP}`}>{viewer.name}</h1>
-        {greeting && <p className="text-base font-semibold text-pickle-neon">{greeting}</p>}
-        <p className="whitespace-nowrap text-lg font-bold tracking-[0.05em] text-pickle-neon">{formatPublicCode(code)}</p>
+        {greeting && <p className="text-base font-semibold text-pb-play">{greeting}</p>}
+        <p className="whitespace-nowrap text-lg font-bold tracking-[0.05em] text-pb-play">{formatPublicCode(code)}</p>
       </header>
       <section
         aria-label="Courts"
@@ -224,26 +224,26 @@ export default function TvBoard({ code }) {
       >
         {overlay === 'results' && <ResultsScreen viewer={viewer} tv />}
         {overlay === 'draw' && (
-          <div className="grid place-content-center rounded-2xl bg-navy-900 p-8 text-center lg:col-span-full lg:row-span-full" data-testid="tv-draw-note">
+          <div className="grid place-content-center rounded-2xl bg-pb-surface p-8 text-center lg:col-span-full lg:row-span-full" data-testid="tv-draw-note">
             <p className="text-[clamp(2rem,5vw,6rem)] font-bold leading-tight">{tournament.phase === 'SETUP' ? 'The draw is coming soon' : 'Draft draw'}</p>
-            <p className="mt-[0.5em] text-[clamp(1.25rem,2.5vw,3rem)] text-mist">Pairs and games may still change before the start.</p>
+            <p className="mt-[0.5em] text-[clamp(1.25rem,2.5vw,3rem)] text-pb-ink-2">Pairs and games may still change before the start.</p>
           </div>
         )}
-        {!overlay && courts.length === 0 && <p className="grid place-items-center rounded-2xl bg-navy-900 p-8 text-center text-[clamp(1.5rem,3.5vw,4rem)] font-bold text-mist lg:col-span-full lg:row-span-full">No courts are in play right now</p>}
+        {!overlay && courts.length === 0 && <p className="grid place-items-center rounded-2xl bg-pb-surface p-8 text-center text-[clamp(1.5rem,3.5vw,4rem)] font-bold text-pb-ink-2 lg:col-span-full lg:row-span-full">No courts are in play right now</p>}
         {!overlay && courts.map((court) => <TvCourt key={court.id} court={court} fresh={live} />)}
       </section>
       {!overlay && !tournament && <CompactQueue viewer={viewer} />}
       <aside className="hidden min-h-0 flex-col gap-[1vw] overflow-hidden lg:flex">
         <header>
-          <p className="text-[clamp(0.9rem,1.1vw,1.5rem)] font-bold text-pickle-neon"><LiveState viewer={viewer} live={live} lastAt={lastSnapshotAt} /> · {modeLabel}</p>
+          <p className="text-[clamp(0.9rem,1.1vw,1.5rem)] font-bold text-pb-play"><LiveState viewer={viewer} live={live} lastAt={lastSnapshotAt} /> · {modeLabel}</p>
           <h1 className={`text-[clamp(1.25rem,1.8vw,2.5rem)] font-bold leading-tight ${WRAP}`}>{viewer.name}</h1>
-          {greeting && <p className="text-[clamp(0.9rem,1.1vw,1.5rem)] font-semibold text-pickle-neon">{greeting}</p>}
+          {greeting && <p className="text-[clamp(0.9rem,1.1vw,1.5rem)] font-semibold text-pb-play">{greeting}</p>}
         </header>
         <div className="flex items-center gap-[1vw]">
           <div data-testid="tv-qr" data-url={qrUrl} className="shrink-0"><QrCode url={qrUrl} size={qrSize} label={qrLabel} /></div>
           <div className="min-w-0">
-            <p className="text-[clamp(0.9rem,1.1vw,1.5rem)] text-mist">{checkIn ? 'Scan to check in' : final ? 'Scan for the final standings' : 'Scan to follow on your phone'}</p>
-            <p className="whitespace-nowrap text-[clamp(1rem,1.5vw,2.25rem)] font-bold tracking-[0.04em] text-pickle-neon">{formatPublicCode(code)}</p>
+            <p className="text-[clamp(0.9rem,1.1vw,1.5rem)] text-pb-ink-2">{checkIn ? 'Scan to check in' : final ? 'Scan for the final standings' : 'Scan to follow on your phone'}</p>
+            <p className="whitespace-nowrap text-[clamp(1rem,1.5vw,2.25rem)] font-bold tracking-[0.04em] text-pb-play">{formatPublicCode(code)}</p>
           </div>
         </div>
         {!overlay && (tournament ? <ComingUp tournament={tournament} /> : <TvQueue viewer={viewer} />)}
@@ -259,7 +259,7 @@ export default function TvBoard({ code }) {
       {/* Outside the side panel, which phones hide: a hidden live region is never announced. */}
       {tournament && <ChampionAnnouncer champion={tournament.champion} />}
       {announcement && (
-        <footer aria-label="Welcome message" className="rounded-2xl bg-navy-900 px-4 py-2 text-xl font-semibold lg:col-span-2 lg:-mt-[0.6vw] lg:px-[1.2vw] lg:py-[0.2vw] lg:text-[clamp(1rem,1.5vw,2.25rem)] lg:leading-tight">
+        <footer aria-label="Welcome message" className="rounded-2xl bg-pb-surface px-4 py-2 text-xl font-semibold lg:col-span-2 lg:-mt-[0.6vw] lg:px-[1.2vw] lg:py-[0.2vw] lg:text-[clamp(1rem,1.5vw,2.25rem)] lg:leading-tight">
           <TvMarquee text={announcement} />
         </footer>
       )}

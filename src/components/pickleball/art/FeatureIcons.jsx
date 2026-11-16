@@ -4,8 +4,9 @@
 // from src/styles/pickleball-open.css and only runs inside a `.pb-anim`
 // container, so it stops for reduced motion. No animated element carries its
 // own `transform` attribute: the CSS animation would replace it.
-const NEON = '#c6ff2e'
-const TEAMB = '#8d9bff'
+import { PB } from '../../../config/pickleballPalette'
+const NEON = PB.play
+const TEAMB = PB.teamB
 
 function Icon({ className = '', children }) {
   return (

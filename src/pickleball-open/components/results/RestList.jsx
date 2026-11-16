@@ -10,7 +10,7 @@ export default function RestList({ rest, highlightIds = [], pairs = false }) {
     <div className="overflow-x-auto">
       <table className="w-full text-left text-[15px]">
         <caption className="sr-only">Everyone else, in rank order</caption>
-        <thead className="text-xs text-mist">
+        <thead className="text-xs text-pb-ink-2">
           <tr>
             <th className="py-2 pr-2">#</th>
             <th className="py-2">{pairs ? 'Pair' : 'Player'}</th>
@@ -21,8 +21,8 @@ export default function RestList({ rest, highlightIds = [], pairs = false }) {
         </thead>
         <tbody>
           {rest.map((entry) => (
-            <tr key={entry.id} className={`border-t border-navy-800 ${highlightIds.includes(entry.id) ? 'font-bold text-pickle-neon' : ''}`}>
-              <td className="py-2 pr-2 font-bold text-pickle-neon tabular-nums">{entry.place}</td>
+            <tr key={entry.id} className={`border-t border-pb-raised ${highlightIds.includes(entry.id) ? 'font-bold text-pb-play' : ''}`}>
+              <td className="py-2 pr-2 font-bold text-pb-play tabular-nums">{entry.place}</td>
               <td className="py-2 [overflow-wrap:anywhere]">{entry.name}</td>
               <td className="whitespace-nowrap py-2 text-right tabular-nums">{winLoss(entry)}</td>
               <td className="py-2 pl-2 text-right tabular-nums">{pct(entry.winRate)}</td>

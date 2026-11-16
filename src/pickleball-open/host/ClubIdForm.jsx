@@ -36,9 +36,9 @@ export default function ClubIdForm({ current, onSaved, onSignInEnded = null }) {
     <form onSubmit={save} className="grid gap-2">
       <label className="grid gap-1 text-sm font-semibold">Your DUPR Club ID
         <input value={value} onChange={(event) => setValue(event.target.value)} maxLength={20} autoComplete="off"
-          className="min-h-11 rounded-lg bg-ink px-3 py-2 font-mono text-white" />
+          className="min-h-11 rounded-lg bg-pb-canvas px-3 py-2 font-mono text-white" />
       </label>
-      <p className="text-xs text-mist">On your club’s page in DUPR. Saved for every session you export.</p>
+      <p className="text-xs text-pb-ink-2">On your club’s page in DUPR. Saved for every session you export.</p>
       {error && <p role="alert" className="text-sm text-rose-200">{error}</p>}
       <Button type="submit" disabled={busy || trimmed === (current ?? '')}>{busy ? 'Saving…' : 'Save Club ID'}</Button>
     </form>

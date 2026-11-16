@@ -9,13 +9,13 @@ export default function CourtCard({ court, nameOf, ended = false, onStart, onGam
   const match = court.match
   const testId = `court-${court.position}`
   if (!court.enabled) {
-    return <article data-testid={testId} className="rounded-2xl border border-navy-800 p-4 text-mist"><h3 className="font-bold text-white">{court.label}</h3><p className="mt-2 text-sm">Off</p></article>
+    return <article data-testid={testId} className="rounded-2xl border border-pb-raised p-4 text-pb-ink-2"><h3 className="font-bold text-white">{court.label}</h3><p className="mt-2 text-sm">Off</p></article>
   }
   if (!match) {
     return (
-      <article data-testid={testId} className="rounded-2xl border border-dashed border-navy-700 p-4">
+      <article data-testid={testId} className="rounded-2xl border border-dashed border-pb-rule p-4">
         <h3 className="font-bold">{court.label}</h3>
-        <p className={`mt-2 text-sm ${court.blocked && !ended ? 'text-amber-200' : 'text-mist'}`} role={court.blocked && !ended ? 'status' : undefined}>
+        <p className={`mt-2 text-sm ${court.blocked && !ended ? 'text-amber-200' : 'text-pb-ink-2'}`} role={court.blocked && !ended ? 'status' : undefined}>
           {ended ? 'Session ended' : court.blocked ?? 'Waiting for players. Fills automatically when the next game ends.'}
         </p>
       </article>
@@ -23,19 +23,19 @@ export default function CourtCard({ court, nameOf, ended = false, onStart, onGam
   }
   const proposed = match.status === 'PROPOSED'
   return (
-    <article key={match.id} className={`pb-flip flex flex-col gap-3 rounded-2xl p-4 ${proposed ? 'border-2 border-dashed border-pickle-neon bg-ink' : 'bg-navy-900'}`} data-testid={testId}>
+    <article key={match.id} className={`pb-flip flex flex-col gap-3 rounded-2xl p-4 ${proposed ? 'border-2 border-dashed border-pb-play bg-pb-canvas' : 'bg-pb-surface'}`} data-testid={testId}>
       <div className="flex items-baseline justify-between">
         <h3 className="text-lg font-bold">{court.label}</h3>
-        <span className={`text-xs ${proposed ? 'font-bold text-pickle-neon' : 'text-mist'}`}>{proposed ? `${UP_NEXT} · ${WALK_ON}` : `Playing · ${minutesSince(match.startedAt)} min`}</span>
+        <span className={`text-xs ${proposed ? 'font-bold text-pb-play' : 'text-pb-ink-2'}`}>{proposed ? `${UP_NEXT} · ${WALK_ON}` : `Playing · ${minutesSince(match.startedAt)} min`}</span>
       </div>
-      {court.fixtureLabel && <p className="-mt-2 text-xs font-bold uppercase tracking-[0.08em] text-pickle-neon">{court.fixtureLabel}</p>}
+      {court.fixtureLabel && <p className="-mt-2 text-xs font-bold uppercase tracking-[0.08em] text-pb-play">{court.fixtureLabel}</p>}
       <div className="grid gap-1 text-[15px]">
         <TeamNames side="A" names={match.teamA.map(nameOf)} />
         <TeamNames side="B" names={match.teamB.map(nameOf)} />
       </div>
       {proposed ? (
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="neon" className={onEdit ? '' : 'col-span-2'} onClick={() => onStart(match)}>Start</Button>
+          <Button variant="play" className={onEdit ? '' : 'col-span-2'} onClick={() => onStart(match)}>Start</Button>
           {onEdit && <Button variant="ghost" onClick={() => onEdit(match)}>Edit</Button>}
           <Button variant="quiet" className="col-span-2 !min-h-11 text-sm" onClick={() => onGameOver(match)}>Already played? Enter result</Button>
         </div>

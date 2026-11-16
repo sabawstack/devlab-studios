@@ -7,13 +7,13 @@ import { Button, Panel } from '../components/ui.jsx'
 import BracketView from './BracketView.jsx'
 import { commandFor, isSelected, tap } from './drawTaps'
 
-const FOCUS = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pickle-neon'
+const FOCUS = 'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pb-play'
 
 function Tappable({ item, selected, onTap, label, children, className = '' }) {
   const chosen = isSelected(selected, item)
   return (
     <button type="button" aria-pressed={chosen} aria-label={label} onClick={() => onTap(item)}
-      className={`min-h-11 rounded-lg px-2 text-left ${FOCUS} ${chosen ? 'bg-pickle-neon font-bold text-ink' : 'bg-navy-800 hover:bg-navy-700'} ${className}`}>
+      className={`min-h-11 rounded-lg px-2 text-left ${FOCUS} ${chosen ? 'bg-pb-play font-bold text-pb-canvas' : 'bg-pb-raised hover:bg-pb-rule'} ${className}`}>
       {children}
     </button>
   )
@@ -81,12 +81,12 @@ export default function DraftEditor({ tournament, nameOf, send, focusToken = 0, 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 ref={heading} tabIndex={-1} id="draft-heading" className="scroll-mt-20 text-lg font-bold focus:outline-none">Draft draw · {tournament.formatLabel}</h2>
-            <p className="text-sm text-mist">
+            <p className="text-sm text-pb-ink-2">
               Tap one, then another, to swap: two players, two pairs’ seeds, or two pairs in the games below.
               {pools.length > 0 && ' Tap a seed to move that pair to another pool.'}
             </p>
           </div>
-          <Button variant="neon" onClick={start} disabled={loose.length > 0} aria-describedby={loose.length > 0 ? 'no-partner-notice' : undefined}>Start tournament</Button>
+          <Button variant="play" onClick={start} disabled={loose.length > 0} aria-describedby={loose.length > 0 ? 'no-partner-notice' : undefined}>Start tournament</Button>
         </div>
         {loose.length > 0 && (
           <div role="status" className="grid gap-2 rounded-xl bg-amber-400/15 px-4 py-3 text-amber-100">
@@ -98,12 +98,12 @@ export default function DraftEditor({ tournament, nameOf, send, focusToken = 0, 
             </div>
           </div>
         )}
-        <p aria-live="polite" className={`min-h-5 text-sm ${selected ? 'font-semibold text-pickle-neon' : 'text-mist'}`}>
+        <p aria-live="polite" className={`min-h-5 text-sm ${selected ? 'font-semibold text-pb-play' : 'text-pb-ink-2'}`}>
           {selected ? selectionHint(selected, tournament, nameOf, pools.length > 0) : 'Nothing selected.'}
         </p>
         <ol className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(min(100%,15rem),1fr))]" aria-label="Pairs in seed order">
           {tournament.pairs.map((pair) => (
-            <li key={pair.id} className="grid gap-1.5 rounded-xl bg-navy-900 p-1.5">
+            <li key={pair.id} className="grid gap-1.5 rounded-xl bg-pb-surface p-1.5">
               <div className="flex items-center gap-1.5">
                 <Tappable item={{ kind: 'pair', id: pair.id }} selected={selected} onTap={onTap} label={`Seed ${pair.seed}: ${pair.name}`} className="w-11 shrink-0 text-center font-bold">
                   {pair.seed}
@@ -113,11 +113,11 @@ export default function DraftEditor({ tournament, nameOf, send, focusToken = 0, 
                     {nameOf(id)}
                   </Tappable>
                 ))}
-                {pair.poolLabel && <span className="shrink-0 px-1 text-xs text-mist">Pool {pair.poolLabel}</span>}
+                {pair.poolLabel && <span className="shrink-0 px-1 text-xs text-pb-ink-2">Pool {pair.poolLabel}</span>}
               </div>
               {movingPair?.id === pair.id && (
                 <div className="flex flex-wrap items-center gap-2 px-1 pb-1" role="group" aria-label={`Move ${pair.name}`}>
-                  <span className="text-sm text-mist">Move to</span>
+                  <span className="text-sm text-pb-ink-2">Move to</span>
                   {pools.filter((label) => label !== pair.poolLabel).map((label) => (
                     <Button key={label} variant="ghost" className="!px-3" onClick={() => move(label)}>Pool {label}</Button>
                   ))}

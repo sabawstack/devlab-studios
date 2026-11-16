@@ -18,9 +18,9 @@ const untilDate = (iso) => new Date(iso).toLocaleDateString(undefined, { weekday
 function Heading({ name, tv }) {
   return (
     <header className="pb-fade-in grid gap-1 text-center" style={{ '--pb-delay': '0ms' }}>
-      <p className={`font-bold text-pickle-neon ${tv ? 'text-[clamp(1.5rem,2.4vw,3.5rem)] leading-tight' : 'text-xl sm:text-2xl'}`}>Thanks for playing, everyone! 🏆</p>
+      <p className={`font-bold text-pb-play ${tv ? 'text-[clamp(1.5rem,2.4vw,3.5rem)] leading-tight' : 'text-xl sm:text-2xl'}`}>Thanks for playing, everyone! 🏆</p>
       <h2 className={`font-bold [overflow-wrap:anywhere] ${tv ? 'text-[clamp(1.25rem,1.9vw,2.75rem)] leading-tight' : 'text-lg sm:text-xl'}`}>{name}</h2>
-      <p className={`font-bold uppercase tracking-[0.14em] text-mist ${tv ? 'text-[clamp(0.95rem,1.15vw,1.6rem)]' : 'text-xs'}`}>Final standings</p>
+      <p className={`font-bold uppercase tracking-[0.14em] text-pb-ink-2 ${tv ? 'text-[clamp(0.95rem,1.15vw,1.6rem)]' : 'text-xs'}`}>Final standings</p>
     </header>
   )
 }
@@ -74,29 +74,29 @@ export default function ResultsScreen({ viewer, boardUrl = '', actions = null, h
   if (tv) {
     return (
       <section aria-label="Final results" data-testid="final-results"
-        className="relative flex min-h-0 flex-col gap-[1.6vh] rounded-2xl bg-navy-900 p-4 lg:col-span-full lg:row-span-full lg:justify-[safe_center] lg:overflow-hidden lg:p-[1.4vw]">
+        className="relative flex min-h-0 flex-col gap-[1.6vh] rounded-2xl bg-pb-surface p-4 lg:col-span-full lg:row-span-full lg:justify-[safe_center] lg:overflow-hidden lg:p-[1.4vw]">
         <Heading name={results.name} tv />
         {/* The podium takes what it needs (up to 45% when a list follows; a big tie shrinks it to fit), the list the rest. */}
         {noGames
-          ? <p className="text-center text-[clamp(1.25rem,2vw,3rem)] text-mist">No games were saved in this session.</p>
+          ? <p className="text-center text-[clamp(1.25rem,2vw,3rem)] text-pb-ink-2">No games were saved in this session.</p>
           : <TvPodium key={podiumKey(results.podium)} podium={results.podium} limited={hasList} />}
         {hasList && <TvRest rest={results.rest} didntPlay={results.didntPlay} />}
-        <p className="shrink-0 text-center text-[clamp(1.05rem,1.3vw,1.9rem)] text-mist">{summary} · Results stay available until {untilDate(results.expiresAt)}</p>
+        <p className="shrink-0 text-center text-[clamp(1.05rem,1.3vw,1.9rem)] text-pb-ink-2">{summary} · Results stay available until {untilDate(results.expiresAt)}</p>
       </section>
     )
   }
 
   return (
-    <section aria-label="Final results" data-testid="final-results" className="mx-auto grid w-full max-w-4xl gap-5 rounded-3xl bg-navy-900 p-4 sm:p-6">
+    <section aria-label="Final results" data-testid="final-results" className="mx-auto grid w-full max-w-4xl gap-5 rounded-3xl bg-pb-surface p-4 sm:p-6">
       <Heading name={results.name} />
       {noGames
-        ? <p className="text-center text-mist">No games were saved in this session.</p>
+        ? <p className="text-center text-pb-ink-2">No games were saved in this session.</p>
         : <div className="mx-auto w-full max-w-2xl"><Podium podium={results.podium} highlightIds={highlightIds} /></div>}
       <RestList rest={results.rest} highlightIds={highlightIds} pairs={pairs} />
       {results.didntPlay.length > 0 && (
-        <p className="text-sm text-mist [overflow-wrap:anywhere]" data-testid="didnt-play">Didn't play: {results.didntPlay.join(', ')}</p>
+        <p className="text-sm text-pb-ink-2 [overflow-wrap:anywhere]" data-testid="didnt-play">Didn't play: {results.didntPlay.join(', ')}</p>
       )}
-      <div className="grid gap-1 text-sm text-mist">
+      <div className="grid gap-1 text-sm text-pb-ink-2">
         <p data-testid="results-summary">{summary}</p>
         <p>Results stay available until {untilDate(results.expiresAt)}.</p>
       </div>

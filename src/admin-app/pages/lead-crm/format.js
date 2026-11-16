@@ -17,8 +17,8 @@ export const STAGE_TONES = {
   RESEARCHING: 'bg-sky-100 text-sky-800',
   RESEARCHED: 'bg-sky-100 text-sky-800',
   RULE_QUALIFIED: 'bg-indigo-100 text-indigo-800',
-  AI_REVIEW: 'bg-violet-100 text-violet-800',
-  AI_QUALIFIED: 'bg-violet-100 text-violet-800',
+  AI_REVIEW: 'bg-[var(--ws-selected)] text-[var(--ws-link)]',
+  AI_QUALIFIED: 'bg-[var(--ws-selected)] text-[var(--ws-link)]',
   CONTACT_FOUND: 'bg-cyan-100 text-cyan-800',
   READY_FOR_REVIEW: 'bg-amber-100 text-amber-800',
   READY_TO_CONTACT: 'bg-amber-100 text-amber-900',
@@ -51,7 +51,7 @@ export const COMPLIANCE_TONES = {
   pending: 'bg-slate-100 text-slate-600',
   needs_human_review: 'bg-amber-100 text-amber-800',
   blocked: 'bg-rose-100 text-rose-800',
-  waived: 'bg-violet-100 text-violet-800',
+  waived: 'bg-[var(--ws-selected)] text-[var(--ws-link)]',
 }
 
 export function humanize(value) {

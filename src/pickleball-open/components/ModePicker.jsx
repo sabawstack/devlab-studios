@@ -9,9 +9,9 @@ export function ModePicker({ value, onChange, label = 'Choose game mode' }) {
         const checked = mode === value
         return (
           <button key={mode} type="button" role="radio" aria-checked={checked} onClick={() => onChange(mode)}
-            className={`min-h-14 rounded-2xl p-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-pickle-neon ${checked ? 'bg-pickle-neon text-ink' : 'border border-navy-700 bg-navy-900 text-white hover:border-pickle-neon'}`}>
+            className={`min-h-14 rounded-2xl p-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-pb-play ${checked ? 'bg-pb-play text-pb-canvas' : 'border border-pb-rule bg-pb-surface text-white hover:border-pb-play'}`}>
             <span className="block font-bold">{MODE_INFO[mode].label}</span>
-            <span className={`block text-sm ${checked ? 'text-ink' : 'text-mist'}`}>{MODE_INFO[mode].summary}</span>
+            <span className={`block text-sm ${checked ? 'text-pb-canvas' : 'text-pb-ink-2'}`}>{MODE_INFO[mode].summary}</span>
           </button>
         )
       })}
@@ -23,9 +23,9 @@ export function ModePicker({ value, onChange, label = 'Choose game mode' }) {
 export default function ModeSheet({ mode, onPick, onClose }) {
   return (
     <Sheet title="Game mode" onClose={onClose}>
-      <p className="mb-4 text-sm text-mist">{MODE_HELP}</p>
+      <p className="mb-4 text-sm text-pb-ink-2">{MODE_HELP}</p>
       <ModePicker value={mode} onChange={onPick} label="Game mode" />
-      <p className="mt-4 text-sm text-mist">A change applies from the next game proposed. Games already proposed or on court stay as they are. A keep-together or keep-apart rule can hold a player back or bring a partner on early.</p>
+      <p className="mt-4 text-sm text-pb-ink-2">A change applies from the next game proposed. Games already proposed or on court stay as they are. A keep-together or keep-apart rule can hold a player back or bring a partner on early.</p>
     </Sheet>
   )
 }

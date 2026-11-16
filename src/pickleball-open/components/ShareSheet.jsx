@@ -12,25 +12,25 @@ export default function ShareSheet({ code, selfCheckIn, onToggleCheckIn, onClose
         <div className="flex flex-col items-center gap-3 text-center">
           <h3 className="font-bold">Player board</h3>
           <QrCode url={viewerLink(origin, code)} size={200} />
-          <p className="text-2xl font-bold tracking-[0.08em] text-pickle-neon">{formatPublicCode(code)}</p>
-          <p className="text-sm text-mist">Players scan this to follow courts and standings. It can't change anything.</p>
+          <p className="text-2xl font-bold tracking-[0.08em] text-pb-play">{formatPublicCode(code)}</p>
+          <p className="text-sm text-pb-ink-2">Players scan this to follow courts and standings. It can't change anything.</p>
         </div>
         <div className="flex flex-col items-center gap-3 text-center">
           <h3 className="font-bold">Check in</h3>
           {selfCheckIn ? (
             <>
               <QrCode url={checkInLink(origin, code)} size={200} label="QR code for self check-in" />
-              <p className="text-sm text-mist">New arrivals scan this and type their own name. They join level with whoever has played least.</p>
+              <p className="text-sm text-pb-ink-2">New arrivals scan this and type their own name. They join level with whoever has played least.</p>
             </>
           ) : (
-            <p className="text-sm text-mist">Self check-in is off. Only you can add players.</p>
+            <p className="text-sm text-pb-ink-2">Self check-in is off. Only you can add players.</p>
           )}
-          <Button variant={selfCheckIn ? 'ghost' : 'neon'} onClick={onToggleCheckIn}>
+          <Button variant={selfCheckIn ? 'ghost' : 'play'} onClick={onToggleCheckIn}>
             {selfCheckIn ? 'Turn self check-in off' : 'Turn self check-in on'}
           </Button>
         </div>
       </div>
-      <a href={tvLink(origin, code)} target="_blank" rel="noopener" className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-navy-700 px-4 font-semibold hover:bg-navy-900">Open the TV board</a>
+      <a href={tvLink(origin, code)} target="_blank" rel="noopener" className="mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-pb-rule px-4 font-semibold hover:bg-pb-surface">Open the TV board</a>
     </Sheet>
   )
 }

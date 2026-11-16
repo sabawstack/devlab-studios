@@ -121,6 +121,9 @@ test.describe('player board status card (PB-QUEUE-02)', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto(`/pickleball/s/${code}`)
     await expect(card(page)).toBeVisible()
+    // Audit the board at rest: the court cards flip in from 20 % opacity
+    // (.pb-flip, 420 ms), and axe measures contrast at whatever opacity it finds.
+    await page.waitForFunction(() => document.getAnimations().filter((a) => a.animationName === 'pb-flip').every((a) => a.playState === 'finished'))
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()
     const blocking = results.violations.filter((v) => ['serious', 'critical'].includes(v.impact))
     expect(blocking.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`)).toEqual([])

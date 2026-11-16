@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
+import { PB } from '../../config/pickleballPalette'
 
 // Client-side SVG from a URL this app built itself (never raw user input), so
 // injecting the library's markup is safe. Copied from the operator app's
@@ -8,7 +9,7 @@ export default function QrCode({ url, size = 176, label = 'QR code for the playe
   const [markup, setMarkup] = useState(null)
   useEffect(() => {
     let ignore = false
-    QRCode.toString(url, { type: 'svg', width: size, margin: 2, color: { dark: '#0b1426', light: '#ffffff' } })
+    QRCode.toString(url, { type: 'svg', width: size, margin: 2, color: { dark: PB.canvas, light: '#ffffff' } })
       .then((svg) => { if (!ignore) setMarkup(svg) })
       .catch(() => {})
     return () => { ignore = true }

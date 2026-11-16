@@ -78,7 +78,7 @@ export default function SessionApp({ code }) {
   if (!code || status === 'not-found') return <ExpiredNotice />
   if (host && hostKey && !authFailed) return <HostConsole code={code} hostKey={hostKey} host={host} status={status} onHost={setHost} />
   if (captain && captainKey) return <CaptainConsole code={code} captainKey={captainKey} snapshot={captain} status={status} onSnapshot={setCaptain} signInNotice={signInNotice} />
-  if (!viewer) return <p className="p-8 text-center text-mist" role="status">Loading the board…</p>
+  if (!viewer) return <p className="p-8 text-center text-pb-ink-2" role="status">Loading the board…</p>
   return <ViewerBoard viewer={viewer} lastSnapshotAt={lastSnapshotAt} lastContactAt={lastContactAt} invalidHostLink={authFailed && !canFallBack} revokedCaptainLink={captainRevoked}
     signInNotice={signInNotice} />
 }

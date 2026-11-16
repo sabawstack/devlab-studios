@@ -82,7 +82,7 @@ function AdminLoginsPanel({ minPasswordLength = 12 }) {
           Password
           <input type="password" required minLength={minPasswordLength} value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} className={input} autoComplete="new-password" />
         </label>
-        <button type="submit" disabled={busy} className="rounded-md bg-brand-teal px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">Add login</button>
+        <button type="submit" disabled={busy} className="rounded-md bg-[var(--ws-action)] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">Add login</button>
       </form>
       {status ? <p role="status" className={`text-sm ${status.tone === 'ok' ? 'text-emerald-700' : 'text-rose-700'}`}>{status.message}</p> : null}
     </section>

@@ -49,7 +49,7 @@ function DigestCard({ digest, onToggle, onDelete, busy }) {
             type="button"
             onClick={() => onToggle(digest)}
             disabled={busy}
-            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-violet-400 hover:text-violet-700 disabled:opacity-50"
+            className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-[var(--ws-link)] hover:text-[var(--ws-link)] disabled:opacity-50"
           >
             {digest.status === 'published' ? 'Unpublish' : 'Publish'}
           </button>
@@ -71,7 +71,7 @@ function DigestCard({ digest, onToggle, onDelete, busy }) {
               href={item.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-semibold text-slate-900 hover:text-violet-700 hover:underline"
+              className="text-sm font-semibold text-slate-900 hover:text-[var(--ws-link)] hover:underline"
             >
               {item.title}
             </a>
@@ -161,7 +161,7 @@ function DigestsPage() {
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Daily Digests</h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-500">
-            The AI &amp; Automation Daily log on <a href="/insights/daily" className="font-semibold text-violet-700 hover:underline">/insights/daily</a>.
+            The AI &amp; Automation Daily log on <a href="/insights/daily" className="font-semibold text-[var(--ws-link)] hover:underline">/insights/daily</a>.
             Generated once a day from a fixed list of feeds and kept for seven days, after which each edition is removed automatically.
           </p>
         </div>
@@ -169,7 +169,7 @@ function DigestsPage() {
           type="button"
           onClick={handleGenerate}
           disabled={busy}
-          className="rounded-lg bg-violet-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-800 disabled:opacity-50"
+          className="rounded-lg bg-[var(--ws-action)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--ws-action-hover)] disabled:opacity-50"
         >
           {busy ? 'Working…' : 'Generate now'}
         </button>

@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { Button, Sheet } from '../components/ui.jsx'
 import { substituteCandidates } from './substituteCandidates'
 
-const field = 'min-h-11 w-full rounded-xl border border-navy-700 bg-navy-900 px-3 text-base text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pickle-neon'
+const field = 'min-h-11 w-full rounded-xl border border-pb-field bg-pb-surface px-3 text-base text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pb-play'
 
 export default function SubstituteSheet({ tournament, players, onCourtIds, error, onSubstitute, onClose }) {
   const [pairId, setPairId] = useState(() => (tournament.pairs.find((p) => !onCourtIds.has(p.id)) ?? tournament.pairs[0])?.id ?? '')
@@ -30,19 +30,19 @@ export default function SubstituteSheet({ tournament, players, onCourtIds, error
   return (
     <Sheet title="Substitute a player" onClose={onClose}>
       <div className="grid gap-3">
-        <label className="grid gap-1 text-sm text-mist">Pair
+        <label className="grid gap-1 text-sm text-pb-ink-2">Pair
           <select className={field} value={pairId} onChange={(e) => { setPairId(e.target.value); setOutId('') }}>
             {tournament.pairs.map((p) => <option key={p.id} value={p.id} disabled={onCourtIds.has(p.id)}>{p.name}{onCourtIds.has(p.id) ? ' (on court)' : ''}</option>)}
           </select>
         </label>
-        <label className="grid gap-1 text-sm text-mist">Player coming off
+        <label className="grid gap-1 text-sm text-pb-ink-2">Player coming off
           <select className={field} value={outId} onChange={(e) => setOutId(e.target.value)}>
             <option value="">Pick one</option>
             {pair?.playerIds.map((id) => <option key={id} value={id}>{nameOf(id)}</option>)}
           </select>
         </label>
         {bench.length > 0 ? (
-          <label className="grid gap-1 text-sm text-mist">Substitute
+          <label className="grid gap-1 text-sm text-pb-ink-2">Substitute
             <select className={field} value={inId} onChange={(e) => setInId(e.target.value)}>
               <option value="">Pick one</option>
               {bench.map((p) => <option key={p.id} value={p.id}>{p.name}{p.status === 'BREAK' ? ' (on a break)' : ''}</option>)}
@@ -52,8 +52,8 @@ export default function SubstituteSheet({ tournament, players, onCourtIds, error
           <p className="text-sm text-amber-200">Everyone is in a pair. Add the substitute on the Players tab first.</p>
         )}
         {error && <p role="alert" className="rounded-xl bg-rose-500/15 px-4 py-3 text-rose-100">{error}</p>}
-        <p className="text-sm text-mist">The pair keeps its results and its place in the draw. A pair on court can be changed after its game.</p>
-        <Button variant="neon" disabled={busy || !pair || pairOnCourt || !outId || !inId} onClick={submit}>Substitute</Button>
+        <p className="text-sm text-pb-ink-2">The pair keeps its results and its place in the draw. A pair on court can be changed after its game.</p>
+        <Button variant="play" disabled={busy || !pair || pairOnCourt || !outId || !inId} onClick={submit}>Substitute</Button>
       </div>
     </Sheet>
   )

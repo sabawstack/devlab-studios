@@ -63,15 +63,15 @@ export default function TvCourt({ court, fresh = true }) {
     <article
       ref={card}
       style={size ? { fontSize: `${size}px` } : undefined}
-      className={`tv-court flex min-h-0 flex-col justify-center overflow-hidden rounded-[0.8em] p-[0.5em] text-xl leading-[1.2] lg:text-[1.2vw] ${court.state === 'UP_NEXT' ? 'border-4 border-pickle-neon bg-ink' : 'bg-navy-900'}`}
+      className={`tv-court flex min-h-0 flex-col justify-center overflow-hidden rounded-[0.8em] p-[0.5em] text-xl leading-[1.2] lg:text-[1.2vw] ${court.state === 'UP_NEXT' ? 'border-4 border-pb-play bg-pb-canvas' : 'bg-pb-surface'}`}
       data-testid="tv-court"
     >
       <div ref={content} className="shrink-0">
         <div className="flex flex-wrap items-baseline justify-between gap-x-[0.5em]">
-          <h2 className="text-[1.1em] font-bold text-pickle-neon">{court.label}</h2>
+          <h2 className="text-[1.1em] font-bold text-pb-play">{court.label}</h2>
           {/* The full label where it fits on one line; a narrow tile (16 courts on a small TV) keeps
               the names large and says only "Up next" (tv-court-state rules in pickleball-open.css). */}
-          <span className={`text-[0.55em] font-bold uppercase tracking-[0.08em] ${live ? 'text-mist' : 'text-pickle-neon'}`}>
+          <span className={`text-[0.55em] font-bold uppercase tracking-[0.08em] ${live ? 'text-pb-ink-2' : 'text-pb-play'}`}>
             {court.state === 'UP_NEXT' && fresh ? (
               <>
                 <span className="tv-state-long">{courtStateLabel(court, { fresh })}</span>
@@ -80,12 +80,12 @@ export default function TvCourt({ court, fresh = true }) {
             ) : courtStateLabel(court, { fresh })}
           </span>
         </div>
-        {court.fixtureLabel && <p className="text-[0.55em] font-bold uppercase tracking-[0.08em] text-mist">{court.fixtureLabel}</p>}
+        {court.fixtureLabel && <p className="text-[0.55em] font-bold uppercase tracking-[0.08em] text-pb-ink-2">{court.fixtureLabel}</p>}
         {court.teamA.length > 0 && (
           <div className="mt-[0.25em] font-semibold">
-            <Team players={court.teamA} color="border-pickle-neon" />
-            <hr className="my-[0.25em] border-navy-700" />
-            <Team players={court.teamB} color="border-pickle-teamb" />
+            <Team players={court.teamA} color="border-pb-play" />
+            <hr className="my-[0.25em] border-pb-rule" />
+            <Team players={court.teamB} color="border-pb-team-b" />
           </div>
         )}
       </div>

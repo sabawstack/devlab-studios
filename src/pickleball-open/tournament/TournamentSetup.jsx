@@ -29,7 +29,7 @@ export default function TournamentSetup({ tournament, activeCount, send, onGener
       <Panel className="flex flex-wrap items-center justify-between gap-3">
         <p className="min-w-0 text-sm">
           <span className="font-bold">{tournament.formatLabel}</span>
-          <span className="text-mist"> · Pairs: {PAIRING_INFO[tournament.pairing].label} · Seeding: {SEEDING_INFO[tournament.seeding].label}</span>
+          <span className="text-pb-ink-2"> · Pairs: {PAIRING_INFO[tournament.pairing].label} · Seeding: {SEEDING_INFO[tournament.seeding].label}</span>
         </p>
         <Button variant="ghost" aria-expanded={false} onClick={() => setChanging(true)}>Change setup</Button>
       </Panel>
@@ -41,15 +41,15 @@ export default function TournamentSetup({ tournament, activeCount, send, onGener
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold">{drafted ? 'Change the draw' : 'Set up the draw'}</h2>
-          <p className="text-sm text-mist">
+          <p className="text-sm text-pb-ink-2">
             {activeCount} players checked in: {pairs} pair{pairs === 1 ? '' : 's'}{activeCount % 2 ? ', 1 player left over' : ''}. Players on a break are not drawn.
           </p>
         </div>
         {drafted && <Button variant="ghost" aria-expanded onClick={() => setChanging(false)}>Keep this draft</Button>}
       </div>
-      <div className="grid gap-2"><h3 className="text-sm font-bold uppercase tracking-[0.1em] text-mist">Format</h3><FormatPicker value={format} onChange={setFormat} /></div>
-      <div className="grid gap-2"><h3 className="text-sm font-bold uppercase tracking-[0.1em] text-mist">Pairs</h3><PairingPicker value={pairing} onChange={setPairing} /></div>
-      <div className="grid gap-2"><h3 className="text-sm font-bold uppercase tracking-[0.1em] text-mist">Seeding</h3><SeedingPicker value={seeding} onChange={setSeeding} /></div>
+      <div className="grid gap-2"><h3 className="text-sm font-bold uppercase tracking-[0.1em] text-pb-ink-2">Format</h3><FormatPicker value={format} onChange={setFormat} /></div>
+      <div className="grid gap-2"><h3 className="text-sm font-bold uppercase tracking-[0.1em] text-pb-ink-2">Pairs</h3><PairingPicker value={pairing} onChange={setPairing} /></div>
+      <div className="grid gap-2"><h3 className="text-sm font-bold uppercase tracking-[0.1em] text-pb-ink-2">Seeding</h3><SeedingPicker value={seeding} onChange={setSeeding} /></div>
       {short && <p className="text-sm text-amber-200" role="status">{FORMAT_INFO[format].label} needs at least {minimumEntrants(format)} pairs. Add players first.</p>}
       <Button variant={drafted ? 'ghost' : 'primary'} disabled={short} onClick={generate}>{drafted ? 'Generate again' : 'Generate the draw'}</Button>
     </Panel>

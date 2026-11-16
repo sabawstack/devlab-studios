@@ -74,7 +74,7 @@ function PerItemCollectionPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-slate-900">{config.label}</h1>
-        <button type="button" onClick={startNew} className="rounded-lg bg-brand-teal px-4 py-2 text-sm font-semibold text-white hover:brightness-95">
+        <button type="button" onClick={startNew} className="rounded-lg bg-[var(--ws-action)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--ws-action-hover)]">
           Add New
         </button>
       </div>
@@ -89,7 +89,7 @@ function PerItemCollectionPage() {
               key={item.id}
               type="button"
               onClick={() => selectItem(item)}
-              className={`block w-full rounded-lg border px-3 py-2 text-left text-sm ${selected?.id === item.id ? 'border-brand-teal bg-brand-mint/40 font-semibold text-brand-ink' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}
+              className={`block w-full rounded-lg border px-3 py-2 text-left text-sm ${selected?.id === item.id ? 'border-[var(--ws-link)] bg-[var(--ws-selected)] font-semibold text-[var(--ws-ink)]' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}
             >
               {config.itemLabel ? config.itemLabel(item) : item.id}
             </button>
@@ -105,7 +105,7 @@ function PerItemCollectionPage() {
               {message ? <p className={message.type === 'success' ? 'text-sm text-emerald-700' : 'text-sm text-rose-600'}>{message.text}</p> : null}
 
               <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={handleSave} className="rounded-lg bg-brand-teal px-4 py-2 text-sm font-semibold text-white hover:brightness-95">
+                <button type="button" onClick={handleSave} className="rounded-lg bg-[var(--ws-action)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--ws-action-hover)]">
                   Save
                 </button>
                 {selected.id ? (

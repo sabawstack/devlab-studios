@@ -18,7 +18,7 @@ const KINDS = [
   ['OPEN_PLAY', 'Open play', 'Players rotate through the courts all session.'],
   ['TOURNAMENT', 'Tournament', 'Fixed pairs play a draw: round robin, pools or a bracket.'],
 ]
-const field = 'w-full rounded-xl border border-navy-700 bg-navy-900 px-3 py-3 text-base text-white placeholder:text-mist/70 focus:border-pickle-neon focus:outline-none'
+const field = 'w-full rounded-xl border border-pb-field bg-pb-surface px-3 py-3 text-base text-white placeholder:text-pb-ink-2/70 focus:border-pb-play focus:outline-none'
 
 export default function CreateSessionApp({ siteKey }) {
   const [step, setStep] = useState('details')
@@ -84,9 +84,9 @@ export default function CreateSessionApp({ siteKey }) {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-6 md:py-12">
-      <a href="/pickleball" className="text-sm text-mist hover:text-white">← DevLab Pickleball</a>
+      <a href="/pickleball" className="text-sm text-pb-ink-2 hover:text-white">← DevLab Pickleball</a>
       <h1 className="mt-3 text-3xl font-bold md:text-4xl">{step === 'details' ? 'New session' : 'Add players'}</h1>
-      <p className="mt-1 text-mist">Step {step === 'details' ? 1 : 2} of 2 · free, no sign-up</p>
+      <p className="mt-1 text-pb-ink-2">Step {step === 'details' ? 1 : 2} of 2 · free, no sign-up</p>
 
       {step === 'details' && (
         <form className="mt-6 grid gap-5 md:grid-cols-2" onSubmit={(event) => { event.preventDefault(); setStep('players') }}>
@@ -94,16 +94,16 @@ export default function CreateSessionApp({ siteKey }) {
             {KINDS.map(([kind, label, summary]) => (
               <button key={kind} type="button" role="radio" aria-checked={details.kind === kind}
                 onClick={() => update({ kind, name: details.name === 'Open Play' || details.name === 'Tournament' ? label : details.name })}
-                className={`min-h-16 rounded-2xl p-4 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pickle-neon ${details.kind === kind ? 'bg-pickle-neon text-ink' : 'border border-navy-700 bg-navy-900 text-white hover:border-pickle-neon'}`}>
+                className={`min-h-16 rounded-2xl p-4 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pb-play ${details.kind === kind ? 'bg-pb-play text-pb-canvas' : 'border border-pb-rule bg-pb-surface text-white hover:border-pb-play'}`}>
                 <span className="block text-lg font-bold">{label}</span>
-                <span className={`block text-sm ${details.kind === kind ? 'text-ink' : 'text-mist'}`}>{summary}</span>
+                <span className={`block text-sm ${details.kind === kind ? 'text-pb-canvas' : 'text-pb-ink-2'}`}>{summary}</span>
               </button>
             ))}
           </div>
-          <label className="grid gap-1.5 text-sm text-mist">Session name
+          <label className="grid gap-1.5 text-sm text-pb-ink-2">Session name
             <input required maxLength={60} className={field} value={details.name} onChange={(e) => update({ name: e.target.value })} />
           </label>
-          <label className="grid gap-1.5 text-sm text-mist">Your name (shown as "Hosted by")
+          <label className="grid gap-1.5 text-sm text-pb-ink-2">Your name (shown as "Hosted by")
             <input required maxLength={40} className={field} value={details.hostDisplayName} placeholder="e.g. Coach Mike" onChange={(e) => update({ hostDisplayName: e.target.value })} />
           </label>
           <Panel>
@@ -120,34 +120,34 @@ export default function CreateSessionApp({ siteKey }) {
             <span className="font-semibold">Games to</span>
             <div className="mt-2 grid grid-cols-3 gap-2" role="radiogroup" aria-label="Games to">
               {TARGETS.map((target) => (
-                <Button key={target} role="radio" aria-checked={details.target === target} variant={details.target === target ? 'neon' : 'ghost'} onClick={() => update({ target })}>{target}</Button>
+                <Button key={target} role="radio" aria-checked={details.target === target} variant={details.target === target ? 'play' : 'ghost'} onClick={() => update({ target })}>{target}</Button>
               ))}
             </div>
-            <p className="mt-3 text-sm text-mist">Sudden death or win by 2: both are accepted when you enter the score.</p>
+            <p className="mt-3 text-sm text-pb-ink-2">Sudden death or win by 2: both are accepted when you enter the score.</p>
           </Panel>
           {details.kind === 'TOURNAMENT' ? (
             <Panel className="md:col-span-2">
               <p className="mb-3 font-semibold">Format</p>
               <FormatPicker value={details.format} onChange={(format) => update({ format })} />
-              <p className="mt-3 text-sm text-mist">Once everyone is in, you choose how pairs are made and seeded, generate the draw, and edit it as much as you like before you start.</p>
+              <p className="mt-3 text-sm text-pb-ink-2">Once everyone is in, you choose how pairs are made and seeded, generate the draw, and edit it as much as you like before you start.</p>
             </Panel>
           ) : (
             <Panel className="md:col-span-2">
               <p className="font-semibold">Choose game mode</p>
-              <p className="mb-3 mt-1 text-sm text-mist">{MODE_HELP}</p>
+              <p className="mb-3 mt-1 text-sm text-pb-ink-2">{MODE_HELP}</p>
               <ModePicker value={details.mode} onChange={(mode) => update({ mode })} />
-              <p className="mt-3 text-sm text-mist">You can switch any time during the session, and every proposed game can be edited before it starts. A keep-together or keep-apart rule can hold a player back or bring a partner on early.</p>
+              <p className="mt-3 text-sm text-pb-ink-2">You can switch any time during the session, and every proposed game can be edited before it starts. A keep-together or keep-apart rule can hold a player back or bring a partner on early.</p>
             </Panel>
           )}
           <label className="flex min-h-11 items-center gap-3 md:col-span-2">
-            <input type="checkbox" className="h-5 w-5 accent-[#c6ff2e]" checked={details.selfCheckIn} onChange={(e) => update({ selfCheckIn: e.target.checked })} />
-            <span>Let players check themselves in by QR <span className="text-sm text-mist">(you can turn this off any time)</span></span>
+            <input type="checkbox" className="h-5 w-5 accent-pb-play" checked={details.selfCheckIn} onChange={(e) => update({ selfCheckIn: e.target.checked })} />
+            <span>Let players check themselves in by QR <span className="text-sm text-pb-ink-2">(you can turn this off any time)</span></span>
           </label>
           <div className="grid gap-1.5 md:col-span-2">
-            <label className="grid gap-1.5 text-sm text-mist">Welcome message (players see it on the board, check-in page and TV; leave empty for none)
+            <label className="grid gap-1.5 text-sm text-pb-ink-2">Welcome message (players see it on the board, check-in page and TV; leave empty for none)
               <textarea rows={2} className={field} value={announcement} onChange={(e) => update({ announcement: e.target.value })} />
             </label>
-            <p className={`text-right text-xs ${announcementOver ? 'font-bold text-rose-200' : 'text-mist'}`} aria-live="polite">
+            <p className={`text-right text-xs ${announcementOver ? 'font-bold text-rose-200' : 'text-pb-ink-2'}`} aria-live="polite">
               {announcement.trim().length}/{LIMITS.maxAnnouncementLength}{announcementOver ? `: keep it to ${LIMITS.maxAnnouncementLength} characters` : ''}
             </p>
           </div>
@@ -159,27 +159,27 @@ export default function CreateSessionApp({ siteKey }) {
         <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div className="grid gap-4">
             <div className="grid grid-cols-2 gap-2" role="tablist" aria-label="How to add players">
-              <Button role="tab" aria-selected={rosterMode === 'paste'} variant={rosterMode === 'paste' ? 'neon' : 'ghost'} onClick={() => setRosterMode('paste')}>Paste list</Button>
-              <Button role="tab" aria-selected={rosterMode === 'csv'} variant={rosterMode === 'csv' ? 'neon' : 'ghost'} onClick={() => setRosterMode('csv')}>Upload CSV</Button>
+              <Button role="tab" aria-selected={rosterMode === 'paste'} variant={rosterMode === 'paste' ? 'play' : 'ghost'} onClick={() => setRosterMode('paste')}>Paste list</Button>
+              <Button role="tab" aria-selected={rosterMode === 'csv'} variant={rosterMode === 'csv' ? 'play' : 'ghost'} onClick={() => setRosterMode('csv')}>Upload CSV</Button>
             </div>
             {rosterMode === 'paste' ? (
-              <label className="grid gap-1.5 text-sm text-mist">Paste names from Reclub, WhatsApp or anywhere: one per line, or comma-separated
+              <label className="grid gap-1.5 text-sm text-pb-ink-2">Paste names from Reclub, WhatsApp or anywhere: one per line, or comma-separated
                 <textarea className={`${field} h-48 font-mono text-sm`} value={pasted} onChange={(e) => setPasted(e.target.value)} placeholder={'1. Ana\n2. Ben\nCarlo, Dina'} />
               </label>
             ) : (
-              <label className="grid gap-1.5 text-sm text-mist">CSV with columns: name, skill (1–8, optional), DUPR ID (optional)
+              <label className="grid gap-1.5 text-sm text-pb-ink-2">CSV with columns: name, skill (1–8, optional), DUPR ID (optional)
                 <input type="file" accept=".csv,text/csv" className={field} onChange={onCsvFile} />
               </label>
             )}
-            <p className="text-sm text-mist">You can add late arrivals any time. The board is public to anyone with the link, so first names or nicknames are fine.</p>
+            <p className="text-sm text-pb-ink-2">You can add late arrivals any time. The board is public to anyone with the link, so first names or nicknames are fine.</p>
           </div>
           <Panel>
             <div className="flex items-baseline justify-between">
               <h2 className="font-bold">{roster.entries.length} players found</h2>
-              {roster.duplicates.length > 0 && <span className="text-xs text-mist">{roster.duplicates.length} duplicate{roster.duplicates.length > 1 ? 's' : ''} removed</span>}
+              {roster.duplicates.length > 0 && <span className="text-xs text-pb-ink-2">{roster.duplicates.length} duplicate{roster.duplicates.length > 1 ? 's' : ''} removed</span>}
             </div>
             <ul className="mt-3 flex flex-wrap gap-1.5 text-sm">
-              {roster.entries.map((entry) => <li key={entry.name} className="rounded-full bg-navy-800 px-3 py-1">{entry.name}</li>)}
+              {roster.entries.map((entry) => <li key={entry.name} className="rounded-full bg-pb-raised px-3 py-1">{entry.name}</li>)}
             </ul>
             {roster.warnings.map((warning) => <p key={warning} className="mt-2 text-xs text-amber-200">{warning}</p>)}
             {roster.entries.length > 0 && roster.entries.length < 4 && <p className="mt-3 text-sm text-amber-200">Add at least 4 players for the first game.</p>}

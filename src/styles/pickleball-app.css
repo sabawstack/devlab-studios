@@ -1,25 +1,30 @@
 /*
- * DevLab Pickleball app screens on the shared brand tokens (BRAND-03, ADR 0016).
+ * DevLab Pickleball app screens on the DevLab brand (BRAND-03, ADR 0016).
  *
  * Imported only by the app shell (src/layouts/PickleballAppShell.astro), never
- * by the public Pickleball pages inside the brand shell. Navy and lime stay:
- * they are the game, legible across a hall. What is not the game moves onto
- * the brand: the type face, the indigo non-game action and the radius scale.
- * The app is a dark surface, so its focus ring is the light play colour, the
- * same rule the brand applies to graphite (.ink-panel uses its light ink).
+ * by the public Pickleball pages inside the brand shell. The whole app sits on
+ * the brand's graphite surface (the home hero, .ink-panel); the court colours
+ * are the light ends of the brand gradient: indigo for play, magenta for team
+ * B. The values mirror src/config/pickleballPalette.js (Tailwind, SVG art and
+ * the poster read that file); src/config/pickleballPalette.test.js keeps the
+ * two equal. The app is a dark surface, so its focus ring is the light play
+ * colour, the same rule the brand applies to graphite.
  * Guarded by src/styles/productThemes.test.ts.
  */
 @import './brand-tokens.css';
 
 .pb-app {
-  /* Play (product-owned): the court colours. */
-  --pb-canvas: #0b1426;
-  --pb-surface: #11214d;
-  --pb-ink: #ffffff;
-  --pb-ink-2: #b5c4e1;
-  --pb-play: #c6ff2e;
-  --pb-team-b: #8d9bff;
-  /* Not play (inherited from the brand): actions, focus, radius, type. */
+  --pb-canvas: var(--exhibit-paper);
+  --pb-sunken: #0f0d22;
+  --pb-surface: var(--exhibit-paper-2);
+  --pb-raised: #29274a;
+  --pb-rule: #3a3858;
+  --pb-field: #77749a;
+  --pb-ink: var(--exhibit-ink);
+  --pb-ink-2: var(--exhibit-ink-2);
+  --pb-play: #c7d2fe;
+  --pb-team-b: #e879f9;
+  /* The non-game primary action: brand indigo. */
   --pb-action: var(--link);
   --pb-action-hover: #4f46e5;
   --pb-action-ink: #ffffff;
@@ -36,7 +41,7 @@
   outline-offset: 2px;
 }
 
-/* The non-game primary action (create, sign in, open the board): brand indigo, not the legacy #4500ff. */
+/* The non-game primary action (create, sign in, open the board). */
 .pb-action {
   background: var(--pb-action);
   color: var(--pb-action-ink);

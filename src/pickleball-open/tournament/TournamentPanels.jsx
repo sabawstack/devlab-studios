@@ -16,14 +16,14 @@ export default function TournamentPanels({ viewer, courtsGrid, me, section }) {
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
       <div className="grid content-start gap-5">
-        {t.phase === 'SETUP' && <p className="text-mist">The host is setting up the draw.</p>}
-        {t.phase === 'DRAFT' && <p className="rounded-xl bg-navy-900 px-4 py-3 text-mist">Draft draw: the host may still change pairs and games before the start.</p>}
+        {t.phase === 'SETUP' && <p className="text-pb-ink-2">The host is setting up the draw.</p>}
+        {t.phase === 'DRAFT' && <p className="rounded-xl bg-pb-surface px-4 py-3 text-pb-ink-2">Draft draw: the host may still change pairs and games before the start.</p>}
         <section className={section('courts')} aria-label="Courts">
           {courtsGrid}
           {coming.length > 0 && (
             // Bordered rather than a filled panel, so the game cards inside stand out from it.
-            <div className="mt-4 rounded-2xl border border-navy-800 p-3">
-              <h2 className="mb-2 font-bold">Coming up <span className="font-normal text-mist">· in the order free courts take them</span></h2>
+            <div className="mt-4 rounded-2xl border border-pb-raised p-3">
+              <h2 className="mb-2 font-bold">Coming up <span className="font-normal text-pb-ink-2">· in the order free courts take them</span></h2>
               <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(min(100%,15rem),1fr))]">
                 {coming.map((game) => <GameCard key={game.id} fixture={game} highlight={myPair} note={HELD_LABEL[game.held] ?? null} />)}
               </div>

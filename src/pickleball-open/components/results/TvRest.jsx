@@ -63,12 +63,12 @@ function FittedRest({ rest, didntPlay }) {
       content: (
         // The record wraps under the name in a narrow column instead of squeezing it.
         <span className="flex flex-wrap items-baseline justify-between gap-x-3">
-          <span className={`min-w-[8ch] ${WRAP}`}><b className="text-pickle-neon tabular-nums">{entry.place}</b> {entry.name}</span>
-          <span className="whitespace-nowrap tabular-nums text-mist">{recordWithPoints(entry)}</span>
+          <span className={`min-w-[8ch] ${WRAP}`}><b className="text-pb-play tabular-nums">{entry.place}</b> {entry.name}</span>
+          <span className="whitespace-nowrap tabular-nums text-pb-ink-2">{recordWithPoints(entry)}</span>
         </span>
       ),
     })),
-    ...(didntPlay.length ? [{ key: 'didnt-play', span: true, content: <span className={`text-mist ${WRAP}`}>Didn't play: {didntPlay.join(', ')}</span> }] : []),
+    ...(didntPlay.length ? [{ key: 'didnt-play', span: true, content: <span className={`text-pb-ink-2 ${WRAP}`}>Didn't play: {didntPlay.join(', ')}</span> }] : []),
   ]
   const shown = Number.isFinite(limit) ? limit : items.length
   const hiddenRanked = Math.max(0, rest.length - shown)
@@ -88,7 +88,7 @@ function FittedRest({ rest, didntPlay }) {
       </div>
       {/* Always rendered so its height can be measured; it takes room only when rows are hidden. */}
       <p ref={note} data-shown={overflowing} aria-hidden={!overflowing}
-        className={`text-center text-[clamp(1.05rem,1.3vw,1.9rem)] font-semibold text-pickle-neon ${overflowing ? 'shrink-0' : 'pointer-events-none invisible absolute inset-x-0'}`}
+        className={`text-center text-[clamp(1.05rem,1.3vw,1.9rem)] font-semibold text-pb-play ${overflowing ? 'shrink-0' : 'pointer-events-none invisible absolute inset-x-0'}`}
         {...(overflowing ? { 'data-testid': 'tv-results-more' } : {})}>
         {hiddenRanked > 0 ? `+${hiddenRanked} more: scan the QR for the full list` : 'Scan the QR for the full list'}
       </p>

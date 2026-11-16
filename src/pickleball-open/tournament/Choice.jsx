@@ -9,9 +9,9 @@ export function Choice({ label, order, info, value, onChange, columns = false })
         const checked = key === value
         return (
           <button key={key} type="button" role="radio" aria-checked={checked} onClick={() => onChange(key)}
-            className={`min-h-14 rounded-2xl p-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-pickle-neon ${checked ? 'bg-pickle-neon text-ink' : 'border border-navy-700 bg-navy-900 text-white hover:border-pickle-neon'}`}>
+            className={`min-h-14 rounded-2xl p-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-pb-play ${checked ? 'bg-pb-play text-pb-canvas' : 'border border-pb-rule bg-pb-surface text-white hover:border-pb-play'}`}>
             <span className="block font-bold">{info[key].label}</span>
-            <span className={`block text-sm ${checked ? 'text-ink' : 'text-mist'}`}>{info[key].summary}</span>
+            <span className={`block text-sm ${checked ? 'text-pb-canvas' : 'text-pb-ink-2'}`}>{info[key].summary}</span>
           </button>
         )
       })}

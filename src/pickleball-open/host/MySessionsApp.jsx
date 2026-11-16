@@ -63,9 +63,9 @@ export default function MySessionsApp() {
   return (
     <main className="mx-auto grid max-w-2xl gap-5 px-4 py-8">
       <header>
-        <a href="/pickleball" className="text-sm text-mist underline">DevLab Pickleball</a>
+        <a href="/pickleball" className="text-sm text-pb-ink-2 underline">DevLab Pickleball</a>
         <h1 className="mt-2 text-3xl font-bold">My sessions</h1>
-        <p className="mt-1 text-mist">Sessions you linked to your Google account for the DUPR export. Open one as host from any device.</p>
+        <p className="mt-1 text-pb-ink-2">Sessions you linked to your Google account for the DUPR export. Open one as host from any device.</p>
       </header>
       {error && <p role="alert" className="rounded-xl bg-rose-500/15 px-4 py-3 text-rose-100">{error}</p>}
       {loadError && (
@@ -74,7 +74,7 @@ export default function MySessionsApp() {
           <Button variant="ghost" onClick={() => { setLoadError(null); setReload((n) => n + 1) }}>Retry</Button>
         </div>
       )}
-      {host === undefined && !loadError && <p role="status" className="text-mist">Loading…</p>}
+      {host === undefined && !loadError && <p role="status" className="text-pb-ink-2">Loading…</p>}
 
       {host === null && (
         <Panel className="grid gap-3">
@@ -90,12 +90,12 @@ export default function MySessionsApp() {
       {host && (
         <>
           <section aria-label="Linked sessions" className="grid gap-3">
-            {sessions.length === 0 && <Panel><p className="text-mist">No linked sessions yet. On a session’s console, choose More, then Email me the DUPR export, to link one.</p></Panel>}
+            {sessions.length === 0 && <Panel><p className="text-pb-ink-2">No linked sessions yet. On a session’s console, choose More, then Email me the DUPR export, to link one.</p></Panel>}
             {sessions.map((session) => (
               <Panel key={session.code} className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
                   <h2 className="truncate text-lg font-bold">{session.name}</h2>
-                  <p className="text-sm text-mist">
+                  <p className="text-sm text-pb-ink-2">
                     {session.kind === 'TOURNAMENT' ? 'Tournament' : 'Open play'}{session.status === 'ENDED' ? ' · Ended' : ''} · Results deleted on {dateOf(session.expiresAt)}
                   </p>
                 </div>

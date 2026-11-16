@@ -24,7 +24,7 @@ const clock = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', min
 
 function MeBanner({ text }) {
   if (!text) return null
-  return <p className="rounded-2xl bg-pickle-neon px-4 py-3 text-lg font-bold text-ink [overflow-wrap:anywhere]" role="status">{text}</p>
+  return <p className="rounded-2xl bg-pb-play px-4 py-3 text-lg font-bold text-pb-canvas [overflow-wrap:anywhere]" role="status">{text}</p>
 }
 
 export default function ViewerBoard({ viewer, lastSnapshotAt = null, lastContactAt = null, invalidHostLink, revokedCaptainLink = false, signInNotice = null }) {
@@ -47,12 +47,12 @@ export default function ViewerBoard({ viewer, lastSnapshotAt = null, lastContact
   const courtsGrid = (
     <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
       {viewer.courts.map((court) => (
-        <article key={`${court.id}-${court.teamA.join()}`} className={`pb-flip rounded-2xl p-4 ${court.state === 'UP_NEXT' ? 'border-2 border-pickle-neon' : 'bg-navy-900'}`}>
+        <article key={`${court.id}-${court.teamA.join()}`} className={`pb-flip rounded-2xl p-4 ${court.state === 'UP_NEXT' ? 'border-2 border-pb-play' : 'bg-pb-surface'}`}>
           <div className="flex items-baseline justify-between">
-            <h2 className="text-2xl font-bold text-pickle-neon">{court.label}</h2>
-            <span className={`text-xs ${court.state === 'UP_NEXT' ? 'font-bold text-pickle-neon' : 'text-mist'}`}>{courtStateLabel(court, { fresh })}</span>
+            <h2 className="text-2xl font-bold text-pb-play">{court.label}</h2>
+            <span className={`text-xs ${court.state === 'UP_NEXT' ? 'font-bold text-pb-play' : 'text-pb-ink-2'}`}>{courtStateLabel(court, { fresh })}</span>
           </div>
-          {court.fixtureLabel && <p className="text-xs font-bold uppercase tracking-[0.08em] text-mist">{court.fixtureLabel}</p>}
+          {court.fixtureLabel && <p className="text-xs font-bold uppercase tracking-[0.08em] text-pb-ink-2">{court.fixtureLabel}</p>}
           {court.teamA.length > 0 && (
             <div className="mt-2 grid gap-1 text-[15px]">
               <TeamNames side="A" names={court.teamA} emphasis={myName ? [myName] : []} />
@@ -71,17 +71,17 @@ export default function ViewerBoard({ viewer, lastSnapshotAt = null, lastContact
       {invalidHostLink && <p role="alert" className="rounded-xl bg-amber-400/15 px-4 py-3 text-amber-100">That host link isn't valid for this session. You're seeing the player board.</p>}
       <header className="flex flex-wrap items-end gap-3">
         <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
-          <p className="flex items-center gap-2 text-xs font-bold text-pickle-neon">
-            <span className={`h-2 w-2 rounded-full bg-pickle-neon ${final ? '' : 'pb-pulse'}`} aria-hidden="true" />
+          <p className="flex items-center gap-2 text-xs font-bold text-pb-play">
+            <span className={`h-2 w-2 rounded-full bg-pb-play ${final ? '' : 'pb-pulse'}`} aria-hidden="true" />
             {viewer.status !== 'ACTIVE' ? 'ENDED' : final ? 'FINISHED' : fresh ? 'LIVE' : <span className="text-amber-200">Offline · showing data from {lastSnapshotAt ? clock(lastSnapshotAt) : 'earlier'}</span>}
           </p>
           <h1 className="text-2xl font-bold sm:text-3xl [overflow-wrap:anywhere]">{viewer.name}</h1>
           {/* Once the results show, their "Thanks for playing" header takes over from the greeting and message. */}
           {!final && <Welcome announcement={viewer.announcement} className="mt-1" />}
-          <p className="text-sm text-mist">Hosted by {viewer.hostDisplayName} · {courtCount} court{courtCount === 1 ? '' : 's'} · {tournament ? tournament.formatLabel : MODE_INFO[viewer.settings.mode]?.label ?? 'Paddle stack'}</p>
+          <p className="text-sm text-pb-ink-2">Hosted by {viewer.hostDisplayName} · {courtCount} court{courtCount === 1 ? '' : 's'} · {tournament ? tournament.formatLabel : MODE_INFO[viewer.settings.mode]?.label ?? 'Paddle stack'}</p>
           {/* Check-in closes once the final standings show. */}
           {viewer.settings.selfCheckIn && !final && (
-            <a href={`/pickleball/s/${viewer.code}/check-in`} className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-pickle-neon underline underline-offset-4">Not on the list? Check in</a>
+            <a href={`/pickleball/s/${viewer.code}/check-in`} className="mt-1 inline-flex min-h-11 items-center text-sm font-semibold text-pb-play underline underline-offset-4">Not on the list? Check in</a>
           )}
         </div>
       </header>
@@ -89,7 +89,7 @@ export default function ViewerBoard({ viewer, lastSnapshotAt = null, lastContact
       {tournament && <ChampionAnnouncer champion={tournament.champion} />}
       {final ? (
         <>
-          <NamePicker viewer={viewer} me={me} onPick={setMe} label="Who are you?" className="rounded-2xl bg-navy-900 p-4" />
+          <NamePicker viewer={viewer} me={me} onPick={setMe} label="Who are you?" className="rounded-2xl bg-pb-surface p-4" />
           <MeBanner text={finishLine(viewer, me)} />
           <ResultsScreen viewer={viewer} boardUrl={viewerLink(window.location.origin, viewer.code)} highlightIds={highlightIds} />
           {tournament && (
@@ -103,10 +103,10 @@ export default function ViewerBoard({ viewer, lastSnapshotAt = null, lastContact
       <>
       <StatusCard viewer={viewer} me={me} onPick={setMe} status={mine} fresh={fresh} lastSnapshotAt={lastSnapshotAt} />
 
-      <div className="grid grid-cols-3 gap-1 rounded-xl bg-navy-900 p-1 lg:hidden" role="tablist" aria-label="Board sections">
+      <div className="grid grid-cols-3 gap-1 rounded-xl bg-pb-surface p-1 lg:hidden" role="tablist" aria-label="Board sections">
         {tabs.map(([key, label]) => (
           <button key={key} type="button" role="tab" aria-selected={tab === key} onClick={() => setTab(key)}
-            className={`min-h-11 rounded-lg text-sm ${tab === key ? 'bg-pickle-neon font-bold text-ink' : 'text-mist'}`}>{label}</button>
+            className={`min-h-11 rounded-lg text-sm ${tab === key ? 'bg-pb-play font-bold text-pb-canvas' : 'text-pb-ink-2'}`}>{label}</button>
         ))}
       </div>
 
@@ -123,7 +123,7 @@ export default function ViewerBoard({ viewer, lastSnapshotAt = null, lastContact
           <Panel className={section('standings')}><h2 className="mb-2 text-lg font-bold">Standings</h2><StandingsTable rows={viewer.standings} highlightId={me} /></Panel>
           <Panel className={section('results')}>
             <h2 className="mb-2 text-lg font-bold">Recent results</h2>
-            {viewer.recentResults.length === 0 ? <p className="text-sm text-mist">No results yet.</p> : (
+            {viewer.recentResults.length === 0 ? <p className="text-sm text-pb-ink-2">No results yet.</p> : (
               <ul className="grid gap-1.5 text-sm">
                 {viewer.recentResults.map((r) => (
                   <li key={r.matchId}>{r.courtLabel}: <b>{(r.winner === 'A' ? r.teamA : r.teamB).join(' · ')}</b> beat {(r.winner === 'A' ? r.teamB : r.teamA).join(' · ')}{r.scoreA !== null && ` ${Math.max(r.scoreA, r.scoreB)}–${Math.min(r.scoreA, r.scoreB)}`}</li>
@@ -137,8 +137,8 @@ export default function ViewerBoard({ viewer, lastSnapshotAt = null, lastContact
       </>
       )}
       <footer className="grid gap-3 pt-2 text-center">
-        <p className="text-xs text-mist">Results are deleted from the live service 7 days after the last change to this session ({expires}). No sign-up; this phone only remembers which name you picked.</p>
-        <a href="/pickleball/new" className="mx-auto inline-flex min-h-11 items-center rounded-xl border border-navy-700 px-5 hover:bg-navy-900">Run your own games, free</a>
+        <p className="text-xs text-pb-ink-2">Results are deleted from the live service 7 days after the last change to this session ({expires}). No sign-up; this phone only remembers which name you picked.</p>
+        <a href="/pickleball/new" className="mx-auto inline-flex min-h-11 items-center rounded-xl border border-pb-rule px-5 hover:bg-pb-surface">Run your own games, free</a>
         <Endorsement />
       </footer>
     </main>

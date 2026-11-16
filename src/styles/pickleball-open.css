@@ -51,13 +51,14 @@
   .pb-fit, .pb-fit * { transition: none !important; }
 }
 
-/* The product band on the brand shell (BRAND-04): the pickleball marketing
-   pages keep their own dark look inside the DevLab header and footer. */
+/* The product band on the brand shell (BRAND-04): the Pickleball marketing
+   pages sit on the brand's graphite surface inside the DevLab header and
+   footer, in the app's colours (src/config/pickleballPalette.js). */
 .pb-marketing {
-  background: #070916;
-  color: #f7f7fc;
+  background: var(--exhibit-paper);
+  color: var(--exhibit-ink);
 }
-.pb-marketing :focus-visible { outline: 2px solid #c6ff2e; outline-offset: 2px; }
+.pb-marketing :focus-visible { outline: 2px solid #c7d2fe; outline-offset: 2px; }
 
 /* TV court tiles (PB-QUEUE-01/04): "Up next · walk on now" when it fits on one
    line beside the court name, else "Up next", so a narrow tile keeps its names

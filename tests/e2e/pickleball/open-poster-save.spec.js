@@ -36,6 +36,11 @@ async function endedSession(request) {
   return code
 }
 
+// The sheet flips in (.pb-flip: rotateX from 70 degrees, 420 ms), which squashes
+// every box in it; measure sizes only once that animation has finished.
+const atRest = (page) => page.waitForFunction(() => document.getAnimations()
+  .filter((a) => a.animationName === 'pb-flip').every((a) => a.playState === 'finished'))
+
 async function openPoster(page, request) {
   const code = await endedSession(request)
   await page.goto(`/pickleball/s/${code}`)
@@ -123,6 +128,7 @@ test.describe('poster on Android', () => {
     const sheet = await openPoster(page, request)
     await expect(sheet.getByText('Tip: tap and hold the poster to save it')).toBeVisible()
     const save = sheet.getByRole('button', { name: 'Download', exact: true })
+    await atRest(page)
     expect((await save.boundingBox()).height).toBeGreaterThanOrEqual(44)
     await page.setViewportSize({ width: 390, height: 844 })
     await shot(page, 'android-390')
@@ -155,6 +161,7 @@ test.describe('poster on iPhone', () => {
     await expect(sheet.getByText('Tip: tap and hold the poster to save it')).toBeVisible()
     await shot(page, 'iphone-390')
     const save = sheet.getByRole('button', { name: 'Save to Photos' })
+    await atRest(page)
     expect((await save.boundingBox()).height).toBeGreaterThanOrEqual(44)
     await save.click()
     await expect.poll(() => shares(page).then((s) => s.length)).toBe(1)

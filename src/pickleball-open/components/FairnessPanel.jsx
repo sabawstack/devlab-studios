@@ -16,14 +16,14 @@ export default function FairnessPanel({ fairness, tv = false }) {
     { label: 'Repeat partners', value: String(fairness.repeatedPartners), hint: 'pairs who partnered again' },
   ]
   return (
-    <section aria-labelledby={headingId} className={tv ? 'grid gap-2' : 'rounded-2xl bg-navy-900 p-4'} data-testid="fairness">
-      <h2 id={headingId} className={tv ? 'text-[clamp(1rem,1.4vw,1.75rem)] font-bold uppercase tracking-[0.12em] text-pickle-neon' : 'text-lg font-bold'}>Fairness</h2>
+    <section aria-labelledby={headingId} className={tv ? 'grid gap-2' : 'rounded-2xl bg-pb-surface p-4'} data-testid="fairness">
+      <h2 id={headingId} className={tv ? 'text-[clamp(1rem,1.4vw,1.75rem)] font-bold uppercase tracking-[0.12em] text-pb-play' : 'text-lg font-bold'}>Fairness</h2>
       <dl className="grid grid-cols-3 gap-2">
         {tiles.map((tile) => (
-          <div key={tile.label} className={`min-w-0 rounded-xl bg-navy-800 p-3 ${tv ? 'break-words' : '[overflow-wrap:anywhere]'}`}>
-            <dt className={tv ? 'text-[clamp(0.8rem,1vw,1.25rem)] text-mist' : 'text-xs text-mist'}>{tile.label}</dt>
+          <div key={tile.label} className={`min-w-0 rounded-xl bg-pb-raised p-3 ${tv ? 'break-words' : '[overflow-wrap:anywhere]'}`}>
+            <dt className={tv ? 'text-[clamp(0.8rem,1vw,1.25rem)] text-pb-ink-2' : 'text-xs text-pb-ink-2'}>{tile.label}</dt>
             <dd className={`font-bold ${tv ? 'text-[clamp(1.5rem,2.4vw,3rem)]' : 'text-2xl'}`}>{tile.value}</dd>
-            <dd className={`text-mist ${tv ? 'break-words text-[clamp(0.8rem,1vw,1.25rem)]' : 'truncate text-xs'}`}>{tile.hint}</dd>
+            <dd className={`text-pb-ink-2 ${tv ? 'break-words text-[clamp(0.8rem,1vw,1.25rem)]' : 'truncate text-xs'}`}>{tile.hint}</dd>
           </div>
         ))}
       </dl>

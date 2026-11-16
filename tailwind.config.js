@@ -1,3 +1,5 @@
+import { PB } from './src/config/pickleballPalette.js'
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{astro,js,jsx,ts,tsx,md,mdx}'],
@@ -55,25 +57,18 @@ export default {
           orangeDark: '#0800cc',
           shell: '#f5f5fc',
         },
-        navy: {
-          50: '#e8edff',
-          100: '#cfd9ff',
-          200: '#a3b8ff',
-          300: '#7594fb',
-          400: '#4d72ef',
-          500: '#3055d6',
-          600: '#1f3fa6',
-          700: '#193480',
-          800: '#152b66',
-          900: '#11214d',
-          950: '#0b1b34',
-        },
-        ink: '#0b1426',
-        mist: '#b5c4e1',
-        // Free open play (spec §11): one neon accent layered on DevLab navy/violet.
-        pickle: {
-          neon: '#c6ff2e',
-          teamb: '#8d9bff',
+        // DevLab Pickleball (src/config/pickleballPalette.js): graphite surfaces, indigo play, magenta team B.
+        pb: {
+          canvas: PB.canvas,
+          sunken: PB.sunken,
+          surface: PB.surface,
+          raised: PB.raised,
+          rule: PB.rule,
+          field: PB.field,
+          ink: PB.ink,
+          'ink-2': PB.ink2,
+          play: PB.play,
+          'team-b': PB.teamB,
         },
       },
       boxShadow: {

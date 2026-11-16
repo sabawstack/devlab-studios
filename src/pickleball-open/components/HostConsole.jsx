@@ -123,23 +123,23 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
       <header className="relative flex flex-wrap items-center gap-3 py-2">
         <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
           <h1 className="truncate text-xl font-bold sm:text-2xl">{viewer.name}</h1>
-          <p className="text-xs text-mist">
+          <p className="text-xs text-pb-ink-2">
             {countLabel(host.players.filter((p) => p.status !== 'LEFT').length, 'player')} · {countLabel(host.courts.filter((c) => c.enabled).length, 'court')}
             {status !== 'open' && <span className="ml-2 text-amber-200">· {status === 'connecting' ? 'Connecting…' : 'Reconnecting…'}</span>}
             {pending > 0 && <span className="ml-2 text-amber-200">· Sending {pending}…</span>}
-            {viewer.status === 'ENDED' && <span className="ml-2 text-pickle-neon">· Ended</span>}
+            {viewer.status === 'ENDED' && <span className="ml-2 text-pb-play">· Ended</span>}
           </p>
         </div>
         {tournament
-          ? <span className="min-w-0 flex-1 truncate text-sm font-semibold text-mist sm:flex-none">{tournament.formatLabel}</span>
+          ? <span className="min-w-0 flex-1 truncate text-sm font-semibold text-pb-ink-2 sm:flex-none">{tournament.formatLabel}</span>
           : <Button variant="ghost" aria-haspopup="dialog" onClick={() => setDialog({ type: 'mode' })}>Game mode: {MODE_INFO[host.settings.mode]?.label ?? 'Paddle stack'}</Button>}
-        <Button variant="neon" onClick={() => setDialog({ type: 'share' })}>Share board</Button>
+        <Button variant="play" onClick={() => setDialog({ type: 'share' })}>Share board</Button>
         {/* The menu is placed against the header, not the button: on a phone More wraps to the
             left edge, and a menu anchored to its right side ran off the screen. */}
         <div>
           <Button ref={moreButton} variant="ghost" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>More</Button>
           {menuOpen && (
-            <div className="absolute right-0 z-40 mt-2 grid w-56 gap-1 rounded-2xl bg-navy-950 p-2 shadow-elevated">
+            <div className="absolute right-0 z-40 mt-2 grid w-56 gap-1 rounded-2xl bg-pb-sunken p-2 shadow-elevated">
               <Button variant="ghost" onClick={() => { setMenuOpen(false); setDialog({ type: 'announcement' }) }}>Edit welcome message</Button>
               <Button variant="ghost" onClick={() => { setMenuOpen(false); setDialog({ type: 'captains' }) }}>Court captains</Button>
               <Button variant="ghost" onClick={() => { setMenuOpen(false); download() }}>Download results (CSV)</Button>
@@ -153,7 +153,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
 
       {/* Sticky, so a refusal (a draw edit the server turned down) shows wherever the host tapped. */}
       {(error || actionError) && (
-        <div ref={banner} className="sticky top-0 z-30 -mx-3 bg-ink px-3 py-2 sm:-mx-5 sm:px-5">
+        <div ref={banner} className="sticky top-0 z-30 -mx-3 bg-pb-canvas px-3 py-2 sm:-mx-5 sm:px-5">
           <p role="alert" className="flex items-center justify-between rounded-xl bg-rose-500/15 px-4 py-3 text-rose-100">
             {friendlyError(actionError ?? error)}<button type="button" onClick={() => { setActionError(null); clearError() }} className="ml-3 min-h-11 px-3 underline">OK</button>
           </p>
@@ -215,10 +215,10 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
       </div>
       )}
 
-      <nav className={`fixed inset-x-0 bottom-0 z-20 grid ${tabs.length === 4 ? 'grid-cols-4' : 'grid-cols-3'} border-t border-navy-800 bg-ink lg:hidden`} aria-label="Sections">
+      <nav className={`fixed inset-x-0 bottom-0 z-20 grid ${tabs.length === 4 ? 'grid-cols-4' : 'grid-cols-3'} border-t border-pb-raised bg-pb-canvas lg:hidden`} aria-label="Sections">
         {tabs.map(([key, label]) => (
           <button key={key} type="button" aria-current={tab === key} onClick={() => setTab(key)}
-            className={`min-h-14 text-sm ${tab === key ? 'font-bold text-pickle-neon' : 'text-mist'}`}>{label}</button>
+            className={`min-h-14 text-sm ${tab === key ? 'font-bold text-pb-play' : 'text-pb-ink-2'}`}>{label}</button>
         ))}
       </nav>
 

@@ -28,7 +28,7 @@ const DELIVERY_TONES = {
 const PIPELINE_TONES = {
   new: 'bg-sky-100 text-sky-800',
   in_review: 'bg-indigo-100 text-indigo-800',
-  qualified: 'bg-violet-100 text-violet-800',
+  qualified: 'bg-[var(--ws-selected)] text-[var(--ws-link)]',
   contacted: 'bg-cyan-100 text-cyan-800',
   won: 'bg-emerald-100 text-emerald-800',
   lost: 'bg-slate-200 text-slate-700',
@@ -353,7 +353,7 @@ function LeadsPage() {
               {leads.map((lead) => (
                 <tr
                   key={lead.id}
-                  className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 ${selectedId === lead.id ? 'bg-brand-mint/30' : ''}`}
+                  className={`border-b border-slate-100 last:border-0 hover:bg-slate-50 ${selectedId === lead.id ? 'bg-[var(--ws-selected)]' : ''}`}
                 >
                   <td className="whitespace-nowrap px-4 py-3 text-slate-500">
                     {/*
@@ -416,7 +416,7 @@ function LeadsPage() {
                 <DetailRow label="Type">{INQUIRY_TYPE_LABELS[detail.inquiryType] || humanize(detail.inquiryType)}</DetailRow>
                 <DetailRow label="Name">{detail.name}</DetailRow>
                 <DetailRow label="Email">
-                  <a href={`mailto:${detail.email}`} className="text-brand-teal hover:underline">{detail.email}</a>
+                  <a href={`mailto:${detail.email}`} className="text-[var(--ws-link)] hover:underline">{detail.email}</a>
                 </DetailRow>
                 <DetailRow label="Company">{detail.company}</DetailRow>
                 <DetailRow label="Website">{detail.website}</DetailRow>

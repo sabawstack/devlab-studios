@@ -38,13 +38,13 @@ export default function MediaAssetTable({ assets, busyKey, onReplace, onRemove }
               <td className="px-3 py-2"><img src={asset.url} alt={asset.altText || asset.filename} className="h-10 w-14 rounded object-cover" loading="lazy" /></td>
               <td className="max-w-[220px] truncate px-3 py-2 font-semibold text-slate-800" title={asset.filename}>
                 {asset.filename}
-                <a href={asset.url} target="_blank" rel="noreferrer" aria-label={`Open ${asset.filename}`} className="ml-1 inline-block align-middle"><ExternalLink className="h-3.5 w-3.5 text-slate-400 hover:text-violet-600" /></a>
+                <a href={asset.url} target="_blank" rel="noreferrer" aria-label={`Open ${asset.filename}`} className="ml-1 inline-block align-middle"><ExternalLink className="h-3.5 w-3.5 text-slate-400 hover:text-[var(--ws-link)]" /></a>
               </td>
               <td className="max-w-[200px] truncate px-3 py-2 font-mono text-[11px] text-slate-500" title={asset.key}>{asset.key}</td>
               <td className="whitespace-nowrap px-3 py-2 text-slate-600">{formatBytes(asset.size)}</td>
               <td className="whitespace-nowrap px-3 py-2 text-slate-600">{asset.folder}</td>
               <td className="whitespace-nowrap px-3 py-2"><span className={asset.trackedInD1 ? 'text-emerald-600' : 'text-slate-400'}>{asset.trackedInD1 ? 'Linked' : 'R2 only'}</span></td>
-              <td className="max-w-[220px] truncate px-3 py-2 text-violet-700" title={usedByLabel(asset.usedBy)}>{usedByLabel(asset.usedBy)}</td>
+              <td className="max-w-[220px] truncate px-3 py-2 text-[var(--ws-link)]" title={usedByLabel(asset.usedBy)}>{usedByLabel(asset.usedBy)}</td>
               <td className="whitespace-nowrap px-3 py-2 text-slate-500">{new Date(asset.uploadedAt).toLocaleDateString()}</td>
               <td className="whitespace-nowrap px-3 py-2">
                 <div className="flex items-center gap-2">

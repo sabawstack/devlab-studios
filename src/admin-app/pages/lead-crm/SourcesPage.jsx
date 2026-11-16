@@ -67,7 +67,7 @@ function SourceRow({ source, onChanged }) {
               href={source.baseUrl}
               target="_blank"
               rel="noreferrer nofollow"
-              className="text-xs text-slate-400 hover:text-brand-teal hover:underline"
+              className="text-xs text-slate-400 hover:text-[var(--ws-link)] hover:underline"
             >
               {source.baseUrl}
             </a>

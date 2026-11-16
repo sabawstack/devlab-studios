@@ -51,8 +51,30 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+### Changed
+
+- **DevLab Pickleball is on the DevLab brand, not its old navy and lime.**
+  The app screens (setup, board, host and captain consoles, TV, results,
+  tournaments), the public `/pickleball`, `/pickleball/how-it-works` and
+  `/pickleball/rotation` pages, their illustrations, the QR codes and the
+  results poster now use the brand's graphite surface, a light indigo for
+  play and magenta for team B (the light ends of the brand gradient), and the
+  brand's gradient primary and outline buttons on the public pages. Every
+  colour comes from one module, `src/config/pickleballPalette.js` (Tailwind
+  `pb-*` utilities); the old `navy-*`, `ink`, `mist` and `pickle-*` Tailwind
+  colours are removed. The poster uses Space Grotesk. The "Running a club or
+  venue?" form uses the brand form styling (`.dl-form`) instead of a white
+  card. Contrast is tested: text and court colours at least 4.5:1 on every
+  surface, form-field borders 3:1, the two teams 1.65:1 apart in lightness.
+- **Admin: the last legacy colours are gone.** The 35 remaining `brand-*`
+  utilities (the old `#4500ff` blue) and the violet links, buttons and badges
+  in the older editors (page builder, collections, work page, security, media,
+  digests, audit log, lead CRM settings) now use the workspace tokens. The
+  raw-colour ratchet is lowered to match (`adminLegacy` 0, `pickleballHex` 7).
+
 ### Fixed
 
+- Tests: the player-board accessibility audit and the poster sheet's 44 px button checks now wait for the 420 ms flip-in animation to finish. Both measured mid-animation (axe read contrast at partial opacity; the button box was squashed by `rotateX`), which made the poster checks fail on `main` locally and the audit fail once play stopped being lime.
 - Tests: the Pickleball `nextUp` property and queue-prediction simulation tests have a 60-second budget. They are deterministic but CPU-heavy (about 1.3 s each locally) and once passed vitest's 5-second default on a busy CI runner; the invariant itself held.
 
 ## [2.7.0] - 2026-11-16

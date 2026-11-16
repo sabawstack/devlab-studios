@@ -2,9 +2,9 @@ import { useEffect, useRef } from 'react'
 
 const VARIANTS = {
   primary: 'pb-action',
-  neon: 'bg-pickle-neon text-ink hover:brightness-95',
-  ghost: 'border border-navy-700 text-white hover:bg-navy-900',
-  quiet: 'text-pickle-neon hover:underline',
+  play: 'bg-pb-play text-pb-canvas hover:brightness-95',
+  ghost: 'border border-pb-rule text-white hover:bg-pb-surface',
+  quiet: 'text-pb-play hover:underline',
   danger: 'border border-rose-400/60 text-rose-200 hover:bg-rose-500/10',
 }
 
@@ -13,18 +13,18 @@ export function Button({ variant = 'primary', className = '', type = 'button', .
   return (
     <button
       type={type}
-      className={`inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2.5 font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pickle-neon disabled:cursor-not-allowed disabled:opacity-50 ${VARIANTS[variant]} ${className}`}
+      className={`inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2.5 font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pb-play disabled:cursor-not-allowed disabled:opacity-50 ${VARIANTS[variant]} ${className}`}
       {...props}
     />
   )
 }
 
 export function Panel({ className = '', as: Tag = 'div', ...props }) {
-  return <Tag className={`rounded-2xl bg-navy-900 p-4 ${className}`} {...props} />
+  return <Tag className={`rounded-2xl bg-pb-surface p-4 ${className}`} {...props} />
 }
 
 export function Dot({ side }) {
-  return <span aria-hidden="true" className={`inline-block h-2.5 w-2.5 rounded-full ${side === 'A' ? 'bg-pickle-neon' : 'bg-pickle-teamb'}`} />
+  return <span aria-hidden="true" className={`inline-block h-2.5 w-2.5 rounded-full ${side === 'A' ? 'bg-pb-play' : 'bg-pb-team-b'}`} />
 }
 
 export function TeamNames({ side, names, emphasis = [] }) {
@@ -35,8 +35,8 @@ export function TeamNames({ side, names, emphasis = [] }) {
       <span>
         {names.map((name, index) => (
           <span key={name}>
-            {index > 0 && <span className="text-mist"> · </span>}
-            <span className={emphasis.includes(name) ? 'font-bold text-pickle-neon' : ''}>{name}</span>
+            {index > 0 && <span className="text-pb-ink-2"> · </span>}
+            <span className={emphasis.includes(name) ? 'font-bold text-pb-play' : ''}>{name}</span>
           </span>
         ))}
       </span>
@@ -100,12 +100,12 @@ export function Sheet({ title, onClose, children, returnFocusRef = null }) {
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className="pb-flip max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-navy-950 p-5 shadow-elevated outline-none md:max-w-lg md:rounded-3xl"
+        className="pb-flip max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-pb-sunken p-5 shadow-elevated outline-none md:max-w-lg md:rounded-3xl"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between gap-4">
           <h2 className="text-xl font-bold">{title}</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="min-h-11 min-w-11 rounded-xl text-mist hover:bg-navy-900">✕</button>
+          <button type="button" onClick={onClose} aria-label="Close" className="min-h-11 min-w-11 rounded-xl text-pb-ink-2 hover:bg-pb-surface">✕</button>
         </div>
         {children}
       </div>
@@ -117,7 +117,7 @@ export function Sheet({ title, onClose, children, returnFocusRef = null }) {
 export function ConfirmSheet({ title, body, confirmLabel, danger = false, onConfirm, onClose, returnFocusRef }) {
   return (
     <Sheet title={title} onClose={onClose} returnFocusRef={returnFocusRef}>
-      <p className="text-mist">{body}</p>
+      <p className="text-pb-ink-2">{body}</p>
       <div className="mt-5 grid grid-cols-2 gap-2">
         <Button variant="ghost" onClick={onClose}>Cancel</Button>
         <Button variant={danger ? 'danger' : 'primary'} onClick={() => { onClose(); onConfirm() }}>{confirmLabel}</Button>

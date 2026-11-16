@@ -10,7 +10,7 @@ import { Panel, TeamNames } from './ui.jsx'
 
 function Chip({ name, mine, muted = false, suffix = null }) {
   return (
-    <li className={`rounded-full px-3 py-1 [overflow-wrap:anywhere] ${mine ? 'bg-pickle-neon font-bold text-ink' : muted ? 'bg-navy-900 text-mist' : 'bg-navy-800'}`}>
+    <li className={`rounded-full px-3 py-1 [overflow-wrap:anywhere] ${mine ? 'bg-pb-play font-bold text-pb-canvas' : muted ? 'bg-pb-surface text-pb-ink-2' : 'bg-pb-raised'}`}>
       {name}{mine && <span className="sr-only"> (you)</span>}{mine && <span aria-hidden="true"> · you</span>}{suffix}
     </li>
   )
@@ -23,8 +23,8 @@ export function ConfirmedCalls({ viewer, myName, fresh = true }) {
   return (
     <section aria-label="Called next" className="grid gap-2" data-testid="confirmed-calls">
       {calls.map((court) => (
-        <div key={court.id} className="rounded-2xl border-2 border-pickle-neon bg-ink p-3">
-          <p className="font-bold text-pickle-neon">{upNextLabel(court.label, { fresh })}</p>
+        <div key={court.id} className="rounded-2xl border-2 border-pb-play bg-pb-canvas p-3">
+          <p className="font-bold text-pb-play">{upNextLabel(court.label, { fresh })}</p>
           <div className="mt-1 grid gap-1 text-[15px]">
             <TeamNames side="A" names={court.teamA} emphasis={myName ? [myName] : []} />
             <TeamNames side="B" names={court.teamB} emphasis={myName ? [myName] : []} />
@@ -40,11 +40,11 @@ export function NextFour({ viewer, me }) {
   if (!viewer.nextUp) return null
   return (
     <Panel as="section" aria-label="Next four" data-testid="next-four">
-      <h2 className="font-bold">{NEXT_FOUR} <span className="font-normal text-mist">· {NEXT_FOUR_WHEN}</span></h2>
+      <h2 className="font-bold">{NEXT_FOUR} <span className="font-normal text-pb-ink-2">· {NEXT_FOUR_WHEN}</span></h2>
       <ul className="mt-2 flex flex-wrap gap-1.5 text-sm">
         {viewer.nextUp.players.map((p) => <Chip key={p.id} name={p.name} mine={p.id === me} />)}
       </ul>
-      <p className="mt-2 text-xs text-mist">Courts and teams are set when the court opens.</p>
+      <p className="mt-2 text-xs text-pb-ink-2">Courts and teams are set when the court opens.</p>
     </Panel>
   )
 }
@@ -55,14 +55,14 @@ export function WaitingList({ viewer, me }) {
   return (
     <Panel as="section" aria-label="Waiting" data-testid="waiting-list">
       <h2 className="font-bold">{WAITING} ({viewer.waiting.length})</h2>
-      <p className="mt-1 text-xs text-mist">{QUEUE_RULE}</p>
+      <p className="mt-1 text-xs text-pb-ink-2">{QUEUE_RULE}</p>
       {viewer.waiting.length + viewer.onBreak.length > 0 && (
         <ul className="mt-2 flex flex-wrap gap-1.5 text-sm">
           {viewer.waiting.map((w) => <Chip key={w.id} name={w.name} mine={w.id === me} />)}
           {viewer.onBreak.map((p) => <Chip key={p.id} name={p.name} mine={p.id === me} muted suffix={<span> · {ON_BREAK.toLowerCase()}</span>} />)}
         </ul>
       )}
-      {viewer.waiting.length === 0 && <p className="mt-2 text-sm text-mist">Nobody is waiting.</p>}
+      {viewer.waiting.length === 0 && <p className="mt-2 text-sm text-pb-ink-2">Nobody is waiting.</p>}
       {note && <p className="mt-2 text-sm font-semibold">{note}</p>}
     </Panel>
   )

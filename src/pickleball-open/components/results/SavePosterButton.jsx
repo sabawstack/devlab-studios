@@ -60,25 +60,25 @@ export default function SavePosterButton({ results, viewer }) {
     <div className="grid min-w-0 gap-2">
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="ghost" onClick={make} disabled={busy} aria-busy={busy}>{busy ? 'Making poster…' : 'Save poster'}</Button>
-        <p className="text-sm text-mist">Names appear as entered in the session.</p>
+        <p className="text-sm text-pb-ink-2">Names appear as entered in the session.</p>
       </div>
       {error && <Alert>{error}</Alert>}
       {poster && (
         <Sheet title="Results poster" onClose={() => setPoster(null)}>
           <div className="grid gap-4">
             {poster.platform === 'in-app' && (
-              <p data-testid="poster-in-app" className="rounded-xl border border-pickle-neon/60 bg-pickle-neon/10 p-3 text-sm font-semibold text-white">{IN_APP_MESSAGE}</p>
+              <p data-testid="poster-in-app" className="rounded-xl border border-pb-play/60 bg-pb-play/10 p-3 text-sm font-semibold text-white">{IN_APP_MESSAGE}</p>
             )}
             <div className="grid gap-1">
               <img src={poster.url} alt={`Results poster for ${results.name}`} width={1080} height={1350} data-testid="poster-preview"
                 className="mx-auto h-auto max-h-[60vh] w-auto max-w-full rounded-xl" />
-              {touch && <p className="text-center text-sm text-mist">Tip: tap and hold the poster to save it</p>}
+              {touch && <p className="text-center text-sm text-pb-ink-2">Tip: tap and hold the poster to save it</p>}
             </div>
             <div className="flex flex-wrap gap-3">
-              {label && <Button variant="neon" onClick={save}>{label}</Button>}
-              {poster.canShare && <Button variant={label ? 'ghost' : 'neon'} onClick={share}>Share</Button>}
+              {label && <Button variant="play" onClick={save}>{label}</Button>}
+              {poster.canShare && <Button variant={label ? 'ghost' : 'play'} onClick={share}>Share</Button>}
             </div>
-            {touch && poster.platform !== 'in-app' && !poster.canShare && <p className="text-sm text-mist">{NO_FILE_SHARE}</p>}
+            {touch && poster.platform !== 'in-app' && !poster.canShare && <p className="text-sm text-pb-ink-2">{NO_FILE_SHARE}</p>}
             {notice && <Alert>{notice}</Alert>}
           </div>
         </Sheet>

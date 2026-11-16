@@ -32,16 +32,25 @@ and a gradient bar on the active nav item, with a `--brand-gradient` in
     background. Space Grotesk, with JetBrains Mono (`.ws-mono`) for labels and
     identifiers.
   - Pickleball app screens: `src/styles/pickleball-app.css`, imported only by
-    `PickleballAppShell`, scoped to `.pb-app`, defines `--pb-*`. Navy and lime
-    stay as the play colours. The non-game primary action uses the brand indigo,
-    and the type face is Space Grotesk (the TV fit and long-name checks pass with
-    it). The public Pickleball marketing pages stay in the brand shell.
+    `PickleballAppShell`, scoped to `.pb-app`, defines `--pb-*`. Amended
+    2026-11-16 (owner): the app no longer keeps the navy and lime of its first
+    look. It sits on the brand's graphite surface (the exhibit tokens), its
+    play colour is a light indigo and team B a magenta, the light ends of the
+    brand gradient, chosen so the two teams also differ in lightness (1.65:1).
+    The values live in `src/config/pickleballPalette.js`, which Tailwind
+    (`pb-*` utilities), the SVG art and the results poster read; the CSS layer
+    mirrors them and `pickleballPalette.test.js` keeps the two equal. The
+    non-game primary action uses the brand indigo, and the type face is Space
+    Grotesk (the TV fit and long-name checks pass with it). The public
+    Pickleball marketing pages sit in the brand shell on `.ink-panel`, with the
+    brand's own primary and outline buttons and the brand form styling.
 - **What is inherited and what is product-specific.** Inherited, never
   redefined: font families, the palette roles, radii, motion durations. Each
   product maps them to its own roles (`--ws-action: var(--link)`,
   `--pb-action: var(--link)`). Product-specific, owned by the layer: the
-  Pickleball play colours, and on dark surfaces the focus ring (the brand rule
-  for graphite is a light ring; Pickleball uses its light play colour).
+  Pickleball court colours (play, team B, the illustration court), and on dark
+  surfaces the focus ring (the brand rule for graphite is a light ring;
+  Pickleball uses its light play colour).
 - **The gradient stays public.** It appears in three public places only (ADR
   0015). The product layers are tested to contain no gradient, blur or
   backdrop.

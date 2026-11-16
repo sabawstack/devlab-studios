@@ -162,8 +162,8 @@ function FlagRow({ item, state, busy, onToggle }) {
         aria-checked={requested}
         disabled={disabled}
         onClick={() => onToggle(item, !requested)}
-        className={`relative inline-flex h-6 w-11 flex-none rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 ${
-          requested ? 'bg-violet-600' : 'bg-slate-300'
+        className={`relative inline-flex h-6 w-11 flex-none rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ws-focus)] focus-visible:ring-offset-2 ${
+          requested ? 'bg-[var(--ws-action)]' : 'bg-slate-300'
         } disabled:cursor-not-allowed disabled:opacity-45`}
       >
         <span

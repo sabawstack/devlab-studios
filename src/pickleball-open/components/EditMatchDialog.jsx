@@ -25,32 +25,32 @@ export default function EditMatchDialog({ match, players, nameOf, onSave, onSkip
 
   const slotButton = (index) => (
     <button key={index} type="button" onClick={() => tapSlot(index)} aria-pressed={selected === index}
-      className={`min-h-12 rounded-xl px-3 text-left ${selected === index ? 'border-2 border-pickle-neon bg-white font-bold text-ink' : 'bg-navy-800'}`}>
+      className={`min-h-12 rounded-xl px-3 text-left ${selected === index ? 'border-2 border-pb-play bg-white font-bold text-pb-canvas' : 'bg-pb-raised'}`}>
       {nameOf(slots[index])}{selected === index ? ' · replace…' : ''}
     </button>
   )
 
   return (
     <Sheet title="Edit before start" onClose={onClose}>
-      <p className="text-sm text-mist">Tap a player, then tap someone waiting to put them in, or tap a second player to swap teams. A player you swap out keeps their place in line.</p>
+      <p className="text-sm text-pb-ink-2">Tap a player, then tap someone waiting to put them in, or tap a second player to swap teams. A player you swap out keeps their place in line.</p>
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <div className="grid gap-2"><p className="text-xs font-bold text-pickle-neon">TEAM A</p>{slotButton(0)}{slotButton(1)}</div>
-        <div className="grid gap-2"><p className="text-xs font-bold text-pickle-teamb">TEAM B</p>{slotButton(2)}{slotButton(3)}</div>
+        <div className="grid gap-2"><p className="text-xs font-bold text-pb-play">TEAM A</p>{slotButton(0)}{slotButton(1)}</div>
+        <div className="grid gap-2"><p className="text-xs font-bold text-pb-team-b">TEAM B</p>{slotButton(2)}{slotButton(3)}</div>
       </div>
       {selected !== null && (
         <div className="mt-4 grid gap-1.5">
-          <p className="text-sm text-mist">Put in instead of {nameOf(slots[selected])}</p>
-          {available.length === 0 && <p className="text-sm text-mist">Nobody else is free right now.</p>}
+          <p className="text-sm text-pb-ink-2">Put in instead of {nameOf(slots[selected])}</p>
+          {available.length === 0 && <p className="text-sm text-pb-ink-2">Nobody else is free right now.</p>}
           {available.map((p) => (
-            <button key={p.id} type="button" onClick={() => replaceWith(p.id)} className="flex min-h-11 items-center justify-between rounded-xl border border-navy-700 px-3 hover:border-pickle-neon">
-              <span>{p.name}</span><span className="text-xs text-mist">{p.games} game{p.games === 1 ? '' : 's'} · sat out {p.satOut}</span>
+            <button key={p.id} type="button" onClick={() => replaceWith(p.id)} className="flex min-h-11 items-center justify-between rounded-xl border border-pb-rule px-3 hover:border-pb-play">
+              <span>{p.name}</span><span className="text-xs text-pb-ink-2">{p.games} game{p.games === 1 ? '' : 's'} · sat out {p.satOut}</span>
             </button>
           ))}
         </div>
       )}
       <div className="mt-5 grid grid-cols-2 gap-2">
         <Button variant="ghost" onClick={onSkip}>Suggest another four</Button>
-        <Button variant="neon" onClick={() => onSave(slots)}>Save</Button>
+        <Button variant="play" onClick={() => onSave(slots)}>Save</Button>
       </div>
     </Sheet>
   )

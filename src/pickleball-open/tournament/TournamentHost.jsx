@@ -88,7 +88,7 @@ export default function TournamentHost({ host, resultsScreen = null, send, error
             </div>
           </section>
         ) : (
-          tab === 'courts' && <p className="text-mist lg:hidden">Courts fill once you start the tournament.</p>
+          tab === 'courts' && <p className="text-pb-ink-2 lg:hidden">Courts fill once you start the tournament.</p>
         )}
         <section className={section('draw')} aria-label="Draw">
           {running ? (
@@ -96,7 +96,7 @@ export default function TournamentHost({ host, resultsScreen = null, send, error
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-bold">{t.formatLabel}</h2>
-                  {t.phase === 'RUNNING' && <p className="text-sm text-mist">To swap opponents, tap a pair the draw placed in a game that has not started, then one in another game of the same round. Pairs that got there by a result move only when that result changes.</p>}
+                  {t.phase === 'RUNNING' && <p className="text-sm text-pb-ink-2">To swap opponents, tap a pair the draw placed in a game that has not started, then one in another game of the same round. Pairs that got there by a result move only when that result changes.</p>}
                 </div>
                 {t.phase === 'RUNNING' && <Button variant="ghost" onClick={openSubstitute}>Substitute a player</Button>}
               </div>

@@ -59,7 +59,7 @@ function VersionHistoryPanel({ contentType, contentId = null, onRestored }) {
               type="button"
               onClick={() => handleRestore(version.versionNumber)}
               disabled={restoringVersion !== null}
-              className="text-xs font-semibold text-brand-teal hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+              className="text-xs font-semibold text-[var(--ws-link)] hover:underline disabled:cursor-not-allowed disabled:opacity-50"
             >
               {restoringVersion === version.versionNumber ? 'Restoring…' : 'Restore'}
             </button>

@@ -618,3 +618,12 @@ Owner: "Approve production, make all production useful, decide what's best."
 - **Found after promotion:** the PR #74 CI run (pull_request event) timed out once on the `nextUp` property test (5.2 s against vitest's 5 s default; the invariant held, the two other runs on the same commit passed). Fixed with a 60 s budget for the two deterministic heavy test files.
 - Still for the owner, as before: a live three-device Pickleball session on production or preview (Turnstile needs a person), and a signed-in Admin walk-through.
 
+### Phase 15 — Brand follow-up after production (2026-11-16)
+
+Owner, looking at production: "Still on the old Branding" (`/pickleball/new`) and "Admin also in old Branding i think".
+
+- **Cause (Pickleball):** not a deploy problem. BRAND-03 deliberately kept navy and lime as the Pickleball play colours, and the public Pickleball pages kept their own navy band and the legacy `#4500ff` button. The owner's call overrides that: Pickleball moves onto the brand graphite. ADR 0016 amended.
+- **Cause (Admin):** Home and the shell were already on the workspace tokens (graphite sidebar, stone canvas, indigo); the older editors still carried 35 legacy `brand-*` utilities (`#4500ff`) and violet links, buttons and badges.
+- **Change:** `src/config/pickleballPalette.js` is the one source of Pickleball colours (Tailwind `pb-*`, SVG art, poster, QR); old `navy`/`ink`/`mist`/`pickle` Tailwind colours removed; public Pickleball pages on `.ink-panel` with the brand buttons and `.dl-form`; Admin legacy and violet utilities onto `--ws-*`. Ratchet: `adminLegacy` 35 → 0, `pickleballHex` 17 → 7.
+- **Checks:** unit suite 3,136 passed; new `pickleballPalette.test.js` and extended `productThemes.test.ts` (contrast of text, play, team B and field borders on every surface; teams 1.65:1 apart in lightness); local captures of setup, board, TV and landing reviewed.
+

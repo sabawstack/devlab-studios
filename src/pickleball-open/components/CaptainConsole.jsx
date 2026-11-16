@@ -33,13 +33,13 @@ export default function CaptainConsole({ code, captainKey, snapshot, status, onS
   return (
     <div className="mx-auto grid max-w-xl gap-4 px-3 pb-24 pt-3 sm:px-5 lg:max-w-5xl lg:grid-cols-2 lg:items-start">
       <header className="py-2 lg:col-span-2">
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-pickle-neon">Court captain</p>
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-pb-play">Court captain</p>
         <h1 className="truncate text-2xl font-bold">{snapshot.viewer.name}</h1>
-        <p className="text-sm text-mist">
+        <p className="text-sm text-pb-ink-2">
           {snapshot.captain.label}
           {status !== 'open' && <span className="ml-2 text-amber-200">· {status === 'connecting' ? 'Connecting…' : 'Reconnecting…'}</span>}
           {pending > 0 && <span className="ml-2 text-amber-200">· Sending {pending}…</span>}
-          {ended && <span className="ml-2 text-pickle-neon">· Ended</span>}
+          {ended && <span className="ml-2 text-pb-play">· Ended</span>}
         </p>
       </header>
 
@@ -67,17 +67,17 @@ export default function CaptainConsole({ code, captainKey, snapshot, status, onS
           <h2 className="text-lg font-bold">Queue</h2>
           <p className="mt-1 text-sm">
             {court.match?.status === 'PROPOSED'
-              ? <><b className="text-pickle-neon">{UP_NEXT}</b> on {court.label}: {[...court.match.teamA, ...court.match.teamB].map(nameOf).join(', ')}. Tap Start once they are on court.</>
+              ? <><b className="text-pb-play">{UP_NEXT}</b> on {court.label}: {[...court.match.teamA, ...court.match.teamB].map(nameOf).join(', ')}. Tap Start once they are on court.</>
               : court.match?.status === 'IN_PROGRESS' ? `${court.label} is playing. The next four are called when a game ends.` : `${court.label} has no game yet.`}
           </p>
-          <p className="mt-1 text-sm text-mist">{WAITING}: {snapshot.viewer.waiting.length} player{snapshot.viewer.waiting.length === 1 ? '' : 's'}.</p>
+          <p className="mt-1 text-sm text-pb-ink-2">{WAITING}: {snapshot.viewer.waiting.length} player{snapshot.viewer.waiting.length === 1 ? '' : 's'}.</p>
           {snapshot.viewer.nextUp && (
-            <p className="mt-1 text-sm">{NEXT_FOUR} <span className="text-mist">· {NEXT_FOUR_WHEN}</span>: {snapshot.viewer.nextUp.players.map((p) => p.name).join(', ')}</p>
+            <p className="mt-1 text-sm">{NEXT_FOUR} <span className="text-pb-ink-2">· {NEXT_FOUR_WHEN}</span>: {snapshot.viewer.nextUp.players.map((p) => p.name).join(', ')}</p>
           )}
         </Panel>
       )}
       <Panel><h2 className="mb-2 text-lg font-bold">Standings</h2><StandingsTable rows={snapshot.viewer.standings} /></Panel>
-      <p className="text-center text-xs text-mist lg:col-span-2">This link runs {court.label} only. The host can turn it off at any time.</p>
+      <p className="text-center text-xs text-pb-ink-2 lg:col-span-2">This link runs {court.label} only. The host can turn it off at any time.</p>
 
       {dialog?.type === 'gameOver' && (
         <GameOverDialog title={`${court.label} · who won?`} match={dialog.match} nameOf={nameOf} settings={snapshot.settings}

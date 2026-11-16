@@ -111,12 +111,12 @@ function PageBuilderPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-slate-900">Page: {page.title || slug}</h1>
         <div className="flex gap-2">
-          {relatedLibrary ? <a href={relatedLibrary.to} className="rounded-lg border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-100">{relatedLibrary.label}</a> : null}
+          {relatedLibrary ? <a href={relatedLibrary.to} className="rounded-lg border border-[var(--ws-rule)] bg-[var(--ws-selected)] px-4 py-2 text-sm font-semibold text-[var(--ws-link)] hover:bg-[var(--ws-selected)]">{relatedLibrary.label}</a> : null}
           <button type="button" onClick={() => setShowHistory((v) => !v)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
             {showHistory ? 'Hide History' : 'Version History'}
           </button>
           <PreviewDraftButton type="page" id={slug} />
-          <button type="button" onClick={handleSave} className="rounded-lg bg-brand-teal px-4 py-2 text-sm font-semibold text-white hover:brightness-95">
+          <button type="button" onClick={handleSave} className="rounded-lg bg-[var(--ws-action)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--ws-action-hover)]">
             Save Page
           </button>
         </div>
@@ -177,7 +177,7 @@ function PageBuilderPage() {
         {page.blocks.map((block, index) => HIDDEN_PUBLIC_BLOCKS.has(block.type) || !allowedBlockTypes.includes(block.type) ? null : (
           <div key={index} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
-              <span className="rounded-full bg-brand-mint px-3 py-1 text-xs font-semibold text-brand-teal">{BLOCK_LABELS[block.type] || block.type}</span>
+              <span className="rounded-full bg-[var(--ws-selected)] px-3 py-1 text-xs font-semibold text-[var(--ws-link)]">{BLOCK_LABELS[block.type] || block.type}</span>
               <div className="flex gap-2 text-xs font-semibold text-slate-500">
                 {/* CMS-04: each repeated control names its block. */}
                 <button type="button" aria-label={`Move ${BLOCK_LABELS[block.type] || block.type} block ${index + 1} up`} onClick={() => moveBlock(index, -1)} className="hover:text-slate-800">Up</button>

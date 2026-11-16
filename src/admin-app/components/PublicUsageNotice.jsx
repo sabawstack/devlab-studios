@@ -8,7 +8,7 @@ export default function PublicUsageNotice({ contentType, label, publicPath, desc
   const resolvedDescription = description || usage?.description || 'Changes are reflected on the public website after saving.'
 
   return (
-    <aside className="rounded-xl border border-violet-200 bg-violet-50/60 px-4 py-3 text-sm text-slate-700">
+    <aside className="rounded-xl border border-[var(--ws-rule)] bg-[var(--ws-selected)] px-4 py-3 text-sm text-slate-700">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="font-semibold text-slate-900">Public use: {resolvedLabel}</p>
@@ -16,7 +16,7 @@ export default function PublicUsageNotice({ contentType, label, publicPath, desc
         </div>
         <div className="flex flex-wrap gap-2">
           {paths.map((path) => path.startsWith('/') ? (
-            <a key={path} href={path} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-white px-3 py-1.5 text-xs font-semibold text-violet-700 hover:border-violet-400">
+            <a key={path} href={path} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full border border-[var(--ws-rule)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--ws-link)] hover:border-[var(--ws-link)]">
               {path}
               <ExternalLink className="h-3 w-3" aria-hidden="true" />
             </a>

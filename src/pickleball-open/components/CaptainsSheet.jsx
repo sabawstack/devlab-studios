@@ -75,35 +75,35 @@ export default function CaptainsSheet({ code, hostKey, courts, captains, onHost,
 
   return (
     <Sheet title="Court captains" onClose={onClose}>
-      <p className="text-sm text-mist">A captain link lets someone run one court from their own phone: start its games and save, undo or fix its results. Nothing else. Turn a link off and it stops working at once.</p>
+      <p className="text-sm text-pb-ink-2">A captain link lets someone run one court from their own phone: start its games and save, undo or fix its results. Nothing else. Turn a link off and it stops working at once.</p>
       {error && <p role="alert" className="mt-3 rounded-xl bg-rose-500/15 px-4 py-3 text-rose-100">{error}</p>}
       {fresh && (
-        <div className="mt-4 grid min-w-0 gap-3 rounded-2xl border-2 border-pickle-neon p-4">
+        <div className="mt-4 grid min-w-0 gap-3 rounded-2xl border-2 border-pb-play p-4">
           <p className="font-bold">{fresh.label}</p>
           <div className="flex flex-col items-center gap-2 text-center">
             <QrCode url={fresh.url} size={176} label={`QR code for the ${fresh.courtLabel} captain link`} />
-            <p className="text-xs text-mist">The captain scans this with their phone.</p>
+            <p className="text-xs text-pb-ink-2">The captain scans this with their phone.</p>
           </div>
-          <Button variant="neon" onClick={share}>Send link</Button>
-          {copyNote && <p role="status" className="text-sm font-semibold text-pickle-neon">{copyNote}</p>}
-          <label className="grid min-w-0 gap-1 text-xs text-mist">Captain link for {fresh.courtLabel}
-            <input readOnly value={fresh.url} onFocus={(event) => event.target.select()} className="min-h-11 w-full min-w-0 rounded-lg bg-ink px-3 py-2 font-mono text-xs text-white" />
+          <Button variant="play" onClick={share}>Send link</Button>
+          {copyNote && <p role="status" className="text-sm font-semibold text-pb-play">{copyNote}</p>}
+          <label className="grid min-w-0 gap-1 text-xs text-pb-ink-2">Captain link for {fresh.courtLabel}
+            <input readOnly value={fresh.url} onFocus={(event) => event.target.select()} className="min-h-11 w-full min-w-0 rounded-lg bg-pb-canvas px-3 py-2 font-mono text-xs text-white" />
           </label>
-          <p className="text-xs text-mist">Shown once. Send it now; you can always make another.</p>
+          <p className="text-xs text-pb-ink-2">Shown once. Send it now; you can always make another.</p>
         </div>
       )}
       <ul className="mt-4 grid gap-2">
         {courts.filter((court) => court.enabled).map((court) => {
           const links = captains.filter((c) => c.courtId === court.id)
           return (
-            <li key={court.id} className="rounded-xl bg-navy-900 p-3">
+            <li key={court.id} className="rounded-xl bg-pb-surface p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-bold">{court.label}</span>
                 <Button variant="ghost" disabled={busy} onClick={() => make(court)}>Make a link for {court.label}</Button>
               </div>
               {links.map((c) => (
                 <div key={c.id} className="mt-2 flex items-center justify-between gap-2 text-sm">
-                  <span className="min-w-0 truncate text-mist">{c.label}</span>
+                  <span className="min-w-0 truncate text-pb-ink-2">{c.label}</span>
                   <Button variant="danger" className="!px-3" disabled={turningOff !== null} onClick={() => turnOff(c)} aria-label={`Turn off ${c.label}`}>{turningOff === c.id ? 'Turning off…' : 'Turn off'}</Button>
                 </div>
               ))}

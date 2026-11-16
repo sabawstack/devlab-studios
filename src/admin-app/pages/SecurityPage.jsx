@@ -33,7 +33,7 @@ function PasswordField({ id, label, value, onChange, autoComplete, hint, error, 
           onChange={(event) => onChange(event.target.value)}
           autoComplete={autoComplete}
           disabled={disabled}
-          className="w-full rounded-md border border-slate-300 py-2 pl-3 pr-11 text-sm outline-none focus:border-brand-teal disabled:bg-slate-50"
+          className="w-full rounded-md border border-slate-300 py-2 pl-3 pr-11 text-sm outline-none focus:border-[var(--ws-link)] disabled:bg-slate-50"
           aria-invalid={error ? 'true' : undefined}
           aria-describedby={[error ? `${id}-error` : null, hint ? `${id}-hint` : null].filter(Boolean).join(' ') || undefined}
         />
@@ -43,7 +43,7 @@ function PasswordField({ id, label, value, onChange, autoComplete, hint, error, 
           aria-pressed={isVisible}
           aria-controls={id}
           aria-label={isVisible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
-          className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-md text-slate-500 transition hover:text-brand-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal"
+          className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-md text-slate-500 transition hover:text-[var(--ws-link)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ws-focus)]"
         >
           {isVisible ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
         </button>
@@ -138,7 +138,7 @@ function SecurityPage() {
         />
 
         <p className="flex items-start gap-2 rounded-lg bg-slate-50 px-3 py-2.5 text-xs text-slate-600">
-          <ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand-teal" aria-hidden="true" />
+          <ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--ws-link)]" aria-hidden="true" />
           <span>
             Changing your password signs out every other device immediately. If you are changing it because it may have
             leaked, that is what stops a session someone else already holds.
@@ -148,7 +148,7 @@ function SecurityPage() {
         <button
           type="submit"
           disabled={isSaving || !form.currentPassword || !form.newPassword || !form.confirmPassword}
-          className="rounded-md bg-brand-teal px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-orange disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-md bg-[var(--ws-action)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--ws-action-hover)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSaving ? 'Changing…' : 'Change password'}
         </button>

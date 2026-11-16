@@ -80,10 +80,10 @@ export default function DuprSheet({ code, hostKey, version, send, commandError =
 
   const idForm = (player) => (
     <form key={player.id} className="flex items-end gap-2" onSubmit={(event) => { event.preventDefault(); saveId(player) }}>
-      <label className="grid min-w-0 flex-1 gap-1 break-words text-xs text-mist">DUPR ID for {player.name}
+      <label className="grid min-w-0 flex-1 gap-1 break-words text-xs text-pb-ink-2">DUPR ID for {player.name}
         <input value={ids[player.id] ?? ''} maxLength={6} autoComplete="off"
           onChange={(event) => setIds((prev) => ({ ...prev, [player.id]: event.target.value }))}
-          className="min-h-11 w-full min-w-0 rounded-lg bg-ink px-3 py-2 font-mono uppercase text-white" />
+          className="min-h-11 w-full min-w-0 rounded-lg bg-pb-canvas px-3 py-2 font-mono uppercase text-white" />
       </label>
       <Button type="submit" variant="ghost">Save</Button>
     </form>
@@ -93,14 +93,14 @@ export default function DuprSheet({ code, hostKey, version, send, commandError =
     <Sheet title="Email me the DUPR export" onClose={onClose}>
       {error && <p role="alert" className={alertClass}>{error}</p>}
       {commandError && <p role="alert" className={alertClass}>{commandError}</p>}
-      {notice && <p role="status" className="mb-3 rounded-xl bg-pickle-neon px-4 py-3 font-semibold text-ink">{notice}</p>}
+      {notice && <p role="status" className="mb-3 rounded-xl bg-pb-play px-4 py-3 font-semibold text-pb-canvas">{notice}</p>}
       {loadError && (
         <div role="alert" className={`${alertClass} flex flex-wrap items-center justify-between gap-2`}>
           <span className="min-w-0 break-words">{loadError}</span>
           <Button variant="ghost" onClick={retry}>Retry</Button>
         </div>
       )}
-      {step === 'LOADING' && !loadError && <p role="status" className="text-mist">Loading…</p>}
+      {step === 'LOADING' && !loadError && <p role="status" className="text-pb-ink-2">Loading…</p>}
 
       {step === 'SIGN_IN' && (
         <div className="grid gap-3">
@@ -134,7 +134,7 @@ export default function DuprSheet({ code, hostKey, version, send, commandError =
         <div className="grid gap-3">
           <p className="font-semibold">{exportSummary(status)}</p>
           {status.skipped.length > 0 && (
-            <ul aria-label="Left out" className="grid gap-1 break-words text-sm text-mist">
+            <ul aria-label="Left out" className="grid gap-1 break-words text-sm text-pb-ink-2">
               {status.skipped.map((s) => <li key={s.game}>Game {s.game}{s.court ? `, ${s.court}` : ''}: {s.summary}. {s.reason}</li>)}
             </ul>
           )}
@@ -150,9 +150,9 @@ export default function DuprSheet({ code, hostKey, version, send, commandError =
               {status.sharedIds.map(idForm)}
             </div>
           )}
-          <p className="text-sm text-mist">Club ID {status.host.duprClubId}. In DUPR, go to {DUPR_CLICK_PATH} and choose the file. Your DUPR account must be a Club Director or Organizer of the club.</p>
-          <Button variant="neon" disabled={busy || !status.exported || !status.exportsLeft} onClick={email}>{busy ? 'Sending…' : 'Email me the export'}</Button>
-          <p className="break-words text-xs text-mist">{status.exportsLeft} of {status.exportLimit} exports left today, sent to {status.host.email}.</p>
+          <p className="text-sm text-pb-ink-2">Club ID {status.host.duprClubId}. In DUPR, go to {DUPR_CLICK_PATH} and choose the file. Your DUPR account must be a Club Director or Organizer of the club.</p>
+          <Button variant="play" disabled={busy || !status.exported || !status.exportsLeft} onClick={email}>{busy ? 'Sending…' : 'Email me the export'}</Button>
+          <p className="break-words text-xs text-pb-ink-2">{status.exportsLeft} of {status.exportLimit} exports left today, sent to {status.host.email}.</p>
           {nextExport && <p className="text-sm font-semibold text-amber-100">{nextExport}</p>}
           <details>
             <summary className="min-h-11 cursor-pointer py-2 text-sm">Change Club ID</summary>

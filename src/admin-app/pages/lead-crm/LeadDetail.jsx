@@ -104,7 +104,7 @@ function SignalList({ signals }) {
                     href={signal.sourceUrl}
                     target="_blank"
                     rel="noreferrer nofollow"
-                    className="mt-0.5 inline-block text-xs text-slate-400 hover:text-brand-teal hover:underline"
+                    className="mt-0.5 inline-block text-xs text-slate-400 hover:text-[var(--ws-link)] hover:underline"
                   >
                     Source page ↗
                   </a>
@@ -397,7 +397,7 @@ function LeadDetail({ leadId, onChanged }) {
               href={company?.websiteUrl}
               target="_blank"
               rel="noreferrer nofollow"
-              className="hover:text-brand-teal hover:underline"
+              className="hover:text-[var(--ws-link)] hover:underline"
             >
               {company?.canonicalDomain}
             </a>

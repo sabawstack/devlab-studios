@@ -27,20 +27,20 @@ export default function PlayersPanel({ players, playing, showSkill = false, send
       <form onSubmit={add} className="flex gap-2">
         <label className="sr-only" htmlFor="add-players">Add players</label>
         <input id="add-players" value={names} onChange={(e) => setNames(e.target.value)} placeholder="Add late arrivals (comma-separated)"
-          className="min-h-11 min-w-0 flex-1 rounded-xl border border-navy-700 bg-navy-900 px-3 text-white placeholder:text-mist/70" />
-        <Button type="submit" variant="neon">Add</Button>
+          className="min-h-11 min-w-0 flex-1 rounded-xl border border-pb-field bg-pb-surface px-3 text-white placeholder:text-pb-ink-2/70" />
+        <Button type="submit" variant="play">Add</Button>
       </form>
       <ul className="grid gap-1.5">
         {players.filter((p) => p.status !== 'LEFT').map((p) => {
           const onCourt = playing.has(p.id)
           const waitingNow = p.status === 'ACTIVE' && !p.busy
           return (
-            <li key={p.id} className="grid gap-1 rounded-xl bg-navy-900 px-3 py-2 text-[15px]">
+            <li key={p.id} className="grid gap-1 rounded-xl bg-pb-surface px-3 py-2 text-[15px]">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="min-w-0 flex-1 basis-28 break-words">{p.name}</span>
                 {showSkill && (
                   <select aria-label={`Skill for ${p.name}`} value={p.skill === null ? '' : String(p.skill)} onChange={(e) => setSkill(p, e.target.value)}
-                    className="min-h-11 rounded-lg border border-navy-700 bg-navy-950 px-2 text-sm text-white">
+                    className="min-h-11 rounded-lg border border-pb-rule bg-pb-sunken px-2 text-sm text-white">
                     <option value="">Skill –</option>
                     {p.skill !== null && !SKILLS.includes(p.skill) && <option value={String(p.skill)}>{p.skill}</option>}
                     {SKILLS.map((s) => <option key={s} value={String(s)}>Skill {s}</option>)}
@@ -48,9 +48,9 @@ export default function PlayersPanel({ players, playing, showSkill = false, send
                 )}
                 {p.status === 'ACTIVE' && !onCourt && <Button variant="quiet" className="!min-h-11 !px-2 text-sm" onClick={() => send({ type: 'SET_PLAYER_STATUS', playerId: p.id, status: 'BREAK' })}>Break</Button>}
                 {p.status === 'BREAK' && <Button variant="quiet" className="!min-h-11 !px-2 text-sm" onClick={() => send({ type: 'SET_PLAYER_STATUS', playerId: p.id, status: 'ACTIVE' })}>Back in</Button>}
-                {!onCourt && <Button variant="quiet" className="!min-h-11 !px-2 text-sm text-mist" aria-label={`${p.name} left`} onClick={() => send({ type: 'SET_PLAYER_STATUS', playerId: p.id, status: 'LEFT' })}>Left</Button>}
+                {!onCourt && <Button variant="quiet" className="!min-h-11 !px-2 text-sm text-pb-ink-2" aria-label={`${p.name} left`} onClick={() => send({ type: 'SET_PLAYER_STATUS', playerId: p.id, status: 'LEFT' })}>Left</Button>}
               </div>
-              <span className="text-xs text-mist">
+              <span className="text-xs text-pb-ink-2">
                 {onCourt ? PLAYING : p.busy ? UP_NEXT : STATUS_LABEL[p.status]} · {p.games} game{p.games === 1 ? '' : 's'} · sat out {p.satOut}
                 {waitingNow ? ` · ${minutesSince(p.waitingSince, now)} min` : ''}
               </span>

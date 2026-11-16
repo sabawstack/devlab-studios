@@ -23,7 +23,7 @@ export default function HostQueuePanel({ host, nameOf }) {
 
       {calls.length > 0 && (
         <div>
-          <h3 className="text-sm font-bold text-pickle-neon">{UP_NEXT}</h3>
+          <h3 className="text-sm font-bold text-pb-play">{UP_NEXT}</h3>
           <ul className="mt-1 grid gap-1 text-sm">
             {calls.map((c) => (
               <li key={c.id} className="[overflow-wrap:anywhere]"><b>{c.label}</b>: {[...c.match.teamA, ...c.match.teamB].map(nameOf).join(', ')}</li>
@@ -44,22 +44,22 @@ export default function HostQueuePanel({ host, nameOf }) {
 
       {viewer.nextUp && (
         <div data-testid="host-next-four">
-          <h3 className="text-sm font-bold">{NEXT_FOUR} <span className="font-normal text-mist">· {NEXT_FOUR_WHEN}</span></h3>
+          <h3 className="text-sm font-bold">{NEXT_FOUR} <span className="font-normal text-pb-ink-2">· {NEXT_FOUR_WHEN}</span></h3>
           <p className="mt-1 text-sm [overflow-wrap:anywhere]">{viewer.nextUp.players.map((p) => p.name).join(', ')}</p>
         </div>
       )}
 
       <div>
         <h3 className="text-sm font-bold">{WAITING} ({viewer.waiting.length})</h3>
-        <p className="text-xs text-mist">{QUEUE_RULE} Listed in that order.</p>
-        {viewer.waiting.length === 0 ? <p className="mt-1 text-sm text-mist">Everyone is on court.</p> : (
+        <p className="text-xs text-pb-ink-2">{QUEUE_RULE} Listed in that order.</p>
+        {viewer.waiting.length === 0 ? <p className="mt-1 text-sm text-pb-ink-2">Everyone is on court.</p> : (
           <ul className="mt-1 grid gap-1 text-sm">
             {viewer.waiting.map((w) => {
               const p = players.get(w.id)
               return (
-                <li key={w.id} className="flex flex-wrap justify-between gap-x-3 rounded-lg bg-navy-800 px-3 py-1.5">
+                <li key={w.id} className="flex flex-wrap justify-between gap-x-3 rounded-lg bg-pb-raised px-3 py-1.5">
                   <span className="[overflow-wrap:anywhere]">{w.name}</span>
-                  {p && <span className="text-mist">{plural(p.games, 'game')} · sat out {p.satOut}</span>}
+                  {p && <span className="text-pb-ink-2">{plural(p.games, 'game')} · sat out {p.satOut}</span>}
                 </li>
               )
             })}
@@ -71,7 +71,7 @@ export default function HostQueuePanel({ host, nameOf }) {
       {onBreak.length > 0 && (
         <div>
           <h3 className="text-sm font-bold">{ON_BREAK} ({onBreak.length})</h3>
-          <p className="mt-1 text-sm text-mist [overflow-wrap:anywhere]">{onBreak.map((p) => p.name).join(', ')}</p>
+          <p className="mt-1 text-sm text-pb-ink-2 [overflow-wrap:anywhere]">{onBreak.map((p) => p.name).join(', ')}</p>
         </div>
       )}
     </Panel>

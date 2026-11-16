@@ -20,16 +20,16 @@ export default function ShareResultsButton({ results, url }) {
   return (
     <div className="grid min-w-0 gap-2">
       <div className="flex flex-wrap items-center gap-3">
-        <Button variant="neon" onClick={share}>Share results</Button>
+        <Button variant="play" onClick={share}>Share results</Button>
         {/* Always mounted, so a screen reader hears "Copied" when it appears. */}
-        <span role="status" className="text-sm font-semibold text-pickle-neon">{outcome === 'copied' ? 'Copied' : ''}</span>
+        <span role="status" className="text-sm font-semibold text-pb-play">{outcome === 'copied' ? 'Copied' : ''}</span>
       </div>
       {outcome === 'failed' && (
         <div role="alert" className="grid gap-2 rounded-xl bg-amber-400/15 p-3 text-amber-100">
           <p className="text-sm">Couldn't copy. Select the text below and copy it yourself.</p>
           <textarea readOnly value={text} rows={4} aria-label="Results to share"
             onFocus={(event) => event.target.select()}
-            className="w-full rounded-lg border border-navy-700 bg-navy-950 p-2 text-sm text-white" />
+            className="w-full rounded-lg border border-pb-rule bg-pb-sunken p-2 text-sm text-white" />
         </div>
       )}
     </div>
