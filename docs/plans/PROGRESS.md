@@ -505,3 +505,16 @@ Also: `primitives/Dialog.jsx` (focus moves in, Tab trapped, Escape when dismissi
 
 Verification: lint 0 errors, typecheck 0 errors, unit 3,023 passed / 1 skipped, build OK, static e2e 246 passed / 1 skipped, worker e2e 324 passed / 6 failed / 1 skipped. The 6 failures (SEO slug editor, Lead CRM sources seed, two mailbox transmitter callbacks, two poster-share emulations) were rerun on clean `main` with the same local state and fail identically there: pre-existing local-environment failures, not from this group.
 
+### Group 2 — Pickleball queue read model (log)
+
+Branch `feat/pb-admin-2-queue-model` (stacked on Group 1), commit `b0856e1`.
+
+| Req | Status | Evidence |
+|---|---|---|
+| PB-QUEUE-08 | done | `testing/reducerSim.ts` drives `applyCommand` + `finalizeCommand`; `queuePrediction.simulation.test.ts` RED (no `outlook.ts`) then GREEN. Positions 1–4 right 11–24%, unconditional projection 30–100%, `nextUp` right 1,863/1,863 and shown in 26–58% of results (table in the spec) |
+| PB-QUEUE-06 | done | `outlook.ts` (`nextUp` + `idle`), wired into `toViewerSnapshot`. `outlook.property.test.ts` 16 tests: the invariant in all four modes with rules and random disturbances, 1–16 courts, up to 128 players. Mutation check: removing any gate condition turns a test red (the by-standing tie condition is caught by a constructed case, not by random play; recorded as a deviation) |
+| PB-TOURNAMENT-01 | done | `fixtureQueue` in `tournament/courts.ts` (shared `readiness` + exported `playOrder`), `TournamentView.comingUp`; first unheld entry equals `proposeFixture` at every step of three formats; client `nextGames` is a lookup |
+| SEC-01 | done | Exact top-level and per-court keys; `nextUp` entries exactly `id`/`name`; disjoint from up-next courts; null in the five required states; viewer JSON free of the host blocker text and `rules` |
+
+Verification: lint 0 errors (1 pre-existing warning), typecheck 0, unit 3,051 passed / 1 skipped (210 files), build OK. Worker e2e 326 passed / 4 failed (SEO slug, Lead CRM sources seed, two poster-share emulations: the known pre-existing set). Static e2e: the first run after the worker suite failed 4 public-page tests (Work entries and sitemap) because the worker suite's admin tests leave projects in the local D1 the static snapshot copies; the local state was moved aside to `.wrangler/state-backup-2026-11-16` (kept) and the rerun on fresh state passed 246 / 1 skipped, as CI runs.
+
