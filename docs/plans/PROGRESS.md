@@ -551,7 +551,7 @@ Verification: lint 0 errors (1 pre-existing warning), typecheck 0, unit 3,062 pa
 
 ### Group 5 — Brand foundation (log)
 
-Branch `feat/pb-admin-5-brand-foundation` (stacked on Group 4), commits `6dee54d` (BRAND-01) and `6dee54d`.
+Branch `feat/pb-admin-5-brand-foundation` (stacked on Group 4), commits `6dee54d` (BRAND-01) and `b699895` (BRAND-02..06 and ADR 0016; its message reads "docs(plans): log Group 5" because the feature commit was rejected by the commit-message linter and the log commit picked up the staged code. History was not rewritten).
 
 | Req | Status | Evidence |
 |---|---|---|
