@@ -204,10 +204,10 @@ _Pending._
 
 | ID | Test |
 |---|---|
-| CRM-01 | _pending_ |
-| CRM-02 | _pending_ |
-| ADMIN-05 | _pending_ |
-| MAIL-01 | _pending_ |
+| CRM-01 | `src/admin-app/lib/adminApi.test.js` (delete with and without a body; RED before the fix); `tests/e2e/lead-crm.spec.js` "a suppression can be removed with a reason and is kept as removed" (RED before the fix) |
+| CRM-02 | `tests/e2e/lead-crm.spec.js` "a failed policy review keeps the editor open with the error" (synthetic source, failed PATCH; RED before the fix) |
+| ADMIN-05 | `adminApi.test.js` (pause on 401, one notice, retry after sign-in, sign-out rejects, login 401 exempt, no listener = old behaviour); `tests/e2e/session-expiry.admin.spec.js` (revoke mid-page, dialog over the page, typed value kept, sign in, request retried; wrong password, Escape ignored, Sign out) |
+| MAIL-01 | `tests/e2e/mailbox.spec.js` "a failed archive says so instead of failing silently" (RED before the fix) |
 | PB-QUEUE-08 | _pending_ |
 | PB-QUEUE-06 | _pending_ |
 | PB-TOURNAMENT-01 | _pending_ |

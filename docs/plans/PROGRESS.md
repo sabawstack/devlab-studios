@@ -490,3 +490,18 @@ scratchpad, not committed (admin pages can show local fixture data).
 | Spec | `docs/plans/devlab-admin-pickleball-brand-alignment-audit.md` created with every requirement ID, the owner decisions, the `nextUp` contract and gate, and the testing matrix |
 | Tooling | `scripts/visual/capture-apps.mjs` (Admin and Pickleball captures on the local stack) |
 
+### Group 1 — Verified defects (log)
+
+Branch `feat/pb-admin-1-defects` (stacked on Group 0), commit `325ce1b`.
+
+| Req | Status | Evidence |
+|---|---|---|
+| CRM-01 | done | `adminApi.delete(path, body?)`; unit test RED (body dropped) then GREEN; the other six DELETE callers pass no body and keep their request shape (unit-tested). E2e adds a suppression, removes it with a reason and finds it under "Show removed entries" with that reason: RED without the fix |
+| ADMIN-05 | done | `adminFetch` + `onSessionExpired` in `lib/adminApi.js`; `SessionExpiredDialog` beside the router (router memoised per sign-in so it never remounts); legacy editors (`ContentManager`, `ProjectsManager`, `SeoManager`, `SiteSettingsManager`, project gallery upload) and the media, attachment and DMARC fetches go through `adminFetch`; "Cloudflare Access" text gone. 4 unit tests; 2 e2e (revoke mid-page → dialog → typed value kept → sign in → request retried; wrong password, Escape ignored, Sign out) |
+| CRM-02 | done | Editor closes only when the save succeeded. E2e with a synthetic source and a failed PATCH: RED without the fix |
+| MAIL-01 | done | `role="alert"` error on a failed state change. E2e with a failed state POST: RED without the fix |
+
+Also: `primitives/Dialog.jsx` (focus moves in, Tab trapped, Escape when dismissible, focus returns), the first ADMIN-06 primitive, used by the session dialog.
+
+Verification: lint 0 errors, typecheck 0 errors, unit 3,023 passed / 1 skipped, build OK, static e2e 246 passed / 1 skipped, worker e2e 324 passed / 6 failed / 1 skipped. The 6 failures (SEO slug editor, Lead CRM sources seed, two mailbox transmitter callbacks, two poster-share emulations) were rerun on clean `main` with the same local state and fail identically there: pre-existing local-environment failures, not from this group.
+
