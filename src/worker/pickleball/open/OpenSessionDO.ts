@@ -27,6 +27,7 @@ import {
 import {
   claimSession, deleteDuprExport, insertDuprExport, insertHostKey, loadHostAccess, recentDuprExports, reopenRefusal, type HostAccess,
 } from '../../repositories/pickleball/open/hostAccess'
+import { enableHeartbeat } from './heartbeat'
 
 export type DoResult<T> = { status: number; body: T | { error: string }; retryAfterSeconds?: number }
 export interface Credentials { hostKey: string | null; captainKey: string | null }
@@ -131,6 +132,12 @@ function windowRetryAfter(times: readonly number[], limit: number, windowMs: num
 }
 
 export class OpenSessionDO extends DurableObject<Env> {
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env)
+    // Set on every start (it is not persisted); answering a ping never wakes this object.
+    enableHeartbeat(ctx)
+  }
+
   private loaded: Cached | null = null
   private chain: Promise<unknown> = Promise.resolve()
   private commandTimes: number[] = []

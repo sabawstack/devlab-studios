@@ -6,6 +6,7 @@ import { viewerLink } from '../lib/hostKeys'
 import { readMe } from '../lib/me'
 import { myStatus } from '../lib/myStatus'
 import { courtStateLabel } from '../lib/queueVocabulary'
+import { isFresh } from '../lib/realtimeConfig'
 import { useNow } from '../lib/useNow'
 import { BOARD_TABS } from '../tournament/tabs'
 import BracketView from '../tournament/BracketView.jsx'
@@ -18,8 +19,6 @@ import StatusCard, { NamePicker } from './StatusCard.jsx'
 import Welcome from './Welcome.jsx'
 import { Panel, TeamNames } from './ui.jsx'
 
-// Polling keeps the board current when the socket can't open, so "live" means fresh data, not an open socket.
-const STALE_MS = 15_000
 const clock = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
 function MeBanner({ text }) {
@@ -27,9 +26,10 @@ function MeBanner({ text }) {
   return <p className="rounded-2xl bg-pickle-neon px-4 py-3 text-lg font-bold text-ink [overflow-wrap:anywhere]" role="status">{text}</p>
 }
 
-export default function ViewerBoard({ viewer, status, lastSnapshotAt = null, invalidHostLink, revokedCaptainLink = false, signInNotice = null }) {
+export default function ViewerBoard({ viewer, lastSnapshotAt = null, lastContactAt = null, invalidHostLink, revokedCaptainLink = false, signInNotice = null }) {
   const now = useNow(5000)
-  const fresh = status === 'open' || (lastSnapshotAt !== null && now - lastSnapshotAt < STALE_MS)
+  // PB-REALTIME-01: "live" means the server was heard from recently (a frame, a heartbeat, a poll), not an open socket.
+  const fresh = isFresh(lastContactAt, now)
   const [me, setMe] = useState(() => readMe(viewer.code))
   const [tab, setTab] = useState('courts')
   const mine = myStatus(viewer, me)

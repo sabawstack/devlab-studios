@@ -219,7 +219,14 @@ no place number, and names a four only through `nextUp`.
 
 ### PB-REALTIME-01: timings
 
-_Pending._
+Configured (`src/pickleball-open/lib/realtimeConfig.js`): poll every 5 s while
+the socket is down; heartbeat every 10 s; reply deadline 5 s; stale after 25 s
+without server contact; reconnect 1, 2, 4, then 8 s. Heartbeat: runtime
+auto-response (Cloudflare Durable Object State API, `setWebSocketAutoResponse`,
+page updated 2026-09-30). Measured locally (`open-realtime.spec.js`, wrangler
+dev, Chromium): heartbeat round trip 5–26 ms; quiet board LIVE through 30 s;
+silently dead socket shown as "Last known" after ~30 s; LIVE again ~2.3 s after
+the network returned. Production and real phones not measured (see Not done).
 
 ## Testing matrix
 
@@ -234,7 +241,7 @@ _Pending._
 | PB-TOURNAMENT-01 | `snapshot.tournament.test.ts` "tournament comingUp" (empty before the start; exact keys; live games left out; `PAIR_PLAYING` and `ON_BREAK`; first unheld game equals `proposeFixture` at every step of round robin, pool-to-bracket and double elimination); `bracketLayout.test.js` (client follows the server order) |
 | SEC-01 | `snapshot.test.ts` "nextUp and idle in the viewer snapshot" (exact top-level and court keys; `nextUp` entries exactly `id` and `name`; none on a court; nobody both up next and in `nextUp`; null with a proposed game, a free court, fewer than four waiting, ended, tournament; `idle` never carries the host text or `rules`) |
 | PB-QUEUE-01..05, 07, PB-UX | `queueVocabulary.test.js`, `myStatus.test.js` (no place number, `NEXT_FOUR`, stale wording); `tests/e2e/pickleball/open-queue.spec.js` (status card in each state on a 390 px phone incl. the "Who are you?" prompt and the live region; board order; unnumbered waiting list; next four; "decided when a game ends"; TV waiting panel, next four and compact queue; host and captain queue panels; axe on the board and TV); `open-play.spec.js` (end-session sheet: Cancel, Escape, focus return, confirm) and the TV fit tests at 16 courts and long names |
-| PB-REALTIME-01, 02 | _pending_ |
+| PB-REALTIME-01, 02 | `heartbeat.test.ts` (auto-response pair registered; no-op outside workerd); `realtimeConfig.test.js` (freshness from contact; heartbeat + deadline inside the stale window); `myStatus.test.js` ("Last known", no imperative); `queueVocabulary.test.js`; `tests/e2e/pickleball/open-realtime.spec.js` (runtime pong; quiet board stays LIVE past the stale window; dead-but-open socket → "Last known", no "walk on now", recovers; visibility/online → immediate poll + RESYNC) |
 | BRAND-01..06 | _pending_ |
 | ADMIN-01..10, CRM-03..07, MAIL-02..05, CMS-01..04 | _pending_ |
 

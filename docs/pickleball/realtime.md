@@ -49,6 +49,42 @@ it polls the same route every 5 seconds and reconnects after 1, 2, 4, then every
 8 seconds, keeping the last snapshot on screen. A socket counts as live only once
 it has delivered the snapshot the page signed in for.
 
+## Freshness and the heartbeat (Phase 15, PB-REALTIME-01/02)
+
+"LIVE" on the board and TV means the server was heard from within
+`staleMs` (25 s): any frame, a heartbeat reply, or a successful poll. The socket's
+own state is not trusted, because a phone that slept can hold a socket that says
+"open" and is dead. All timings live in `src/pickleball-open/lib/realtimeConfig.js`.
+
+- **Heartbeat.** An open socket sends the plain text `ping` every 10 s. The
+  Durable Object registers `ping`/`pong` with `ctx.setWebSocketAutoResponse`
+  (`src/worker/pickleball/open/heartbeat.ts`), so the Workers runtime answers
+  without waking a hibernating object or billing its duration. Source:
+  Cloudflare, Durable Object State API, "setWebSocketAutoResponse"
+  (developers.cloudflare.com/durable-objects/api/state/, updated 2026-09-30):
+  "the auto-response will be returned without waking WebSockets in
+  hibernation"; request and response are each limited to 2,048 characters.
+  Auto-responded pings never reach `webSocketMessage`, so they do not spend the
+  per-socket message budget.
+- **Reply deadline.** A ping, a `RESYNC`, or a freshly opened socket with no
+  frame within `replyTimeoutMs` (5 s) is treated as dead: dropped without
+  waiting for a close handshake, then the poll-and-reconnect path takes over.
+- **Waking.** On `visibilitychange` (visible) and `online` the client polls at
+  once and, if the socket is open, sends the existing `RESYNC` under the same
+  deadline.
+- **Stale wording.** While not fresh, the status card reads "Last known (time):
+  …" and no call says "walk on now"; the header says "Offline · showing data
+  from …". Only snapshots the server sent are ever shown: polling and
+  reconnecting never create a call.
+
+Measured on the local stack (`tests/e2e/pickleball/open-realtime.spec.js`,
+wrangler dev, Chromium, 2026-11-16), not guarantees: heartbeat round trip 5–26
+ms; a quiet session stayed LIVE for 30 s with no state change; with the socket
+silently dead and polls failing, the board showed "Last known" after about 30 s
+(25 s stale window plus the 5 s screen clock tick); once the network returned,
+LIVE again after about 2.3 s. Not measured: real mobile radios, carrier NAT
+timeouts, or a phone waking from deep sleep on the production edge.
+
 ## Concurrency
 
 Commands go through `POST /api/pickleball/open/s/{code}/commands` to the same

@@ -11,7 +11,7 @@ const NOW = '2026-10-12T10:00:00.000Z'
 async function setup() {
   const { d1, raw } = createSqliteD1(MIGRATIONS)
   const env = { PICKLEBALL_DB: d1 } as unknown as Pick<Env, 'PICKLEBALL_DB' | 'RATE_LIMITER'>
-  const host = await upsertHost(d1, { googleSub: 'g1', email: 'mo@example.com', displayName: 'Mo', marketingOptIn: false }, { now: NOW, newId: () => 'h1' })
+  const host = await upsertHost(d1, { googleSub: 'g1', email: 'mo@example.com', displayName: 'Mo', marketingOptIn: false }, { now: NOW, newId: () => 'host-row-7f3c9e' })
   return { env, raw, host }
 }
 

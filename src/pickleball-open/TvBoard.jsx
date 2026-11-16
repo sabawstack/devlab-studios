@@ -13,6 +13,7 @@ import { checkInLink, viewerLink } from './lib/hostKeys'
 import { PANEL_MS, PANELS, tvColumns, tvRows } from './lib/tvLayout'
 import { useNow } from './lib/useNow'
 import { useOpenSession } from './lib/useOpenSession'
+import { isFresh, REALTIME } from './lib/realtimeConfig'
 import FairnessPanel from './components/FairnessPanel.jsx'
 import FitList from './components/FitList.jsx'
 import QrCode from './components/QrCode.jsx'
@@ -23,7 +24,6 @@ import { HELD_LABEL, NEXT_FOUR, NEXT_FOUR_WHEN, QUEUE_RULE, WAITING, waitingNote
 import ResultsScreen from './components/results/ResultsScreen.jsx'
 import ChampionAnnouncer from './tournament/ChampionAnnouncer.jsx'
 
-const STALE_MS = 15_000
 const WRAP = '[overflow-wrap:anywhere]'
 const H2 = 'text-[clamp(1rem,1.4vw,1.75rem)] font-bold uppercase tracking-[0.12em] text-pickle-neon'
 
@@ -167,7 +167,7 @@ function Results({ viewer }) {
 }
 
 export default function TvBoard({ code }) {
-  const { status, viewer, lastSnapshotAt } = useOpenSession(code, null)
+  const { status, viewer, lastSnapshotAt, lastContactAt } = useOpenSession(code, null)
   const now = useNow(5000)
   const [openedAt] = useState(() => Date.now())
   const width = useSyncExternalStore(subscribeResize, viewportWidth, () => 1280)
@@ -178,12 +178,13 @@ export default function TvBoard({ code }) {
     return <TvNotice title="This session has ended and its results were deleted." body="Sessions are deleted 7 days after their last change." />
   }
   if (!viewer) {
-    return now - openedAt > STALE_MS
+    return now - openedAt > REALTIME.staleMs
       ? <TvNotice title="Can't reach the board" body="Trying again every few seconds." />
       : <TvNotice title="Loading the board…" />
   }
 
-  const live = status === 'open' || (lastSnapshotAt !== null && now - lastSnapshotAt < STALE_MS)
+  // PB-REALTIME-01: live means recent server contact, not an open socket.
+  const live = isFresh(lastContactAt, now)
   // A finished tournament shows its final standings before the host ends it: treat it as over.
   const final = showsFinalResults(viewer)
   const courts = viewer.courts.filter((c) => c.state !== 'OFF')
