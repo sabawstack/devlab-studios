@@ -51,6 +51,8 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-11-16
+
 ### Added
 
 - Specification for the Admin and Pickleball queue, defect and brand alignment work (`docs/plans/devlab-admin-pickleball-brand-alignment-audit.md`), logged as Phase 15 in `docs/plans/PROGRESS.md`, and `scripts/visual/capture-apps.mjs`, which captures the Admin and Pickleball screens on the local stack with synthetic sessions at 390, 820, 1440 and 1920 px (output stays outside the repository).
