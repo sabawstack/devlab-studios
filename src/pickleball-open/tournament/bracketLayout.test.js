@@ -37,4 +37,13 @@ describe('nextGames', () => {
     expect(next[0].roundNumber).toBe(1)
     expect(nextGames(null)).toEqual([])
   })
+
+  // PB-TOURNAMENT-01: the client no longer orders anything itself.
+  it('follows the server order and carries why a game is held', () => {
+    const t = view('ROUND_ROBIN', 8, 1)
+    expect(nextGames(t, 99).map((f) => f.id)).toEqual(t.comingUp.map((c) => c.fixtureId))
+    expect(nextGames(t, 99).map((f) => f.held)).toEqual(t.comingUp.map((c) => c.held))
+    const reversed = { ...t, comingUp: [...t.comingUp].reverse() }
+    expect(nextGames(reversed, 99).map((f) => f.id)).toEqual(reversed.comingUp.map((c) => c.fixtureId))
+  })
 })

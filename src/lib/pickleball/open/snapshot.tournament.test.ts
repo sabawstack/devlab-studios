@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { resultsCsv } from './resultsCsv'
 import { toCaptainSnapshot, toHostSnapshot, toViewerSnapshot } from './snapshot'
 import { makeCtx, playOut, run, tournamentSession } from './testing/tournament'
+import { proposeFixture } from './tournament/courts'
 import type { CaptainRecord } from './types'
 
 function cup() {
@@ -70,5 +71,62 @@ describe('tournament snapshots', () => {
     expect(csv).not.toMatch(/(^|,)=HYPERLINK/m)
     const tabbed = { ...done, players: done.players.map((p) => (p.id === 'p1' ? { ...p, name: '	=1+1' } : p)) }
     expect(resultsCsv(tabbed)).toContain(`"'	=1+1 & Ben"`)
+  })
+})
+
+// PB-TOURNAMENT-01: "Coming up" from the server's own fixture order and busy rules.
+describe('tournament comingUp', () => {
+  function roundRobin() {
+    const ctx = makeCtx()
+    let state = tournamentSession(16, 2, 'ROUND_ROBIN')
+    state = run(state, { type: 'GENERATE_DRAW', format: 'ROUND_ROBIN', pairing: 'MANUAL', seeding: 'MANUAL' }, ctx(1))
+    return { state, ctx }
+  }
+
+  it('is empty before the start, and carries exactly fixtureId and held', () => {
+    const { state, ctx } = roundRobin()
+    expect(toViewerSnapshot(state).tournament!.comingUp).toEqual([])
+    const started = run(state, { type: 'START_TOURNAMENT' }, ctx(2))
+    const coming = toViewerSnapshot(started).tournament!.comingUp
+    expect(coming.length).toBeGreaterThan(0)
+    for (const entry of coming) expect(Object.keys(entry).sort()).toEqual(['fixtureId', 'held'])
+  })
+
+  it('leaves out games already on a court and marks games whose pair is playing or on a break', () => {
+    const { state, ctx } = roundRobin()
+    const started = run(state, { type: 'START_TOURNAMENT' }, ctx(2))
+    const t = toViewerSnapshot(started).tournament!
+    const onCourt = new Set(t.fixtures.filter((f) => f.court).map((f) => f.id))
+    expect(t.comingUp.some((c) => onCourt.has(c.fixtureId))).toBe(false)
+    const playingPairs = new Set(t.fixtures.filter((f) => f.court).flatMap((f) => [f.entrantAId, f.entrantBId]))
+    for (const entry of t.comingUp) {
+      const f = t.fixtures.find((x) => x.id === entry.fixtureId)!
+      const busy = playingPairs.has(f.entrantAId) || playingPairs.has(f.entrantBId)
+      expect(entry.held).toBe(busy ? 'PAIR_PLAYING' : null)
+    }
+    // A player of a free pair goes on a break: that pair's games are held ON_BREAK.
+    const free = t.comingUp.find((c) => c.held === null)!
+    const pair = t.pairs.find((p) => p.id === t.fixtures.find((f) => f.id === free.fixtureId)!.entrantAId)!
+    const away = run(started, { type: 'SET_PLAYER_STATUS', playerId: pair.playerIds[0], status: 'BREAK' }, ctx(3))
+    const held = toViewerSnapshot(away).tournament!.comingUp.find((c) => c.fixtureId === free.fixtureId)
+    expect(held?.held).toBe('ON_BREAK')
+  })
+
+  it('the first game not held is always the one the next free court takes', () => {
+    const ctx = makeCtx()
+    for (const [format, players] of [['ROUND_ROBIN', 12], ['POOL_TO_BRACKET', 16], ['DOUBLE_ELIMINATION', 8]] as const) {
+      let state = tournamentSession(players, 2, format)
+      state = run(state, { type: 'GENERATE_DRAW', format, pairing: 'MANUAL', seeding: 'MANUAL' }, ctx(1))
+      state = run(state, { type: 'START_TOURNAMENT' }, ctx(2))
+      let minute = 3
+      for (let guard = 0; guard < 200; guard += 1) {
+        const next = toViewerSnapshot(state).tournament!.comingUp.find((c) => c.held === null)?.fixtureId ?? null
+        expect(proposeFixture(state)?.fixtureId ?? null).toBe(next)
+        const live = state.matches.find((m) => m.status === 'PROPOSED' || m.status === 'IN_PROGRESS')
+        if (!live) break
+        if (live.status === 'PROPOSED') state = run(state, { type: 'START_MATCH', matchId: live.id }, ctx((minute += 1)))
+        state = run(state, { type: 'RECORD_RESULT', matchId: live.id, winner: 'A', scoreA: 11, scoreB: 7 }, ctx((minute += 1)))
+      }
+    }
   })
 })

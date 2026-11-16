@@ -23,8 +23,9 @@ function lexicographic(a: readonly number[], b: readonly number[]): number {
   return 0
 }
 
-export function proposeByStanding(input: ModeInput): Proposal | null {
-  const { state, queue, history, rules, exclude } = input
+/** Everything both the window search and the fallback read; null when fewer than four are due. */
+function standingContext(input: ModeInput) {
+  const { state, queue, rules, exclude } = input
   const pool = fairPool(queue, rules, exclude)
   const due = [...pool.required, ...pool.optional]
   if (due.length < 4) return null
@@ -37,6 +38,14 @@ export function proposeByStanding(input: ModeInput): Proposal | null {
   const { required: must, rest } = splitPool(pool, state)
   const required = must.map((e) => e.player.id)
   const anchor: QueueEntry = must[0] ?? rest[0]
+  return { rank, ranked, required, rest, anchor }
+}
+
+type StandingContext = NonNullable<ReturnType<typeof standingContext>>
+
+/** The qualifying window of four adjacent ranks whose four have met least; null when none qualifies. */
+function bestWindow(input: ModeInput, { ranked, required, anchor }: StandingContext): string[] | null {
+  const { state, history, rules, exclude } = input
   const met = meetings(state)
   const at = ranked.indexOf(anchor)
   const banned = exclude ? setKey(exclude) : null
@@ -57,13 +66,31 @@ export function proposeByStanding(input: ModeInput): Proposal | null {
     ]
     if (!best || lexicographic(score, best.score) < 0) best = { ids, score }
   }
-  if (best) return standingSplit(best.ids, input)
+  return best?.ids ?? null
+}
+
+/**
+ * True when the proposal would come from a standings window rather than the
+ * rank-distance fallback. Read-only; used by outlook.ts, which can only say who
+ * is next when the choice depends on relative ranks alone.
+ */
+export function byStandingUsesWindow(input: ModeInput): boolean {
+  const context = standingContext(input)
+  return context !== null && bestWindow(input, context) !== null
+}
+
+export function proposeByStanding(input: ModeInput): Proposal | null {
+  const context = standingContext(input)
+  if (!context) return null
+  const window = bestWindow(input, context)
+  if (window) return standingSplit(window, input)
 
   // No window seats every required player within the rules: required players
   // first, then the optional ones nearest in rank to the anchor.
+  const { rank, required, rest, anchor } = context
   const anchorRank = rank(anchor.player.id)
   const nearest = [...rest].sort((a, b) => Math.abs(rank(a.player.id) - anchorRank) - Math.abs(rank(b.player.id) - anchorRank))
-  const four = pickFour([...required, ...nearest.map((e) => e.player.id)], rules, exclude, new Set(queue.map((e) => e.player.id)))
+  const four = pickFour([...required, ...nearest.map((e) => e.player.id)], input.rules, input.exclude, new Set(input.queue.map((e) => e.player.id)))
   if (!four) return null
   return standingSplit([...four].sort((a, b) => rank(a) - rank(b)), input)
 }

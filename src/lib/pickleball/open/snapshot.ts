@@ -2,6 +2,7 @@
 // never by spreading state, so a new column can never leak to the public
 // board by accident. The captain snapshot is the same idea for one court.
 import { busyPlayerIds, fairnessSummary, gamesPlayed, queueOrder, roundsSatOut, type FairnessSummary } from './fairness'
+import { queueOutlook, type CourtIdle } from './outlook'
 import { proposalBlocker } from './propose'
 import { computeStandings, type StandingRow } from './standings'
 import { tournamentCourtNote } from './tournament/courts'
@@ -18,6 +19,12 @@ export interface ViewerCourt {
   startedAt: string | null
   /** The tournament game on this court ("Semi-final 1"); null in open play. */
   fixtureLabel: string | null
+  /**
+   * Why an enabled court has no game, as a coarse reason (outlook.ts); null
+   * when it has a game or is off. Never the host's free-text blocker, which can
+   * reveal that pairing rules exist.
+   */
+  idle: CourtIdle | null
 }
 
 export interface ViewerSnapshot {
@@ -37,6 +44,12 @@ export interface ViewerSnapshot {
   version: number
   courts: ViewerCourt[]
   waiting: Array<{ id: string; name: string }>
+  /**
+   * The four the server will call when the next game ends, only when the state
+   * already fixes them (outlook.ts); null otherwise. Provisional: no court and
+   * no teams, and it is never a reservation.
+   */
+  nextUp: { players: Array<{ id: string; name: string }> } | null
   onBreak: Array<{ id: string; name: string }>
   roster: Array<{ id: string; name: string }>
   standings: StandingRow[]
@@ -137,6 +150,7 @@ function gameTimes(matches: readonly OpenMatch[]): ViewerSnapshot['games'] {
 
 export function toViewerSnapshot(state: OpenSessionState): ViewerSnapshot {
   const courts = [...state.courts].sort((a, b) => a.position - b.position)
+  const outlook = queueOutlook(state)
   return {
     code: state.publicCode,
     kind: state.kind,
@@ -157,9 +171,11 @@ export function toViewerSnapshot(state: OpenSessionState): ViewerSnapshot {
         teamA: match ? namesOf(state, match.teamA) : [], teamB: match ? namesOf(state, match.teamB) : [],
         startedAt: match?.startedAt ?? null,
         fixtureLabel: labelFor(state, match),
+        idle: outlook.idle.get(c.id) ?? null,
       }
     }),
     waiting: queueOrder(state).map((e) => ({ id: e.player.id, name: e.player.name })),
+    nextUp: outlook.nextUp ? { players: outlook.nextUp.map((e) => ({ id: e.player.id, name: e.player.name })) } : null,
     onBreak: state.players.filter((p) => p.status === 'BREAK').map((p) => ({ id: p.id, name: p.name })),
     roster: state.players.filter((p) => p.status !== 'LEFT').map((p) => ({ id: p.id, name: p.name })),
     standings: computeStandings(state.players, state.matches),

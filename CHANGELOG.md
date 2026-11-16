@@ -55,6 +55,9 @@ decided against that surface specifically:
 
 - Specification for the Admin and Pickleball queue, defect and brand alignment work (`docs/plans/devlab-admin-pickleball-brand-alignment-audit.md`), logged as Phase 15 in `docs/plans/PROGRESS.md`, and `scripts/visual/capture-apps.mjs`, which captures the Admin and Pickleball screens on the local stack with synthetic sessions at 390, 820, 1440 and 1920 px (output stays outside the repository).
 
+- Pickleball: two read-only queue fields in the public snapshot (and so in the host and captain ones). `nextUp` names the four players the server will call when the next game ends, only when the current state already fixes them, whichever side wins and by any score; otherwise it is null and nobody is named. Each court's `idle` says, as a coarse reason, why an enabled court has no game (too few players, waiting on the host, tournament not started, waiting on a result, a player on break, session over), and never the host's own wording. No matchmaking or ordering rule changed and nothing is reserved (PB-QUEUE-06, SEC-01). A reducer-driven simulation measured that positions 1–4 of the waiting list were the four actually called only 11–24% of the time (PB-QUEUE-08); a property test holds the `nextUp` contract in all four modes with keep-together/apart rules, from 1 to 16 courts and up to 128 players.
+- Pickleball tournaments: `comingUp` lists the ready games with no court in the order free courts take them, each marked held when a pair is still playing or a player is on a break, from the server's own order and busy rules; the board and TV no longer order games themselves (PB-TOURNAMENT-01).
+
 ### Fixed
 
 - Admin: removing a suppression from the Lead CRM screen always failed with a 400, because the client dropped the written reason the route requires; `adminApi.delete` now sends an optional JSON body and every other caller is unchanged (CRM-01).

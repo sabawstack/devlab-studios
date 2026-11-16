@@ -143,7 +143,10 @@ diffs and the results CSV.
   change the draw (draft edits, substitutions, swaps, start).
 - **Snapshots.** `toTournamentView` (allowlist: names, ids, scores, court labels)
   is in the viewer snapshot and so in the host and captain ones; courts carry
-  `fixtureLabel`. `myStatus` says done only when the player's pair is out or the
+  `fixtureLabel`. `comingUp` lists the ready games with no court in the order
+  free courts take them, each `held` as `PAIR_PLAYING`, `ON_BREAK` or null
+  (`courts.ts fixtureQueue`: the same order and busy rules as `proposeFixture`,
+  so the client never orders games itself). `myStatus` says done only when the player's pair is out or the
   tournament is finished.
 - **TV.** Standings, recent results and next games (not the bracket, which is on
   phones); a draft/setup note before the start; the champions when finished
@@ -224,6 +227,21 @@ diffs and the results CSV.
 - **Guards.** `src/worker/pickleball/retirement.test.ts` keeps the old routes,
   pages, modules, Durable Object and secret from coming back;
   `dropLegacy.test.ts` checks 0020 against the real foreign keys.
+
+### Queue outlook (Phase 15, PB-QUEUE-06/08)
+
+Proposals stay late-bound: a court gets its four when it frees, and nobody is
+reserved in advance. `queueOrder` (`fairness.ts`) is a priority order, not the
+calling order: measured through the real reducer
+(`queuePrediction.simulation.test.ts`), positions 1–4 of the waiting list were
+the four actually called only 11–24% of the time. So the board never shows a
+place number. `outlook.ts` names the next four (`nextUp`) only when the current
+state fixes them whichever side wins and by any score (every court playing,
+nothing proposed, no finisher able to re-enter the fair pool, no keep-together
+pair split between court and queue; by standing also needs no ranked tie among
+the candidates and a standings-window choice). `outlook.property.test.ts` holds
+that against the real reducer in all four modes, with rules and every
+disturbance, from 1 to 16 courts and up to 128 players.
 
 ## Shared foundations
 

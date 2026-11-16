@@ -77,7 +77,8 @@ function desc(a: number | null, b: number | null): number {
   return Math.abs(a - b) < EPSILON ? 0 : b - a
 }
 
-function compareCore(a: StandingRow, b: StandingRow): number {
+/** Win rate, then share of points won: the comparison before any tie-break (exported for outlook.ts). */
+export function compareCore(a: StandingRow, b: StandingRow): number {
   // A share rather than a margin: +4 means far less in a game to 21 than to 11,
   // and a percentage stays comparable across targets and game counts.
   return desc(a.winRate, b.winRate) || desc(a.pointsPct, b.pointsPct)

@@ -2,6 +2,7 @@
 // by field, like snapshot.ts. Pair and player names, ids, scores and court
 // labels only: never a skill, a DUPR ID or anything secret.
 import type { OpenSessionState, Side } from '../types'
+import { fixtureQueue, type FixtureHold } from './courts'
 import { unpairedPlayers } from './draw'
 import { FORMAT_INFO } from './info'
 import { fixtureLabel, pairName, roundLabel, sourceLabel } from './labels'
@@ -70,6 +71,12 @@ export interface TournamentView {
   pools: Array<{ label: string; standings: StandingView[] }>
   standings: StandingView[]
   champion: { entrantId: string; name: string } | null
+  /**
+   * Ready games with no court yet, in the order free courts take them, and why
+   * each is held, if it is (PB-TOURNAMENT-01). From the server's own order and
+   * busy rules (courts.ts fixtureQueue); empty unless the tournament is running.
+   */
+  comingUp: Array<{ fixtureId: string; held: FixtureHold | null }>
 }
 
 function standingView(row: PairStanding): StandingView {
@@ -114,5 +121,6 @@ export function toTournamentView(state: OpenSessionState): TournamentView | null
     pools: poolLabels(t).map((label) => ({ label, standings: poolStandings(t, label, matches, players).map(standingView) })),
     standings: overallStandings(t, matches, players).map(standingView),
     champion: winnerEntrant ? { entrantId: winnerEntrant.id, name: pairName(winnerEntrant, players) } : null,
+    comingUp: fixtureQueue(state),
   }
 }

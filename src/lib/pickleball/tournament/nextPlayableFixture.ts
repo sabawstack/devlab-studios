@@ -23,10 +23,13 @@ export function nextPlayableFixture(fixtures: FixtureRow[], entrantsInPlay: stri
 
   if (playable.length === 0) return null
 
-  const sorted = [...playable].sort((a, b) => {
-    if (a.roundNumber !== b.roundNumber) return a.roundNumber - b.roundNumber
-    return a.position - b.position
-  })
+  const sorted = [...playable].sort(playOrder)
 
   return sorted[0]
+}
+
+/** The order free courts take ready games in: earliest round first, then draw position. Shared with "Coming up". */
+export function playOrder(a: Pick<FixtureRow, 'roundNumber' | 'position'>, b: Pick<FixtureRow, 'roundNumber' | 'position'>): number {
+  if (a.roundNumber !== b.roundNumber) return a.roundNumber - b.roundNumber
+  return a.position - b.position
 }

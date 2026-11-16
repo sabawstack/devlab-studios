@@ -31,7 +31,11 @@ the URL fragment, at most 128 characters). Answers:
 command each socket gets the snapshot for its role, each built at most once per
 broadcast. Snapshots are allowlists (`src/lib/pickleball/open/snapshot.ts`): the
 viewer one carries names, courts, matches, results and standings, never skill,
-DUPR IDs, secrets, claims or host data.
+DUPR IDs, secrets, claims or host data. Two derived, read-only queue fields
+(`src/lib/pickleball/open/outlook.ts`, PB-QUEUE-06): `nextUp` (the four the
+server will call when the next game ends, only when the state already fixes
+them, else null; ids and names only, no court or teams) and each court's
+`idle` (a coarse reason an enabled court is empty, never the host's text).
 
 A deleted or purged session closes its sockets with code **4404**; the client
 then shows the "session ended" page and stops reconnecting.

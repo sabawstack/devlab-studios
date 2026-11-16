@@ -27,11 +27,17 @@ export function drawSections(tournament) {
   ]
 }
 
-/** Games ready to play with no court yet, earliest round first: the order free courts take them in. */
+/**
+ * Games ready to play with no court yet, in the order free courts take them,
+ * each with `held` ('PAIR_PLAYING' | 'ON_BREAK' | null). A lookup into the
+ * server's own list (tournament.comingUp, PB-TOURNAMENT-01): the order and the
+ * busy and break rules are the server's, never recomputed here.
+ */
 export function nextGames(tournament, limit = 4) {
   if (!tournament || tournament.phase !== 'RUNNING') return []
-  return tournament.fixtures
-    .filter((f) => f.status === 'READY' && !f.court)
-    .sort((a, b) => a.roundNumber - b.roundNumber || a.position - b.position)
+  const byId = new Map(tournament.fixtures.map((f) => [f.id, f]))
+  return (tournament.comingUp ?? [])
+    .map(({ fixtureId, held }) => (byId.has(fixtureId) ? { ...byId.get(fixtureId), held } : null))
+    .filter(Boolean)
     .slice(0, limit)
 }

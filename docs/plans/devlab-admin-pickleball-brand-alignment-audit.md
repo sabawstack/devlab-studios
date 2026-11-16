@@ -191,10 +191,31 @@ was the waiting list.
 
 ### PB-QUEUE-08: does queue position predict the next four?
 
-Filled in by `src/lib/pickleball/open/nextUp.simulation.test.ts` (see the
-testing matrix). Numbers below are from the committed test's own output.
+From `src/lib/pickleball/open/queuePrediction.simulation.test.ts` (committed;
+it prints these lines). Sessions played through `applyCommand` +
+`finalizeCommand` (`testing/reducerSim.ts`), games of 8–16 minutes so courts
+free one at a time, every call started at once, no pairing rules, three seeds ×
+120 results per row. "Shown" is the share of results before which `nextUp`
+named a four.
 
-_Pending._
+| Mode | Size | Positions 1–4 right | Unconditional projection right | `nextUp` shown | `nextUp` right |
+|---|---|---|---|---|---|
+| Paddle stack | 14 players, 2 courts | 19% | 30% | 28% | 100/100 |
+| Paddle stack | 24, 3 | 18% | 61% | 47% | 168/168 |
+| Paddle stack | 40, 4 | 14% | 100% | 58% | 210/210 |
+| Winners/losers | 14, 2 | 19% | 33% | 28% | 100/100 |
+| Winners/losers | 24, 3 | 18% | 53% | 47% | 168/168 |
+| Winners/losers | 40, 4 | 24% | 86% | 58% | 210/210 |
+| By standing | 14, 2 | 20% | 54% | 26% | 94/94 |
+| By standing | 24, 3 | 18% | 76% | 43% | 156/156 |
+| By standing | 40, 4 | 11% | 89% | 50% | 179/179 |
+| Balanced | 14, 2 | 19% | 30% | 28% | 100/100 |
+| Balanced | 24, 3 | 18% | 61% | 47% | 168/168 |
+| Balanced | 40, 4 | 14% | 100% | 58% | 210/210 |
+
+This reproduces the design check (positions 12–25%, unconditional 29–100%,
+gated always right) through the real reducer. Conclusion kept: the board shows
+no place number, and names a four only through `nextUp`.
 
 ### PB-REALTIME-01: timings
 
@@ -208,10 +229,10 @@ _Pending._
 | CRM-02 | `tests/e2e/lead-crm.spec.js` "a failed policy review keeps the editor open with the error" (synthetic source, failed PATCH; RED before the fix) |
 | ADMIN-05 | `adminApi.test.js` (pause on 401, one notice, retry after sign-in, sign-out rejects, login 401 exempt, no listener = old behaviour); `tests/e2e/session-expiry.admin.spec.js` (revoke mid-page, dialog over the page, typed value kept, sign in, request retried; wrong password, Escape ignored, Sign out) |
 | MAIL-01 | `tests/e2e/mailbox.spec.js` "a failed archive says so instead of failing silently" (RED before the fix) |
-| PB-QUEUE-08 | _pending_ |
-| PB-QUEUE-06 | _pending_ |
-| PB-TOURNAMENT-01 | _pending_ |
-| SEC-01 | _pending_ |
+| PB-QUEUE-08 | `src/lib/pickleball/open/queuePrediction.simulation.test.ts` (asserts > 100 samples per row, `nextUp` right every time, shown at least once per row) |
+| PB-QUEUE-06 | `src/lib/pickleball/open/outlook.property.test.ts`: the invariant against the real reducer in all four modes with rules and random disturbances (break, return, arrival, leave, skip, edit, mode change, abandon, undo, court on/off, new rule), 1, 2, 3, 4 and 16 courts up to 128 players, every live game finished both ways at five scores; asserts the gate fires; level-score by-standing runs; targeted cases for each gate condition and for `idle`. Mutation check: removing any one gate condition turns at least one test red |
+| PB-TOURNAMENT-01 | `snapshot.tournament.test.ts` "tournament comingUp" (empty before the start; exact keys; live games left out; `PAIR_PLAYING` and `ON_BREAK`; first unheld game equals `proposeFixture` at every step of round robin, pool-to-bracket and double elimination); `bracketLayout.test.js` (client follows the server order) |
+| SEC-01 | `snapshot.test.ts` "nextUp and idle in the viewer snapshot" (exact top-level and court keys; `nextUp` entries exactly `id` and `name`; none on a court; nobody both up next and in `nextUp`; null with a proposed game, a free court, fewer than four waiting, ended, tournament; `idle` never carries the host text or `rules`) |
 | PB-QUEUE-01..05, 07, PB-UX | _pending_ |
 | PB-REALTIME-01, 02 | _pending_ |
 | BRAND-01..06 | _pending_ |
@@ -219,7 +240,10 @@ _Pending._
 
 ## Deviations
 
-None yet.
+- **`outlook.ts` beside `propose.ts`, not inside it.** The pure function sits in its own module in the same folder and reads only what `proposeForCourt` reads; `propose.ts` is unchanged.
+- **`byStanding.ts` refactor.** The window search and its inputs were extracted (`standingContext`, `bestWindow`) so `outlook.ts` can ask whether the window path is in use (`byStandingUsesWindow`). Behaviour is unchanged: every existing mode, fairness and reducer test passes unmodified. `standings.ts` exports its existing `compareCore`; `nextPlayableFixture.ts` exports its existing sort as `playOrder`.
+- **By-standing tie condition proven by construction.** Random play never built the small fully-met tie group that makes this condition necessary, so the property runs alone do not catch its removal. A targeted test shows the mechanism (a finisher joining a tie flips two waiting players from head-to-head to name order), and a gate test shows `nextUp` is null there. Every other gate condition is caught by the property or targeted tests when removed.
+- **An abandoned game is not covered by the `nextUp` invariant**, as specified (it covers results). Abandoning returns the players without a game credited, so they can re-enter the pool. The four shown were labelled provisional ("when a court opens"); after any change `nextUp` is recomputed from the new state.
 
 ## Not done
 

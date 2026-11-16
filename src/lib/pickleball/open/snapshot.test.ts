@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { toHostSnapshot, toViewerSnapshot } from './snapshot'
+import { DEFAULT_SETTINGS } from './types'
 import { fillProposals } from './propose'
 import { at, court, finished, player, sessionState } from './testing/fixtures'
+import { createDriver } from './testing/reducerSim'
 
 function state() {
   const base = sessionState({
@@ -24,9 +26,13 @@ describe('toViewerSnapshot', () => {
   it('carries exactly the allowlisted top-level and settings keys, nothing else', () => {
     const viewer = toViewerSnapshot(state())
     expect(Object.keys(viewer).sort()).toEqual([
-      'announcement', 'code', 'courts', 'endedAt', 'expiresAt', 'fairness', 'games', 'hostDisplayName', 'kind', 'name', 'onBreak',
+      'announcement', 'code', 'courts', 'endedAt', 'expiresAt', 'fairness', 'games', 'hostDisplayName', 'kind', 'name', 'nextUp', 'onBreak',
       'recentResults', 'roster', 'settings', 'standings', 'status', 'tournament', 'version', 'waiting',
     ])
+    // SEC-01: every court carries exactly these keys (idle is a coarse reason, never the host's text).
+    for (const c of viewer.courts) {
+      expect(Object.keys(c).sort()).toEqual(['fixtureLabel', 'id', 'idle', 'label', 'startedAt', 'state', 'teamA', 'teamB'])
+    }
     expect(Object.keys(viewer.settings).sort()).toEqual(['mode', 'selfCheckIn', 'target'])
     expect(Object.keys(viewer.fairness).sort()).toEqual(['longestWait', 'repeatedPartners', 'sitOutSpread'])
   })
@@ -47,3 +53,66 @@ describe('toHostSnapshot', () => {
     expect(host.players.find((p) => p.id === 'a')).toMatchObject({ games: 1, busy: expect.any(Boolean) })
   })
 })
+
+// SEC-01 for the queue fields (PB-QUEUE-06).
+describe('nextUp and idle in the viewer snapshot', () => {
+  function allPlaying(players = 14, courts = 2) {
+    const driver = createDriver({ players, courts, mode: 'PADDLE_STACK', seed: 3 })
+    for (const m of driver.state.matches.filter((x) => x.status === 'PROPOSED')) driver.run({ type: 'START_MATCH', matchId: m.id })
+    return driver
+  }
+
+  it('names exactly four, each with only an id and a name, none of them on a court', () => {
+    const viewer = toViewerSnapshot(allPlaying().state)
+    expect(viewer.nextUp).not.toBeNull()
+    expect(Object.keys(viewer.nextUp!)).toEqual(['players'])
+    expect(viewer.nextUp!.players).toHaveLength(4)
+    for (const p of viewer.nextUp!.players) expect(Object.keys(p).sort()).toEqual(['id', 'name'])
+    const onCourt = new Set(viewer.courts.flatMap((c) => [...c.teamA, ...c.teamB]))
+    for (const p of viewer.nextUp!.players) expect(onCourt.has(p.name)).toBe(false)
+    // Every next-four player is also in the waiting list, so nothing new is revealed.
+    const waiting = new Set(viewer.waiting.map((w) => w.id))
+    for (const p of viewer.nextUp!.players) expect(waiting.has(p.id)).toBe(true)
+  })
+
+  it('no player is both on an up-next court and in nextUp', () => {
+    const driver = allPlaying()
+    const live = driver.state.matches.find((m) => m.status === 'IN_PROGRESS')!
+    driver.run({ type: 'RECORD_RESULT', matchId: live.id, winner: 'A', scoreA: 11, scoreB: 3 })
+    const viewer = toViewerSnapshot(driver.state)
+    const upNext = viewer.courts.filter((c) => c.state === 'UP_NEXT').flatMap((c) => [...c.teamA, ...c.teamB])
+    expect(upNext).toHaveLength(4)
+    const named = new Set((viewer.nextUp?.players ?? []).map((p) => p.name))
+    for (const name of upNext) expect(named.has(name)).toBe(false)
+  })
+
+  it('is null with a proposed game, a free court, fewer than four waiting, an ended session and a tournament', () => {
+    expect(toViewerSnapshot(state()).nextUp).toBeNull() // a proposed game and a free court
+    const few = allPlaying(11, 2)
+    expect(toViewerSnapshot(few.state).waiting).toHaveLength(3)
+    expect(toViewerSnapshot(few.state).nextUp).toBeNull()
+    const ended = allPlaying()
+    expect(toViewerSnapshot(ended.state).nextUp).not.toBeNull()
+    ended.run({ type: 'END_SESSION' })
+    expect(toViewerSnapshot(ended.state).nextUp).toBeNull()
+    expect(toViewerSnapshot({ ...allPlaying().state, kind: 'TOURNAMENT' }).nextUp).toBeNull()
+  })
+
+  it('idle is a coarse reason on free enabled courts only, and the host text never leaks', () => {
+    const viewer = toViewerSnapshot(state())
+    expect(viewer.courts.map((c) => c.idle)).toEqual([null, 'TOO_FEW_PLAYERS', null])
+    const ruled = sessionState({
+      courts: [court('c1', 1)],
+      players: ['a', 'b', 'c', 'd'].map((id, i) => player(id, { position: i })),
+      settings: { ...DEFAULT_SETTINGS, rules: [{ kind: 'APART', playerIds: ['a', 'b'] }] },
+    })
+    const blocked = toViewerSnapshot(ruled)
+    expect(blocked.courts[0].idle).toBe('WAITING_FOR_HOST')
+    const json = JSON.stringify(blocked)
+    expect(json).not.toContain('rules')
+    expect(json).not.toContain('keep-')
+    // The host still gets its own explanation.
+    expect(toHostSnapshot(ruled).courts[0].blocked).toMatch(/keep-together and keep-apart rules/)
+  })
+})
+
