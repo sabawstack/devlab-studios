@@ -536,3 +536,16 @@ Visual check (local, synthetic sessions; not committed): board at 390 in every s
 
 Verification: lint 0 errors (1 pre-existing warning), typecheck 0, unit 3,058 passed / 1 skipped, build OK, static e2e 246 passed / 1 skipped (fresh state), worker e2e 336 passed / 2 failed (SEO slug, Lead CRM sources seed: known pre-existing).
 
+### Group 4 — Pickleball realtime (log)
+
+Branch `feat/pb-admin-4-realtime` (stacked on Group 3), commit `ba321e2`.
+
+| Req | Status | Evidence |
+|---|---|---|
+| PB-REALTIME-01 | done | `heartbeat.ts` registers `ping`/`pong` with `setWebSocketAutoResponse` (Cloudflare DO State API, updated 2026-09-30; cited in `docs/pickleball/realtime.md`); `useOpenSession` tracks `lastContactAt`, sends a heartbeat every 10 s with a 5 s reply deadline, drops a socket that opens but sends nothing, polls and RESYNCs on `visibilitychange`/`online`; board and TV use `isFresh(lastContactAt)`; all timings in `realtimeConfig.js`. E2e: runtime pong; quiet board LIVE through 30 s; dead-but-open socket noticed; wake → immediate poll + RESYNC. Measured locally: round trip 5–26 ms, stale shown ~30 s after the cut, LIVE ~2.3 s after recovery |
+| PB-REALTIME-02 | done | "Last known (time): …" without "walk on now" on the card, calls and TV tiles while not fresh; only server snapshots are ever shown (e2e) |
+
+Also: `hostSession.test.ts` used host id `h1`, which a random 43-character cookie token contains about 1% of the time; it failed CI once on PR #70 (re-run green). The id is now `host-row-7f3c9e`.
+
+Verification: lint 0 errors (1 pre-existing warning), typecheck 0, unit 3,062 passed / 1 skipped, build OK, static e2e 246 / 1 skipped, worker e2e 340 passed / 2 failed (known SEO slug and Lead CRM sources seed).
+
