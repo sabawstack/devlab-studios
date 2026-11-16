@@ -534,5 +534,5 @@ Branch `feat/pb-admin-3-queue-ui` (stacked on Group 2), commit `ff8f0ad`.
 
 Visual check (local, synthetic sessions; not committed): board at 390 in every state, TV with 2 and 16 courts and 40-character names at 1920, host at 390. Before/after sets in the session scratchpad.
 
-Verification: lint 0 errors (1 pre-existing warning), typecheck 0, unit 3,064 passed / 1 skipped, build OK, static e2e 246 passed / 1 skipped (fresh state), worker e2e 336 passed / 2 failed (SEO slug, Lead CRM sources seed: known pre-existing).
+Verification: lint 0 errors (1 pre-existing warning), typecheck 0, unit 3,058 passed / 1 skipped, build OK, static e2e 246 passed / 1 skipped (fresh state), worker e2e 336 passed / 2 failed (SEO slug, Lead CRM sources seed: known pre-existing).
 
