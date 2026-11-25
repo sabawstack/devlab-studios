@@ -51,6 +51,8 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-11-25
+
 ### Changed
 
 - **Open play: the next four are picked while the courts play, with their
