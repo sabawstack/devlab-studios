@@ -1,6 +1,7 @@
 // The queue as players, the TV, the host and captains see it (PB-QUEUE-01..07):
 // one vocabulary, a status card for every player state, an unnumbered waiting
-// list, and "Next four" only when the server has fixed them. Synthetic names.
+// list, and the next four on deck with their court and teams while every court
+// plays (PB-QUEUE-09). Synthetic names.
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 
@@ -70,7 +71,7 @@ test.describe('player board status card (PB-QUEUE-02)', () => {
     await card(page).getByText(`Not ${upNext}?`).click()
     await card(page).getByLabel('Pick your name').selectOption({ label: waiting })
     await expect(status).toHaveText(`Hi ${waiting}. Waiting · order can change`)
-    await expect(page.getByTestId('waiting-list')).toContainText('Fewest games go first. The next four are picked when a court opens.')
+    await expect(page.getByTestId('waiting-list')).toContainText('Fewest games go first. The next four are picked while the courts play, so they can get ready.')
     // Never a place in line.
     await expect(page.getByText(/#\d|in line/)).toHaveCount(0)
 
@@ -79,32 +80,43 @@ test.describe('player board status card (PB-QUEUE-02)', () => {
     await expect(status).toHaveText(`Hi ${waiting}. On break`)
   })
 
-  test('names the next four only once every court is playing and the server has fixed them', async ({ page, request }) => {
+  test('puts the next four on deck with their court and teams once every court is playing', async ({ page, request }) => {
     const { code, hostKey } = await createSession(request)
     let host = await hostSnapshot(request, code, hostKey)
     for (const c of host.courts) await command(request, code, hostKey, { type: 'START_MATCH', matchId: c.match.id })
     host = await hostSnapshot(request, code, hostKey)
     expect(host.viewer.nextUp?.players).toHaveLength(4)
+    // Behind the court whose game started first.
+    expect(host.viewer.nextUp.court).toBe('Court 1')
     const four = host.viewer.nextUp.players.map((p) => p.name)
     const notInFour = host.viewer.waiting.find((w) => !four.includes(w.name)).name
 
     await page.goto(`/pickleball/s/${code}`)
     await pickName(page, four[0])
-    await expect(card(page).getByRole('status')).toHaveText(`Hi ${four[0]}. Next four · when a court opens`)
+    await expect(card(page).getByRole('status')).toHaveText(`Hi ${four[0]}. Next four · Court 1 · get ready`)
     const panel = page.getByTestId('next-four')
     await expect(panel).toBeVisible()
+    await expect(panel).toContainText('Next four · Court 1 · get ready')
     for (const n of four) await expect(panel).toContainText(n)
+    // On deck is not also waiting.
+    for (const n of four) await expect(page.getByTestId('waiting-list')).not.toContainText(n)
 
     // Board order (PB-QUEUE-03): status card, courts, next four, then waiting.
     const y = async (locator) => (await locator.boundingBox()).y
     expect(await y(card(page))).toBeLessThan(await y(page.getByTestId('next-four')))
     expect(await y(page.getByTestId('next-four'))).toBeLessThan(await y(page.getByTestId('waiting-list')))
-    await expect(page.getByTestId('waiting-list').getByRole('heading')).toHaveText('Waiting (6)')
+    await expect(page.getByTestId('waiting-list').getByRole('heading')).toHaveText('Waiting (2)')
     await expect(page.getByTestId('waiting-list').getByRole('listitem').first()).not.toContainText(/^\d/)
+
+    // Court 1's game ends: the four on deck are called there.
+    await command(request, code, hostKey, { type: 'RECORD_RESULT', matchId: host.courts[0].match.id, winner: 'A', scoreA: 11, scoreB: 4 })
+    await expect(card(page).getByRole('status')).toHaveText(`Hi ${four[0]}. Up next · Court 1 · walk on now`)
 
     await card(page).getByText(`Not ${four[0]}?`).click()
     await card(page).getByLabel('Pick your name').selectOption({ label: notInFour })
-    await expect(card(page).getByRole('status')).toHaveText(`Hi ${notInFour}. Waiting · order can change`)
+    // Court 2 is now the only court playing with nobody behind it: the next deck
+    // forms there, and the two who were waiting (fewest games) are in it.
+    await expect(card(page).getByRole('status')).toHaveText(`Hi ${notInFour}. Next four · Court 2 · get ready`)
   })
 
   test('says the next four are decided when a game ends, when the server has not fixed them', async ({ page, request }) => {
@@ -131,17 +143,18 @@ test.describe('player board status card (PB-QUEUE-02)', () => {
 })
 
 test.describe('TV queue panel (PB-QUEUE-04)', () => {
-  test('is called Waiting, is unnumbered, shows the next four, and has a compact version on narrow screens', async ({ page, request }) => {
+  test('is called Waiting, is unnumbered, shows the next four with court and teams, and has a compact version on narrow screens', async ({ page, request }) => {
     const { code, hostKey } = await createSession(request)
     const host = await hostSnapshot(request, code, hostKey)
     for (const c of host.courts) await command(request, code, hostKey, { type: 'START_MATCH', matchId: c.match.id })
     await page.setViewportSize({ width: 1920, height: 1080 })
     await page.goto(`/pickleball/s/${code}/tv`)
     const waiting = page.getByTestId('tv-waiting')
-    await expect(waiting.getByRole('heading')).toHaveText('Waiting (6)')
+    await expect(waiting.getByRole('heading')).toHaveText('Waiting (2)')
     await expect(waiting.getByRole('listitem').first()).not.toContainText(/^\d/)
     await expect(page.getByRole('region', { name: 'Up next' })).toHaveCount(0)
-    await expect(page.getByTestId('tv-next-four').getByRole('listitem')).toHaveCount(4)
+    await expect(page.getByTestId('tv-next-four').getByRole('heading')).toHaveText(/Next four · Court 1 · get ready/i)
+    await expect(page.getByTestId('tv-next-four').getByRole('listitem')).toHaveCount(2)
     await expect(page.getByTestId('tv-court').first()).toContainText(/playing/i)
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()
     expect(results.violations.filter((v) => ['serious', 'critical'].includes(v.impact)).map((v) => v.id)).toEqual([])
@@ -149,8 +162,8 @@ test.describe('TV queue panel (PB-QUEUE-04)', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     const compact = page.getByTestId('tv-compact-queue')
     await expect(compact).toBeVisible()
-    await expect(compact).toContainText('Waiting (6)')
-    await expect(compact).toContainText('Next four')
+    await expect(compact).toContainText('Waiting (2)')
+    await expect(compact).toContainText('Next four · Court 1 · get ready')
   })
 
   test('a confirmed call stays on its court tile as "Up next"', async ({ page, request }) => {

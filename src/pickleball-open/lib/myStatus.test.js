@@ -23,9 +23,9 @@ describe('myStatus', () => {
     expect(myStatus(viewer, 'zz')).toEqual({ kind: 'NONE' })
   })
 
-  it('is NEXT_FOUR only when the server named the player in nextUp', () => {
-    const fixed = { ...viewer, nextUp: { players: [{ id: 'c', name: 'Cyd' }, { id: 'q', name: 'Q' }] } }
-    expect(myStatus(fixed, 'c')).toEqual({ kind: 'NEXT_FOUR' })
+  it('is NEXT_FOUR, with the court, only when the server put the player on deck', () => {
+    const fixed = { ...viewer, nextUp: { court: 'Court 1', players: [{ id: 'c', name: 'Cyd' }, { id: 'q', name: 'Q' }] } }
+    expect(myStatus(fixed, 'c')).toEqual({ kind: 'NEXT_FOUR', court: 'Court 1' })
     // A confirmed call wins over everything else.
     expect(myStatus({ ...fixed, nextUp: { players: [{ id: 'b', name: 'Ben' }] } }, 'b')).toEqual({ kind: 'UP_NEXT', court: 'Court 3' })
   })
@@ -105,7 +105,9 @@ describe('statusLine: the shared vocabulary', () => {
   it('uses one label per state', () => {
     expect(statusLine({ kind: 'PLAYING', court: 'Court 2' })).toBe('Playing · Court 2')
     expect(statusLine({ kind: 'UP_NEXT', court: 'Court 2' })).toBe('Up next · Court 2 · walk on now')
-    expect(statusLine({ kind: 'NEXT_FOUR' })).toBe('Next four · when a court opens')
+    expect(statusLine({ kind: 'NEXT_FOUR', court: 'Court 1' })).toBe('Next four · Court 1 · get ready')
+    // An older server sent no court: the line still reads.
+    expect(statusLine({ kind: 'NEXT_FOUR' })).toBe('Next four · get ready')
     expect(statusLine({ kind: 'WAITING' })).toBe('Waiting · order can change')
     expect(statusLine({ kind: 'BREAK' })).toBe('On break')
     expect(statusLine({ kind: 'NONE' })).toBeNull()
@@ -118,7 +120,7 @@ describe('statusLine: the shared vocabulary', () => {
   // PB-REALTIME-02: on data that may be stale, nothing tells the player to walk on.
   it('drops the instruction and says "Last known" when freshness is unknown', () => {
     expect(statusLine({ kind: 'UP_NEXT', court: 'Court 2' }, { fresh: false, lastKnown: '10:42' })).toBe('Last known (10:42): Up next · Court 2')
-    expect(statusLine({ kind: 'NEXT_FOUR' }, { fresh: false, lastKnown: '10:42' })).toBe('Last known (10:42): Next four')
+    expect(statusLine({ kind: 'NEXT_FOUR', court: 'Court 1' }, { fresh: false, lastKnown: '10:42' })).toBe('Last known (10:42): Next four · Court 1')
     expect(statusLine({ kind: 'PLAYING', court: 'Court 1' }, { fresh: false, lastKnown: '10:42' })).toBe('Last known (10:42): Playing · Court 1')
   })
 })
@@ -129,7 +131,7 @@ describe('statusText: the personal hello', () => {
     expect(statusText({ kind: 'UP_NEXT', court: 'Court 2' }, 'Ana')).toBe('Hi Ana. Up next · Court 2 · walk on now')
     expect(statusText({ kind: 'PLAYING', court: 'Court 2' }, 'Ana')).toBe('Hi Ana. Playing · Court 2')
     expect(statusText({ kind: 'BREAK' }, '  Ana  ')).toBe('Hi Ana. On break')
-    expect(statusText({ kind: 'NEXT_FOUR' }, 'Ana')).toBe('Hi Ana. Next four · when a court opens')
+    expect(statusText({ kind: 'NEXT_FOUR', court: 'Court 1' }, 'Ana')).toBe('Hi Ana. Next four · Court 1 · get ready')
   })
 
   it('prefixes the tournament statuses the same way', () => {

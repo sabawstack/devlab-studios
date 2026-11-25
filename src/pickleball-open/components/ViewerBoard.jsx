@@ -112,11 +112,11 @@ export default function ViewerBoard({ viewer, lastSnapshotAt = null, lastContact
 
       {tournament ? <TournamentPanels viewer={viewer} courtsGrid={courtsGrid} me={me} section={section} /> : (
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
-        {/* PB-QUEUE-03: confirmed calls, courts, the next four (when fixed), then everyone waiting. */}
+        {/* PB-QUEUE-03: confirmed calls, courts, the four on deck, then everyone waiting. */}
         <section className={`${section('courts')} grid content-start gap-4`} aria-label="Courts">
           <ConfirmedCalls viewer={viewer} myName={myName} fresh={fresh} />
           {courtsGrid}
-          <NextFour viewer={viewer} me={me} />
+          <NextFour viewer={viewer} myName={myName} fresh={fresh} />
           <WaitingList viewer={viewer} me={me} />
         </section>
         <aside className="grid content-start gap-4">

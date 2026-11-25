@@ -3,33 +3,39 @@
 //
 //   Playing        match IN_PROGRESS          "Playing · Court 2"
 //   Up next        match PROPOSED on a court  "Up next · Court 2 · walk on now"
-//   Next four      viewer.nextUp non-null     "Next four · when a court opens"
+//   Next four      viewer.nextUp non-null     "Next four · Court 1 · get ready"
 //   Waiting        active, in no match        "Waiting · order can change"
 //   On break       status BREAK               "On break"
 //
-// "Up next" means a confirmed call (a PROPOSED match on a court) and nothing
-// else. The waiting list is a priority order, never a promise: no screen shows
-// a place number. When the data may be stale (freshness unknown), nothing is
+// "Up next" means a confirmed call (a PROPOSED match on a free court) and
+// nothing else. "Next four" is the game on deck (PB-QUEUE-09): its four and
+// teams are set while the court still plays, so they can get ready, and the
+// court is where they are expected (another court that frees first takes them).
+// The waiting list is a priority order, never a promise: no screen shows a
+// place number. When the data may be stale (freshness unknown), nothing is
 // phrased as an instruction to walk on (PB-REALTIME-02).
 
 export const PLAYING = 'Playing'
 export const UP_NEXT = 'Up next'
 export const WALK_ON = 'walk on now'
 export const NEXT_FOUR = 'Next four'
-export const NEXT_FOUR_WHEN = 'when a court opens'
+export const GET_READY = 'get ready'
 export const WAITING = 'Waiting'
 export const WAITING_NOTE = 'order can change'
 export const ON_BREAK = 'On break'
 
 /** The rule, in words, wherever the waiting list is shown (PB-QUEUE-03). */
-export const QUEUE_RULE = 'Fewest games go first. The next four are picked when a court opens.'
+export const QUEUE_RULE = 'Fewest games go first. The next four are picked while the courts play, so they can get ready.'
+/** Shown with the next four: the court is where they are expected, not a reason to wait longer. */
+export const NEXT_FOUR_NOTE = 'If another court opens first, they go there instead.'
 /** Every court is playing and the next four are not fixed yet. */
 export const UNDECIDED = 'The next four are decided when a game ends.'
 
 export const playingLabel = (court) => `${PLAYING} · ${court}`
 /** A confirmed call. `fresh: false` drops the instruction: the call may have changed since. */
 export const upNextLabel = (court, { fresh = true } = {}) => (fresh ? `${UP_NEXT} · ${court} · ${WALK_ON}` : `${UP_NEXT} · ${court}`)
-export const nextFourLabel = () => `${NEXT_FOUR} · ${NEXT_FOUR_WHEN}`
+/** The game on deck. `fresh: false` drops the instruction, like upNextLabel. */
+export const nextFourLabel = (court, { fresh = true } = {}) => [NEXT_FOUR, court, fresh ? GET_READY : null].filter(Boolean).join(' · ')
 export const waitingLabel = () => `${WAITING} · ${WAITING_NOTE}`
 
 /** A court tile's state line; the court's own label is already on the tile. */

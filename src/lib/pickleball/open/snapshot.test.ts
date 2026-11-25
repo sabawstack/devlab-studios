@@ -62,17 +62,20 @@ describe('nextUp and idle in the viewer snapshot', () => {
     return driver
   }
 
-  it('names exactly four, each with only an id and a name, none of them on a court', () => {
+  it('names the four on deck with their court and teams, and only ids and names', () => {
     const viewer = toViewerSnapshot(allPlaying().state)
     expect(viewer.nextUp).not.toBeNull()
-    expect(Object.keys(viewer.nextUp!)).toEqual(['players'])
+    expect(Object.keys(viewer.nextUp!).sort()).toEqual(['court', 'courtId', 'players', 'teamA', 'teamB'])
+    expect(viewer.nextUp!.court).toMatch(/^Court \d+$/)
+    expect(viewer.courts.find((c) => c.id === viewer.nextUp!.courtId)?.state).toBe('PLAYING')
     expect(viewer.nextUp!.players).toHaveLength(4)
+    expect(viewer.nextUp!.players.map((p) => p.name)).toEqual([...viewer.nextUp!.teamA, ...viewer.nextUp!.teamB])
     for (const p of viewer.nextUp!.players) expect(Object.keys(p).sort()).toEqual(['id', 'name'])
     const onCourt = new Set(viewer.courts.flatMap((c) => [...c.teamA, ...c.teamB]))
     for (const p of viewer.nextUp!.players) expect(onCourt.has(p.name)).toBe(false)
-    // Every next-four player is also in the waiting list, so nothing new is revealed.
+    // On deck is not waiting: nobody is listed twice.
     const waiting = new Set(viewer.waiting.map((w) => w.id))
-    for (const p of viewer.nextUp!.players) expect(waiting.has(p.id)).toBe(true)
+    for (const p of viewer.nextUp!.players) expect(waiting.has(p.id)).toBe(false)
   })
 
   it('no player is both on an up-next court and in nextUp', () => {
@@ -86,7 +89,7 @@ describe('nextUp and idle in the viewer snapshot', () => {
     for (const name of upNext) expect(named.has(name)).toBe(false)
   })
 
-  it('is null with a proposed game, a free court, fewer than four waiting, an ended session and a tournament', () => {
+  it('is null with a proposed game, a free court, fewer than four waiting, and an ended session', () => {
     expect(toViewerSnapshot(state()).nextUp).toBeNull() // a proposed game and a free court
     const few = allPlaying(11, 2)
     expect(toViewerSnapshot(few.state).waiting).toHaveLength(3)
@@ -95,7 +98,6 @@ describe('nextUp and idle in the viewer snapshot', () => {
     expect(toViewerSnapshot(ended.state).nextUp).not.toBeNull()
     ended.run({ type: 'END_SESSION' })
     expect(toViewerSnapshot(ended.state).nextUp).toBeNull()
-    expect(toViewerSnapshot({ ...allPlaying().state, kind: 'TOURNAMENT' }).nextUp).toBeNull()
   })
 
   it('idle is a coarse reason on free enabled courts only, and the host text never leaks', () => {

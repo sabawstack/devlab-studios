@@ -228,20 +228,36 @@ diffs and the results CSV.
   pages, modules, Durable Object and secret from coming back;
   `dropLegacy.test.ts` checks 0020 against the real foreign keys.
 
-### Queue outlook (Phase 15, PB-QUEUE-06/08)
+### Next four on deck (PB-QUEUE-09; replaces the PB-QUEUE-06/08 outlook)
 
-Proposals stay late-bound: a court gets its four when it frees, and nobody is
-reserved in advance. `queueOrder` (`fairness.ts`) is a priority order, not the
-calling order: measured through the real reducer
-(`queuePrediction.simulation.test.ts`), positions 1–4 of the waiting list were
-the four actually called only 11–24% of the time. So the board never shows a
-place number. `outlook.ts` names the next four (`nextUp`) only when the current
-state fixes them whichever side wins and by any score (every court playing,
-nothing proposed, no finisher able to re-enter the fair pool, no keep-together
-pair split between court and queue; by standing also needs no ranked tie among
-the candidates and a standings-window choice). `outlook.property.test.ts` holds
-that against the real reducer in all four modes, with rules and every
-disturbance, from 1 to 16 courts and up to 128 players.
+The next four are picked while the courts play, so they can get ready
+(the PickleQ-style flow the owner asked for, 2026-11-25). Once every enabled
+court has a game, `fillProposals` (`propose.ts`) proposes one more game
+behind the playing court whose game started first: a `PROPOSED` match on a
+court that still has an `IN_PROGRESS` one is "on deck" (`isOnDeck`). Its four
+and teams are fixed: they leave the waiting list, and the board, TV, host and
+captain show "Next four · Court N · get ready" with the teams (`viewer.nextUp`:
+`courtId`, `court`, `teamA`, `teamB`, `players`).
+
+- **One deck at a time, not one per court.** A deck per court would lock the
+  same eight players into one court's rotation and stop the modes mixing.
+- **Called when a court frees.** When the deck's court finishes, the deck is
+  simply that court's call ("Up next · walk on now"). If another court frees
+  first (or one is switched on), that court takes the deck instead, so its four
+  never wait longer than they were told; the UI says so next to the court.
+- **Refused while the court plays.** `START_MATCH` and `RECORD_RESULT` on a
+  deck return 409. Skip and edit work as on any proposal. A deck player put on
+  a break or marked left withdraws the deck, and it re-forms from the queue.
+- **Open play only.** Tournaments keep filling free courts from the draw.
+- **Trade-off.** A late arrival, or a finisher with fewer games, cannot join a
+  deck already set; they go into the next one.
+
+`onDeck.property.test.ts` holds the promise against the real reducer in all
+four modes, with rules and every disturbance, from 1 to 16 courts and up to
+128 players: whenever a game is on deck, the next result on any court calls
+exactly that game to the court that freed. It also checks there is at most one
+deck, never one while a court is free, and never none when a fitting four is
+waiting. `outlook.ts` now only gives a free court's coarse idle reason.
 
 ## Shared foundations
 

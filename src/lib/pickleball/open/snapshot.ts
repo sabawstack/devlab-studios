@@ -2,8 +2,8 @@
 // never by spreading state, so a new column can never leak to the public
 // board by accident. The captain snapshot is the same idea for one court.
 import { busyPlayerIds, fairnessSummary, gamesPlayed, queueOrder, roundsSatOut, type FairnessSummary } from './fairness'
-import { queueOutlook, type CourtIdle } from './outlook'
-import { proposalBlocker } from './propose'
+import { courtIdle, type CourtIdle } from './outlook'
+import { onDeckMatch, proposalBlocker } from './propose'
 import { computeStandings, type StandingRow } from './standings'
 import { tournamentCourtNote } from './tournament/courts'
 import { fixtureLabel } from './tournament/labels'
@@ -45,11 +45,12 @@ export interface ViewerSnapshot {
   courts: ViewerCourt[]
   waiting: Array<{ id: string; name: string }>
   /**
-   * The four the server will call when the next game ends, only when the state
-   * already fixes them (outlook.ts); null otherwise. Provisional: no court and
-   * no teams, and it is never a reservation.
+   * The four on deck (PB-QUEUE-09): set while every court plays, with their
+   * court and teams, so they can get ready. They are called to `court` when its
+   * game ends, or to whichever court frees first if that is sooner. Null when
+   * nobody is on deck (a court is free, fewer than four wait, or a tournament).
    */
-  nextUp: { players: Array<{ id: string; name: string }> } | null
+  nextUp: { courtId: string; court: string; teamA: string[]; teamB: string[]; players: Array<{ id: string; name: string }> } | null
   onBreak: Array<{ id: string; name: string }>
   roster: Array<{ id: string; name: string }>
   standings: StandingRow[]
@@ -150,7 +151,8 @@ function gameTimes(matches: readonly OpenMatch[]): ViewerSnapshot['games'] {
 
 export function toViewerSnapshot(state: OpenSessionState): ViewerSnapshot {
   const courts = [...state.courts].sort((a, b) => a.position - b.position)
-  const outlook = queueOutlook(state)
+  const idle = courtIdle(state)
+  const deck = onDeckMatch(state)
   return {
     code: state.publicCode,
     kind: state.kind,
@@ -171,11 +173,17 @@ export function toViewerSnapshot(state: OpenSessionState): ViewerSnapshot {
         teamA: match ? namesOf(state, match.teamA) : [], teamB: match ? namesOf(state, match.teamB) : [],
         startedAt: match?.startedAt ?? null,
         fixtureLabel: labelFor(state, match),
-        idle: outlook.idle.get(c.id) ?? null,
+        idle: idle.get(c.id) ?? null,
       }
     }),
     waiting: queueOrder(state).map((e) => ({ id: e.player.id, name: e.player.name })),
-    nextUp: outlook.nextUp ? { players: outlook.nextUp.map((e) => ({ id: e.player.id, name: e.player.name })) } : null,
+    nextUp: deck
+      ? {
+          courtId: deck.courtId, court: state.courts.find((c) => c.id === deck.courtId)?.label ?? '',
+          teamA: namesOf(state, deck.teamA), teamB: namesOf(state, deck.teamB),
+          players: [...deck.teamA, ...deck.teamB].map((id) => ({ id, name: namesOf(state, [id])[0] })),
+        }
+      : null,
     onBreak: state.players.filter((p) => p.status === 'BREAK').map((p) => ({ id: p.id, name: p.name })),
     roster: state.players.filter((p) => p.status !== 'LEFT').map((p) => ({ id: p.id, name: p.name })),
     standings: computeStandings(state.players, state.matches),

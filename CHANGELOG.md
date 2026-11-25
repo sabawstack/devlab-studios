@@ -51,6 +51,24 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+### Changed
+
+- **Open play: the next four are picked while the courts play, with their
+  court and teams, so they can get ready.** Once every court has a game, the
+  server puts the next four "on deck" behind the court whose game started
+  first. The player board, status card, TV, host queue and captain console show
+  "Next four · Court 1 · get ready" with the two teams, and the host's player
+  list marks them "Next four". When that court's game ends they are called
+  there ("walk on now"); if another court frees first they go there instead, so
+  they never wait longer than they were told. Only one game is on deck at a
+  time, so players still mix across courts. A game on deck cannot be started or
+  scored while its court is still playing (409). Before this, the next four
+  were named only when the live game's result could not change them, so a
+  common board (one court, everyone level on games) showed nobody and said
+  "The next four are decided when a game ends". `viewer.nextUp` now also
+  carries `courtId`, `court`, `teamA` and `teamB`; players on deck are no
+  longer listed under Waiting. Tournaments are unchanged.
+
 ## [2.7.1] - 2026-11-16
 
 ### Changed

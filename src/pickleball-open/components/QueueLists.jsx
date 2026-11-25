@@ -1,11 +1,11 @@
 // src/pickleball-open/components/QueueLists.jsx
 // The queue as the player board shows it (PB-QUEUE-03), in the shared
-// vocabulary: confirmed calls with their courts, the next four when the
-// server has fixed them, then everyone waiting, unnumbered, with the rule in
-// words. Nothing here orders anyone: every list is the server's, as sent.
+// vocabulary: confirmed calls with their courts, the four on deck with their
+// court and teams (PB-QUEUE-09), then everyone waiting, unnumbered, with the
+// rule in words. Nothing here orders anyone: every list is the server's, as sent.
 // No animation on any of it: a moving chip would suggest an order that is
 // not promised (PB-QUEUE-07).
-import { NEXT_FOUR, NEXT_FOUR_WHEN, ON_BREAK, QUEUE_RULE, upNextLabel, WAITING, waitingNote } from '../lib/queueVocabulary'
+import { NEXT_FOUR_NOTE, nextFourLabel, ON_BREAK, QUEUE_RULE, upNextLabel, WAITING, waitingNote } from '../lib/queueVocabulary'
 import { Panel, TeamNames } from './ui.jsx'
 
 function Chip({ name, mine, muted = false, suffix = null }) {
@@ -35,17 +35,19 @@ export function ConfirmedCalls({ viewer, myName, fresh = true }) {
   )
 }
 
-/** The four the server will call when a court opens; only when it has fixed them. */
-export function NextFour({ viewer, me }) {
-  if (!viewer.nextUp) return null
+/** The four on deck: their court and teams are set while that court still plays, so they can get ready. */
+export function NextFour({ viewer, myName, fresh = true }) {
+  const deck = viewer.nextUp
+  if (!deck) return null
   return (
-    <Panel as="section" aria-label="Next four" data-testid="next-four">
-      <h2 className="font-bold">{NEXT_FOUR} <span className="font-normal text-pb-ink-2">· {NEXT_FOUR_WHEN}</span></h2>
-      <ul className="mt-2 flex flex-wrap gap-1.5 text-sm">
-        {viewer.nextUp.players.map((p) => <Chip key={p.id} name={p.name} mine={p.id === me} />)}
-      </ul>
-      <p className="mt-2 text-xs text-pb-ink-2">Courts and teams are set when the court opens.</p>
-    </Panel>
+    <section aria-label="Next four" data-testid="next-four" className="rounded-2xl border-2 border-dashed border-pb-play bg-pb-canvas p-3">
+      <p className="font-bold text-pb-play">{nextFourLabel(deck.court, { fresh })}</p>
+      <div className="mt-1 grid gap-1 text-[15px]">
+        <TeamNames side="A" names={deck.teamA} emphasis={myName ? [myName] : []} />
+        <TeamNames side="B" names={deck.teamB} emphasis={myName ? [myName] : []} />
+      </div>
+      <p className="mt-2 text-xs text-pb-ink-2">{NEXT_FOUR_NOTE}</p>
+    </section>
   )
 }
 
@@ -62,7 +64,7 @@ export function WaitingList({ viewer, me }) {
           {viewer.onBreak.map((p) => <Chip key={p.id} name={p.name} mine={p.id === me} muted suffix={<span> · {ON_BREAK.toLowerCase()}</span>} />)}
         </ul>
       )}
-      {viewer.waiting.length === 0 && <p className="mt-2 text-sm text-pb-ink-2">Nobody is waiting.</p>}
+      {viewer.waiting.length === 0 && <p className="mt-2 text-sm text-pb-ink-2">{viewer.nextUp ? 'Nobody else is waiting.' : 'Nobody is waiting.'}</p>}
       {note && <p className="mt-2 text-sm font-semibold">{note}</p>}
     </Panel>
   )

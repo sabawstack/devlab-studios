@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { courtStateLabel, IDLE_LABEL, upNextLabel, waitingNote } from './queueVocabulary'
+import { courtStateLabel, IDLE_LABEL, nextFourLabel, upNextLabel, waitingNote } from './queueVocabulary'
 
 const court = (state, idle = null) => ({ state, idle, teamA: [], teamB: [] })
 const board = (courts, extra = {}) => ({ status: 'ACTIVE', kind: 'OPEN_PLAY', courts, waiting: [{ id: 'w', name: 'W' }], nextUp: null, ...extra })
@@ -9,6 +9,11 @@ describe('queue vocabulary (PB-QUEUE-01)', () => {
     expect(courtStateLabel(court('UP_NEXT'))).toBe('Up next · walk on now')
     expect(courtStateLabel(court('UP_NEXT'), { fresh: false })).toBe('Up next')
     expect(upNextLabel('Court 4')).toBe('Up next · Court 4 · walk on now')
+  })
+
+  it('"Next four" names the court and says get ready only when fresh', () => {
+    expect(nextFourLabel('Court 1')).toBe('Next four · Court 1 · get ready')
+    expect(nextFourLabel('Court 1', { fresh: false })).toBe('Next four · Court 1')
   })
 
   it('an empty court says why, from the server reason', () => {

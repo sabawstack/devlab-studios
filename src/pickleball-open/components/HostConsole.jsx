@@ -55,6 +55,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
   const nameOf = useCallback((id) => names.get(id) ?? '—', [names])
   const courtLabel = useCallback((id) => host.courts.find((c) => c.id === id)?.label ?? '', [host.courts])
   const playing = useMemo(() => new Set(host.courts.flatMap((c) => (c.match?.status === 'IN_PROGRESS' ? [...c.match.teamA, ...c.match.teamB] : []))), [host.courts])
+  const onDeck = useMemo(() => new Set((host.viewer.nextUp?.players ?? []).map((p) => p.id)), [host.viewer.nextUp])
   const dismissUndo = useCallback(() => setUndo(null), [])
   const banner = useRef(null)
   const moreButton = useRef(null)
@@ -202,7 +203,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
 
         <aside className="grid content-start gap-5">
           <div className={`${section('players')} grid gap-5`}>
-            <PlayersPanel players={host.players} playing={playing} showSkill={host.settings.mode === 'BALANCED'} send={send} />
+            <PlayersPanel players={host.players} playing={playing} onDeck={onDeck} showSkill={host.settings.mode === 'BALANCED'} send={send} />
             <RulesPanel rules={host.settings.rules} players={host.players} send={send} />
           </div>
           <div className={section('results')}>

@@ -1,10 +1,10 @@
 // src/pickleball-open/components/HostQueuePanel.jsx
 // The host's one view of the queue, on the Courts tab (PB-QUEUE-05): who is
-// called to which court, the next four when the server has fixed them,
+// called to which court, the four on deck with their court and teams,
 // everyone waiting in priority order with their games and rounds sat out,
 // who is on a break, and why any court is empty. Read-only: the order is the
 // server's, as sent, and the host acts on courts and players elsewhere.
-import { IDLE_LABEL, NEXT_FOUR, NEXT_FOUR_WHEN, ON_BREAK, QUEUE_RULE, UP_NEXT, WAITING, waitingNote } from '../lib/queueVocabulary'
+import { IDLE_LABEL, NEXT_FOUR_NOTE, nextFourLabel, ON_BREAK, QUEUE_RULE, UP_NEXT, WAITING, waitingNote } from '../lib/queueVocabulary'
 import { Panel } from './ui.jsx'
 
 const plural = (n, noun) => `${n} ${noun}${n === 1 ? '' : 's'}`
@@ -44,15 +44,16 @@ export default function HostQueuePanel({ host, nameOf }) {
 
       {viewer.nextUp && (
         <div data-testid="host-next-four">
-          <h3 className="text-sm font-bold">{NEXT_FOUR} <span className="font-normal text-pb-ink-2">· {NEXT_FOUR_WHEN}</span></h3>
-          <p className="mt-1 text-sm [overflow-wrap:anywhere]">{viewer.nextUp.players.map((p) => p.name).join(', ')}</p>
+          <h3 className="text-sm font-bold text-pb-play">{nextFourLabel(viewer.nextUp.court)}</h3>
+          <p className="mt-1 text-sm [overflow-wrap:anywhere]">{viewer.nextUp.teamA.join(' & ')} <span className="text-pb-ink-2">vs</span> {viewer.nextUp.teamB.join(' & ')}</p>
+          <p className="text-xs text-pb-ink-2">{NEXT_FOUR_NOTE} To swap someone out, set them on a break.</p>
         </div>
       )}
 
       <div>
         <h3 className="text-sm font-bold">{WAITING} ({viewer.waiting.length})</h3>
         <p className="text-xs text-pb-ink-2">{QUEUE_RULE} Listed in that order.</p>
-        {viewer.waiting.length === 0 ? <p className="mt-1 text-sm text-pb-ink-2">Everyone is on court.</p> : (
+        {viewer.waiting.length === 0 ? <p className="mt-1 text-sm text-pb-ink-2">{viewer.nextUp ? 'Nobody else is waiting.' : 'Everyone is on court.'}</p> : (
           <ul className="mt-1 grid gap-1 text-sm">
             {viewer.waiting.map((w) => {
               const p = players.get(w.id)

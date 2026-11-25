@@ -19,7 +19,7 @@ const TONE = {
 /** A short line under the status, where one helps. */
 function note(kind) {
   if (kind === 'WAITING') return 'Your name moves to a court when you are called. The board updates by itself.'
-  if (kind === 'NEXT_FOUR') return 'You are in the four the next free court will call. Courts and teams are set when it opens.'
+  if (kind === 'NEXT_FOUR') return 'You play when the game on that court ends. If another court opens first, you go there instead.'
   if (kind === 'BREAK') return 'Tell the host when you are back.'
   return null
 }

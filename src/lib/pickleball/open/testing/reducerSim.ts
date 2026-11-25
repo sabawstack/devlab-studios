@@ -5,6 +5,7 @@
 // the reducer). Games last different times, so courts free one at a time, as
 // they do at a club. Never imported by application code.
 import type { OpenCommand } from '../../../schemas/pickleball/open/commands'
+import { isOnDeck } from '../propose'
 import { applyCommand, finalizeCommand } from '../reducer'
 import { at, court, player, sessionState } from './fixtures'
 import { mulberry32 } from './simulate'
@@ -112,7 +113,9 @@ export class Clock {
   }
 }
 
-/** Starts every proposed game (players walk on as soon as they are called). */
+/** Starts every called game (players walk on as soon as they are called); a game on deck waits for its court. */
 export function startAll(driver: Driver): void {
-  for (const m of driver.state.matches.filter((x) => x.status === 'PROPOSED')) driver.run({ type: 'START_MATCH', matchId: m.id }, 0)
+  for (const m of driver.state.matches.filter((x) => x.status === 'PROPOSED' && !isOnDeck(driver.state, x))) {
+    driver.run({ type: 'START_MATCH', matchId: m.id }, 0)
+  }
 }

@@ -69,16 +69,6 @@ function bestWindow(input: ModeInput, { ranked, required, anchor }: StandingCont
   return best?.ids ?? null
 }
 
-/**
- * True when the proposal would come from a standings window rather than the
- * rank-distance fallback. Read-only; used by outlook.ts, which can only say who
- * is next when the choice depends on relative ranks alone.
- */
-export function byStandingUsesWindow(input: ModeInput): boolean {
-  const context = standingContext(input)
-  return context !== null && bestWindow(input, context) !== null
-}
-
 export function proposeByStanding(input: ModeInput): Proposal | null {
   const context = standingContext(input)
   if (!context) return null

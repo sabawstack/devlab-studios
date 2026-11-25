@@ -5,7 +5,7 @@ import { proposeBalanced } from './modes/balanced'
 import { proposeByStanding } from './modes/byStanding'
 import { activeRules } from './rules'
 import { proposeFixture } from './tournament/courts'
-import { LIMITS, type CommandContext, type OpenSessionState, type StackingMode } from './types'
+import { LIMITS, type CommandContext, type OpenCourt, type OpenMatch, type OpenSessionState, type StackingMode } from './types'
 
 const PROPOSERS: Record<StackingMode, ModeProposer> = {
   PADDLE_STACK: proposePaddleStack,
@@ -58,14 +58,51 @@ function courtIsFree(state: OpenSessionState, courtId: string): boolean {
   return !state.matches.some((m) => m.courtId === courtId && (m.status === 'PROPOSED' || m.status === 'IN_PROGRESS'))
 }
 
-/** Proposes a match for every enabled court that has none (spec §5.2). */
+/**
+ * On deck: a proposed game whose court is still playing (PB-QUEUE-09). Its
+ * four are set while the game before them runs, so they can get ready; it
+ * becomes the court's call ("walk on now") when that game ends.
+ */
+export function isOnDeck(state: OpenSessionState, match: OpenMatch): boolean {
+  return match.status === 'PROPOSED'
+    && state.matches.some((m) => m.courtId === match.courtId && m.status === 'IN_PROGRESS')
+}
+
+/** The open-play game on deck, if any (there is at most one). */
+export function onDeckMatch(state: OpenSessionState): OpenMatch | null {
+  return state.matches.find((m) => isOnDeck(state, m)) ?? null
+}
+
+/** The playing court with no game behind it whose game started first: the one expected to free first. */
+function deckCourt(state: OpenSessionState, courts: readonly OpenCourt[]): OpenCourt | null {
+  const startedAt = (courtId: string) => {
+    const m = state.matches.find((x) => x.courtId === courtId && x.status === 'IN_PROGRESS')
+    return m ? Date.parse(m.startedAt ?? m.proposedAt) : null
+  }
+  const candidates = courts
+    .filter((c) => startedAt(c.id) !== null && !state.matches.some((m) => m.courtId === c.id && m.status === 'PROPOSED'))
+    .sort((a, b) => startedAt(a.id)! - startedAt(b.id)! || a.position - b.position)
+  return candidates[0] ?? null
+}
+
+/**
+ * Proposes a match for every enabled court that has none (spec §5.2). In open
+ * play a court that frees takes the game on deck first, so its four never wait
+ * longer than they were told; and once every court has a game, the next four
+ * go on deck behind the court expected to free first (PB-QUEUE-09).
+ */
 export function fillProposals(state: OpenSessionState, ctx: CommandContext): OpenSessionState {
-  return [...state.courts]
-    .filter((c) => c.enabled)
-    .sort((a, b) => a.position - b.position)
-    .reduce((acc, court) => {
-      if (!courtIsFree(acc, court.id)) return acc
-      const proposal = proposeForCourt(acc)
-      return proposal ? addProposal(acc, court.id, proposal, ctx) : acc
-    }, state)
+  const courts = [...state.courts].filter((c) => c.enabled).sort((a, b) => a.position - b.position)
+  const openPlay = state.kind === 'OPEN_PLAY'
+  const filled = courts.reduce((acc, court) => {
+    if (!courtIsFree(acc, court.id)) return acc
+    const deck = openPlay ? onDeckMatch(acc) : null
+    if (deck) return { ...acc, matches: acc.matches.map((m) => (m.id === deck.id ? { ...m, courtId: court.id } : m)) }
+    const proposal = proposeForCourt(acc)
+    return proposal ? addProposal(acc, court.id, proposal, ctx) : acc
+  }, state)
+  if (!openPlay || onDeckMatch(filled) || courts.some((c) => courtIsFree(filled, c.id))) return filled
+  const target = deckCourt(filled, courts)
+  const proposal = target ? proposeForCourt(filled) : null
+  return target && proposal ? addProposal(filled, target.id, proposal, ctx) : filled
 }

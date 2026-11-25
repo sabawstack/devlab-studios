@@ -1,4 +1,4 @@
-import { nextFourLabel, NEXT_FOUR, ON_BREAK, playingLabel, upNextLabel, waitingLabel } from './queueVocabulary'
+import { nextFourLabel, ON_BREAK, playingLabel, upNextLabel, waitingLabel } from './queueVocabulary'
 
 // src/pickleball-open/lib/myStatus.js
 const OVER = new Set(['FINISHED', 'BYE'])
@@ -44,8 +44,8 @@ export function myStatus(viewer, playerId) {
   }
   if (viewer.onBreak.some((p) => p.id === playerId)) return { kind: 'BREAK' }
   if (viewer.tournament) return tournamentStatus(viewer.tournament, playerId)
-  // PB-QUEUE-02: the next four only when the server fixed them; never a place in line.
-  if (viewer.nextUp?.players?.some((p) => p.id === playerId)) return { kind: 'NEXT_FOUR' }
+  // PB-QUEUE-09: on deck, with the court they are expected on; never a place in line.
+  if (viewer.nextUp?.players?.some((p) => p.id === playerId)) return { kind: 'NEXT_FOUR', court: viewer.nextUp.court }
   if (viewer.waiting.some((w) => w.id === playerId)) return { kind: 'WAITING' }
   return { kind: 'NONE' }
 }
@@ -61,7 +61,7 @@ export function statusLine(status, { fresh = true, lastKnown = null } = {}) {
     switch (status.kind) {
       case 'PLAYING': return playingLabel(status.court)
       case 'UP_NEXT': return upNextLabel(status.court, { fresh })
-      case 'NEXT_FOUR': return fresh ? nextFourLabel() : NEXT_FOUR
+      case 'NEXT_FOUR': return nextFourLabel(status.court, { fresh })
       case 'WAITING': return waitingLabel()
       case 'BREAK': return ON_BREAK
       case 'NEXT_GAME': return `Your next game: ${status.label}`

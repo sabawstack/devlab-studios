@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { minutesSince, useNow } from '../lib/useNow'
-import { ON_BREAK, PLAYING, UP_NEXT, WAITING } from '../lib/queueVocabulary'
+import { NEXT_FOUR, ON_BREAK, PLAYING, UP_NEXT, WAITING } from '../lib/queueVocabulary'
 import { Button } from './ui.jsx'
 
 const STATUS_LABEL = { ACTIVE: WAITING, BREAK: ON_BREAK, LEFT: 'Left' }
 const SKILLS = [1, 2, 3, 4, 5]
 
 /** Each row shows games, rounds sat out and the current wait (spec §5.5); skill is editable where it is used (balanced teams, tournament pairs and seeds). */
-export default function PlayersPanel({ players, playing, showSkill = false, send }) {
+export default function PlayersPanel({ players, playing, onDeck = new Set(), showSkill = false, send }) {
   const [names, setNames] = useState('')
   const now = useNow()
 
@@ -51,7 +51,7 @@ export default function PlayersPanel({ players, playing, showSkill = false, send
                 {!onCourt && <Button variant="quiet" className="!min-h-11 !px-2 text-sm text-pb-ink-2" aria-label={`${p.name} left`} onClick={() => send({ type: 'SET_PLAYER_STATUS', playerId: p.id, status: 'LEFT' })}>Left</Button>}
               </div>
               <span className="text-xs text-pb-ink-2">
-                {onCourt ? PLAYING : p.busy ? UP_NEXT : STATUS_LABEL[p.status]} · {p.games} game{p.games === 1 ? '' : 's'} · sat out {p.satOut}
+                {onCourt ? PLAYING : onDeck.has(p.id) ? NEXT_FOUR : p.busy ? UP_NEXT : STATUS_LABEL[p.status]} · {p.games} game{p.games === 1 ? '' : 's'} · sat out {p.satOut}
                 {waitingNow ? ` · ${minutesSince(p.waitingSince, now)} min` : ''}
               </span>
             </li>

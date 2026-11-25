@@ -87,7 +87,7 @@ async function scenarios() {
   await command(ctx, mixed.code, mixed.hostKey, { type: 'SET_PLAYER_STATUS', playerId: waitingIds[waitingIds.length - 1], status: 'BREAK' })
   const breakId = waitingIds[waitingIds.length - 1]
   const waitingId = waitingIds[0]
-  // Every court playing: the "next four" state, when the server fixes it.
+  // Every court playing: the next four are on deck with their court and teams.
   const busy = await createSession(ctx, { name: 'Thursday Ladder', courtCount: 2, players: SHORT.slice(0, 14).map((n) => ({ name: n })) })
   const busySnap = await startAll(ctx, busy.code, busy.hostKey)
   const busyWaitingId = busySnap.viewer.waiting[0]?.id

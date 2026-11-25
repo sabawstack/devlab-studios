@@ -20,7 +20,7 @@ import QrCode from './components/QrCode.jsx'
 import TvCourt from './components/TvCourt.jsx'
 import TvMarquee from './components/TvMarquee.jsx'
 import { nextGames } from './tournament/bracketLayout'
-import { HELD_LABEL, NEXT_FOUR, NEXT_FOUR_WHEN, QUEUE_RULE, WAITING, waitingNote } from './lib/queueVocabulary'
+import { HELD_LABEL, NEXT_FOUR_NOTE, nextFourLabel, QUEUE_RULE, WAITING, waitingNote } from './lib/queueVocabulary'
 import ResultsScreen from './components/results/ResultsScreen.jsx'
 import ChampionAnnouncer from './tournament/ChampionAnnouncer.jsx'
 
@@ -105,8 +105,8 @@ function ComingUp({ tournament }) {
 const more = (n) => <span className="text-[clamp(0.9rem,1.1vw,1.5rem)] text-pb-ink-2">and {n} more on the player board</span>
 
 /**
- * The open-play queue on the TV (PB-QUEUE-04): the next four when the server
- * has fixed them, then everyone waiting, unnumbered. Confirmed calls stay on
+ * The open-play queue on the TV (PB-QUEUE-04): the four on deck with their
+ * court and teams (PB-QUEUE-09), then everyone waiting, unnumbered. Confirmed calls stay on
  * the court tiles. Rows that do not fit are counted, never dropped silently.
  */
 function TvQueue({ viewer }) {
@@ -117,17 +117,20 @@ function TvQueue({ viewer }) {
     <>
       {viewer.nextUp && (
         <section aria-label="Next four" data-testid="tv-next-four" className="shrink-0">
-          <h2 className={H2}>{NEXT_FOUR} <span className="text-pb-ink-2">· {NEXT_FOUR_WHEN}</span></h2>
-          <ul className="mt-1 flex flex-wrap gap-2 text-[clamp(1rem,1.3vw,1.75rem)]">
-            {viewer.nextUp.players.map((p) => <li key={p.id} className={`rounded-2xl border-2 border-dashed border-pb-play px-3 py-1 ${WRAP}`}>{p.name}</li>)}
+          <h2 className={H2}>{nextFourLabel(viewer.nextUp.court)}</h2>
+          <ul className="mt-1 flex flex-wrap items-center gap-2 text-[clamp(1rem,1.3vw,1.75rem)]">
+            {[viewer.nextUp.teamA, viewer.nextUp.teamB].map((team, i) => (
+              <li key={i} className={`rounded-2xl border-2 border-dashed border-pb-play px-3 py-1 ${WRAP}`}>{team.join(' & ')}</li>
+            ))}
           </ul>
+          <p className="text-[clamp(0.8rem,0.9vw,1.25rem)] text-pb-ink-2">{NEXT_FOUR_NOTE}</p>
         </section>
       )}
       <section aria-label="Waiting" data-testid="tv-waiting" className="flex max-h-[26vh] min-h-0 shrink flex-col">
         <h2 className={H2}>{WAITING} ({viewer.waiting.length})</h2>
         <p className="text-[clamp(0.8rem,0.9vw,1.25rem)] text-pb-ink-2">{QUEUE_RULE}</p>
         {waiting.length === 0
-          ? <p className="mt-1 text-[clamp(1rem,1.3vw,1.75rem)] text-pb-ink-2">Everyone is on court</p>
+          ? <p className="mt-1 text-[clamp(1rem,1.3vw,1.75rem)] text-pb-ink-2">{viewer.nextUp ? 'Nobody else is waiting' : 'Everyone is on court'}</p>
           : <FitList rows={waiting} className="mt-1 flex flex-wrap gap-2 text-[clamp(1rem,1.3vw,1.75rem)]" rowClassName={chip} more={more} />}
         {note && <p className="shrink-0 text-[clamp(0.9rem,1.1vw,1.5rem)] font-semibold">{note}</p>}
       </section>
@@ -142,8 +145,9 @@ function CompactQueue({ viewer }) {
     <section aria-label="Queue" data-testid="tv-compact-queue" className="grid gap-3 rounded-2xl bg-pb-surface p-4 text-lg lg:hidden">
       {viewer.nextUp && (
         <div>
-          <h2 className="font-bold text-pb-play">{NEXT_FOUR} <span className="font-normal text-pb-ink-2">· {NEXT_FOUR_WHEN}</span></h2>
-          <p className={WRAP}>{viewer.nextUp.players.map((p) => p.name).join(' · ')}</p>
+          <h2 className="font-bold text-pb-play">{nextFourLabel(viewer.nextUp.court)}</h2>
+          <p className={WRAP}>{viewer.nextUp.teamA.join(' & ')} <span className="text-pb-ink-2">vs</span> {viewer.nextUp.teamB.join(' & ')}</p>
+          <p className="text-sm text-pb-ink-2">{NEXT_FOUR_NOTE}</p>
         </div>
       )}
       <div>

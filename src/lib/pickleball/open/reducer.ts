@@ -1,7 +1,7 @@
 import type { OpenCommand } from '../../schemas/pickleball/open/commands'
 import { cleanAnnouncement } from './announcement'
 import { busyPlayerIds, gamesPlayed, matchIncludes, pairKey } from './fairness'
-import { addProposal, fillProposals, proposeForCourt } from './propose'
+import { addProposal, fillProposals, isOnDeck, proposeForCourt } from './propose'
 import { cleanName } from './roster'
 import { activeRules, keepsRules, ruleViolation } from './rules'
 import { validateResult } from './scoreValidation'
@@ -165,6 +165,12 @@ function removeRule(state: OpenSessionState, rule: PairRule): CommandResult {
   return ok(withRules(state, rules.filter((r) => !sameRule(r, rule))))
 }
 
+/** Why a game on deck cannot start yet. */
+function stillPlaying(state: OpenSessionState, match: OpenMatch): string {
+  const label = state.courts.find((c) => c.id === match.courtId)?.label ?? 'That court'
+  return `${label} is still playing. Start this game when that one ends.`
+}
+
 function recordResult(state: OpenSessionState, command: Extract<OpenCommand, { type: 'RECORD_RESULT' | 'EDIT_RESULT' }>, ctx: CommandContext): CommandResult {
   const match = state.matches.find((m) => m.id === command.matchId)
   if (!match) return fail(404, 'Game not found.')
@@ -174,6 +180,7 @@ function recordResult(state: OpenSessionState, command: Extract<OpenCommand, { t
     return fail(409, match.recordedBy ? `This game was already saved by ${match.recordedBy}.` : 'This game was already saved.')
   }
   if (!editing && match.status !== 'PROPOSED' && match.status !== 'IN_PROGRESS') return fail(409, 'This game cannot be saved.')
+  if (!editing && isOnDeck(state, match)) return fail(409, stillPlaying(state, match))
   const check = validateResult({ winner: command.winner, scoreA: command.scoreA, scoreB: command.scoreB }, state.settings)
   if (!check.ok) return fail(400, check.reason)
   const saved: OpenMatch = {
@@ -248,6 +255,7 @@ export function applyCommand(state: OpenSessionState, command: OpenCommand, ctx:
       const match = state.matches.find((m) => m.id === command.matchId)
       if (!match) return fail(404, 'Game not found.')
       if (match.status !== 'PROPOSED') return fail(409, 'This game has already started.')
+      if (isOnDeck(state, match)) return fail(409, stillPlaying(state, match))
       const started = { ...match, status: 'IN_PROGRESS' as const, startedAt: ctx.now }
       return syncFixture(withMatch(state, started), started, 'START')
     }
