@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { courtStateLabel } from '../lib/queueVocabulary'
+import { courtStateLabel, GET_READY, NEXT_FOUR } from '../lib/queueVocabulary'
 const MAX_PX = 110
 const HARD_MIN_PX = 10
 const WIDE = '(min-width: 1024px)'
@@ -32,12 +32,16 @@ function Team({ players, color }) {
   )
 }
 
-/** One court on the TV: one player per line, type as large as the card allows (a very long name can push it small, but nothing is cut off). */
-export default function TvCourt({ court, fresh = true }) {
+/**
+ * One court on the TV: one player per line, type as large as the card allows
+ * (a very long name can push it small, but nothing is cut off). `next` is the
+ * game on deck when it waits for this court; it shows under the game in play.
+ */
+export default function TvCourt({ court, fresh = true, next = null }) {
   const card = useRef(null)
   const content = useRef(null)
   const [size, setSize] = useState(null)
-  const signature = `${court.label}|${court.state}|${court.idle ?? ''}|${fresh}|${court.fixtureLabel ?? ''}|${court.teamA.join('/')}|${court.teamB.join('/')}`
+  const signature = `${court.label}|${court.state}|${court.idle ?? ''}|${fresh}|${court.fixtureLabel ?? ''}|${court.teamA.join('/')}|${court.teamB.join('/')}|${next ? [...next.teamA, ...next.teamB].join('/') : ''}`
   useEffect(() => {
     let frame = 0
     const refit = () => {
@@ -86,6 +90,16 @@ export default function TvCourt({ court, fresh = true }) {
             <Team players={court.teamA} color="border-pb-play" />
             <hr className="my-[0.25em] border-pb-rule" />
             <Team players={court.teamB} color="border-pb-team-b" />
+          </div>
+        )}
+        {next && live && (
+          <div data-testid="tv-court-next" className="mt-[0.4em] rounded-[0.4em] border-2 border-dashed border-pb-play p-[0.3em] text-[0.6em]">
+            <p className="text-[0.8em] font-bold uppercase tracking-[0.08em] text-pb-play">{fresh ? `${NEXT_FOUR} · ${GET_READY}` : NEXT_FOUR}</p>
+            <p className="font-semibold [overflow-wrap:anywhere]">
+              <span className="border-l-[0.22em] border-pb-play pl-[0.3em]">{next.teamA.join(' & ')}</span>
+              <span className="mx-[0.4em] text-pb-ink-2">vs</span>
+              <span className="border-l-[0.22em] border-pb-team-b pl-[0.3em]">{next.teamB.join(' & ')}</span>
+            </p>
           </div>
         )}
       </div>

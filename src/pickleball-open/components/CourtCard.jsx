@@ -1,11 +1,12 @@
 import { UP_NEXT, WALK_ON } from '../lib/queueVocabulary'
-import { Button, TeamNames } from './ui.jsx'
+import { Button, NextOnCourt, TeamNames } from './ui.jsx'
 
 function minutesSince(iso) {
   return iso ? Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60_000)) : 0
 }
 
-export default function CourtCard({ court, nameOf, ended = false, onStart, onGameOver, onEdit }) {
+/** `next` is the game on deck when it waits for this court (viewer.nextUp), else null. */
+export default function CourtCard({ court, nameOf, ended = false, next = null, onStart, onGameOver, onEdit }) {
   const match = court.match
   const testId = `court-${court.position}`
   if (!court.enabled) {
@@ -42,6 +43,7 @@ export default function CourtCard({ court, nameOf, ended = false, onStart, onGam
       ) : (
         <Button variant="primary" onClick={() => onGameOver(match)}>Game over</Button>
       )}
+      {next && !proposed && <NextOnCourt next={next} />}
     </article>
   )
 }

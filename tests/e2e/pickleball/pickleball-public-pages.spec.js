@@ -28,6 +28,21 @@ test.describe('Pickleball public pages', () => {
     await expect(page.getByRole('link', { name: 'Operator sign in' })).toHaveCount(0)
   })
 
+  // The brand reset `.brand :where(a) { color: inherit }` used to tie with a
+  // link's own colour utility and win, so "Resume as host" (light text on a
+  // dark button) took the card's dark ink: dark on dark (2026-11-25).
+  test('the welcome-back button text is readable on its button', async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('devlab-pickleball-hosted', JSON.stringify([
+      { code: 'ABCDE23456', hostKey: 'synthetic-host-key', name: 'Open Play', savedAt: new Date().toISOString() },
+    ])))
+    await page.goto('/pickleball')
+    const resume = page.getByRole('link', { name: 'Resume as host' })
+    await expect(resume).toBeVisible()
+    const { color, background } = await resume.evaluate((el) => ({ color: getComputedStyle(el).color, background: getComputedStyle(el).backgroundColor }))
+    expect(color).not.toBe(background)
+    expect(color).toBe('rgb(199, 210, 254)') // pb-play on pb-canvas
+  })
+
   // On a social post the image IS the post -- it is read before any text.
   // These pages shipped with the site-wide agency card, so someone sharing
   // the pickleball link advertised a software consultancy instead. Pin a

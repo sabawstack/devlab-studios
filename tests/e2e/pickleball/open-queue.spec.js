@@ -98,6 +98,11 @@ test.describe('player board status card (PB-QUEUE-02)', () => {
     await expect(panel).toBeVisible()
     await expect(panel).toContainText('Next four · Court 1 · get ready')
     for (const n of four) await expect(panel).toContainText(n)
+    // And on the court they will play on, under the game in progress.
+    const onCourt = page.getByTestId('court-next')
+    await expect(onCourt).toHaveCount(1)
+    await expect(onCourt).toContainText('Next four · get ready')
+    for (const n of four) await expect(onCourt).toContainText(n)
     // On deck is not also waiting.
     for (const n of four) await expect(page.getByTestId('waiting-list')).not.toContainText(n)
 
@@ -155,6 +160,8 @@ test.describe('TV queue panel (PB-QUEUE-04)', () => {
     await expect(page.getByRole('region', { name: 'Up next' })).toHaveCount(0)
     await expect(page.getByTestId('tv-next-four').getByRole('heading')).toHaveText(/Next four · Court 1 · get ready/i)
     await expect(page.getByTestId('tv-next-four').getByRole('listitem')).toHaveCount(2)
+    await expect(page.getByTestId('tv-court-next')).toHaveCount(1)
+    await expect(page.getByTestId('tv-court-next')).toContainText(/Next four · get ready/i)
     await expect(page.getByTestId('tv-court').first()).toContainText(/playing/i)
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()
     expect(results.violations.filter((v) => ['serious', 'critical'].includes(v.impact)).map((v) => v.id)).toEqual([])

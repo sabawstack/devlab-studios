@@ -18,7 +18,7 @@ import StandingsTable from './StandingsTable.jsx'
 import StatusCard, { NamePicker } from './StatusCard.jsx'
 import Welcome from './Welcome.jsx'
 import Endorsement from './Endorsement.jsx'
-import { Panel, TeamNames } from './ui.jsx'
+import { NextOnCourt, Panel, TeamNames } from './ui.jsx'
 
 const clock = (ms) => new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
@@ -58,6 +58,9 @@ export default function ViewerBoard({ viewer, lastSnapshotAt = null, lastContact
               <TeamNames side="A" names={court.teamA} emphasis={myName ? [myName] : []} />
               <TeamNames side="B" names={court.teamB} emphasis={myName ? [myName] : []} />
             </div>
+          )}
+          {viewer.nextUp?.courtId === court.id && court.state === 'PLAYING' && (
+            <div className="mt-3"><NextOnCourt next={viewer.nextUp} emphasis={myName ? [myName] : []} fresh={fresh} /></div>
           )}
         </article>
       ))}

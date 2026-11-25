@@ -66,7 +66,10 @@ body.brand {
   max-width: 68ch;
   text-wrap: pretty;
 }
-.brand :where(a) {
+/* Zero specificity, so a link's own colour utility (text-pb-play, text-white…)
+   still applies; a bare link inherits. At `.brand :where(a)` this rule tied with
+   the utilities and, loading later, won: "Resume as host" went dark on dark. */
+:where(.brand a) {
   color: inherit;
   text-decoration: none;
 }

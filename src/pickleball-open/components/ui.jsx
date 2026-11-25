@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { GET_READY, NEXT_FOUR } from '../lib/queueVocabulary'
 
 const VARIANTS = {
   primary: 'pb-action',
@@ -123,5 +124,22 @@ export function ConfirmSheet({ title, body, confirmLabel, danger = false, onConf
         <Button variant={danger ? 'danger' : 'primary'} onClick={() => { onClose(); onConfirm() }}>{confirmLabel}</Button>
       </div>
     </Sheet>
+  )
+}
+
+/**
+ * The four on deck, shown on their court under the game in progress
+ * (PB-QUEUE-09), so whoever looks at the court sees who plays there next.
+ * `fresh: false` drops the instruction, like every other call (PB-REALTIME-02).
+ */
+export function NextOnCourt({ next, emphasis = [], fresh = true }) {
+  return (
+    <div data-testid="court-next" className="rounded-xl border-2 border-dashed border-pb-play bg-pb-canvas p-3">
+      <p className="text-xs font-bold uppercase tracking-[0.08em] text-pb-play">{fresh ? `${NEXT_FOUR} · ${GET_READY}` : NEXT_FOUR}</p>
+      <div className="mt-1 grid gap-1 text-[15px]">
+        <TeamNames side="A" names={next.teamA} emphasis={emphasis} />
+        <TeamNames side="B" names={next.teamB} emphasis={emphasis} />
+      </div>
+    </div>
   )
 }

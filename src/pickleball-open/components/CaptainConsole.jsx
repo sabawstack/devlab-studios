@@ -53,6 +53,7 @@ export default function CaptainConsole({ code, captainKey, snapshot, status, onS
 
       <div className="grid gap-4">
         <CourtCard court={court} nameOf={nameOf} ended={ended}
+          next={snapshot.viewer.nextUp?.courtId === court.id ? snapshot.viewer.nextUp : null}
           onStart={(match) => send({ type: 'START_MATCH', matchId: match.id })}
           onGameOver={(match) => setDialog({ type: 'gameOver', match })}
           onEdit={snapshot.viewer.kind === 'TOURNAMENT' ? null : (match) => setDialog({ type: 'edit', match })} />

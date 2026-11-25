@@ -5,7 +5,7 @@
 // who is on a break, and why any court is empty. Read-only: the order is the
 // server's, as sent, and the host acts on courts and players elsewhere.
 import { IDLE_LABEL, NEXT_FOUR_NOTE, nextFourLabel, ON_BREAK, QUEUE_RULE, UP_NEXT, WAITING, waitingNote } from '../lib/queueVocabulary'
-import { Panel } from './ui.jsx'
+import { Panel, TeamNames } from './ui.jsx'
 
 const plural = (n, noun) => `${n} ${noun}${n === 1 ? '' : 's'}`
 
@@ -45,7 +45,10 @@ export default function HostQueuePanel({ host, nameOf }) {
       {viewer.nextUp && (
         <div data-testid="host-next-four">
           <h3 className="text-sm font-bold text-pb-play">{nextFourLabel(viewer.nextUp.court)}</h3>
-          <p className="mt-1 text-sm [overflow-wrap:anywhere]">{viewer.nextUp.teamA.join(' & ')} <span className="text-pb-ink-2">vs</span> {viewer.nextUp.teamB.join(' & ')}</p>
+          <div className="mt-1 grid gap-1 text-sm">
+            <TeamNames side="A" names={viewer.nextUp.teamA} />
+            <TeamNames side="B" names={viewer.nextUp.teamB} />
+          </div>
           <p className="text-xs text-pb-ink-2">{NEXT_FOUR_NOTE} To swap someone out, set them on a break.</p>
         </div>
       )}

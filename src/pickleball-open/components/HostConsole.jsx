@@ -191,6 +191,7 @@ export default function HostConsole({ code, hostKey, host, status, onHost }) {
           <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
             {host.courts.map((court) => (
               <CourtCard key={court.id} court={court} nameOf={nameOf} ended={viewer.status === 'ENDED'}
+                next={viewer.nextUp?.courtId === court.id ? viewer.nextUp : null}
                 onStart={(match) => send({ type: 'START_MATCH', matchId: match.id })}
                 onGameOver={(match) => setDialog({ type: 'gameOver', match })}
                 onEdit={(match) => setDialog({ type: 'edit', match })} />

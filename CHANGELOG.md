@@ -51,6 +51,27 @@ decided against that surface specifically:
 
 ## [Unreleased]
 
+### Fixed
+
+- **"Resume as host" was dark text on a dark button** on `/pickleball`'s
+  welcome-back card. The brand stylesheet's link reset
+  (`.brand :where(a) { color: inherit }`) tied with a link's own colour
+  utility and, loading later, won, so the link took the card's dark ink. The
+  reset now has zero specificity (`:where(.brand a)`): a bare link still
+  inherits, and a link that names its colour keeps it. The same fix restores the
+  intended light colours of the other pickleball links that name one (check-in,
+  "How it works" on an expired board, "My sessions", the setup page's back
+  link). The business-site form links are unchanged (their form rule is more
+  specific). Pinned by a public-pages e2e test.
+
+### Changed
+
+- **The next four now show on their court, not only in the queue.** Under the
+  game in progress, the court card on the host and captain consoles, the court
+  tile on the player board and the TV court tile show "Next four · get ready"
+  with the two teams in their team colours. The host's queue panel shows them
+  with team dots too.
+
 ## [2.8.0] - 2026-11-25
 
 ### Changed

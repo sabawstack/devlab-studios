@@ -234,7 +234,7 @@ export default function TvBoard({ code }) {
           </div>
         )}
         {!overlay && courts.length === 0 && <p className="grid place-items-center rounded-2xl bg-pb-surface p-8 text-center text-[clamp(1.5rem,3.5vw,4rem)] font-bold text-pb-ink-2 lg:col-span-full lg:row-span-full">No courts are in play right now</p>}
-        {!overlay && courts.map((court) => <TvCourt key={court.id} court={court} fresh={live} />)}
+        {!overlay && courts.map((court) => <TvCourt key={court.id} court={court} fresh={live} next={viewer.nextUp?.courtId === court.id ? viewer.nextUp : null} />)}
       </section>
       {!overlay && !tournament && <CompactQueue viewer={viewer} />}
       <aside className="hidden min-h-0 flex-col gap-[1vw] overflow-hidden lg:flex">
